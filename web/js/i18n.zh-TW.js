@@ -330,4 +330,5 @@ export default {
   "err.model_in_use": "有翻唱正在進行或排隊，等它完成再刪除模型。",
   "err.model_changed": "這個工作排隊後音色模型被更換（重新訓練或取代）了，請重新製作。",
   "err.file_in_use": "音檔正被其他程式使用（播放器或 MV 渲染），關掉後再試一次。",
+  "cover.models_n": "共 {0} 個 · 點一下展開／收合",
 };

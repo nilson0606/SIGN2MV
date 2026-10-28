@@ -330,4 +330,5 @@ export default {
   "err.model_in_use": "A cover is running or queued; delete the model after it finishes.",
   "err.model_changed": "The voice model was changed (retrained or replaced) after this job was queued. Start it again.",
   "err.file_in_use": "The audio file is in use by another program (a player or an MV render). Close it and try again.",
+  "cover.models_n": "{0} model(s) · click to open",
 };

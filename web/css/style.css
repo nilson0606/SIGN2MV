@@ -176,3 +176,9 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .cv-model .tag a { color: var(--bad); text-decoration: none; }
 .cv-loss { margin-top: 8px; }
 .cv-chart { width: 100%; max-width: 560px; background: #0b1014; border-radius: 6px; }
+.cv-fold > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 10px; }
+.cv-fold > summary::-webkit-details-marker { display: none; }
+.cv-fold > summary h3 { margin: 0; }
+.cv-fold > summary::before { content: '▸'; color: var(--accent); }
+.cv-fold[open] > summary::before { content: '▾'; }
+.cv-fold[open] > summary { margin-bottom: 10px; }

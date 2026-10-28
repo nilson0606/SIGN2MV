@@ -602,6 +602,12 @@ async function showLoss(name) {
 
 function renderModels() {
   const ms = (status && status.models) || [];
+  modelsCount.textContent = t('cover.models_n', ms.length);
+  const fd = folds.models;
+  if (fd && status && foldPref('models') === null && fd.open !== !ms.length) {   // open only while there is no model yet
+    fd.dataset.auto = '1';
+    fd.open = !ms.length;
+  }
   modelsList.replaceChildren(...(ms.length ? ms.map((m) => el('div', { class: 'cv-model' },
     el('div', { class: 'row' },
       el('b', { class: 'grow' }, m.name),
@@ -621,9 +627,27 @@ function renderModels() {
     : [el('div', { class: 'empty' }, t('cover.no_models_hint'))]));
 }
 
+// management panels fold away; whether each one is open is remembered in this browser
+const modelsCount = el('span', { class: 'muted small' });
+const folds = {};
+function foldPref(key) {
+  try { return localStorage.getItem(`sign2mv.cover.fold.${key}`); } catch { return null; }
+}
+function foldPanel(key, title, extra, ...children) {
+  let open = null;
+  try { open = localStorage.getItem(`sign2mv.cover.fold.${key}`); } catch { /* storage unavailable */ }
+  const d = el('details', { class: 'panel cv-fold', open: open === '1' },
+    el('summary', {}, el('h3', {}, title), extra || null), ...children);
+  d.addEventListener('toggle', () => {
+    if (d.dataset.auto) { delete d.dataset.auto; return; }   // opened by the page, not by the user
+    try { localStorage.setItem(`sign2mv.cover.fold.${key}`, d.open ? '1' : '0'); } catch { /* ignore */ }
+  });
+  folds[key] = d;
+  return d;
+}
+
 function sectionModels() {
-  return el('div', { class: 'panel' },
-    el('h3', {}, t('cover.models')),
+  return foldPanel('models', t('cover.models'), modelsCount,
     el('p', { class: 'muted small' }, t('cover.models_hint')),
     modelsList, lossBox,
     el('div', { class: 'section' },
@@ -687,6 +711,7 @@ trFiles.addEventListener('change', async () => {
 
 async function followTraining(job, name) {
   trJobId = job.id;
+  if (folds.train && !folds.train.open) { folds.train.dataset.auto = '1'; folds.train.open = true; }   // show the progress
   trStart.disabled = true;
   trStop.classList.remove('hidden');
   const timer = setInterval(async () => {
@@ -719,8 +744,7 @@ trStop.addEventListener('click', async () => {
 });
 
 function sectionTrain() {
-  return el('div', { class: 'panel' },
-    el('h3', {}, t('cover.train')),
+  return foldPanel('train', t('cover.train'), null,
     el('p', { class: 'muted small' }, t('cover.train_hint')),
     field(t('cover.train_name'), trName, t('cover.train_name_hint')),
     field(t('cover.train_files'), el('span', { class: 'row' }, trFiles, trFileInfo)),
@@ -743,8 +767,7 @@ function renderInstruments() {
   sfInfo.textContent = ['steel_guitar', 'yangqin', 'guzheng', 'dizi'].map((k) => `${t(`cover.inst.${k}`)} ${ins[k] ? '✅' : '—'}`).join(' · ');
 }
 function sectionInstruments() {
-  return el('div', { class: 'panel' },
-    el('h3', {}, t('cover.instruments')), sfInfo,
+  return foldPanel('instruments', t('cover.instruments'), null, sfInfo,
     el('p', { class: 'muted small' }, t('cover.instruments_hint')),
     el('div', { class: 'row' }, sfPath, el('button', { class: 'btn', onclick: async () => {
       try { const res = await api.post('/api/cover/soundfonts/import', { path: sfPath.value }); toast(t('cover.sf_imported', res.imported.join(', '))); await loadStatus(); }
