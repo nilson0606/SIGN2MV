@@ -63,7 +63,12 @@ class _Downloader:
                     url = M["mel_roformer_kim"]["url"]
                 if os.path.isfile(output_path) and os.path.getsize(output_path) > 0:
                     return
-                download(url, Path(output_path))
+                try:
+                    download(url, Path(output_path))
+                except InstallError as exc:
+                    # audio-separator tries its second repository when this raises RuntimeError
+                    # (e.g. the RoFormer .yaml configs are no longer in the first one)
+                    raise RuntimeError(str(exc)) from exc
 
         self.sep = LocalSeparator(model_file_dir=str(MODELS / "separation"), info_only=True,
                                   log_level=logging.WARNING)

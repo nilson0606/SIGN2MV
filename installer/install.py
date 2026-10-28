@@ -149,6 +149,12 @@ def download(url: str, dest: Path, sha256: str | None = None, size: int | None =
             os.replace(part, dest)
             log(f"  downloaded {dest.name} ({dest.stat().st_size / 1048576:.1f} MB)")
             return dest
+        except urllib.error.HTTPError as exc:
+            if exc.code in (403, 404, 410):   # the file is not there: retrying cannot help
+                part.unlink(missing_ok=True)
+                raise InstallError(f"not found ({exc.code}): {url}") from exc
+            log(f"  attempt {attempt}/{attempts} failed: {exc}")
+            time.sleep(min(30, 3 * attempt))
         except (urllib.error.URLError, OSError, InstallError) as exc:
             log(f"  attempt {attempt}/{attempts} failed: {exc}")
             if isinstance(exc, InstallError) and "checksum" in str(exc):
