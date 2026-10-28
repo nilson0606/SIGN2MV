@@ -146,6 +146,10 @@ async function loadJobs() {
   } catch { /* server may be shutting down */ }
 }
 bus.addEventListener('reload-jobs', loadJobs);
+$('#jobs-clear').addEventListener('click', async () => {
+  try { const res = await api.post('/api/jobs/clear-finished'); toast(t('jobs.cleared', res.cleared)); await loadJobs(); }
+  catch (err) { toast(errorText(err), true); }
+});
 
 async function addDemo(lane) {
   const seconds = Number($('#demo-seconds').value) || 10;

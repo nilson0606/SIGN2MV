@@ -147,6 +147,20 @@ def test_cover_needs_song_and_model(client, root):
     saved = client.put(f"/api/cover/songs/{sid}/settings", json={"params": {"model": "A", "key": 3}}).json()
     assert saved["settings"]["key"] == 3
     assert client.get(f"/api/cover/songs/{sid}").json()["settings"]["key"] == 3
+    # audio is served from memory (no file handle kept open), with ranges
+    f = root / "library" / "songs" / sid / "renders" / "rtest" / "audio.mp3"
+    f.parent.mkdir(parents=True)
+    f.write_bytes(bytes(range(256)) * 4)
+    full = client.get(f"/media/{sid}/renders/rtest/audio.mp3")
+    assert full.status_code == 200 and len(full.content) == 1024 and full.headers["accept-ranges"] == "bytes"
+    part = client.get(f"/media/{sid}/renders/rtest/audio.mp3", headers={"Range": "bytes=10-19"})
+    assert part.status_code == 206 and part.content == bytes(range(10, 20))
+    assert part.headers["content-range"] == "bytes 10-19/1024"
+    tail = client.get(f"/media/{sid}/renders/rtest/audio.mp3", headers={"Range": "bytes=-4"})
+    assert tail.content == bytes(range(252, 256))
+    f.unlink()   # nothing holds it
+    # finished jobs can be cleared from the list
+    assert client.post("/api/jobs/clear-finished").json()["cleared"] >= 0
 
 
 # ------------------------------------------------------------------ conversion (engine + Applio)

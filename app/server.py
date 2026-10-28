@@ -154,6 +154,10 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
                           timeout_s=max(1.0, min(timeout_s, 3600.0)),
                           args=[sys.executable, "-u", str(paths.workers / "demo_job.py")])
 
+    @app.post("/api/jobs/clear-finished")
+    def clear_finished_jobs():
+        return {"cleared": jobs.clear_finished()}
+
     @app.post("/api/jobs/{job_id}/cancel")
     def cancel_job(job_id: str):
         if jobs.get(job_id) is None:

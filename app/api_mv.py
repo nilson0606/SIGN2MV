@@ -44,6 +44,7 @@ from .mvstudio.core import (Image, KARAOKE_TIMING_MODES, MAX_SCENES, FRAME_W, FR
                             restore_instrumentals, sanitize_no_ai, save_project_dict, splice_interlude, _scene_files,
                             _scene_payload, TRANSITION_STYLES, BLINDS_N, BLUR_MAX_PX, execute_mv_verification)
 from .renders import list_renders
+from .util import media_response
 
 AUDIO_EXT = (".wav", ".mp3", ".m4a", ".flac", ".webm", ".ogg", ".aac")
 MEDIA_TYPES = {".mp4": "video/mp4", ".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "audio/mp4",
@@ -1268,7 +1269,7 @@ def router(ctx: Context) -> APIRouter:
 
     # ------------------------------------------------------------------ media
     @r.get("/api/mv/media")
-    def serve_media_file(path: str, download: bool = False, filename: Optional[str] = None):
+    def serve_media_file(request: Request, path: str, download: bool = False, filename: Optional[str] = None):
         configure()
         try:
             p = Path(path).resolve()
@@ -1280,6 +1281,6 @@ def router(ctx: Context) -> APIRouter:
             return jerr(404, "找不到檔案")
         if download:
             return FileResponse(p, filename=filename or p.name, media_type="application/octet-stream")
-        return FileResponse(p, media_type=MEDIA_TYPES[ext], headers={"Accept-Ranges": "bytes", "Cache-Control": "no-cache"})
+        return media_response(p, request, MEDIA_TYPES[ext], {"Cache-Control": "no-cache"})
 
     return r

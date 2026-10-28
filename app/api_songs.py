@@ -8,12 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, File, Request, UploadFile
-from fastapi.responses import FileResponse
 
 from . import stems as stems_mod
 from .context import Context
 from .library import LibraryError
-from .util import body_json, err
+from .util import body_json, err, media_response
 
 SEPARATION_TIMEOUT = 3600.0
 
@@ -200,7 +199,7 @@ def router(ctx: Context) -> APIRouter:
 
     # ---------------- media ----------------
     @r.get("/media/{song_id}/{rel:path}")
-    def media(song_id: str, rel: str):
+    def media(song_id: str, rel: str, request: Request):
         try:
             lib = ctx.library()
             song_dir = lib.song_dir(song_id).resolve()
@@ -209,6 +208,6 @@ def router(ctx: Context) -> APIRouter:
         target = (song_dir / rel).resolve()
         if song_dir not in target.parents or not target.is_file():
             return err("file_not_found", 404)
-        return FileResponse(target)
+        return media_response(target, request)
 
     return r

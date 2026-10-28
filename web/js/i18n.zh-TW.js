@@ -347,4 +347,6 @@ export default {
   "stage.mix_balance": "人聲與伴奏平衡",
   "stage.mix_instrument": "產生旋律樂器",
   "stage.mix_master": "母帶限幅與輸出 MP3",
+  "jobs.clear": "🧹 清除已完成",
+  "jobs.cleared": "已從清單清除 {0} 個已結束的工作",
 };

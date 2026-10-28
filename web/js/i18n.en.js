@@ -347,4 +347,6 @@ export default {
   "stage.mix_balance": "Balancing vocal and accompaniment",
   "stage.mix_instrument": "Playing the melody instrument",
   "stage.mix_master": "Mastering and MP3",
+  "jobs.clear": "🧹 Clear finished",
+  "jobs.cleared": "Cleared {0} finished job(s) from the list",
 };

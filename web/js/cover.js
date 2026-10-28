@@ -512,6 +512,8 @@ async function follow(job, remixCard = null, asNew = false) {
   runBtn.disabled = true;
   let box = runJob;
   if (remixCard) {
+    const a = remixCard.querySelector('audio');   // let go of the file that is about to be replaced
+    if (a) { a.pause(); a.removeAttribute('src'); a.load(); }
     box = jobBox();
     remixCard.querySelector('.cv-vjob').replaceChildren(box.el);
     remixCard.querySelectorAll('button').forEach((b) => { b.disabled = true; });

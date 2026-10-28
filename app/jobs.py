@@ -135,6 +135,15 @@ class JobQueue:
             proc.kill_tree()
         return True
 
+    def clear_finished(self) -> int:
+        """Forget finished jobs (the list on the Jobs page). Running and queued jobs stay."""
+        with self._cv:
+            done = [jid for jid, j in self._jobs.items() if j.status in FINISHED]
+            for jid in done:
+                self._jobs.pop(jid, None)
+        self._changed()
+        return len(done)
+
     def cancel_all(self) -> int:
         ids = [j["id"] for j in self.active()]
         return sum(1 for job_id in ids if self.cancel(job_id))
