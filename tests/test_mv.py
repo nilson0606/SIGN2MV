@@ -236,3 +236,36 @@ def test_quick_mv(client, root, tmp_path, monkeypatch):
     assert client.post("/api/quickmv/delete", json={"all": True}).json()["deleted"] == 1
     assert client.get("/api/quickmv").json()["items"] == []
     assert client.delete(f"/api/songs/{sid}/quickmv/qzzzzzzzzzzzz").status_code == 404
+
+    # the old AI cover look ("studio": subtitle, badge, credits line, 60 fps) and the 720p size
+    assert info["sources"][0]["studio"] == {"subtitle": "原曲", "badge": "原曲", "credits": ""}
+    assert client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "t", "artist": "x",
+                                                          "style": "fancy"}).status_code == 400
+    assert client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "t", "artist": "x",
+                                                          "resolution": "4k"}).status_code == 400
+    assert client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "t", "artist": "x", "style": "studio",
+                                                          "credits": "x" * 121}).status_code == 400
+    j = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "錄音室", "artist": "Nilson",
+                                                       "style": "studio", "resolution": "720p", "subtitle": "AI Cover · 測試",
+                                                       "badge": "🎸 吉他版", "credits": "Model: X | Pitch: +2"}).json()
+    done = wait_job(client, j["job"]["id"], 600)
+    assert done["status"] == "succeeded", (done["error_code"], done["error_message"])
+    st = client.get(f"/api/songs/{sid}/quickmv").json()["items"][0]
+    assert st["style"] == "studio" and st["resolution"] == "720p" and st["fps"] == 60
+    assert st["subtitle"] == "Nilson 翻唱 · 測試" and st["badge"] == "🎸 吉他版"     # never shows "AI"
+    video = sdir / st["path"]
+    v = next(s for s in probe(video)["streams"] if s["codec_type"] == "video")
+    assert (v["width"], v["height"], v["r_frame_rate"]) == (1280, 720, "60/1")
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "5", "-i", str(video), "-frames:v", "1", str(frame)], check=True)
+    img = Image.open(frame).convert("RGB")
+    assert max(img.crop((80, 60, 600, 130)).convert("L").getdata()) > 230      # white title
+    r, g, b = img.getpixel((675, 380))                                          # vinyl label (green)
+    assert g > 120 and g > r and g > b
+    sub = img.crop((83, 133, 600, 160))
+    assert any(px[1] > 150 and px[0] < 120 for px in sub.getdata())             # green subtitle
+    j2 = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "card720", "artist": "Nilson",
+                                                        "resolution": "720p"}).json()
+    assert wait_job(client, j2["job"]["id"], 600)["status"] == "succeeded"
+    c720 = next(i for i in client.get(f"/api/songs/{sid}/quickmv").json()["items"] if i["title"] == "card720")
+    v = next(s for s in probe(sdir / c720["path"])["streams"] if s["codec_type"] == "video")
+    assert (v["width"], v["height"], v["r_frame_rate"]) == (1280, 720, "30/1") and c720["style"] == "card"

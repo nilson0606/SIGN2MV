@@ -1,12 +1,15 @@
 """Quick MV: an audio-reactive title card made straight from a song's audio (no lyrics, no photos).
 
-Same picture as sign_record's "製作 MV". Any of the song's audio can be used: the original,
+Two looks: sign_record's "製作 MV" card (default) and AI_COVER_MV's dynamic MV ("studio":
+subtitle, badge, credits line, 60 fps). Both in 1080p or 720p. Any of the song's audio can be used: the original,
 an AI cover version or a sing & record take (both are renders of the song).
 Videos live in songs/<id>/quickmv/<qid>/{video.mp4, info.json}; deleting the song deletes them.
 
 Routes:
   GET    /api/songs/{id}/quickmv            sources, defaults and the song's quick MVs
-  POST   /api/songs/{id}/quickmv            {"source": "original"|<render id>, "title", "artist"} -> job
+  POST   /api/songs/{id}/quickmv            {"source": "original"|<render id>, "title", "artist",
+                                             "style": "card"|"studio", "resolution": "1080p"|"720p",
+                                             "subtitle", "badge", "credits" (studio)} -> job
   DELETE /api/songs/{id}/quickmv/{qid}
   GET    /api/songs/{id}/quickmv/{qid}/download   the MP4 as a download with a readable name
 """
@@ -33,7 +36,18 @@ QID = re.compile(r"^q[a-f0-9]{12}$")
 FONTS = ["C:/Windows/Fonts/msyh.ttc", "C:/Windows/Fonts/msjh.ttc", "C:/Windows/Fonts/msyhbd.ttc",
          "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", "/System/Library/Fonts/PingFang.ttc"]
 HEADING = "C O V E R   S E S S I O N"
-FOOTER = "AUDIO REACTIVE  /  1080p  /  30 fps"
+FOOTER = "AUDIO REACTIVE  /  {res}  /  30 fps"
+BOLD_FONTS = ["C:/Windows/Fonts/msyhbd.ttc", "C:/Windows/Fonts/msjhbd.ttc",
+              "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"]
+# defaults of the studio look (AI_COVER_MV parse_track_metadata, without "AI")
+STUDIO_TEXT = {
+    "zh": {"cover_sub": "翻唱 · {0}", "sing_sub": "唱錄", "orig_sub": "原曲", "cover_badge": "翻唱版", "sing_badge": "唱錄版",
+           "orig_badge": "原曲", "credits": "Model: {0} | Pitch: {1} (半音)", "credits_mf": "Male: {0} | Female: {1}",
+           "original": "原唱", "key": " | Key: {0}"},
+    "en": {"cover_sub": "Cover · {0}", "sing_sub": "Sing & Record", "orig_sub": "Original", "cover_badge": "Cover",
+           "sing_badge": "Sing & Record", "orig_badge": "Original", "credits": "Model: {0} | Pitch: {1} (semitones)",
+           "credits_mf": "Male: {0} | Female: {1}", "original": "Original", "key": " | Key: {0}"},
+}
 LABEL = {"zh": "翻唱｜", "en": "Cover｜"}
 
 
@@ -59,6 +73,36 @@ def pick_font() -> str:
         if p and os.path.isfile(p):
             return p
     return ""
+
+
+def pick_bold_font() -> str:
+    for p in BOLD_FONTS:
+        if os.path.isfile(p):
+            return p
+    return pick_font()
+
+
+def studio_defaults(kind: str, version: dict | None, singer: str, lang: str) -> dict:
+    tx = STUDIO_TEXT[lang]
+    if kind == "cover":
+        p = (version or {}).get("params") or {}
+        label = (version or {}).get("label") or p.get("model") or ""
+        if p.get("mf"):
+            side = lambda sd: tx["original"] if sd.get("keep") else "%s %+d" % (sd.get("model") or "", int(sd.get("pitch") or 0))
+            credits = tx["credits_mf"].format(side(p["mf"].get("male") or {}), side(p["mf"].get("female") or {}))
+        elif p.get("model"):
+            credits = tx["credits"].format(p["model"], format(int(p.get("pitch") or 0), "+d"))
+        else:
+            credits = ""
+        if credits and p.get("key"):
+            credits += tx["key"].format(format(int(p["key"]), "+d"))
+        badge = (f"{singer} " if singer else "") + tx["cover_badge"]
+        out = {"subtitle": tx["cover_sub"].format(label).strip(" ·"), "badge": badge, "credits": credits}
+    elif kind == "sing":
+        out = {"subtitle": tx["sing_sub"], "badge": tx["sing_badge"], "credits": ""}
+    else:
+        out = {"subtitle": tx["orig_sub"], "badge": tx["orig_badge"], "credits": ""}
+    return {k: no_ai(v, singer)[:limit] for (k, v), limit in zip(out.items(), (80, 30, 120))}
 
 
 def quick_dir(song_dir: Path) -> Path:
@@ -100,10 +144,22 @@ def router(ctx: Context) -> APIRouter:
         if src.get("audio"):
             out.append({"id": "original", "kind": "original", "title": song["title"], "path": src["audio"],
                         "duration": src.get("duration")})
+        singer, lang = brand()
+        sdir = ctx.library().song_dir(song_id)
+        for item in out:
+            item["studio"] = studio_defaults("original", None, singer, lang)
         for rd in renders_mod.list_renders(ctx, song_id):
             if rd.get("kind") in ("cover", "sing"):
+                version = None
+                if rd.get("kind") == "cover" and rd.get("cover_version"):
+                    try:
+                        version = json.loads((sdir / "cover" / "versions" / str(rd["cover_version"]) / "version.json")
+                                             .read_text(encoding="utf-8"))
+                    except (OSError, ValueError):
+                        version = None
                 out.append({"id": rd["id"], "kind": rd["kind"], "title": rd.get("title") or rd["id"],
-                            "path": rd["path"], "duration": rd.get("duration"), "created_at": rd.get("created_at")})
+                            "path": rd["path"], "duration": rd.get("duration"), "created_at": rd.get("created_at"),
+                            "studio": studio_defaults(rd["kind"], version, singer, lang)})
         return out
 
     @r.get("/api/songs/{song_id}/quickmv")
@@ -134,6 +190,21 @@ def router(ctx: Context) -> APIRouter:
         src = next((s for s in sources(song, song_id) if s["id"] == body.get("source")), None)
         if not src:
             return err("quickmv_source")
+        style = body.get("style", "card")
+        resolution = body.get("resolution", "1080p")
+        if style not in ("card", "studio") or resolution not in ("1080p", "720p"):
+            return err("quickmv_style")
+        extra: dict[str, str] = {}
+        if style == "studio":
+            # the studio look's own lines (old 副標／樂器徽章／版權列); empty subtitle/credits are left out
+            for key, limit in (("subtitle", 80), ("badge", 30), ("credits", 120)):
+                raw = no_ai(body.get(key), singer)
+                val = clean_label(raw, limit) if raw else ""
+                if val is None:
+                    return err("quickmv_text")
+                extra[key] = val
+            if not extra["badge"]:
+                extra["badge"] = STUDIO_TEXT[lang]["cover_badge"]
         font = pick_font()
         if not font:
             return err("quickmv_font_missing")
@@ -141,10 +212,11 @@ def router(ctx: Context) -> APIRouter:
         info = {"source": src["id"], "source_kind": src["kind"], "source_title": src["title"], "artist": artist}
         job = ctx.submit(kind="quickmv", lane="cpu", script="mv_quick.py",
                          input={"audio": str(sdir / src["path"]), "out_dir": str(quick_dir(sdir) / qid), "font": font,
+                                "bold_font": pick_bold_font(), "style": style, "resolution": resolution,
                                 "title": title, "artist_line": LABEL[lang] + artist, "heading": HEADING,
-                                "footer": FOOTER, "info": info},
+                                "footer": FOOTER.format(res=resolution), "info": info, **extra},
                          title=f"quick MV: {song['title']}", song_id=song_id, timeout_s=3600,
-                         dedupe=f"quickmv:{src['id']}:{title}:{artist}")
+                         dedupe=f"quickmv:{src['id']}:{title}:{artist}:{style}:{resolution}:{json.dumps(extra, sort_keys=True)}")
         return {"job": job, "id": qid}
 
     @r.delete("/api/songs/{song_id}/quickmv/{qid}")

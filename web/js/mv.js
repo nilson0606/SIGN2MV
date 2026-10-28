@@ -66,7 +66,33 @@ frame.addEventListener('load', () => { ready = false; });
 // ------------------------------------------------------------------ quick MV
 const quick = (() => {
   const songSel = el('select', { onchange: () => loadSong(songSel.value) });
-  const srcSel = el('select', {});
+  const srcSel = el('select', { onchange: () => fillStudio(true) });
+  // look (sign_record card / AI_COVER_MV studio card) and size (old 1080p / 720p buttons); remembered
+  const pref = (k, d) => { try { return localStorage.getItem(`sign2mv.qmv.${k}`) || d; } catch { return d; } };
+  const keep = (k, v) => { try { localStorage.setItem(`sign2mv.qmv.${k}`, v); } catch { /* ignore */ } };
+  const styleSel = el('select', { onchange: () => { keep('style', styleSel.value); studioBox.classList.toggle('hidden', styleSel.value !== 'studio'); texts(); } });
+  const resSel = el('select', { onchange: () => keep('res', resSel.value) });
+  const studioIn = {
+    subtitle: el('input', { type: 'text', maxlength: 80, style: 'flex:1;min-width:240px' }),
+    badge: el('input', { type: 'text', maxlength: 30, style: 'min-width:180px' }),
+    credits: el('input', { type: 'text', maxlength: 120, style: 'flex:1;min-width:240px' }),
+  };
+  Object.values(studioIn).forEach((i) => i.addEventListener('input', () => { i.dataset.edited = '1'; }));
+  const studioLabels = { subtitle: el('span'), badge: el('span'), credits: el('span'), style: el('span'), res: el('span') };
+  const studioNote = el('p', { class: 'muted small' });
+  const studioReset = el('button', { class: 'btn small', onclick: () => fillStudio(true, true) });
+  const studioBox = el('div', { class: 'hidden' },
+    el('div', { class: 'row' }, el('label', { style: 'flex:1;display:flex;gap:6px;align-items:center' }, studioLabels.subtitle, studioIn.subtitle)),
+    el('div', { class: 'row' }, el('label', { style: 'display:flex;gap:6px;align-items:center' }, studioLabels.badge, studioIn.badge), studioReset),
+    el('div', { class: 'row' }, el('label', { style: 'flex:1;display:flex;gap:6px;align-items:center' }, studioLabels.credits, studioIn.credits)),
+    studioNote);
+  function fillStudio(_sourceChanged, force) {
+    const src = data && data.sources.find((x) => x.id === srcSel.value);
+    const d = (src && src.studio) || {};
+    for (const [k, inp] of Object.entries(studioIn)) {
+      if (force || !inp.dataset.edited) { inp.value = d[k] || ''; delete inp.dataset.edited; }   // keep what the user typed
+    }
+  }
   const title = el('input', { type: 'text', maxlength: 60, style: 'flex:1;min-width:240px' });
   const artist = el('input', { type: 'text', maxlength: 50, style: 'min-width:180px' });
   const labelSpan = el('span', { class: 'muted' });
@@ -94,9 +120,10 @@ const quick = (() => {
   quickPane.append(el('div', { class: 'panel' },
     head, hint,
     el('div', { class: 'row' }, el('label', {}, labels.song, ' ', songSel), el('label', {}, labels.source, ' ', srcSel)),
+    el('div', { class: 'row' }, el('label', {}, studioLabels.style, ' ', styleSel), el('label', {}, studioLabels.res, ' ', resSel)),
     el('div', { class: 'row' }, el('label', { style: 'flex:1;display:flex;gap:6px;align-items:center' }, labels.title, title)),
     el('div', { class: 'row' }, el('label', { style: 'display:flex;gap:6px;align-items:center' }, labels.artist, labelSpan, artist)),
-    singerHint, fontWarn,
+    studioBox, singerHint, fontWarn,
     el('div', { class: 'row' }, makeBtn), jb.el,
     labels.list, tools, folder, list));
   let songId = null;
@@ -112,6 +139,20 @@ const quick = (() => {
     labels.artist.textContent = t('qmv.artist');
     labels.list.textContent = t(scope === 'all' ? 'qmv.list_all' : 'qmv.list');
     makeBtn.textContent = t('qmv.make');
+    const sv = styleSel.value || pref('style', 'card');
+    styleSel.replaceChildren(el('option', { value: 'card' }, t('qmv.style_card')), el('option', { value: 'studio' }, t('qmv.style_studio')));
+    styleSel.value = sv;
+    const rv = resSel.value || pref('res', '1080p');
+    resSel.replaceChildren(el('option', { value: '1080p' }, t('qmv.res_1080')), el('option', { value: '720p' }, t('qmv.res_720')));
+    resSel.value = rv;
+    studioBox.classList.toggle('hidden', sv !== 'studio');
+    studioLabels.style.textContent = t('qmv.style');
+    studioLabels.res.textContent = t('qmv.res');
+    studioLabels.subtitle.textContent = t('qmv.subtitle');
+    studioLabels.badge.textContent = t('qmv.badge');
+    studioLabels.credits.textContent = t('qmv.credits');
+    studioReset.textContent = t('qmv.studio_reset');
+    studioNote.textContent = t('qmv.studio_note');
     singerHint.textContent = t('qmv.singer_hint');
     fontWarn.textContent = t('qmv.font_missing');
     scopeSong.textContent = t('qmv.scope_song');
@@ -197,6 +238,7 @@ const quick = (() => {
     const pick = [wantSource, prev].find((v) => v && data.sources.some((s) => s.id === v));
     if (pick) srcSel.value = pick;
     wantSource = null;
+    fillStudio(true);
     if (!title.dataset.song || title.dataset.song !== songId) {
       title.value = data.defaults.title;
       title.dataset.song = songId;
@@ -226,7 +268,8 @@ const quick = (() => {
         holder.replaceChildren(v);
         v.play().catch(() => {});
       } }, t('qmv.play'));
-      const meta = [all ? it.song_title : '', it.artist_line, it.source_title ? `${t('qmv.from')} ${it.source_title}` : '', it.duration ? fmtTime(it.duration) : '',
+      const look = [it.style === 'studio' ? t('qmv.style_studio_short') : '', it.resolution && it.resolution !== '1080p' ? it.resolution : ''].filter(Boolean).join(' ');
+      const meta = [all ? it.song_title : '', look, it.artist_line, it.source_title ? `${t('qmv.from')} ${it.source_title}` : '', it.duration ? fmtTime(it.duration) : '',
         it.bytes ? fmtBytes(it.bytes) : '', fmtDate(it.created_at)].filter(Boolean).join(' · ');
       const row = el('div', { class: 'item' + (it.id === highlight ? ' cv-new' : ''), style: 'display:block' },
         el('div', { class: 'row', style: 'align-items:center' },
@@ -250,7 +293,9 @@ const quick = (() => {
     if (!songId) { toast(t('qmv.pick_song'), true); return; }
     makeBtn.disabled = true;
     try {
-      const res = await api.post(`/api/songs/${songId}/quickmv`, { source: srcSel.value, title: title.value, artist: artist.value });
+      const body = { source: srcSel.value, title: title.value, artist: artist.value, style: styleSel.value, resolution: resSel.value };
+      if (styleSel.value === 'studio') Object.entries(studioIn).forEach(([k, i]) => { body[k] = i.value; });
+      const res = await api.post(`/api/songs/${songId}/quickmv`, body);
       const fin = await jb.follow(res.job);
       if (fin.status === 'succeeded') {
         toast(t('qmv.done'));
