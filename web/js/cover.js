@@ -6,6 +6,7 @@ import { t, errorText, onLanguageChange, applyTranslations } from './i18n.js';
 import { $, el, toast, confirmDialog, fmtDate, fmtTime, fmtBytes } from './ui.js';
 import { bus, registerPage, state, goto, mediaUrl, songById, reloadJobs } from './app-state.js';
 import { jobBox } from './jobview.js';
+import { spectrum } from './spectrum.js';
 
 const page = $('#page-cover');
 let status = null;          // /api/cover/status
@@ -155,6 +156,7 @@ const runJob = jobBox();
 const doneBox = el('div', { class: 'cv-done hidden' });
 const runBtn = el('button', { class: 'btn primary', onclick: () => runCover(), 'data-i18n': 'cover.run' });
 const versionsBox = el('div', { class: 'list cv-versions' });
+const specCanvas = spectrum(versionsBox);   // old 頻譜動畫 while a version plays
 const maskList = el('div', { class: 'list' });
 const vsegList = el('div', { class: 'list' });
 
@@ -1292,7 +1294,7 @@ function build() {
     el('div', { class: 'cv-grid' },
       el('div', { class: 'cv-col' }, sectionSong(), sectionVoice(), sectionMix()),
       el('div', { class: 'cv-col' },
-        el('div', { class: 'panel' }, el('h3', {}, t('cover.versions')), el('p', { class: 'muted small' }, t('cover.versions_hint')), vBatch, versionsBox),
+        el('div', { class: 'panel' }, el('h3', {}, t('cover.versions')), el('p', { class: 'muted small' }, t('cover.versions_hint')), specCanvas, vBatch, versionsBox),
         sectionModels(), sectionTrain())));
 }
 
