@@ -394,4 +394,7 @@ export default {
   "storage.hint.sing": "練唱用的準備資料和你的錄音。錄音到「唱錄」頁刪除。",
   "storage.hint.mv": "場景圖、預覽和輸出的影片。專案到「MV」頁刪除。",
   "storage.hint.other": "設定檔等小檔案。",
+  "stored.summary": "{0} 份 · {1}",
+  "stored.children": "底下 {0} 份",
+  "stored.more": "另外 {0} 個",
 };

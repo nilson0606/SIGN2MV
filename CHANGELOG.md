@@ -12,6 +12,8 @@
   others. Each records the stem it was made from. Older key folders are still listed
   and can be deleted; they are no longer reused.
 - Manual: how originals, caches and your work relate.
+- Library song page: sections fold (remembered), with one-line summaries; saved-stem rows
+  fold their children; long "used by" lists are shortened.
 
 ## 0.1.0 — first complete version
 

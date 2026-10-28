@@ -394,4 +394,7 @@ export default {
   "storage.hint.sing": "Prepared references and your takes. Delete takes on the sing & record page.",
   "storage.hint.mv": "Scene images, previews and rendered videos. Delete projects on the MV page.",
   "storage.hint.other": "Small settings files.",
+  "stored.summary": "{0} copies · {1}",
+  "stored.children": "{0} below",
+  "stored.more": "+{0} more",
 };

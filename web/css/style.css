@@ -201,3 +201,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .stored h4 { margin: 8px 0 4px; }
 .stored .stored-row { margin-top: 6px; }
 @media (max-width: 600px) { .storage-row { grid-template-columns: 1fr 70px; } .storage-row .storage-bar { grid-column: 1 / -1; grid-row: 2; } }
+.lib-fold > summary { flex-wrap: wrap; }
+.lib-fold > summary h4 { margin: 0; }
+.stored.lib-fold { margin-top: 14px; padding-top: 10px; border-top: 1px solid #ffffff10; }
+.stored-row .btn + .btn { margin-left: 6px; }

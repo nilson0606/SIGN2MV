@@ -7,6 +7,19 @@ import { jobBox } from './jobview.js';
 
 let filter = '';
 let sizes = {};   // song_id -> bytes on disk
+const expanded = new Set();   // saved-stem rows whose children are shown
+
+// Collapsible section; open/closed is remembered per section (not per song).
+function fold(key, title, info, defaultOpen, ...children) {
+  let v = null;
+  try { v = localStorage.getItem(`sign2mv.lib.fold.${key}`); } catch { /* storage unavailable */ }
+  const d = el('details', { class: 'section cv-fold lib-fold', open: v === null ? defaultOpen : v === '1' },
+    el('summary', {}, el('h3', {}, title), info || null), ...children);
+  d.addEventListener('toggle', () => {
+    try { localStorage.setItem(`sign2mv.lib.fold.${key}`, d.open ? '1' : '0'); } catch { /* ignore */ }
+  });
+  return d;
+}
 
 async function loadSizes() {
   try {
@@ -172,9 +185,7 @@ function sourceSection(song) {
   const media = s.video
     ? el('video', { src: mediaUrl(song.song_id, s.video), controls: true, muted: true, style: 'max-height:240px' })
     : null;
-  return el('div', { class: 'section' },
-    el('h3', {}, t('lib.source_title')),
-    el('div', { class: 'muted small' }, info.join(' · ')),
+  return fold('source', t('lib.source_title'), el('span', { class: 'muted small' }, info.join(' · ')), false,
     el('audio', { src: mediaUrl(song.song_id, s.audio), controls: true, preload: 'none' }),
     media);
 }
@@ -222,8 +233,7 @@ function stemsSection(song) {
 
   const stored = storedCopies(song);
 
-  return el('div', { class: 'section' },
-    el('h3', {}, t('sep.title')),
+  return fold('stems', t('sep.title'), null, true,
     el('p', { class: 'muted small' }, t('sep.hint')),
     el('div', { class: 'row' },
       el('label', {}, t('sep.model'), ' ', model),
@@ -241,6 +251,7 @@ const STORAGE_ROWS = [
 ];
 
 function storageSection(song) {
+  const info = el('span', { class: 'muted small' });
   const body = el('div', {}, el('div', { class: 'muted small' }, t('common.loading')));
   async function load() {
     try {
@@ -255,13 +266,14 @@ function storageSection(song) {
           el('div', { class: 'storage-size' }, fmtBytes(cats[c] || 0)),
           el('div', { class: 'muted small storage-hint' }, t(`storage.hint.${c}`)));
       });
+      info.textContent = fmtBytes(res.total || 0);
       body.replaceChildren(
         el('div', { class: 'muted small' }, t('storage.song_total', fmtBytes(res.total || 0), fmtBytes((res.disk || {}).free || 0))),
         ...rows);
     } catch (err) { body.replaceChildren(el('div', { class: 'muted small' }, errorText(err))); }
   }
-  const sec = el('div', { class: 'section' },
-    el('div', { class: 'row' }, el('h3', { style: 'margin:0;flex:1' }, t('storage.title')),
+  const sec = fold('storage', t('storage.title'), info, false,
+    el('div', { class: 'row', style: 'justify-content:flex-end' },
       el('button', { class: 'btn small', onclick: () => { load(); loadSizes(); } }, t('common.refresh'))),
     body);
   const onJob = () => {
@@ -312,7 +324,10 @@ function dependentsOf(items, target) {
 }
 
 function storedCopies(song) {
-  const box = el('div', { class: 'stored' });
+  const info = el('span', { class: 'muted small' });
+  const box = el('div', {});
+  const wrap = fold('stored', t('stored.title'), info, false, box);
+  wrap.classList.add('stored');
   let items = [];
   let loaded = false;
 
@@ -326,7 +341,8 @@ function storedCopies(song) {
   }
 
   function render(res) {
-    if (!items.length) { box.replaceChildren(el('h4', {}, t('stored.title')), el('div', { class: 'muted small' }, t('stored.empty'))); return; }
+    info.textContent = items.length ? t('stored.summary', items.length, fmtBytes(res.total_bytes || 0)) : t('stored.empty');
+    if (!items.length) { box.replaceChildren(el('div', { class: 'muted small' }, t('stored.empty'))); return; }
     const byDir = Object.fromEntries(items.map((i) => [i.dir, i]));
     const kids = {};
     const roots = [];
@@ -336,25 +352,36 @@ function storedCopies(song) {
     }
     const order = (a, b) => (a.created_at || 0) - (b.created_at || 0);
     const rows = [];
+    const count = (it) => (kids[it.dir] || []).reduce((n, c) => n + 1 + count(c), 0);
     const walk = (it, depth) => {
-      rows.push(row(it, depth, byDir));
-      (kids[it.dir] || []).sort(order).forEach((c) => walk(c, depth + 1));
+      const n = count(it);
+      rows.push(row(it, depth, byDir, n));
+      if (n && expanded.has(it.dir)) (kids[it.dir] || []).sort(order).forEach((c) => walk(c, depth + 1));
     };
     roots.sort((a, b) => (a.type === 'layer' ? 0 : 1) - (b.type === 'layer' ? 0 : 1) || order(a, b)).forEach((r) => walk(r, 0));
     box.replaceChildren(
-      el('h4', {}, t('stored.title')),
       el('div', { class: 'muted small' }, t('stored.total', fmtBytes(res.total_bytes || 0)), res.busy ? ' · ' + t('stored.busy') : ''),
       ...rows);
+    last = res;
   }
+  let last = null;
 
-  function row(it, depth, byDir) {
-    const used = (it.used_by || []).map((u) => el('span', { class: 'badge' }, t(`stored.used.${u.type}`, u.label)));
+  function row(it, depth, byDir, nKids) {
+    const names = (it.used_by || []).map((u) => t(`stored.used.${u.type}`, u.label));
+    const used = names.slice(0, 3).map((n) => el('span', { class: 'badge' }, n));
+    if (names.length > 3) used.push(el('span', { class: 'badge', title: names.join('\n') }, t('stored.more', names.length - 3)));
     const files = (it.type === 'layer' ? (it.files || []).map((f) => trackName(f.replace(/\.wav$/, ''))).join('、') : '');
+    const open = expanded.has(it.dir);
+    const toggle = nKids ? el('button', { class: 'btn small', onclick: () => {
+      if (open) expanded.delete(it.dir); else expanded.add(it.dir);
+      if (last) render(last);
+    } }, (open ? '▾ ' : '▸ ') + t('stored.children', nKids)) : null;
     return el('div', { class: 'item stored-row', style: `margin-left:${depth * 22}px` },
       el('div', { class: 'grow', style: 'white-space:normal' },
         el('b', {}, copyLabel(it, byDir)),
         el('div', { class: 'muted small' }, [files, fmtBytes(it.bytes), fmtDate(it.created_at)].filter(Boolean).join(' · ')),
         used.length ? el('div', { class: 'row', style: 'gap:4px;margin-top:4px' }, ...used) : null),
+      toggle,
       el('button', { class: 'btn small danger', onclick: () => remove(it, byDir) }, t('common.delete')));
   }
 
@@ -385,7 +412,7 @@ function storedCopies(song) {
   };
   bus.addEventListener('job-finished', onJob);
   load();
-  return { el: box, load };
+  return { el: wrap, load };
 }
 
 export { loadSongs };
