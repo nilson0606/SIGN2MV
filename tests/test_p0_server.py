@@ -210,3 +210,16 @@ def test_cover_versions_mvs_batch_delete_open_folder(client, root):
     assert res["deleted"] == 2 and client.get(f"/api/cover/songs/{sid}").json()["versions"] == []
     assert not (sd / "renders" / "r000000000001").exists()
     assert client.post(f"/api/cover/songs/{sid}/versions/delete", json={"ids": []}).status_code == 400
+    # 🧹 clean-up: list first (nothing deleted), then delete; files a version still uses stay
+    for rel, size in (("cover/rvc/old.wav", 300), ("cover/preview/abc_k2.mp3", 40), ("cover/rvc/used.wav", 10)):
+        (sd / rel).parent.mkdir(parents=True, exist_ok=True)
+        (sd / rel).write_bytes(b"x" * size)
+    (sd / "cover" / "versions" / "v0000000003").mkdir(parents=True)
+    (sd / "cover" / "versions" / "v0000000003" / "version.json").write_text(json.dumps(
+        {"id": "v0000000003", "number": 3, "title": "#3", "plan": {"files": ["cover/rvc/used.wav"]}, "created_at": 1}))
+    dry = client.get(f"/api/cover/songs/{sid}/cleanup").json()
+    assert dry["kinds"] == {"rvc": {"files": 1, "bytes": 300}, "preview": {"files": 1, "bytes": 40}} and dry["total"] == 340
+    assert (sd / "cover/rvc/old.wav").is_file()
+    done = client.post(f"/api/cover/songs/{sid}/cleanup", json={}).json()
+    assert done["freed"] == 340 and not (sd / "cover/rvc/old.wav").exists() and (sd / "cover/rvc/used.wav").is_file()
+    assert client.get(f"/api/cover/songs/{sid}/cleanup").json()["total"] == 0

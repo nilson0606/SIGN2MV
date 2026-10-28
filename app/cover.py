@@ -544,12 +544,16 @@ def referenced_files(song_dir: Path) -> set[str]:
     return refs
 
 
-def collect_garbage(song_dir: Path, min_age_s: float = 600, keep_recent_s: float = 600) -> int:
-    """Delete cached cover files no version (or the saved form) uses any more. Returns bytes freed."""
+GARBAGE_KINDS = ("rvc", "midi", "patches", "tmp", "preview")
+
+
+def garbage(song_dir: Path, min_age_s: float = 600, keep_recent_s: float = 600, dry_run: bool = False) -> dict:
+    """Cached cover files no version (or the saved form) uses any more, per kind: {kind: {"files", "bytes"}}.
+    dry_run lists them (old 🧹 清理中間檔 showed the list first); otherwise they are deleted."""
     refs = referenced_files(song_dir)
-    freed = 0
     now = time.time()
-    for sub in ("rvc", "midi", "patches", "tmp", "preview"):
+    out: dict[str, dict] = {}
+    for sub in GARBAGE_KINDS:
         d = cover_dir(song_dir) / sub
         if not d.is_dir():
             continue
@@ -559,12 +563,22 @@ def collect_garbage(song_dir: Path, min_age_s: float = 600, keep_recent_s: float
                 age = min_age_s if sub in ("rvc", "midi", "tmp") else max(min_age_s, keep_recent_s)
                 if rel in refs or now - f.stat().st_mtime < age:
                     continue
-                size = f.stat().st_size if f.is_file() else 0
                 if f.is_dir():
-                    shutil.rmtree(f, ignore_errors=True)
+                    size = sum(x.stat().st_size for x in f.rglob("*") if x.is_file())
+                    if not dry_run:
+                        shutil.rmtree(f)
                 else:
-                    f.unlink()
-                freed += size
+                    size = f.stat().st_size
+                    if not dry_run:
+                        f.unlink()
             except OSError:
-                pass
-    return freed
+                continue
+            k = out.setdefault(sub, {"files": 0, "bytes": 0})
+            k["files"] += 1
+            k["bytes"] += size
+    return out
+
+
+def collect_garbage(song_dir: Path, min_age_s: float = 600, keep_recent_s: float = 600) -> int:
+    """Delete cached cover files no version (or the saved form) uses any more. Returns bytes freed."""
+    return sum(k["bytes"] for k in garbage(song_dir, min_age_s, keep_recent_s).values())

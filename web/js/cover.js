@@ -807,6 +807,22 @@ const vDelSel = el('button', { class: 'btn small danger', onclick: async () => {
   await openSong(songId);
   bus.dispatchEvent(new Event('renders-changed'));
 } });
+// old 🧹 清理中間檔: list what is unused first (kind, count, size), delete after confirming
+const cleanBtn = el('button', { class: 'btn small', 'data-i18n': 'cover.cleanup', onclick: async () => {
+  if (!songId) return;
+  let res;
+  try { res = await api.get(`/api/cover/songs/${songId}/cleanup`); } catch (err) { toast(errorText(err), true); return; }
+  const kinds = Object.entries(res.kinds || {});
+  if (!kinds.length) { toast(t('cover.cleanup_nothing')); return; }
+  const lines = kinds.map(([k, v]) => `• ${t(`cover.garbage.${k}`)}：${t('cover.n_files', v.files)}，${fmtBytes(v.bytes)}`);
+  if (!(await confirmDialog(`${t('cover.cleanup_confirm', fmtBytes(res.total))}\n\n${lines.join('\n')}`, t('cover.cleanup')))) return;
+  try {
+    const done = await api.post(`/api/cover/songs/${songId}/cleanup`, {});
+    const disks = (done.disks || []).map((d) => t('cover.disk_free', d.drive, fmtBytes(d.free))).join('　');
+    toast(t('cover.cleaned', fmtBytes(done.freed)) + (disks ? `\n${disks}` : ''), false, 8000);
+    bus.dispatchEvent(new CustomEvent('storage-changed'));
+  } catch (err) { toast(errorText(err), true); }
+} });
 const vBatch = el('div', { class: 'row cv-batch', style: 'align-items:center;gap:8px' },
   el('label', { class: 'check small' }, vSelAll, el('span', { 'data-i18n': 'qmv.select_all' })), vSelCount, vDelSel);
 // MV projects that play this version: deleting it leaves them without music (finished videos are kept)
@@ -1294,7 +1310,8 @@ function build() {
     el('div', { class: 'cv-grid' },
       el('div', { class: 'cv-col' }, sectionSong(), sectionVoice(), sectionMix()),
       el('div', { class: 'cv-col' },
-        el('div', { class: 'panel' }, el('h3', {}, t('cover.versions')), el('p', { class: 'muted small' }, t('cover.versions_hint')), specCanvas, vBatch, versionsBox),
+        el('div', { class: 'panel' }, el('div', { class: 'row', style: 'align-items:center' }, el('h3', { class: 'grow' }, t('cover.versions')), cleanBtn),
+          el('p', { class: 'muted small' }, t('cover.versions_hint')), specCanvas, vBatch, versionsBox),
         sectionModels(), sectionTrain())));
 }
 

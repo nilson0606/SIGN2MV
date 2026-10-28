@@ -594,4 +594,13 @@ export default {
   "lib.yt_no_info": "讀不到標題（仍可試著匯入）。",
   "lib.drop_hint": "也可以把音訊或影片檔拖到這裡，放開就開始上傳。",
   "err.youtube_info_failed": "讀不到這個網址的資訊。",
+  "cover.cleanup": "🧹 清理中間檔",
+  "cover.cleanup_nothing": "沒有可清理的中間檔：暫存檔都還有版本在用。",
+  "cover.cleanup_confirm": "下面這些檔案沒有任何版本或目前設定在用（共 {0}）。要刪除嗎？版本與分軌都不會動到。",
+  "cover.n_files": "{0} 個檔案",
+  "cover.garbage.rvc": "AI 轉換人聲",
+  "cover.garbage.midi": "樂器伴奏",
+  "cover.garbage.patches": "分段處理片段",
+  "cover.garbage.tmp": "暫存檔",
+  "cover.garbage.preview": "升降 Key 試聽檔",
 };

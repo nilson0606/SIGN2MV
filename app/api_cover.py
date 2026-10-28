@@ -744,6 +744,27 @@ def router(ctx: Context) -> APIRouter:
             deleted += 1
         return {"deleted": deleted, "freed": cover.collect_garbage(sdir, min_age_s=0)}
 
+    @r.get("/api/cover/songs/{song_id}/cleanup")
+    def cleanup_list(song_id: str):
+        """What 🧹 清理中間檔 would delete (nothing is deleted): files no version or the saved form uses."""
+        try:
+            _lib, _song, sdir = song_ctx(song_id)
+        except Exception as exc:  # noqa: BLE001
+            return fail(exc)
+        kinds = cover.garbage(sdir, min_age_s=0, keep_recent_s=0, dry_run=True)
+        return {"kinds": kinds, "total": sum(k["bytes"] for k in kinds.values())}
+
+    @r.post("/api/cover/songs/{song_id}/cleanup")
+    def cleanup_run(song_id: str):
+        try:
+            _lib, _song, sdir = song_ctx(song_id)
+        except Exception as exc:  # noqa: BLE001
+            return fail(exc)
+        if ctx.pending_job(song_id, "cover"):
+            return err("cover_busy", 409)
+        kinds = cover.garbage(sdir, min_age_s=0, keep_recent_s=0)
+        return {"kinds": kinds, "freed": sum(k["bytes"] for k in kinds.values()), "disks": disk_space()}
+
     @r.get("/api/cover/songs/{song_id}/versions/{vid}/tracks")
     def version_tracks(song_id: str, vid: str):
         try:
