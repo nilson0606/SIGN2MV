@@ -339,4 +339,12 @@ export default {
   "cover.ab_original": "🎤 原曲（原唱）",
   "cover.ab_hint": "切換時從同一秒接著播",
   "cover.stems_hint": "分軌（同一個播放器、同一秒接著播）：",
+  "cover.remix_done": "快速混音完成：這個版本已更新",
+  "cover.remix_done_new": "已另存為新版本：{0}",
+  "cover.remix_toast": "快速混音完成",
+  "stage.mix_read": "讀取音軌",
+  "stage.mix_sections": "套用人聲分段處理",
+  "stage.mix_balance": "人聲與伴奏平衡",
+  "stage.mix_instrument": "產生旋律樂器",
+  "stage.mix_master": "母帶限幅與輸出 MP3",
 };

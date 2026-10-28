@@ -496,20 +496,45 @@ function showDone(fin) {
   doneBox.classList.remove('hidden');
 }
 
-async function follow(job) {
+// a quick remix shows its progress and its result inside the version card that was remixed
+function showRemixDone(fin, asNew) {
+  const vid = fin.result && fin.result.version_id;
+  const card = vid && versionsBox.querySelector(`[data-vid="${vid}"]`);
+  const v = ((songState && songState.versions) || []).find((x) => x.id === vid);
+  if (!card || !v) return;
+  card.querySelector('.cv-vjob').replaceChildren(el('div', { class: 'cv-done' },
+    el('div', { class: 'cv-done-title' }, `✅ ${asNew ? t('cover.remix_done_new', v.title) : t('cover.remix_done')}`),
+    el('div', { class: 'row' }, el('button', { class: 'btn primary', onclick: () => {
+      const a = card.querySelector('audio');
+      if (a) a.play().catch(() => {});
+    } }, t('cover.done_play')))));
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function follow(job, remixCard = null, asNew = false) {
   if (busyJob && busyJob.id === job.id) return;   // already followed
   busyJob = job;
   doneBox.classList.add('hidden');
   runBtn.disabled = true;
-  const fin = await runJob.follow(job);
+  let box = runJob;
+  if (remixCard) {
+    box = jobBox();
+    remixCard.querySelector('.cv-vjob').replaceChildren(box.el);
+    remixCard.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+  }
+  const fin = await box.follow(job);
   busyJob = null;
   runBtn.disabled = false;
   reloadJobs();
-  if (fin.status === 'succeeded') toast(t('cover.done'));
+  if (fin.status === 'succeeded') toast(t(remixCard ? 'cover.remix_toast' : 'cover.done'));
   if (songId) {
     try { songState = await api.get(`/api/cover/songs/${songId}`); } catch { /* ignore */ }
-    renderVersions(fin.result && fin.result.version_id);
-    showDone(fin);
+    if (remixCard && fin.status !== 'succeeded') {
+      remixCard.querySelectorAll('button').forEach((b) => { b.disabled = false; });   // keep the error visible
+    } else {
+      renderVersions(fin.result && fin.result.version_id);
+      if (remixCard) showRemixDone(fin, asNew); else showDone(fin);
+    }
   }
   bus.dispatchEvent(new Event('renders-changed'));
 }
@@ -528,7 +553,7 @@ async function remix(v, asNew) {
   if (p.mf) body.mf_vols = { male: p.mf.male.vol, female: p.mf.female.vol };
   try {
     const res = await api.post(`/api/cover/songs/${songId}/versions/${v.id}/remix`, body);
-    follow(res.job);
+    follow(res.job, versionsBox.querySelector(`[data-vid="${v.id}"]`), asNew);
   } catch (err) { toast(errorText(err), true); }
 }
 
@@ -610,7 +635,8 @@ function versionItem(v, hi) {
           bus.dispatchEvent(new Event('renders-changed'));
         } catch (err) { toast(errorText(err), true); }
       } }, t('common.delete'))),
-    tracksBox);
+    tracksBox,
+    el('div', { class: 'cv-vjob' }));
   return box;
 }
 

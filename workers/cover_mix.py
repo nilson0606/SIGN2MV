@@ -297,10 +297,12 @@ def gain_envelope(total_samples, segments, sr=TARGET_SR, fade_s=0.08):
 def mix_master_audio(vocal_path, bgm_path, out_mp3_path, *, soundfonts: Path, vocal_vol=0.95, bgm_vol=0.85,
                      inst_vol=0.0, instrument="none", midi_path=None, octave_shift=99, reverb_wet=0.10,
                      limiter_ceiling=0.96, vocal_masks=None, orig_vocal_path=None, vol_segments=None,
-                     backing_paths=None, log: Callable[[str], None] = _noop) -> dict:
+                     backing_paths=None, log: Callable[[str], None] = _noop,
+                     progress: Callable[[str], None] = _noop) -> dict:
     for p, what in ((vocal_path, "vocal"), (bgm_path, "accompaniment")):
         if not os.path.exists(p):
             raise FileNotFoundError(f"{what} input not found: {p}")
+    progress("mix_read")
     v_data = _read_stereo(vocal_path)
     b_data = _read_stereo(bgm_path)
     sr = TARGET_SR
@@ -309,11 +311,13 @@ def mix_master_audio(vocal_path, bgm_path, out_mp3_path, *, soundfonts: Path, vo
     b_data = _fit(b_data, total_samples)
 
     if vocal_masks:
+        progress("mix_sections")
         o_data = None
         if orig_vocal_path and os.path.exists(orig_vocal_path):
             o_data = _fit(_read_stereo(orig_vocal_path), total_samples).astype(np.float32)
         v_data = apply_vocal_masks(v_data.astype(np.float32), vocal_masks, o_data, sr, log)
 
+    progress("mix_balance")
     sos = scipy.signal.butter(4, 80, btype='highpass', fs=sr, output='sos')
     v_filtered = np.zeros_like(v_data)
     v_filtered[:, 0] = scipy.signal.sosfilt(sos, v_data[:, 0])
@@ -355,6 +359,7 @@ def mix_master_audio(vocal_path, bgm_path, out_mp3_path, *, soundfonts: Path, vo
 
     inst_used = False
     if instrument != "none" and inst_vol > 0 and midi_path and os.path.exists(midi_path):
+        progress("mix_instrument")
         inst_audio = render_instrument(instrument, midi_path, total_samples, soundfonts, sr=sr,
                                        octave_shift=octave_shift, reverb_wet=reverb_wet)
         if inst_audio is not None:
@@ -374,6 +379,7 @@ def mix_master_audio(vocal_path, bgm_path, out_mp3_path, *, soundfonts: Path, vo
     out_mp3_path = Path(out_mp3_path)
     out_mp3_path.parent.mkdir(parents=True, exist_ok=True)
     temp_wav = out_mp3_path.with_name(out_mp3_path.stem + "_temp.wav")
+    progress("mix_master")
     sf.write(str(temp_wav), mixed.astype(np.float32), sr, subtype='FLOAT')   # float keeps peaks for the limiter
     try:
         res = subprocess.run([ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", str(temp_wav),

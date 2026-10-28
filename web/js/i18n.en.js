@@ -339,4 +339,12 @@ export default {
   "cover.ab_original": "🎤 Original",
   "cover.ab_hint": "switching continues from the same second",
   "cover.stems_hint": "Stems (same player, same second):",
+  "cover.remix_done": "Quick remix finished: this version was replaced",
+  "cover.remix_done_new": "Remix saved as a new version: {0}",
+  "cover.remix_toast": "Quick remix finished",
+  "stage.mix_read": "Reading the tracks",
+  "stage.mix_sections": "Applying vocal sections",
+  "stage.mix_balance": "Balancing vocal and accompaniment",
+  "stage.mix_instrument": "Playing the melody instrument",
+  "stage.mix_master": "Mastering and MP3",
 };

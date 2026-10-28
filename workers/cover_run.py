@@ -214,6 +214,9 @@ def write_render(song_dir: Path, render: dict, mp3: Path, extra: dict) -> dict:
     return info
 
 
+MIX_STEPS = {"mix_read": 90, "mix_sections": 91, "mix_balance": 92, "mix_instrument": 93, "mix_master": 95}
+
+
 def main() -> None:
     data = protocol.read_input()
     song_dir = Path(data["song_dir"])
@@ -313,7 +316,7 @@ def main() -> None:
             midi_path=str(A(midi["out"])) if midi else None, octave_shift=mix["octave_shift"],
             reverb_wet=mix["reverb_wet"], vocal_masks=masks or None, orig_vocal_path=str(A(plan["orig_vocal"])),
             vol_segments=plan.get("vol_segments") or None, backing_paths=[str(A(b)) for b in plan.get("backings") or []],
-            log=protocol.log)
+            log=protocol.log, progress=lambda stage: protocol.progress(MIX_STEPS.get(stage, 90), stage, ""))
         # 8. records
         protocol.progress(97, "save", "")
         v = dict(data["version"])
