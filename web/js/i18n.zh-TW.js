@@ -397,4 +397,5 @@ export default {
   "stored.summary": "{0} 份 · {1}",
   "stored.children": "底下 {0} 份",
   "stored.more": "另外 {0} 個",
+  "stage.prepare": "啟動中（載入程式）",
 };

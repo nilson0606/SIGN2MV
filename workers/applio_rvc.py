@@ -52,8 +52,7 @@ def main() -> None:
     data = protocol.read_input()
     tasks = data.get("tasks") or []
     sys.path.insert(0, os.getcwd())
-    protocol.progress(0, "rvc_load", "")
-    with contextlib.redirect_stdout(sys.stderr):
+    with protocol.Heartbeat(0, "rvc_load"), contextlib.redirect_stdout(sys.stderr):
         from rvc.infer.infer import VoiceConverter
         vc = VoiceConverter()
     dev = str(getattr(vc.config, "device", "") or "")
@@ -65,7 +64,7 @@ def main() -> None:
         out = Path(t["output"])
         out.parent.mkdir(parents=True, exist_ok=True)
         raw = out.with_name(out.stem + f".{os.getpid()}.native.wav")
-        protocol.progress(round(i * 100 / max(1, len(tasks)), 1), "rvc", f"{t.get('label', '')} · {where}")
+        pct = round(i * 100 / max(1, len(tasks)), 1)
         kwargs = {}
         if t.get("autotune"):
             kwargs.update(f0_autotune=True, f0_autotune_strength=float(t.get("autotune_strength", 1.0)))
@@ -83,7 +82,8 @@ def main() -> None:
             shutil.copyfile(index, tmp_index)
             index = str(tmp_index)
         try:
-            with contextlib.redirect_stdout(sys.stderr):
+            with protocol.Heartbeat(pct, "rvc", f"{t.get('label', '')} · {where}"), \
+                    contextlib.redirect_stdout(sys.stderr):
                 vc.convert_audio(audio_input_path=str(t["input"]), audio_output_path=str(raw),
                                  model_path=str(t["pth"]), index_path=index,
                                  pitch=int(t.get("pitch", 0)), f0_method=t.get("f0", "rmvpe"),

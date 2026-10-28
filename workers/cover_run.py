@@ -34,13 +34,14 @@ sys.path.insert(0, str(ROOT))
 
 class Step:
     def __init__(self, lo: float, hi: float, stage: str):
-        self.lo, self.hi, self.stage, self.last = lo, hi, stage, -1.0
+        self.lo, self.hi, self.stage, self.last, self.last_text = lo, hi, stage, -1.0, None
 
-    def __call__(self, pct: float, detail: str = "") -> None:
+    def __call__(self, pct: float, detail: str = "", stage: str | None = None) -> None:
         val = self.lo + (self.hi - self.lo) * max(0.0, min(100.0, float(pct))) / 100
-        if val - self.last >= 0.5 or pct >= 100:
-            self.last = val
-            protocol.progress(round(val, 1), self.stage, detail)
+        text = (stage or self.stage, detail)
+        if val - self.last >= 0.5 or pct >= 100 or text != self.last_text:
+            self.last, self.last_text = val, text
+            protocol.progress(round(val, 1), stage or self.stage, detail)
 
 
 def cut(src: Path, dst: Path, start: float, dur: float) -> None:
@@ -154,7 +155,7 @@ def run_applio(tasks: list[dict], applio: dict, report: Step) -> dict:
             label = msg.get("message") or ""
             if msg.get("stage") == "rvc" and done < 100:
                 label = f"{int(round(done * n / 100)) + 1}/{n} {label}".strip()
-            report(done, label)
+            report(done, label, "rvc_load" if msg.get("stage") == "rvc_load" else None)
         elif msg.get("type") == "log":
             protocol.log(msg.get("message", ""))
         elif msg.get("type") == "error":
@@ -223,6 +224,7 @@ MIX_STEPS = {"mix_read": 90, "mix_sections": 91, "mix_balance": 92, "mix_instrum
 
 def main() -> None:
     data = protocol.read_input()
+    protocol.progress(0, "prepare", "")   # loading torch below takes a while on Windows
     song_dir = Path(data["song_dir"])
     plan = data["plan"]
     device = pick_device(data.get("device", "auto"))

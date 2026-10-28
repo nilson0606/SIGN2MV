@@ -397,4 +397,5 @@ export default {
   "stored.summary": "{0} copies · {1}",
   "stored.children": "{0} below",
   "stored.more": "+{0} more",
+  "stage.prepare": "Starting (loading programs)",
 };
