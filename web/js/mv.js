@@ -40,6 +40,7 @@ bus.addEventListener('open-workspace', (e) => {
   openSong(e.detail.songId, '');
 });
 bus.addEventListener('songs', () => { if (ready) send({ type: 'sign2mv:refresh' }); });
+bus.addEventListener('renders-changed', () => { if (ready) send({ type: 'sign2mv:refresh' }); });
 bus.addEventListener('jobs', (e) => {
   busy = (e.detail || []).some((j) => ['mv_render', 'mv_whisper'].includes(j.kind) && ['queued', 'running'].includes(j.status));
 });
@@ -52,6 +53,6 @@ registerPage('mv', {
       if (state.selectedSongId && !pending) pending = { type: 'sign2mv:mv-open', songId: state.selectedSongId, renderId: '' };
     }
   },
-  busy: () => false,
+  busy: () => busy,
   busyText: () => t('mv.busy'),
 });

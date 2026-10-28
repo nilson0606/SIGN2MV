@@ -5,6 +5,7 @@ A recipe describes what a workspace needs:
    "second_pass": bool,               # separate the instrumental again (cleaner backing)
    "lead": bool,                      # split vocals into lead / backing (karaoke model)
    "lead_from": "vocals"|"residual",  # which vocals the lead split uses
+   "lead_passes": 1|2,                # 2 = split the lead again (harmonies the first pass missed)
    "male_female": null|"aufr33"|"sucial"}  # split (lead) vocals into male / female
 Each step is a cached layer in <song>/stems/<key>/ whose key is derived from its
 input and settings, so changing only a later step reuses the earlier ones.
@@ -46,8 +47,11 @@ def normalize(recipe: dict[str, Any] | None) -> dict[str, Any]:
     second = bool(r.get("second_pass"))
     if lead_from == "residual" and not second:
         lead_from = "vocals"
-    return {"model": model, "second_pass": second, "lead": bool(r.get("lead")),
-            "lead_from": lead_from, "male_female": mf}
+    out = {"model": model, "second_pass": second, "lead": bool(r.get("lead")),
+           "lead_from": lead_from, "male_female": mf}
+    if out["lead"] and int(r.get("lead_passes") or 1) == 2:
+        out["lead_passes"] = 2
+    return out
 
 
 def plan(song_dir: Path, song: dict[str, Any], recipe: dict[str, Any]) -> tuple[list[dict], dict[str, str]]:
@@ -87,6 +91,13 @@ def plan(song_dir: Path, song: dict[str, Any], recipe: dict[str, Any]) -> tuple[
                   "params": ROFORMER_PARAMS})
         tracks["lead"] = f"stems/{k3}/lead.wav"
         tracks["backing"] = f"stems/{k3}/backing.wav"
+        if r.get("lead_passes") == 2:
+            k3b = _h("lead", tracks["lead"], "karaoke", ROFORMER_PARAMS)
+            need(k3b, {"kind": "lead", "model": "karaoke", "input": str(song_dir / tracks["lead"]),
+                       "input_ref": tracks["lead"], "params": ROFORMER_PARAMS})
+            tracks["lead_first"] = tracks["lead"]
+            tracks["lead"] = f"stems/{k3b}/lead.wav"
+            tracks["backing2"] = f"stems/{k3b}/backing.wav"
         voice_rel = tracks["lead"]
 
     if r["male_female"]:

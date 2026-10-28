@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -29,7 +28,8 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001
         c["torch"] = False
         out["torch_error"] = str(exc)[:300]
-    for mod in ("demucs", "audio_separator", "faster_whisper", "soundfile", "librosa", "yt_dlp", "PIL"):
+    for mod in ("demucs", "audio_separator", "faster_whisper", "soundfile", "librosa", "yt_dlp", "PIL",
+                "pretty_midi", "tinysoundfont"):
         try:
             __import__(mod)
             c[mod] = True
@@ -44,6 +44,14 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001
         c["whisper"] = False
         out["whisper_error"] = str(exc)[:300]
+    try:
+        import logging
+        logging.getLogger().setLevel(logging.ERROR)
+        from basic_pitch.inference import predict  # noqa: F401
+        import onnxruntime  # noqa: F401
+        c["basic_pitch"] = True
+    except Exception:  # noqa: BLE001
+        c["basic_pitch"] = False
     ffmpeg = shutil.which("ffmpeg")
     try:
         res = subprocess.run([ffmpeg or "ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True,
@@ -60,6 +68,8 @@ def main() -> None:
         "separation/model_bs_roformer_ep_317_sdr_12.9755.ckpt",
         "separation/vocals_mel_band_roformer.ckpt",
         "separation/mel_band_roformer_karaoke_aufr33_viperx_sdr_10.1956.ckpt",
+        "separation/bs_roformer_male_female_by_aufr33_sdr_7.2889.ckpt",
+        "soundfonts/GeneralUser-GS.sf2",
         "rmvpe/rmvpe.pt",
         "whisper/medium/model.bin",
         "whisper/small/model.bin",

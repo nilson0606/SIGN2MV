@@ -20,10 +20,20 @@ sys.path.insert(0, str(REPO))
 
 ENGINE_PY = os.environ.get("SIGN2MV_TEST_ENGINE_PYTHON", "")
 MODELS = os.environ.get("SIGN2MV_TEST_MODELS", "")
+# Applio (AI cover): its python and an Applio folder with the prerequisite models
+APPLIO_PY = os.environ.get("SIGN2MV_TEST_APPLIO_PYTHON", "")
+APPLIO_DIR = os.environ.get("SIGN2MV_TEST_APPLIO_DIR", "")
+# a folder holding one RVC voice model (.pth + .index) for conversion tests
+VOICE_DIR = os.environ.get("SIGN2MV_TEST_VOICE", "")
 
 
 def engine_available() -> bool:
     return bool(ENGINE_PY) and Path(ENGINE_PY).exists() and bool(MODELS) and Path(MODELS).is_dir()
+
+
+def applio_available() -> bool:
+    return (engine_available() and bool(APPLIO_PY) and Path(APPLIO_PY).exists() and bool(APPLIO_DIR)
+            and (Path(APPLIO_DIR) / "core.py").is_file() and bool(VOICE_DIR) and Path(VOICE_DIR).is_dir())
 
 
 @pytest.fixture()
@@ -33,7 +43,15 @@ def root(tmp_path, monkeypatch):
     for name in ("app", "workers", "web", "installer"):
         (r / name).symlink_to(REPO / name, target_is_directory=True)
     if MODELS and Path(MODELS).is_dir():
-        (r / "models").symlink_to(Path(MODELS), target_is_directory=True)
+        (r / "models").mkdir()
+        for child in Path(MODELS).iterdir():   # shared read-only models; voices/ stays per test
+            if child.name != "voices":
+                (r / "models" / child.name).symlink_to(child, target_is_directory=child.is_dir())
+    if APPLIO_DIR and Path(APPLIO_DIR).is_dir():
+        (r / "runtime").mkdir()
+        (r / "runtime" / "applio").symlink_to(Path(APPLIO_DIR), target_is_directory=True)
+    if APPLIO_PY:
+        monkeypatch.setenv("SIGN2MV_APPLIO_PYTHON", APPLIO_PY)
     monkeypatch.setenv("SIGN2MV_ROOT", str(r))
     monkeypatch.setenv("SIGN2MV_NO_BROWSER", "1")
     if ENGINE_PY:

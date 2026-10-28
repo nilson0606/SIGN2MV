@@ -1,6 +1,6 @@
 """Synthetic test song: a formant-synthesised sung melody over drums, bass and pad.
 
-Usage: synth_song.py OUT.wav SECONDS   (run with the engine python: numpy, scipy, soundfile)
+Usage: synth_song.py OUT.wav SECONDS [--voice-only]   (engine python: numpy, scipy, soundfile)
 """
 import numpy as np, soundfile as sf, sys
 from scipy.signal import lfilter
@@ -40,6 +40,6 @@ hat=rng.standard_normal(len(t))*np.exp(-60*np.mod(t+beat/2,beat))*0.08
 bassf=np.where(np.mod(t,4)<2,110*2**(-9/12)*2,98)
 bass=0.2*np.sign(np.sin(2*np.pi*np.cumsum(bassf)/sr))*0.5
 pad=0.06*sum(np.sin(2*np.pi*f*t) for f in (220,277,330))
-mix=voice+kick+hat+bass+pad
+mix=voice if '--voice-only' in sys.argv else voice+kick+hat+bass+pad
 mix=np.stack([mix,mix],1)/np.abs(mix).max()*0.8
 sf.write(sys.argv[1],mix,sr,subtype='PCM_16')

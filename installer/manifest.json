@@ -20,6 +20,7 @@
     "cuda_index": "https://download.pytorch.org/whl/cu128",
     "cpu_index": "https://download.pytorch.org/whl/cpu"
   },
+  "basic_pitch": {"version": "0.4.0", "license": "Apache-2.0", "note": "installed with --no-deps; the ONNX model is used"},
   "applio": {
     "version": "3.7.1",
     "url": "https://github.com/IAHispano/Applio/archive/refs/tags/3.7.1.zip",
@@ -43,6 +44,10 @@
               "url": "https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/rmvpe.pt"},
     "whisper_medium": {"dir": "whisper/medium", "repo": "Systran/faster-whisper-medium"},
     "whisper_small": {"dir": "whisper/small", "repo": "Systran/faster-whisper-small",
-                      "note": "CPU fallback (same as the old MV Studio)"}
+                      "note": "CPU fallback (same as the old MV Studio)"},
+    "soundfont_generaluser": {"file": "soundfonts/GeneralUser-GS.sf2", "size": 32319396,
+                              "sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe",
+                              "url": "https://raw.githubusercontent.com/mrbumpy409/GeneralUser-GS/684543d5e5efaef08d02be50dcda8d552478fa60/GeneralUser-GS.sf2",
+                              "version": "2.0.3", "license": "GeneralUser GS License v2.0 (free use and redistribution)"}
   }
 }

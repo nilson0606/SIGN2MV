@@ -1,0 +1,1482 @@
+{
+ "exact": {
+  "-- 未指定歌詞段落 (點擊選擇配對) --": "-- No lyric section assigned (click to choose) --",
+  "-- 選擇歌曲 --": "-- Select song --",
+  "-- 選擇這首歌的音檔 --": "-- Select this song's audio --",
+  "-- 選擇音檔 --": "-- Select audio --",
+  "1080p 合成預覽載入中...": "Loading 1080p preview...",
+  "3 秒 ⏩": "3 s ⏩",
+  "CSV 分鏡表（Excel）": "CSV storyboard (Excel)",
+  "JSON 格式無效": "Invalid JSON",
+  "JSON（完整）": "JSON (full)",
+  "LRC 時間碼匯入": "Imported from LRC timecodes",
+  "LRC 歌詞": "LRC lyrics",
+  "MV 工作站 — 1080p 60fps 敘事分鏡 MV": "MV Studio — 1080p 60fps storyboard MV",
+  "MV 歌名 *": "MV song title *",
+  "NVENC GPU 硬體加速管線": "NVENC GPU hardware-accelerated pipeline",
+  "SIGN2MV 不提供「清空全部專案」；請勾選要刪除的專案再刪除。": "SIGN2MV does not offer \"clear all projects\"; check the projects to delete and delete them.",
+  "SRT 字幕": "SRT subtitles",
+  "Step 1｜母帶音源": "Step 1｜Audio",
+  "Whisper 偵測到人聲停這麼久以上，才算間奏": "Only vocal pauses at least this long (detected by Whisper) count as interludes",
+  "Whisper 分析失敗": "Whisper analysis failed",
+  "Whisper 前會先把人聲分離出來（成品 MV 仍用完整母帶）。勾這個再把主唱和和聲拆開，只用主唱抓字的時間；切換後下次對齊會重跑一次辨識": "Vocals are separated before Whisper runs (the final MV still uses the full audio). Check this to also split lead vocals from harmonies and time words from the lead only; after switching, the next alignment reruns recognition",
+  "Whisper 子程序異常結束": "Whisper subprocess exited unexpectedly",
+  "Whisper 沒有偵測到人聲": "Whisper detected no vocals",
+  "Whisper 沒有偵測到人聲（目前的時間軸沒有變更）": "Whisper detected no vocals (the current timeline was not changed)",
+  "Whisper 聲學分析中止": "Whisper analysis stopped",
+  "Whisper 聲學分析失敗": "Whisper analysis failed",
+  "Whisper 聲學快取 (秒開)": "Whisper cache (instant)",
+  "Whisper 語音辨識逾時": "Whisper recognition timed out",
+  "faster-whisper 語音模型逐字剖析": "faster-whisper word-level analysis",
+  "h264_nvenc (-preset p5 -b:v 8M -r 60) + AAC 320k 高音質母帶": "h264_nvenc (-preset p5 -b:v 8M -r 60) + AAC 320k high-quality audio",
+  "ℹ️ 目前沒有任何被定錨鎖定的段落": "ℹ️ No sections are locked right now",
+  "↩ 重播這句（前 2 秒起）": "↩ Replay this line (from 2 s before)",
+  "⏩ 間奏/片尾延展：": "⏩ Interlude/ending extension:",
+  "⏩ 間奏前＆片尾字幕自動延展 +2.5s": "⏩ Auto-extend subtitles before interludes ＆ at the ending +2.5s",
+  "⏪ 3 秒": "⏪ 3 s",
+  "⏪ 字幕提前進字：": "⏪ Subtitle lead-in:",
+  "⏱️ Step 4｜字幕時間軸微調器（支援 `02:29` 分秒與 `149.00s` 秒數雙向同步）": "⏱️ Step 4｜Subtitle timeline fine-tuner (`02:29` mm:ss and `149.00s` seconds stay in sync)",
+  "⏱️ 含時間碼": "⏱️ With timecodes",
+  "⏱️ 已載入含 [MM:SS.xx] 時間碼的 LRC 歌詞。": "⏱️ Loaded LRC lyrics with [MM:SS.xx] timecodes.",
+  "⏱️ 解析 [分:秒] 時間碼 / 均分時間": "⏱️ Parse [mm:ss] timecodes / split time evenly",
+  "⏳ NVENC 1080p 60fps 渲染中...": "⏳ Rendering NVENC 1080p 60fps...",
+  "⏳ 正在上傳並將": "⏳ Uploading",
+  "⏳ 正在依檔名順序批次上傳": "⏳ Batch uploading in filename order:",
+  "⏳ 正在分析與配置左側分鏡時間軸...": "⏳ Analyzing and laying out the scene timeline on the left...",
+  "⏳ 正在分析音頻並自動填入左側分鏡時間...": "⏳ Analyzing the audio and filling in the scene times on the left...",
+  "⏳ 正在執行任務...": "⏳ Running task...",
+  "⏳ 正在執行自動對齊並填入左側分鏡時間...": "⏳ Auto-aligning and filling in the scene times on the left...",
+  "⏳ 正在建立專案...": "⏳ Creating project...",
+  "⏳ 正在用 Whisper 逐字時間找人聲停頓...": "⏳ Finding vocal pauses from Whisper word timing...",
+  "⏸ 暫停": "⏸ Pause",
+  "⏹️ 已取消 MV 合成": "⏹️ MV render canceled",
+  "⏹️ 已由使用者手動終止": "⏹️ Stopped by user",
+  "⏹️ 強制跳出（直接填入保底時間）": "⏹️ Force stop (fill in fallback times)",
+  "⏹️ 強制跳出（立即填入保底時間軸）": "⏹️ Force stop (fill in fallback timeline now)",
+  "⏹️ 渲染已中止": "⏹️ Render aborted",
+  "⏹️ 渲染已手動終止，所有按鈕已恢復操作！": "⏹️ Render stopped manually; all buttons are usable again!",
+  "⏹️ 渲染已由使用者強制終止": "⏹️ Render stopped by user",
+  "⏹️ 終止渲染（中止並解鎖全部按鈕）": "⏹️ Stop render (abort and unlock all buttons)",
+  "▶ 播放": "▶ Play",
+  "⚠️ 主唱／和聲拆不開，這次用整條人聲辨識": "⚠️ Couldn't split lead vocal from harmonies; recognizing from the full vocal track this time",
+  "⚠️ 人聲分離沒有成功，這次改聽母帶辨識（沒人聲的地方會比較不準）": "⚠️ Vocal separation failed; recognizing from the full audio this time (less accurate where there are no vocals)",
+  "⚠️ 對齊沒有完成，時間軸保持原樣：": "⚠️ Alignment did not finish; timeline unchanged:",
+  "⚠️ 對齊沒有完成，時間軸保持原樣：使用者手動點擊「⏹️ 強制跳出等待」": "⚠️ Alignment did not finish; timeline unchanged: User clicked \"⏹️ Force stop waiting\"",
+  "⚠️ 對齊沒有完成，時間軸保持原樣：對齊回應異常": "⚠️ Alignment did not finish; timeline unchanged: Unexpected alignment response",
+  "⚠️ 對齊沒有完成，時間軸保持原樣：對齊異常自動保底": "⚠️ Alignment did not finish; timeline unchanged: Automatic fallback after an alignment problem",
+  "⚠️ 對齊沒有完成，時間軸保持原樣：等待逾時或已手動強制跳出": "⚠️ Alignment did not finish; timeline unchanged: Timed out or force-stopped",
+  "⚠️ 對齊沒有完成，時間軸沒有變更": "⚠️ Alignment did not finish; the timeline was not changed",
+  "⚠️ 對齊沒有完成，目前的時間軸保持原樣": "⚠️ Alignment did not finish; the current timeline is unchanged",
+  "⚠️ 提醒：您尚未在上方「Step 1」選擇母帶音檔！系統已先幫左側照片自動分配預設連續時間軸（您可先微調秒數）；若要使用 Whisper 語音辨識對齊，請先在 Step 1 下拉選單挑選音檔後再按一次！": "⚠️ Note: no audio selected in \"Step 1\" above! A default continuous timeline was assigned to the photos on the left (you can fine-tune the times). To align with Whisper, pick an audio file in the Step 1 dropdown and press it again!",
+  "⚠️ 時間軸沒有變更": "⚠️ Timeline not changed",
+  "⚠️ 目前尚未渲染成品 MV 影片，請先點擊上方紅色「🎬 啟動 1080p 60fps NVENC 極速渲染」按鈕！": "⚠️ No finished MV yet. Click the red \"🎬 Start 1080p 60fps NVENC fast render\" button above first!",
+  "⚠️ 目前尚未綁定母帶音檔！請從上方「從現有音檔庫快速選擇」下拉選單挑選音檔，或點擊「📥 點擊置入音檔」": "⚠️ No audio linked yet! Pick a file from the \"quick select from existing audio\" dropdown above, or click \"📥 Click to add audio\"",
+  "⚠️ 目前尚未載入專案，無法匯出": "⚠️ No project loaded; nothing to export",
+  "⚠️ 請先勾選要刪除的照片！": "⚠️ Check the photos to delete first!",
+  "⚠️ 警告：確定要將目前專案的所有分鏡照片「全刪光」（清空圖庫）嗎？": "⚠️ Warning: delete ALL scene photos in this project (clear the gallery)?",
+  "⚠️ 警告：確定要將目前專案的所有分鏡照片「全刪光」（清空圖庫）嗎？\n此動作將會清除本專案所有已上傳的分鏡圖片，且音軌對齊時間軸將同步重置！": "⚠️ Warning: delete ALL scene photos in this project (clear the gallery)?\nThis removes every uploaded scene photo in this project and also resets the audio alignment timeline!",
+  "⚠️ 這段間奏蓋到歌詞，下列歌詞被壓短了一半以上：": "⚠️ This interlude overlaps lyrics; these lines were shortened by more than half:",
+  "⚡ 已自動完成保底時間軸配置（原因：使用者手動點擊「⏹️ 強制跳出等待」）": "⚡ Fallback timeline applied automatically (reason: User clicked \"⏹️ Force stop waiting\")",
+  "⚡ 已自動完成保底時間軸配置（原因：對齊回應異常）": "⚡ Fallback timeline applied automatically (reason: Unexpected alignment response)",
+  "⚡ 已自動完成保底時間軸配置（原因：對齊異常自動保底）": "⚡ Fallback timeline applied automatically (reason: Automatic fallback after an alignment problem)",
+  "⚡ 已自動完成保底時間軸配置（原因：等待逾時或已手動強制跳出）": "⚡ Fallback timeline applied automatically (reason: Timed out or force-stopped)",
+  "⚡ 時間軸保底配置完成（已填入全部卡片，可直接微調）": "⚡ Fallback timeline applied (all cards filled; fine-tune as needed)",
+  "⚡ 檢視 Whisper 逐字聲學時間戳": "⚡ View Whisper word timestamps",
+  "⚡ 正在載入/剖析 Whisper 逐字聲學時間戳...": "⚡ Loading/analyzing Whisper word timestamps...",
+  "⚡ 貼上並依 Whisper 自動對齊": "⚡ Paste & auto-align with Whisper",
+  "⚡ 貼上並依 Whisper 自動對齊 (-0.7s提前＋0.4s轉場＋尾韻延展)": "⚡ Paste & auto-align with Whisper (-0.7s lead-in ＋ 0.4s transition ＋ tail extension)",
+  "✅ Whisper 自動對齊成功！": "✅ Whisper auto-align succeeded!",
+  "✅ 已依檔名順序成功放入": "✅ Placed in filename order:",
+  "✅ 已成功將": "✅ Placed",
+  "✅ 已成功新增": "✅ Added",
+  "✏️ 僅替換歌詞文字 (保留目前秒數)": "✏️ Replace lyric text only (keep current times)",
+  "✔ 1080p 60fps（有 NVIDIA 顯示卡時硬體加速）": "✔ 1080p 60fps (hardware-accelerated with an NVIDIA GPU)",
+  "✔ 下次對齊改用整條人聲抓字的時間（會重跑一次辨識）": "✔ Next alignment will time words from the full vocal track (recognition reruns once)",
+  "✔ 下次對齊會先拆出主唱、只用主唱抓字的時間（會重跑一次辨識；成品仍用完整母帶）": "✔ Next alignment will split out the lead vocal and time words from it only (recognition reruns once; the final video still uses the full audio)",
+  "✔ 合成時唱歌段會在字幕下方顯示頻譜跳動": "✔ Sung sections will show a bouncing spectrum below the subtitles",
+  "✔ 套用勾選的間奏": "✔ Apply selected interludes",
+  "✔ 字幕會唱到哪個字、那個字變金色": "✔ Each subtitle word turns gold as it is sung",
+  "✔ 專屬照片": "✔ Dedicated photo",
+  "✔ 已刪除專屬照片，改回沿用 Scene 照片": "✔ Dedicated photo removed; using the Scene photo again",
+  "✔ 已刪除間奏": "✔ Interlude deleted",
+  "✔ 已啟動保底時間軸配置完成": "✔ Fallback timeline applied",
+  "✔ 已跳出等待並套用保底連續時間軸": "✔ Stopped waiting and applied a continuous fallback timeline",
+  "✔ 已載入 Whisper 逐字聲學快取": "✔ Loaded Whisper word-timing cache",
+  "✔ 已關閉逐字變金": "✔ Karaoke highlight turned off",
+  "✔ 已關閉頻譜跳動": "✔ Spectrum turned off",
+  "✔ 支援拖曳放圖＆批次放圖": "✔ Drag & drop and batch photo upload",
+  "✔ 支援貼上整首歌詞自動對齊": "✔ Paste full lyrics for auto-align",
+  "✔ 畫面不出現「AI」字樣": "✔ The video never shows the word \"AI\"",
+  "✔ 逐字變金改成平均分散：開口時第一個字亮、最後一個音時最後一個字亮": "✔ Karaoke highlight set to spread evenly: first character lights when singing starts, last on the final syllable",
+  "✔ 逐字變金改成跟著人聲：每個字對到唱出來的那個音": "✔ Karaoke highlight set to follow vocals: each character matches its sung syllable",
+  "✔ 這段顯示名牌卡": "✔ This section shows the title card",
+  "✔ 這段顯示照片＋字（不顯示名牌卡）": "✔ This section shows photo ＋ text (no title card)",
+  "✕ 關閉": "✕ Close",
+  "✨ 字幕逐字變金": "✨ Karaoke gold highlight",
+  "✨ 新建歌曲 MV 專案": "✨ New song MV project",
+  "✨ 轉場時間：": "✨ Transition length:",
+  "❌ MV 合成失敗": "❌ MV render failed",
+  "❌ 匯入儲存失敗：": "❌ Import/save failed:",
+  "⬇️ 匯出/下載 MV 影片": "⬇️ Export/download MV video",
+  "「⚡ 貼上並依 Whisper 自動對齊」": "\"⚡ Paste & auto-align with Whisper\"",
+  "」的下拉選單選；也可以把電腦裡的音檔拖進播放器。": "\"; you can also drag an audio file from your computer onto the player.",
+  "」；若只想換文字，請先在上方框內貼上歌詞。": "\" button on the left; to replace the text only, paste the lyrics into the box above first.",
+  "一鍵清空目前專案的所有分鏡照片（全刪光）": "Clear all scene photos in this project in one click (delete all)",
+  "上傳圖": "Upload",
+  "上傳失敗": "Upload failed",
+  "上傳更換這張照片": "Upload a replacement for this photo",
+  "下一段": "the next section",
+  "不加的話會被當成一句歌詞：前奏卡會被擠到幾乎沒有、最後一句會被提早切掉、間奏會逐字變金還出現頻譜。": "Without it, the line is treated as a lyric: the intro card gets squeezed to almost nothing, the last line is cut early, and the interlude gets karaoke highlighting and a spectrum.",
+  "並自動轉為 1920x1080...": ", resizing to 1920x1080...",
+  "中間開門": "Doors open",
+  "主唱": "lead vocal",
+  "也可直接將 .wav / .mp3 / .m4a 音檔拖曳到此處置入": "You can also drag a .wav / .mp3 / .m4a file here",
+  "交叉淡化": "Crossfade",
+  "人聲停": "Vocal pause",
+  "人聲從": "Vocals run from",
+  "位置不正確": "Invalid position",
+  "作曲人": "Composer",
+  "作詞人": "Lyricist",
+  "使用者手動點擊「⏹️ 強制跳出等待」": "User clicked \"⏹️ Force stop waiting\"",
+  "使用者新增的間奏": "User-added interlude",
+  "例如：nanduyequ": "e.g. nanduyequ",
+  "例如：南都夜曲": "e.g. 南都夜曲",
+  "例如：郭玉蘭": "e.g. 郭玉蘭",
+  "例如：陳一郎": "e.g. 陳一郎",
+  "例如：陳達儒": "e.g. 陳達儒",
+  "依序自動填入），並在卡片下方": "to fill them in order), and below the card",
+  "依序（1→20 循環）": "In order (cycle 1→20)",
+  "依檔名順序，從最後一張照片的下一格接著放（不會蓋掉已有的照片；要整組換新請先按「全刪光」）。也可以把多張照片直接拖到某一格，從那一格開始依序放（會蓋掉那幾格）": "Adds photos in filename order, starting after the last photo (existing photos are kept; to replace the whole set, press \"Delete all\" first). You can also drag several photos onto a slot to fill from that slot onward (overwrites those slots)",
+  "保底連續時間軸 (可直接微調起迄秒數)": "Continuous fallback timeline (start/end times can be fine-tuned)",
+  "備註": "Notes",
+  "儲存當前專案設定至伺服器": "Save the current project settings to the server",
+  "全片「": "Whole video \"",
+  "全選": "Select all",
+  "兩格都沒有照片": "Neither slot has a photo",
+  "共 0 段": "0 sections",
+  "分鏡/秒數備註...": "Scene / timing notes...",
+  "分鏡圖 (Scene)": "Photo (Scene)",
+  "分鏡照片槽位數量 (N張)": "Number of photo slots (N)",
+  "分鏡美學主題描述": "Storyboard theme description",
+  "分離人聲": "separated vocals",
+  "刪掉專屬照片（改回沿用 Scene 照片）": "Remove the dedicated photo (go back to the Scene photo)",
+  "刪掉這段的專屬照片？": "Remove this section's dedicated photo?",
+  "刪掉這段的專屬照片？\n（刪掉後改回沿用 Scene 照片；時間和字幕不變）": "Remove this section's dedicated photo?\n(It goes back to the Scene photo; time and subtitle stay the same)",
+  "刪除後無法復原。": "This cannot be undone.",
+  "刪除所有勾選的分鏡圖片": "Delete all selected scene photos",
+  "刪除此列": "Delete this row",
+  "刪除此張分鏡照片": "Delete this scene photo",
+  "刪除這段間奏（時間還給前一段）": "Delete this interlude (its time goes back to the previous section)",
+  "前一段": "the previous section",
+  "前奏": "Intro",
+  "前幾個交界：": "First boundaries:",
+  "前後兩段都鎖定，刪掉會留下空白；請先解鎖其中一段": "Both neighboring sections are locked, so deleting would leave a gap; unlock one of them first",
+  "勾選此專案以進行刪除": "Check this project to delete it",
+  "勾選此張照片以進行批次刪除": "Check this photo for batch delete",
+  "匯入現有專案 JSON 設定檔": "Import an existing project JSON file",
+  "匯出 [Scene 01] 歌詞 對照格式": "Export in \"[Scene 01] lyric\" format",
+  "匯出/下載已渲染完成的 1080p 60fps MP4 影片": "Export/download the rendered 1080p 60fps MP4 video",
+  "匯出目前專案設定檔 (JSON)": "Export the current project file (JSON)",
+  "即時合成此幕 1080p 畫面": "Live 1080p preview of this scene",
+  "即時合成預覽這張照片＋歌詞": "Live preview of this photo ＋ lyric",
+  "即時合成預覽這段": "Live preview of this section",
+  "即時對字幕": "Live subtitle check",
+  "即時檢視左上角徽章、漸層暗角與底部金框字幕": "Live view of the top-left badge, gradient vignette and gold-framed subtitles",
+  "原唱人": "Original singer",
+  "原因：使用者手動點擊「⏹️ 強制跳出等待」": "Reason: User clicked \"⏹️ Force stop waiting\"",
+  "原因：對齊回應異常": "Reason: Unexpected alignment response",
+  "原因：對齊異常自動保底": "Reason: Automatic fallback after an alignment problem",
+  "原因：等待逾時或已手動強制跳出": "Reason: Timed out or force-stopped",
+  "原曲音訊": "Original track",
+  "取消": "Cancel",
+  "只有照片做轉場，標題與字幕淡入淡出；前後同一張照片時照片不轉場": "Only photos transition; titles and subtitles fade in/out. No photo transition when both sides use the same photo",
+  "只能開啟歌曲庫裡的檔案": "Only files in the Song Library can be opened",
+  "可以到「工作佇列」查看": "See the \"Job Queue\"",
+  "可以稍後再按一次對齊（例如等其他工作結束，可到「工作佇列」查看），或直接在卡片上微調時間。": "You can align again later (for example after other jobs finish; see the \"Job Queue\"), or fine-tune the times on the cards directly.",
+  "各專案的分鏡照片與成品 MV 檔案會留在原資料夾（只有空白專案 new_song 的照片會清掉）。": "Scene photos and finished MV files stay in their folders (only the photos of the blank project new_song are cleared).",
+  "同一張照片": "same photo",
+  "同一張照片（只換字幕）": "Same photo (subtitle change only)",
+  "名牌卡＝畫面中間的歌名＋作詞作曲卡；照片＋字＝只有照片和下方字幕": "Title card = song title ＋ lyricist/composer card in the center; Photo ＋ text = just the photo and the subtitle below",
+  "向上推": "Push up",
+  "向下推": "Push down",
+  "向右推": "Push right",
+  "向左推": "Push left",
+  "唱到哪個字，那個字就變金色（用 Whisper 辨識到的每個字的時間）": "Each word turns gold as it is sung (uses per-word timing from Whisper)",
+  "唱歌（歌詞段）時在字幕下方顯示跟著音樂跳動的金色頻譜，不會蓋到字幕；前奏／間奏／尾奏不顯示": "During sung (lyric) sections, shows a gold spectrum bouncing to the music below the subtitles without covering them; hidden during intro/interlude/outro",
+  "唱錄": "Recording",
+  "固定一種": "Single style",
+  "圓形展開": "Circle open",
+  "圓形收合": "Circle close",
+  "在下方插入一列": "Insert a row below",
+  "在此直接輸入或修改這張照片的歌詞...": "Type or edit this photo's lyric here...",
+  "在此貼上整首歌詞（一行一句）...\n例如：\n是幸福是不幸 環境來造成\n恩恩怨怨分未清 何必抱不平": "Paste the full lyrics here (one line per lyric)...\ne.g.:\n是幸福是不幸 環境來造成\n恩恩怨怨分未清 何必抱不平",
+  "在此貼上整首歌詞（一行一句）... 例如： 是幸福是不幸 環境來造成 恩恩怨怨分未清 何必抱不平": "Paste the full lyrics here (one line per lyric)... e.g.: 是幸福是不幸 環境來造成 恩恩怨怨分未清 何必抱不平",
+  "在畫廊最後方新增一個空白照片槽位": "Add an empty photo slot at the end of the gallery",
+  "在這張前面插入一個空白照片格（後面的照片往後讓一號，每句歌詞還是配原本的照片）": "Insert an empty photo slot before this one (later photos shift down one number; each lyric keeps its original photo)",
+  "多張分鏡圖": "multiple scene photos",
+  "天藍": "Sky blue",
+  "套用提前": "Apply lead-in",
+  "字幕": "Subtitles",
+  "字幕內容（自動過濾 AI 字樣）": "Subtitle text (\"AI\" filtered automatically)",
+  "將已渲染完成的 1080p 60fps MP4 影片下載至本機": "Download the rendered 1080p 60fps MP4 video to this computer",
+  "將目前時間軸匯出為 [MM:SS.xx] LRC 格式": "Export the current timeline as [MM:SS.xx] LRC",
+  "將目前時間軸的純歌詞載入下方文字框": "Load the plain lyrics of the current timeline into the box below",
+  "專屬照片": "dedicated photo",
+  "專案代碼（英文小寫，可留空）": "Project code (lowercase letters, optional)",
+  "對齊回應異常": "Unexpected alignment response",
+  "對齊異常自動保底": "Automatic fallback after an alignment problem",
+  "導演分鏡 / 對齊備註": "Director / alignment notes",
+  "尚未分配歌詞時間（請在右側貼上歌詞並點擊「⚡ 貼上並依 Whisper 自動對齊」）": "No lyric timing yet (paste lyrics on the right and click \"⚡ Paste & auto-align with Whisper\")",
+  "尚未渲染 MV 影片（渲染完成後即可在此下載）": "No MV rendered yet (download it here after rendering)",
+  "尚未渲染成品 MP4": "No MP4 rendered yet",
+  "尾奏": "Outro",
+  "左上角紅底金框徽章": "Top-left badge (red with gold border)",
+  "已取消 MV 合成": "MV render canceled",
+  "已取消對齊：請在前奏／間奏／尾奏前後加 ～ 再按一次": "Alignment canceled: add ～ around the intro/interlude/outro lines and try again",
+  "已定錨鎖定（重跑 Whisper 對齊時時間絕對不動，點擊解除）": "Locked (time stays fixed when Whisper re-aligns; click to unlock)",
+  "已定錨鎖定（重跑 Whisper 對齊時此段時間絕對不動，點擊解除）": "Locked (this section keeps its time when Whisper re-aligns; click to unlock)",
+  "已由使用者取消": "Canceled by user",
+  "已由使用者取消 Whisper 語音辨識": "Whisper recognition canceled by user",
+  "已自動填入左側照片卡片": "Photo cards on the left filled in",
+  "已解鎖並恢復所有介面按鈕": "All buttons unlocked and restored",
+  "幕次": "Scene",
+  "待命中": "Idle",
+  "待配對": "Unassigned",
+  "後面的照片會往前補號，時間軸不會清空：每句歌詞還是配原本的照片，用到被刪照片的那幾句改用前一句的照片。": "Later photos shift up to fill the gap and the timeline is kept: each lyric keeps its photo, and lines that used a deleted photo use the previous line's photo.",
+  "從切入點前 0.5 秒試聽對齊度": "Listen from 0.5 s before the cue to check alignment",
+  "從剛剛改過時間的那一句（沒改過就是目前這句）開始前 2 秒播放": "Play from 2 s before the line you just retimed (or the current line if none)",
+  "從目前播放位置加一段 8 秒間奏（可再改時間）": "Add an 8 s interlude at the current playback position (you can change the time later)",
+  "從電腦直接置入新音檔（支援點擊或拖曳）": "Add a new audio file from your computer (click or drag)",
+  "忽略快取，強制重新跑一次 Whisper 語音辨識並對齊（已定錨段落依然保留不動）": "Ignore the cache and rerun Whisper recognition and alignment (locked sections stay unchanged)",
+  "您現在可以直接在左側任一張照片調整「起 / 迄」時間（改一張前後自動連動銜接）！": "You can now adjust start/end times on any photo on the left (neighbors follow automatically)!",
+  "您現在可直接點擊任一卡片的": "You can now click any card's",
+  "或修改歌詞！": "or edit the lyrics!",
+  "或直接改時間，前後張會自動連動銜接。": "or edit the time directly; neighboring cards follow automatically.",
+  "批次上傳失敗": "Batch upload failed",
+  "找不到 Whisper 模型，請重新執行 install.bat": "Whisper model not found; run install.bat again",
+  "找不到檔案": "File not found",
+  "找不到這個專案，請重新整理": "Project not found; please refresh",
+  "把目前時間軸（每段的起迄時間、字幕、照片）存成檔案，之後生影片可以用": "Save the current timeline (start/end times, subtitles and photo of each section) to a file for later video work",
+  "拉遠溶解": "Zoom-out dissolve",
+  "拉長尾韻 +2.0s (適用間奏前與片尾)": "Extend tail +2.0 s (for lines before an interlude or at the ending)",
+  "拖曳/點擊換圖": "drag/click to replace the photo",
+  "按「▶ 播放」或播放上方的母帶音檔，畫面會跟著時間換圖換字幕": "Press \"▶ Play\" or play the audio above; the picture and subtitles follow the playback time",
+  "按「取消」先不對齊，讓你自己改。": "Press \"Cancel\" to skip aligning so you can fix it yourself.",
+  "按「確定」幫你改成「～ 間奏 ～」這種寫法再對齊；": "Press \"OK\" to rewrite it in the \"～ 間奏 ～\" form and then align;",
+  "推近溶解": "Zoom-in dissolve",
+  "提前進字": "lead-in",
+  "提前進字）": "lead-in applied)",
+  "提醒：字幕框目前是空的！": "Note: the subtitle box is empty!",
+  "換圖": "Replace",
+  "播放音檔時即時顯示當下的分鏡圖與字幕（時間點照成品規則：換段前 0.4 秒淡入），不用出影片就能對字幕": "While the audio plays, shows the current scene and subtitle live (same timing as the final video: fades in 0.4 s before each change), so you can check subtitles without rendering",
+  "操作": "Actions",
+  "操作狀態待命": "Ready",
+  "收起": "Collapse",
+  "改成「～ 間奏 ～」？": "to \"～ 間奏 ～\" (interlude)?",
+  "放入": "in",
+  "放入／更換這段的專屬照片": "Add / replace this section's dedicated photo",
+  "斜角擦除": "Diagonal wipe",
+  "新增歌詞段落": "Add lyric section",
+  "新歌專案": "New song project",
+  "新歌詞段落": "New lyric section",
+  "時鐘掃描": "Clock wipe",
+  "時間不變；原本這句歌詞會從時間軸拿掉（要的話之後可以再改回來）。": "The time stays the same; the original lyric is removed from the timeline (you can change it back later).",
+  "時間局部微調": "Local time adjustment",
+  "時間軸不需要移動": "The timeline does not need to move",
+  "時間軸分佈": "Timeline range",
+  "智能容錯保底連續時間軸": "Smart fallback continuous timeline",
+  "會一起刪除：專案設定與時間軸、分鏡照片、成品 MV、專案音檔、Whisper 辨識結果、合成暫存。": "This also deletes: project settings and timeline, scene photos, finished MV, project audio, Whisper results and render cache.",
+  "會刪除「所有」專案的設定與時間軸（含手調過的字幕時間），回到一個全新空白專案。": "This deletes the settings and timelines of ALL projects (including hand-tuned subtitle times) and returns to one new blank project.",
+  "未命名歌曲": "Untitled",
+  "未知錯誤": "Unknown error",
+  "未鎖定：可直接輸入或微調起訖時間": "Unlocked: type or fine-tune start/end times",
+  "模糊溶解": "Blur dissolve",
+  "橫百葉窗": "Horizontal blinds",
+  "檔案太大": "File too large",
+  "歌名（左上角大標題）": "Song title (large top-left title)",
+  "歌曲（SIGN2MV 歌曲庫）*": "Song (SIGN2MV Song Library) *",
+  "歌詞": "Lyrics",
+  "正在上傳專屬照片...": "Uploading dedicated photo...",
+  "正在啟動後端處理程序（若不想等待可隨時點右上方「⏹️ 強制跳出」）...": "Starting the server process (click \"⏹️ Force stop\" at the top right any time if you don't want to wait)...",
+  "正在檢查母帶音源與分鏡資產": "Checking audio and scene assets",
+  "正在連線後端 GPU 管線...": "Connecting to the GPU pipeline...",
+  "此動作將會清除本專案所有已上傳的分鏡圖片，且音軌對齊時間軸將同步重置！": "This removes every uploaded scene photo in this project and also resets the audio alignment timeline!",
+  "母帶音檔路徑": "Audio file path",
+  "母帶音源載入中...": "Loading audio...",
+  "沒有勾選任何間奏": "No interludes selected",
+  "沒有找到（可以把秒數調小再找一次）": "None found (try a smaller number of seconds)",
+  "沒有指定要刪的照片": "No photo specified to delete",
+  "清空下方文字框以便重新貼上歌詞": "Clear the text box below to paste lyrics again",
+  "渲染失敗": "Render failed",
+  "渲染失敗：": "Render failed:",
+  "渲染發生錯誤：": "Render error:",
+  "準備開始...": "Getting ready...",
+  "無法播放：": "Cannot play:",
+  "照片最多 36 張，已經放滿了": "Up to 36 photos; all slots are full",
+  "照片牆、Whisper 逐字對齊、20 種轉場；名牌卡的名字來自 SIGN2MV「設定」": "Photo wall, word-level Whisper alignment, 20 transitions; title card names come from SIGN2MV \"Settings\"",
+  "照片編號不正確": "Invalid photo number",
+  "片尾名牌卡": "Outro title card",
+  "片尾名牌卡底部落款 (Outro Card)": "Outro title card signature (Outro Card)",
+  "片尾榮譽名牌卡": "Outro title card",
+  "現在您可以直接在左側任一張照片調整「起 / 迄」時間，前一張結尾與後一張開頭會自動同步銜接！": "You can now adjust start/end times on any photo on the left; the previous card's end and the next card's start follow automatically!",
+  "用 Whisper 辨識到的每個字的時間，找出人聲停很久的地方": "Use the per-word timing from Whisper to find long vocal pauses",
+  "由上往下擦除": "Wipe top to bottom",
+  "由右往左擦除": "Wipe right to left",
+  "由左往右擦除": "Wipe left to right",
+  "白光閃": "White flash",
+  "白色": "White",
+  "直百葉窗": "Vertical blinds",
+  "確定要清空重置嗎？": "Clear and reset everything?",
+  "確定要清空重置嗎？\n\n會刪除「所有」專案的設定與時間軸（含手調過的字幕時間），回到一個全新空白專案。\n各專案的分鏡照片與成品 MV 檔案會留在原資料夾（只有空白專案 new_song 的照片會清掉）。\n刪除後無法復原。": "Clear and reset everything?\n\nThis deletes the settings and timelines of ALL projects (including hand-tuned subtitle times) and returns to one new blank project.\nScene photos and finished MV files stay in their folders (only the photos of the blank project new_song are cleared).\nThis cannot be undone.",
+  "秒": "s",
+  "秒以上": "s or longer",
+  "第一句主歌進字": "First verse line enters",
+  "等待逾時或已手動強制跳出": "Timed out or force-stopped",
+  "粉紅": "Pink",
+  "結束": "End",
+  "結束時間 (`MM:SS` / `秒`)": "End (`MM:SS` / `sec`)",
+  "結束時間 (支援 MM:SS 或秒數，修改後下一張開頭自動銜接)": "End time (MM:SS or seconds; the next card's start follows)",
+  "結束時間延後 0.5s": "End 0.5 s later",
+  "結束時間拉長 +2.0s": "Extend end by +2.0 s",
+  "結束時間提早 0.5s": "End 0.5 s earlier",
+  "結束時間（MM:SS 或秒數）": "End time (MM:SS or seconds)",
+  "絕不卡死保護": "No-hang protection",
+  "翠綠": "Emerald",
+  "翻唱者": "Cover singer",
+  "自動填滿連續「起 / 迄」時間軸！": "on the left with a continuous start/end timeline!",
+  "自動縮放為 1920x1080 放入": ", resizing to 1920x1080 and placing it in",
+  "自動過濾任何「AI」字樣": "Automatically filters out any \"AI\" text",
+  "自訂…": "Custom…",
+  "處理中…": "Processing…",
+  "要解除這些段落的鎖定，並加入間奏嗎？": "Unlock these sections and add the interlude?",
+  "解除所有卡片的定錨鎖定，讓 Whisper 重新對齊全部段落": "Unlock all cards so Whisper re-aligns every section",
+  "解除所有段落的定錨鎖定": "Unlock all sections",
+  "設為目前播放器時間": "Set to current player time",
+  "設為目前播放秒數": "Set to current playback time",
+  "設為目前音檔秒數": "Set to current audio time",
+  "調整起迄時間（改一張前後張自動連動銜接）": "adjust start/end times (neighboring cards follow automatically)",
+  "請先在 Step 1 選擇母帶音檔": "Select an audio file in Step 1 first",
+  "請先在左上角專案按鈕旁打勾要刪除的專案！": "First check the projects to delete next to the project buttons at the top left!",
+  "請先建立或選擇專案！": "Create or select a project first!",
+  "請先選一個專案（決定要匯入到哪一首歌），再匯入": "Select a project first (to decide which song to import into), then import",
+  "請先選擇這個 MV 用的歌曲": "Select the song for this MV first",
+  "請先選擇這個 MV 用的歌曲（要新增歌曲請到「歌曲庫」匯入）": "Select the song for this MV first (to add songs, import them in the \"Song Library\")",
+  "請從右側下拉選擇音檔或點擊置入音檔...": "Pick an audio file from the dropdown on the right or click to add one...",
+  "請輸入槽位數量 N (例如 12, 24, 30...)": "Enter the number of slots N (e.g. 12, 24, 30...)",
+  "請選擇 WAV／MP3／M4A／FLAC 音檔": "Choose a WAV／MP3／M4A／FLAC audio file",
+  "貼上的字幕內容不能為空！請先在字幕框輸入或貼上歌詞。": "The pasted subtitles cannot be empty! Type or paste lyrics into the subtitle box first.",
+  "起": "Start",
+  "跟前一張對調（歌詞不動：這一格的歌詞改顯示換過來的照片）": "Swap with the previous photo (lyrics stay put: this slot's lyric now shows the swapped-in photo)",
+  "跟後一張對調（歌詞不動）": "Swap with the next photo (lyrics stay put)",
+  "跟著人聲：歌詞第幾個字對到唱出來的第幾個音（台語被聽成國語同音字也照位置配）。平均分散：第一個字在開口時亮、最後一個字在最後一個音時亮，中間平均": "Follow vocals: the Nth lyric character is matched to the Nth sung syllable (matched by position even when Taiwanese is heard as Mandarin homophones). Spread evenly: the first character lights when singing starts, the last on the final syllable, evenly in between",
+  "跳到這段試聽": "Jump here and listen",
+  "跳轉試聽這張照片對應的歌聲": "Jump to and listen to this photo's vocals",
+  "輸入 MM:SS 如 02:29 自動換算秒數": "Enter MM:SS such as 02:29 to convert to seconds",
+  "輸入結束時間": "Enter end time",
+  "迄": "End",
+  "這不是支援的音檔格式": "Unsupported audio format",
+  "這段下方顯示的字（可留空）": "Text shown below for this section (optional)",
+  "這段時間放不下間奏（前後都是鎖定段）": "An interlude does not fit here (locked sections on both sides)",
+  "這段時間會併到下一段。": "Its time will be merged into the next section.",
+  "這段時間會併到前一段。": "Its time will be merged into the previous section.",
+  "這段的專屬照片也會一起刪掉。": "This section's dedicated photo will be deleted too.",
+  "這段還沒有代號，請稍候再試（存檔後會自動補上）": "This section has no ID yet; try again in a moment (it is added on save)",
+  "這段間奏已鎖定，請先解鎖再刪除": "This interlude is locked; unlock it before deleting",
+  "這裡已經有間奏卡（預設不勾）": "There is already an interlude here (unchecked by default)",
+  "這裡離下一段鎖定段不到 1 秒，放不下間奏；請換個位置或先解鎖": "Less than 1 s before the next locked section, so an interlude won't fit; pick another spot or unlock first",
+  "這首歌的音檔（原曲／唱錄／翻唱成品）": "This song's audio (original / recording / finished cover)",
+  "選取一張圖片直接放入下一個空白槽位": "Pick one photo and put it in the next empty slot",
+  "選擇這張照片要顯示在哪一句歌詞，或當前奏／間奏／尾奏": "Choose which lyric line this photo shows on, or use it as intro / interlude / outro",
+  "還沒有 Whisper 辨識結果：請先在右側按「⚡ 貼上並依 Whisper 自動對齊」跑一次，再來找間奏": "No Whisper results yet: click \"⚡ Paste & auto-align with Whisper\" on the right once, then look for interludes",
+  "還沒有前奏卡：請先在右側貼歌詞對齊，程式會自動做出前奏卡": "No intro card yet: paste lyrics on the right and align; the intro card is created automatically",
+  "還沒有尾奏卡：請先在右側貼歌詞對齊，程式會自動做出尾奏卡": "No outro card yet: paste lyrics on the right and align; the outro card is created automatically",
+  "還沒有時間軸": "No timeline yet",
+  "還沒有時間軸可以匯出：請先貼歌詞對齊": "No timeline to export yet: paste lyrics and align first",
+  "還沒有時間軸（先在右側貼歌詞對齊），之後這裡會出現前奏、尾奏，也可以加間奏。": "No timeline yet (paste lyrics on the right and align first). The intro and outro will then appear here, and you can add interludes.",
+  "還沒有時間軸：請先在右側貼歌詞對齊，再加間奏": "No timeline yet: paste lyrics on the right and align first, then add interludes",
+  "還沒有時間軸：請先貼歌詞對齊": "No timeline yet: paste lyrics and align first",
+  "還沒有時間軸：請先貼歌詞對齊，再加間奏": "No timeline yet: paste lyrics and align first, then add interludes",
+  "還沒有選擇母帶音檔，無法用 Whisper 對齊；請先在 Step 1 選音檔": "No audio selected, so Whisper cannot align; select an audio file in Step 1 first",
+  "還沒有選擇母帶音檔，無法用 Whisper 對齊；請先在 Step 1 選音檔（目前的時間軸沒有變更）": "No audio selected, so Whisper cannot align; select an audio file in Step 1 first (the current timeline was not changed)",
+  "金色": "Gold",
+  "金色提前": "Gold lead",
+  "金色比人聲早一點亮，看的人有反應時間（0～1 秒，預設 0.30）": "Light up the gold slightly before the voice so viewers can keep up (0–1 s, default 0.30)",
+  "錄音混音出品": "Recording & mixing studio",
+  "鎖定": "Locked",
+  "開場/片尾卡大字（寬字距）": "Intro/outro card headline (wide letter spacing)",
+  "開場名牌卡": "Intro title card",
+  "開場名牌卡 (Intro)": "Intro title card (Intro)",
+  "開場名牌卡底部文字 (Intro Card)": "Intro title card bottom text (Intro Card)",
+  "開場榮譽名牌卡": "Intro title card",
+  "開始": "Start",
+  "開始、": "to",
+  "開始時間 (`MM:SS` / `秒`)": "Start (`MM:SS` / `sec`)",
+  "開始時間 (支援 MM:SS 或秒數，修改後前一張結尾自動銜接)": "Start time (MM:SS or seconds; the previous card's end follows)",
+  "開始時間延後 0.5s": "Start 0.5 s later",
+  "開始時間提早 0.5s": "Start 0.5 s earlier",
+  "開始時間（MM:SS 或秒數）": "Start time (MM:SS or seconds)",
+  "間奏": "Interlude",
+  "間奏的開始／結束時間不正確": "Invalid interlude start/end time",
+  "間奏至少要 1 秒": "An interlude must be at least 1 s",
+  "關閉": "Close",
+  "隨機": "Random",
+  "隨機模式：重新抽一組轉場（同一組每次合成結果都一樣）": "Random mode: draw a new set of transitions (the same set always renders the same way)",
+  "音檔": "Audio",
+  "音軌對齊已同步重置": "Audio alignment reset",
+  "音軌對齊待重做": "Audio alignment needs redoing",
+  "順序": "Order",
+  "頻譜柱的顏色": "Spectrum bar color",
+  "類型": "Type",
+  "顯示：": "Display:",
+  "首句進字": "First line in at",
+  "黑場": "Fade to black",
+  "點擊任一卡片的": "Click any card's",
+  "點擊定錨鎖定此段時間": "Click to lock this section's time",
+  "點擊定錨鎖定（重跑 Whisper 對齊時保護此段時間不被覆蓋）": "Click to lock (protects this section's time from Whisper re-alignment)",
+  "點擊或拖曳圖片放入這段的專屬照片": "Click or drag an image to set this section's dedicated photo",
+  "點擊立即下載已渲染完成的 1080p 60fps MV 影片": "Click to download the rendered 1080p 60fps MV video",
+  "（全新空白專案）": "(New blank project)",
+  "（刪掉後改回沿用 Scene 照片；時間和字幕不變）": "(It goes back to the Scene photo; time and subtitle stay the same)",
+  "（前後一定要加 ～，半形 ~ 也可以；Scene 編號＝用哪張照片）。": "(the ～ on both sides is required; a half-width ~ also works; the Scene number = which photo to use).",
+  "（前後的段落會自動讓開；加好後可以再改時間、放專屬照片）": "(Surrounding sections move aside automatically; afterwards you can change the time and add a dedicated photo)",
+  "（已套用": "(",
+  "（按「取消」就什麼都不改）": "(Press \"Cancel\" to change nothing)",
+  "（按「取消」就跳過這段間奏）": "(Press \"Cancel\" to skip this interlude)",
+  "（支援一次拖曳或批次選取": "(drag in or batch-select",
+  "（歌曲庫的原曲、唱錄與翻唱成品不會被刪）": "(Original tracks, recordings and finished covers in the Song Library are not deleted)",
+  "（歌曲庫還沒有歌曲，請先到「歌曲庫」匯入）": "(The Song Library has no songs yet; import some in the \"Song Library\" first)",
+  "（沒放就沿用該段 Scene 的照片）。用「＋ 新增間奏」加的間奏，重新對齊歌詞時會保留，前後歌詞自動讓開。": "(otherwise it uses that Scene's photo). Interludes added with \"＋ Add interlude\" are kept when you re-align the lyrics; the lyrics around them move aside automatically.",
+  "（片尾）": "(ending)",
+  "（自動轉 1920x1080）": "(auto-resized to 1920x1080)",
+  "）！接下來請在右側貼上歌詞並點擊「⚡ 貼上並依 Whisper 自動對齊」。": ")! Next, paste lyrics on the right and click \"⚡ Paste & auto-align with Whisper\".",
+  "＋ 前面插一張": "＋ Insert before",
+  "＋ 放入單張照片": "＋ Add one photo",
+  "＋ 新增時間軸段落": "＋ Add timeline section",
+  "＋ 新增照片槽位": "＋ Add photo slot",
+  "＋ 新增間奏": "＋ Add interlude",
+  "＋ 新建歌曲 MV 專案": "＋ New song MV project",
+  "，系統會分析音頻並自動填入左側每張照片的時間與歌詞。": "; the audio is analyzed and the time and lyric of every photo on the left are filled in automatically.",
+  "，請放入新分鏡圖片後，至 Step 3 重新執行對齊。": "; add new scene photos, then run alignment again in Step 3.",
+  "：共配置": ": laid out",
+  "：圖庫已全刪光，請重新放入分鏡圖並點擊「⚡ 貼上並依 Whisper 自動對齊」重新生成時間軸！": ": the gallery was cleared. Add scene photos again and click \"⚡ Paste & auto-align with Whisper\" to rebuild the timeline!",
+  "：已為左側全部": ": filled every",
+  "：建立後先用這首歌的原曲音訊（或從唱錄／翻唱帶過來的成品）。要換成唱錄或翻唱成品，到「": ": the new project starts with this song's original track (or the finished take passed over from recording / cover). To switch to a recording or finished cover, use the dropdown in \"",
+  "：畫面字幕會變成「～ 前奏 ～」這類字樣，右側歌詞也會跟著加上": ": the on-screen subtitle becomes text like \"～ 前奏 ～\", and the lyrics on the right get a matching line",
+  "：請在上方貼入歌詞（一行一句），再點擊": ": paste the lyrics above (one line per lyric), then click",
+  "～ 末句結束": "～ last line ends at",
+  "🌟 前奏": "🌟 Intro",
+  "🌟 前奏／🎻 間奏／🎬 尾奏": "🌟 Intro／🎻 Interlude／🎬 Outro",
+  "🌟 開場卡": "🌟 Intro card",
+  "🎉 執行完成！": "🎉 Done!",
+  "🎙️ Whisper 逐字聲學定位紀錄（點擊任一句可跳轉音檔試聽）：": "🎙️ Whisper word-timing log (click a line to jump there in the audio):",
+  "🎙️ [階段 1/3] GPU 顯存忙碌，自動切換至 CPU int8 模式載入模型...": "🎙️ [Stage 1/3] GPU memory busy; loading the model in CPU int8 mode...",
+  "🎙️ [階段 1/3] 正在啟動獨立聲學環境載入 faster-whisper 模型...": "🎙️ [Stage 1/3] Starting a separate environment and loading the faster-whisper model...",
+  "🎙️ [階段 2/3] CUDA 推理中斷，自動切換 CPU int8 重新剖析...": "🎙️ [Stage 2/3] CUDA inference interrupted; re-analyzing on CPU int8...",
+  "🎙️ 已載入 Whisper 逐字聲學定位快取": "🎙️ Loaded Whisper word-timing cache",
+  "🎙️ 正在執行 Whisper 聲學對齊與字幕時間軸計算...": "🎙️ Running Whisper alignment and building the subtitle timeline...",
+  "🎙️ 正在強制重跑 Whisper 語音辨識與對齊...": "🎙️ Rerunning Whisper recognition and alignment...",
+  "🎙️ 正在讀取 Whisper 逐字聲學定位快取...": "🎙️ Reading Whisper word-timing cache...",
+  "🎚️ 唱歌時顯示頻譜跳動": "🎚️ Show spectrum while singing",
+  "🎞️ 轉場變化：": "🎞️ Transition pattern:",
+  "🎤 [階段 0/3] 正在把主唱和和聲拆開（卡拉 OK 模型）...": "🎤 [Stage 0/3] Separating lead vocal from harmonies (karaoke model)...",
+  "🎤 [階段 0/3] 正在把人聲從母帶分離出來（Demucs）...": "🎤 [Stage 0/3] Separating vocals from the audio (Demucs)...",
+  "🎤 [階段 0/3] 正在準備音檔…": "🎤 [Stage 0/3] Preparing audio…",
+  "🎤 已用主唱校正字的時間": "🎤 Word timing corrected using the lead vocal",
+  "🎤 已用分離人聲校正字的時間": "🎤 Word timing corrected using the separated vocals",
+  "🎤 有和聲：歌詞以主唱為主": "🎤 Has harmonies: follow the lead vocal",
+  "🎤 歌詞": "🎤 Lyric",
+  "🎤 跟著人聲": "🎤 Follow vocals",
+  "🎬 [階段 3/4] 正在執行 NVENC 1080p 60fps 硬體加速編碼封裝...": "🎬 [Stage 3/4] Encoding 1080p 60fps with NVENC hardware acceleration...",
+  "🎬 [階段 3/4] 顯示卡編碼失敗，改用 CPU（libx264）編碼，會比較慢...": "🎬 [Stage 3/4] GPU encoding failed; falling back to CPU (libx264), which is slower...",
+  "🎬 啟動 1080p 60fps NVENC 極速渲染": "🎬 Start 1080p 60fps NVENC fast render",
+  "🎬 尾奏": "🎬 Outro",
+  "🎬 播放成品 MV (.mp4)": "🎬 Play finished MV (.mp4)",
+  "🎬 正在合成 1080p 漸層暗角、0.40s 餘弦跨幀轉場並啟動 h264_nvenc 硬體加速渲染...": "🎬 Compositing 1080p gradient vignette and 0.40s cosine cross-frame transitions, starting h264_nvenc hardware render...",
+  "🎬 正在處理中...": "🎬 Processing...",
+  "🎬 片尾卡": "🎬 Outro card",
+  "🎯 配對歌詞＆時間：": "🎯 Lyric ＆ time:",
+  "🎲 重新抽": "🎲 Reshuffle",
+  "🎵 Step 1｜母帶音源與名牌設定": "🎵 Step 1｜Audio & title card settings",
+  "🎵 即時對字幕": "🎵 Live subtitle check",
+  "🎻 間奏": "🎻 Interlude",
+  "🎼 前奏／間奏／尾奏": "🎼 Intro／Interlude／Outro",
+  "🎼 前奏／間奏／尾奏請寫成": "🎼 Write intro/interlude/outro lines as",
+  "🎼 卡片下拉可選": "🎼 The card dropdown can set",
+  "👁️ 預覽": "👁️ Preview",
+  "👈 也可以在左邊照片卡的下拉選「🌟 前奏／🎻 間奏／🎬 尾奏」，這裡會自動加上那一行。前奏、尾奏沒寫的話，程式會自動做，照片用第一句／最後一句的。": "👈 You can also pick \"🌟 Intro／🎻 Interlude／🎬 Outro\" in a photo card's dropdown on the left and the line is added here automatically. If you leave out the intro or outro, they are created automatically using the photo of the first / last line.",
+  "👉 若您想直接讓 AI 聽音辨識填入左側照片時間，請點左邊金色的「": "👉 To let AI listen to the audio and fill in the photo times on the left, click the gold \"",
+  "💡 一行一句歌詞貼在下方（支援純文字、`[Scene 05] 歌詞` 指定照片格式、或 `[00:23.22] 歌詞` 時間碼格式）：": "💡 Paste one lyric line per row below (plain text, `[Scene 05] lyric` to pick a photo, or `[00:23.22] lyric` timecodes):",
+  "💡 可直接輸入分秒（如 `02:29`、`03:13`）或秒數，點「🎧」可從該句切入前 0.5 秒試聽，點「+2s」可拉長間奏前或片尾字幕餘韻。": "💡 Enter mm:ss (e.g. `02:29`, `03:13`) or seconds. Click \"🎧\" to listen from 0.5 s before the line, or \"+2s\" to extend the tail before an interlude or at the ending.",
+  "💡 提醒：因原本尚未建立時間軸，系統已自動為您貼上的歌詞配置連續時間軸並填入左側照片卡片！": "💡 Note: since there was no timeline yet, a continuous timeline was created for your pasted lyrics and filled into the photo cards on the left!",
+  "💡 每張照片卡片可直接": "💡 On each photo card you can",
+  "💡 每段可放一張": "💡 Each section can have its own",
+  "💡 請先貼上歌詞，或點擊金色「⚡ 貼上並依 Whisper 自動對齊」按鈕！": "💡 Paste lyrics first, or click the gold \"⚡ Paste & auto-align with Whisper\" button!",
+  "💥 全刪光 (清空全部圖片)": "💥 Delete all (clear every photo)",
+  "💥 已全刪光！所有分鏡照片已清空，音軌對齊已同步重置待重做。": "💥 All deleted! Scene photos cleared; audio alignment reset and needs redoing.",
+  "💥 所有分鏡照片已全刪光！": "💥 All scene photos deleted!",
+  "💾 下載帶時間歌詞": "💾 Download timed lyrics",
+  "💾 儲存專案": "💾 Save project",
+  "📁 批次選取多張圖片依序放入": "📁 Batch-add multiple photos in order",
+  "📋 已載入目前時間軸的純歌詞。": "📋 Loaded the plain lyrics of the current timeline.",
+  "📋 純歌詞": "📋 Plain lyrics",
+  "📏 平均分散（頭尾對人聲）": "📏 Spread evenly (ends match vocals)",
+  "📝 Step 3｜一鍵貼上整首歌詞 / 字幕區": "📝 Step 3｜Paste full lyrics / subtitles",
+  "📤 匯入專案": "📤 Import project",
+  "📤 換圖": "📤 Replace",
+  "📥 匯出專案 (JSON)": "📥 Export project (JSON)",
+  "📥 支援直接將電腦音檔拖曳（Drag & Drop）到此播放框置入": "📥 Drag & drop an audio file from your computer onto this player",
+  "📥 請在檔案視窗選擇照片，將放在最後一張照片之後：": "📥 Choose photos in the file dialog; they will be placed after the last photo:",
+  "📥 點擊或拖曳放入專屬照片": "📥 Click or drag to add a dedicated photo",
+  "📥 點擊或拖曳放入照片": "📥 Click or drag to add a photo",
+  "📥 點擊置入音檔 (.wav / .mp3 / .m4a)": "📥 Click to add audio (.wav / .mp3 / .m4a)",
+  "🔄 已清空所有舊專案與快取！現在是 100% 全新空白狀態，請從頭開始測試。": "🔄 All old projects and caches cleared! Everything is now 100% blank; start testing from scratch.",
+  "🔄 強制重跑 Whisper 辨識並對齊": "🔄 Rerun Whisper recognition & align",
+  "🔍 [階段 4/4] 正在執行 ffprobe 物理規格檢驗與關鍵秒數抽幀驗收...": "🔍 [Stage 4/4] Verifying specs with ffprobe and checking frames at key times...",
+  "🔍 自動找間奏": "🔍 Find interludes",
+  "🔒 已定錨": "🔒 Locked",
+  "🔒 此段落已定錨鎖定（誰都不能改！請先點擊上方「🔒已定錨」解鎖後才可修改）": "🔒 This section is locked (no changes allowed! Click \"🔒 Locked\" above to unlock it first)",
+  "🔒 此段落已鎖定（誰都不能改）": "🔒 This section is locked (no changes allowed)",
+  "🔓 全部解除定錨": "🔓 Unlock all",
+  "🔓 未鎖": "🔓 Unlocked",
+  "🔢 沒寫 [Scene NN] 的行照「第幾行」對照片（前奏／間奏／尾奏行也算一張）：第 1 行＝Scene 01、第 2 行＝Scene 02……": "🔢 Lines without [Scene NN] are matched to photos by line number (intro/interlude/outro lines count too): line 1 = Scene 01, line 2 = Scene 02…",
+  "🔼 收起「字幕時間軸微調列表」": "🔼 Hide the \"subtitle timeline list\"",
+  "🔽 展開「字幕時間軸微調列表」（預設收起 · 要用時打開）": "🔽 Show the \"subtitle timeline list\" (collapsed by default · open when needed)",
+  "🖼️ Step 2｜分鏡照片畫廊 ＆「照片指定歌詞」工作台": "🖼️ Step 2｜Scene photo gallery ＆ \"assign lyrics to photos\" workbench",
+  "🖼️ 即時 1080p 畫面合成預覽 ＆ 成品 MV 播放器": "🖼️ Live 1080p composite preview ＆ finished MV player",
+  "🖼️ 合成單幀預覽": "🖼️ Single-frame preview",
+  "🖼️ 含照片編號": "🖼️ With photo numbers",
+  "🖼️ 已載入含 [Scene XX] 照片編號的歌詞。": "🖼️ Loaded lyrics with [Scene XX] photo numbers.",
+  "🖼️ 照片＋字": "🖼️ Photo ＋ text",
+  "🗑️ 刪圖": "🗑️ Delete",
+  "🗑️ 刪除勾選 (": "🗑️ Delete selected (",
+  "🗑️ 刪除勾選圖片 (": "🗑️ Delete selected photos (",
+  "🗑️ 刪除間奏": "🗑️ Delete interlude",
+  "🚀 立即建立並載入專案": "🚀 Create & open project",
+  "🧹 已清空歌詞輸入框，請貼入新歌詞或直接點下方 Whisper 按鈕。": "🧹 Lyrics box cleared. Paste new lyrics or click the Whisper button below.",
+  "🧹 清空": "🧹 Clear",
+  "🪪 名牌卡": "🪪 Title card",
+  "📤 專屬照片": "📤 Own photo"
+ },
+ "patterns": [
+  {
+   "zh": "💡 提醒：因右側字幕框尚未貼入自訂歌詞，系統已自動用 Whisper 聽音辨識出的詞句填滿左側 {0} 張照片的時間與字幕！若台語/國語同音字有誤差，您可直接在卡片上改字，或貼上正確歌詞後點「✏️ 僅替換歌詞文字（保留時間）」。",
+   "en": "💡 Note: no lyrics were pasted in the subtitle box on the right, so the words recognized by Whisper were used to fill the times and subtitles of the {0} photos on the left! If Taiwanese/Mandarin homophones are wrong, edit the text on the cards, or paste the correct lyrics and click \"✏️ Replace lyric text only (keep times)\"."
+  },
+  {
+   "zh": "{0} 沒有加 ～。\n不加的話會被當成一句歌詞：前奏卡會被擠到幾乎沒有、最後一句會被提早切掉、間奏會逐字變金還出現頻譜。\n\n按「確定」幫你改成「～ 間奏 ～」這種寫法再對齊；\n按「取消」先不對齊，讓你自己改。",
+   "en": "{0} is missing ～.\nWithout it, the line is treated as a lyric: the intro card gets squeezed to almost nothing, the last line is cut early, and the interlude gets karaoke highlighting and a spectrum.\n\nPress \"OK\" to rewrite it in the \"～ 間奏 ～\" form and then align;\nPress \"Cancel\" to skip aligning so you can fix it yourself."
+  },
+  {
+   "zh": "確定要刪除勾選的 {0} 個專案嗎？\n\n會一起刪除：專案設定與時間軸、分鏡照片、成品 MV、專案音檔、Whisper 辨識結果、合成暫存。\n刪除後無法復原。\n（歌曲庫的原曲、唱錄與翻唱成品不會被刪）",
+   "en": "Delete the {0} selected projects?\n\nThis also deletes: project settings and timeline, scene photos, finished MV, project audio, Whisper results and render cache.\nThis cannot be undone.\n(Original tracks, recordings and finished covers in the Song Library are not deleted)"
+  },
+  {
+   "zh": "前一張 Scene {0}（{1} ~ {2}）已鎖定，兩張的交界 {3} 跟著被固定。\n\n要解除 Scene {4} 的鎖定，並把交界移到 {5} 嗎？\n（按「取消」就什麼都不改）",
+   "en": "The previous Scene {0} ({1} ~ {2}) is locked, so the boundary at {3} is fixed too.\n\nUnlock Scene {4} and move the boundary to {5}?\n(Press \"Cancel\" to change nothing)"
+  },
+  {
+   "zh": "下一張 Scene {0}（{1} ~ {2}）已鎖定，兩張的交界 {3} 跟著被固定。\n\n要解除 Scene {4} 的鎖定，並把交界移到 {5} 嗎？\n（按「取消」就什麼都不改）",
+   "en": "The next Scene {0} ({1} ~ {2}) is locked, so the boundary at {3} is fixed too.\n\nUnlock Scene {4} and move the boundary to {5}?\n(Press \"Cancel\" to change nothing)"
+  },
+  {
+   "zh": "⚠️ Whisper 語音分析中途發生異常（{0}），系統已自動啟動容錯保底機制，為您填滿全部 {1} 張照片的連續時間軸，您可直接微調秒數！",
+   "en": "⚠️ Whisper analysis hit a problem ({0}); the fallback filled a continuous timeline for all {1} photos. You can fine-tune the times!"
+  },
+  {
+   "zh": "⚡ 時間軸保底配置完成（已填入全部卡片，可直接微調） (耗時 {0}s ｜ 來源：faster-whisper 語音模型逐字剖析)",
+   "en": "⚡ Fallback timeline applied (all cards filled; fine-tune as needed) (took {0}s ｜ source: faster-whisper word-level analysis)"
+  },
+  {
+   "zh": "✔ 前奏卡改用 {0}；但前奏卡目前有專屬照片，畫面會先用專屬照片（要改用這張，請到下方「🎼 前奏／間奏／尾奏」把專屬照片刪掉）",
+   "en": "✔ Intro card now uses {0}; but the intro card has a dedicated photo, which takes priority (to use this one, delete the dedicated photo under \"🎼 Intro／Interlude／Outro\" below)"
+  },
+  {
+   "zh": "✔ 尾奏卡改用 {0}；但尾奏卡目前有專屬照片，畫面會先用專屬照片（要改用這張，請到下方「🎼 前奏／間奏／尾奏」把專屬照片刪掉）",
+   "en": "✔ Outro card now uses {0}; but the outro card has a dedicated photo, which takes priority (to use this one, delete the dedicated photo under \"🎼 Intro／Interlude／Outro\" below)"
+  },
+  {
+   "zh": "把第 {0} 段（{1} ~ {2}）的字\n「{3}」\n改成「～ 間奏 ～」？\n\n時間不變；原本這句歌詞會從時間軸拿掉（要的話之後可以再改回來）。",
+   "en": "Change the text of section {0} ({1} ~ {2})\n\"{3}\"\nto \"～ 間奏 ～\" (interlude)?\n\nThe time stays the same; the original lyric is removed from the timeline (you can change it back later)."
+  },
+  {
+   "zh": "刪除 {0} 的照片？\n\n後面的照片會往前補號，時間軸不會清空：每句歌詞還是配原本的照片，用到被刪照片的那幾句改用前一句的照片。",
+   "en": "Delete the photo of {0}?\n\nLater photos shift up to fill the gap and the timeline is kept: each lyric keeps its photo, and lines that used a deleted photo use the previous line's photo."
+  },
+  {
+   "zh": "✔ 母帶就緒：{0}Hz / {1}ch / 總長 {2}s ({3}) / {4} MB · ⚠️ 警告：前奏無伴奏 (RMS={5})，疑似純人聲乾音！",
+   "en": "✔ Audio ready: {0}Hz / {1}ch / length {2}s ({3}) / {4} MB · ⚠️ Warning: no backing track in the intro (RMS={5}); this looks like a dry vocal-only file!"
+  },
+  {
+   "zh": "⚠️ Whisper 未偵測到有效人聲片段，系統已自動啟動保底機制，幫左側 {0} 張照片分配連續時間軸，您可直接微調秒數！",
+   "en": "⚠️ Whisper found no usable vocal segments; the fallback assigned a continuous timeline to the {0} photos on the left. You can fine-tune the times!"
+  },
+  {
+   "zh": "成品 MV 正被其他程式開著（例如影片播放器），無法覆寫：{0}。新的 MV 已做好，在 {1}；關掉播放後再合成一次即可。（{2}）",
+   "en": "The finished MV is open in another program (e.g. a video player) and cannot be overwritten: {0}. The new MV is ready at {1}; close the player and render again. ({2})"
+  },
+  {
+   "zh": "✔ {0}卡改用 {1}；但{2}卡目前有專屬照片，畫面會先用專屬照片（要改用這張，請到下方「🎼 前奏／間奏／尾奏」把專屬照片刪掉）",
+   "en": "✔ {0} card now uses {1}; but the {2} card has a dedicated photo, which takes priority (to use this one, delete the dedicated photo under \"🎼 Intro／Interlude／Outro\" below)"
+  },
+  {
+   "zh": "🔒 定錨保護生效：已為您精準凍結 {0} 個定錨段落（時間 100% 不變），其餘段落已完成 Whisper 重新對齊！",
+   "en": "🔒 Lock protection applied: {0} locked sections kept frozen (times 100% unchanged); the other sections were re-aligned with Whisper!"
+  },
+  {
+   "zh": "⚡ 時間軸保底配置完成（已填入全部卡片，可直接微調） (耗時 {0}s ｜ 來源：Whisper 聲學快取 (秒開))",
+   "en": "⚡ Fallback timeline applied (all cards filled; fine-tune as needed) (took {0}s ｜ source: Whisper cache (instant))"
+  },
+  {
+   "zh": "✅ Whisper 自動對齊成功！ (耗時 {0}s ｜ 來源：faster-whisper 語音模型逐字剖析)",
+   "en": "✅ Whisper auto-align succeeded! (took {0}s ｜ source: faster-whisper word-level analysis)"
+  },
+  {
+   "zh": "✔ 母帶就緒：{0}Hz / {1}ch / 總長 {2}s ({3}) / {4} MB · ✔ 含完整伴奏＋人聲 (前奏RMS={5})",
+   "en": "✔ Audio ready: {0}Hz / {1}ch / length {2}s ({3}) / {4} MB · ✔ Full backing track ＋ vocals (intro RMS={5})"
+  },
+  {
+   "zh": "間奏 {0} ~ {1} 疊到已鎖定的段落：\n{2}\n\n要解除這些段落的鎖定，並加入間奏嗎？\n（按「取消」就跳過這段間奏）",
+   "en": "Interlude {0} ~ {1} overlaps locked sections:\n{2}\n\nUnlock these sections and add the interlude?\n(Press \"Cancel\" to skip this interlude)"
+  },
+  {
+   "zh": "🔒 已定錨鎖定第 {0} 段 (Scene {1})！重跑 Whisper 自動對齊時此段將 100% 保持不動。",
+   "en": "🔒 Locked section {0} (Scene {1})! It stays 100% unchanged when Whisper auto-align reruns."
+  },
+  {
+   "zh": "✔ 已在歌詞框第 {0} 行加入「{1}」；按「⚡ 貼上並依 Whisper 自動對齊」後，間奏會放到人聲停的地方",
+   "en": "✔ Added \"{1}\" at line {0} of the lyrics box; after \"⚡ Paste & auto-align with Whisper\", the interlude is placed where the vocals pause"
+  },
+  {
+   "zh": "⚡ 時間軸保底配置完成（已填入全部卡片，可直接微調） (耗時 {0}s ｜ 來源：智能容錯保底連續時間軸)",
+   "en": "⚡ Fallback timeline applied (all cards filled; fine-tune as needed) (took {0}s ｜ source: smart fallback continuous timeline)"
+  },
+  {
+   "zh": "⚠️ 對齊過程發生例外（{0}），系統已自動切換保底機制填滿全部 {1} 張照片的時間軸，您現在可直接微調秒數！",
+   "en": "⚠️ An exception occurred during alignment ({0}); switched to the fallback and filled the timeline for all {1} photos. You can fine-tune the times now!"
+  },
+  {
+   "zh": "🎉 已建立《{0}》專案（{1} 個分鏡槽位）！請確認「Step 1」的音檔，並於「Step 2」放入分鏡圖。",
+   "en": "🎉 Created project \"{0}\" ({1} photo slots)! Check the audio in \"Step 1\" and add scene photos in \"Step 2\"."
+  },
+  {
+   "zh": "💡 提醒：您尚未貼入歌詞，系統已先為左側 {0} 張照片平均分配連續時間軸，您可直接微調時間或輸入歌詞！",
+   "en": "💡 Note: no lyrics pasted yet, so an evenly spaced continuous timeline was assigned to the {0} photos on the left. Fine-tune the times or enter lyrics!"
+  },
+  {
+   "zh": "➕ 已在第 {0} 格插入空白照片格，後面的照片往後讓一號；點這格放照片，再用下拉或歌詞指定給哪一句。",
+   "en": "➕ Inserted an empty photo slot at position {0}; later photos shifted down one number. Click the slot to add a photo, then assign it to a line via the dropdown or the lyrics."
+  },
+  {
+   "zh": "✅ Whisper 自動對齊成功！ (耗時 {0}s ｜ 來源：Whisper 聲學快取 (秒開))",
+   "en": "✅ Whisper auto-align succeeded! (took {0}s ｜ source: Whisper cache (instant))"
+  },
+  {
+   "zh": "⚡ [階段 3/3] 正在依 Whisper 聲學自動切分並配對左側 {0} 張分鏡圖...",
+   "en": "⚡ [Stage 3/3] Splitting by Whisper timing and matching the {0} scene photos on the left..."
+  },
+  {
+   "zh": "⚡ [階段 3/3] 正在執行全局字詞流 DP 對齊 ({0} 句歌詞 ↔ 左側分鏡)...",
+   "en": "⚡ [Stage 3/3] Running global word-stream DP alignment ({0} lyric lines ↔ scenes on the left)..."
+  },
+  {
+   "zh": "在 {0} ~ {1} 加一段間奏？\n（前後的段落會自動讓開；加好後可以再改時間、放專屬照片）",
+   "en": "Add an interlude at {0} ~ {1}?\n(Surrounding sections move aside automatically; afterwards you can change the time and add a dedicated photo)"
+  },
+  {
+   "zh": "✅ Whisper 自動對齊成功！ (耗時 {0}s ｜ 來源：智能容錯保底連續時間軸)",
+   "en": "✅ Whisper auto-align succeeded! (took {0}s ｜ source: smart fallback continuous timeline)"
+  },
+  {
+   "zh": "🔓 已解除全部 {0} 個段落的定錨鎖定！重跑 Whisper 時將重新計算所有段落。",
+   "en": "🔓 Unlocked all {0} sections! Rerunning Whisper will recalculate every section."
+  },
+  {
+   "zh": "刪除間奏「{0}」（{1} ~ {2}）？\n這段時間會併到前一段。\n這段的專屬照片也會一起刪掉。",
+   "en": "Delete interlude \"{0}\" ({1} ~ {2})?\nIts time will be merged into the previous section.\nThis section's dedicated photo will be deleted too."
+  },
+  {
+   "zh": "刪除間奏「{0}」（{1} ~ {2}）？\n這段時間會併到下一段。\n這段的專屬照片也會一起刪掉。",
+   "en": "Delete interlude \"{0}\" ({1} ~ {2})?\nIts time will be merged into the next section.\nThis section's dedicated photo will be deleted too."
+  },
+  {
+   "zh": "⏱️ Scene {0} 時間已更新 ({1} ~ {2})，只動相鄰交界，其餘張數不受影響！",
+   "en": "⏱️ Scene {0} time updated ({1} ~ {2}); only the adjacent boundaries moved, other cards are unaffected!"
+  },
+  {
+   "zh": "🖼️ [階段 1/4] 正在合成 1080p 漸層暗角與金框字幕底圖 ({0}/{1})",
+   "en": "🖼️ [Stage 1/4] Compositing 1080p vignette and gold-framed subtitle frames ({0}/{1})"
+  },
+  {
+   "zh": "{0} 落在已鎖定的 Scene {1}（{2} ~ {3}）裡；請把播放位置移到別處，或先解鎖",
+   "en": "{0} falls inside locked Scene {1} ({2} ~ {3}); move the playback position elsewhere or unlock it first"
+  },
+  {
+   "zh": "🗑️ 已刪除 {0}，後面的照片往前補號；時間軸與右側歌詞的照片編號已跟著改。",
+   "en": "🗑️ Deleted {0}; later photos shifted up, and the photo numbers in the timeline and the lyrics on the right were updated."
+  },
+  {
+   "zh": "🎙️ [階段 2/3] Whisper{0} 逐字聲學定位中 ({1}s / {2}s)",
+   "en": "🎙️ [Stage 2/3] Whisper{0} word-level timing ({1}s / {2}s)"
+  },
+  {
+   "zh": "🎉《{0}》1080p 60fps MV 合成與抽幀驗收 100% 完成！",
+   "en": "🎉 \"{0}\" 1080p 60fps MV rendered and frame-checked, 100% done!"
+  },
+  {
+   "zh": "🎉《{0}》1080p 60fps MV 合成渲染與驗收完成！(耗時 {1}s)",
+   "en": "🎉 \"{0}\" 1080p 60fps MV rendered and verified! (took {1}s)"
+  },
+  {
+   "zh": "ffmpeg 編碼失敗（NVENC 與 libx264 都失敗）：{0}",
+   "en": "ffmpeg encoding failed (both NVENC and libx264 failed): {0}"
+  },
+  {
+   "zh": "前一張 Scene {0}（{1} ~ {2}）已鎖定，兩張的交界 {3} 跟著被固定。",
+   "en": "The previous Scene {0} ({1} ~ {2}) is locked, so the boundary at {3} is fixed too."
+  },
+  {
+   "zh": "下一張 Scene {0}（{1} ~ {2}）已鎖定，兩張的交界 {3} 跟著被固定。",
+   "en": "The next Scene {0} ({1} ~ {2}) is locked, so the boundary at {3} is fixed too."
+  },
+  {
+   "zh": "這段時間跟已鎖定的 Scene {0}（{1}~{2}s）重疊；請先解鎖或換個時間",
+   "en": "This time overlaps locked Scene {0} ({1}~{2}s); unlock it first or choose another time"
+  },
+  {
+   "zh": "⏱️ Scene {0} 時間已微調 ({1} ~ {2})，其他張數絕對不動！",
+   "en": "⏱️ Scene {0} time adjusted ({1} ~ {2}); other cards untouched!"
+  },
+  {
+   "zh": "📥 正在置入音檔 {0} 並執行 ffprobe 聲學規格檢測...",
+   "en": "📥 Adding audio {0} and checking its specs with ffprobe..."
+  },
+  {
+   "zh": "✔ 時間軸自動配置完成！(共 {0} 段分鏡，已套用 {1}s 提前進字)",
+   "en": "✔ Timeline laid out automatically! ({0} scenes, {1}s lead-in applied)"
+  },
+  {
+   "zh": "🎙️ [階段 2/3] 正在逐字剖析母帶人聲時間戳 ({0})...",
+   "en": "🎙️ [Stage 2/3] Extracting word timestamps from the vocals ({0})..."
+  },
+  {
+   "zh": "✔ 母帶就緒：{0}Hz / {1}ch / 總長 {2}s ({3}) / {4} MB",
+   "en": "✔ Audio ready: {0}Hz / {1}ch / length {2}s ({3}) / {4} MB"
+  },
+  {
+   "zh": "✔ 母帶就緒：{0}Hz / {1}ch / 總長 {2}s ({3}) / {4} MB{5}",
+   "en": "✔ Audio ready: {0}Hz / {1}ch / length {2}s ({3}) / {4} MB{5}"
+  },
+  {
+   "zh": "🔒 第 {0} 段 (Scene {1}) 已上鎖！未解鎖前誰都不能改！",
+   "en": "🔒 Section {0} (Scene {1}) is locked! No changes until it is unlocked!"
+  },
+  {
+   "zh": "✔ Scene {0} 與 Scene {1} 的照片已對調（歌詞不動）",
+   "en": "✔ Swapped the photos of Scene {0} and Scene {1} (lyrics unchanged)"
+  },
+  {
+   "zh": "· ⚠️ 警告：前奏無伴奏 (RMS={0})，疑似純人聲乾音！",
+   "en": "· ⚠️ Warning: no backing track in the intro (RMS={0}); this looks like a dry vocal-only file!"
+  },
+  {
+   "zh": "第 {0} 段 {1} ~ {2}：「{3}」　下一個轉場：同一張照片（只換字幕）",
+   "en": "Section {0} {1} ~ {2}: \"{3}\"　Next transition: same photo (subtitle change only)"
+  },
+  {
+   "zh": "空白照片槽位（目前共 {0} 個槽位）！可直接點擊該卡片放圖。",
+   "en": "empty photo slot (now {0} slots)! Click the card to add a photo."
+  },
+  {
+   "zh": "⏳ 正在載入並以 ffprobe 檢測音源規格：{0} ...",
+   "en": "⏳ Loading and checking audio specs with ffprobe: {0} ..."
+  },
+  {
+   "zh": "✔ 已將 Scene {0} 照片指定給第 {1} 段歌詞：「{2}」！",
+   "en": "✔ Assigned the Scene {0} photo to lyric section {1}: \"{2}\"!"
+  },
+  {
+   "zh": "✅ 時間軸已完成配置！已將 {0} 段時間填入左側照片卡片。",
+   "en": "✅ Timeline ready! Filled {0} section times into the photo cards on the left."
+  },
+  {
+   "zh": "✔ 已將間奏前與片尾前共 {0} 處歌詞尾韻往後延展 +{1}s！",
+   "en": "✔ Extended {0} lyric tails before interludes and the ending by +{1}s!"
+  },
+  {
+   "zh": "✔ 音檔置入成功：{0} ({1}Hz / 總長 {2}s / {3} MB)",
+   "en": "✔ Audio added: {0} ({1}Hz / length {2}s / {3} MB)"
+  },
+  {
+   "zh": "✨ [階段 2/4] 正在生成 {0}s 轉場（{1}）({2}/{3} 組)",
+   "en": "✨ [Stage 2/4] Generating {0}s transitions ({1}) ({2}/{3} pairs)"
+  },
+  {
+   "zh": "⚡ 已完成 {0} 張照片保底時間軸配置，可直接微調時間！",
+   "en": "⚡ Fallback timeline applied to {0} photos; fine-tune the times directly!"
+  },
+  {
+   "zh": "✔ 已依序放入 {0} 張分鏡圖 (Scene {1} ~ {2})！",
+   "en": "✔ Added {0} scene photos in order (Scene {1} ~ {2})!"
+  },
+  {
+   "zh": "套用 {0}s 提前進字與 +{1}s 尾韻延展（嚴格定錨約束）",
+   "en": "Applying {0}s lead-in and +{1}s tail extension (strict lock constraints)"
+  },
+  {
+   "zh": "✔ 已載入《{0}》({1} 個時間軸段落，共 {2} 個照片槽位)",
+   "en": "✔ Loaded \"{0}\" ({1} timeline sections, {2} photo slots)"
+  },
+  {
+   "zh": "要解除 Scene {0} 的鎖定，並把交界移到 {1} 嗎？",
+   "en": "Unlock Scene {0} and move the boundary to {1}?"
+  },
+  {
+   "zh": "✔ {0} 當間奏（{1} ~ {2}）：畫面字幕是「～ 間奏 ～」",
+   "en": "✔ {0} used as interlude ({1} ~ {2}): on-screen subtitle is \"～ 間奏 ～\""
+  },
+  {
+   "zh": "➔ 前一張 (Scene {0}) 結束時間已同步銜接為",
+   "en": "➔ Previous card (Scene {0}) end time synced to"
+  },
+  {
+   "zh": "➔ 下一張 (Scene {0}) 開始時間已同步銜接為",
+   "en": "➔ Next card (Scene {0}) start time synced to"
+  },
+  {
+   "zh": "⬇️ 正在匯出下載《{0}》成品 MV 影片 ({1})...",
+   "en": "⬇️ Downloading the finished MV of \"{0}\" ({1})..."
+  },
+  {
+   "zh": "🎬 正在合成《{0}》1080p 60fps MV...",
+   "en": "🎬 Rendering the 1080p 60fps MV of \"{0}\"..."
+  },
+  {
+   "zh": "🎉 渲染與抽幀驗收完成！耗時 {0}s ({1})，輸出路徑：{2}",
+   "en": "🎉 Render and frame check done! Took {0}s ({1}), output: {2}"
+  },
+  {
+   "zh": "✔ 已載入 {0} 句 Whisper 聲學時間軸 ({1})",
+   "en": "✔ Loaded {0} Whisper timed lines ({1})"
+  },
+  {
+   "zh": "✔ Whisper 逐字聲學剖析完成！(共 {0} 句)",
+   "en": "✔ Whisper word-level analysis done! ({0} lines)"
+  },
+  {
+   "zh": "Whisper 沒有完成：{0}（目前的時間軸沒有變更）",
+   "en": "Whisper did not finish: {0} (the current timeline was not changed)"
+  },
+  {
+   "zh": "🎬 準備合成《{0}》1080p 60fps MV...",
+   "en": "🎬 Preparing to render the 1080p 60fps MV of \"{0}\"..."
+  },
+  {
+   "zh": "✔ 已有成品 MV ({0} MB, {1}x{2} @ {3}fps)",
+   "en": "✔ Finished MV available ({0} MB, {1}x{2} @ {3}fps)"
+  },
+  {
+   "zh": "刪除間奏「{0}」（{1} ~ {2}）？\n這段時間會併到前一段。",
+   "en": "Delete interlude \"{0}\" ({1} ~ {2})?\nIts time will be merged into the previous section."
+  },
+  {
+   "zh": "刪除間奏「{0}」（{1} ~ {2}）？\n這段時間會併到下一段。",
+   "en": "Delete interlude \"{0}\" ({1} ~ {2})?\nIts time will be merged into the next section."
+  },
+  {
+   "zh": "還沒有{0}卡：請先在右側貼歌詞對齊，程式會自動做出{1}卡",
+   "en": "No {0} card yet: paste lyrics on the right and align; the {1} card is created automatically"
+  },
+  {
+   "zh": "➔ 前一張 (Scene {0}) 結束時間已自動改為",
+   "en": "➔ Previous card (Scene {0}) end time changed to"
+  },
+  {
+   "zh": "➔ 下一段 (Scene {0}) 開始時間已自動改為",
+   "en": "➔ Next section (Scene {0}) start time changed to"
+  },
+  {
+   "zh": "⏳ 排隊中：GPU 正在處理其他工作（第 {0} 個）",
+   "en": "⏳ Queued: the GPU is busy with other jobs (position {0})"
+  },
+  {
+   "zh": "⚠️ 疊到已鎖定的 {0}：套用時會先問你要不要解鎖",
+   "en": "⚠️ Overlaps locked {0}: you will be asked whether to unlock when applying"
+  },
+  {
+   "zh": "🔓 已解除定錨鎖定第 {0} 段 (Scene {1})。",
+   "en": "🔓 Unlocked section {0} (Scene {1})."
+  },
+  {
+   "zh": "切掉拖進器樂段的字 {0} 個、刪掉器樂段幻聽 {1} 個",
+   "en": "Trimmed {0} words that ran into instrumental parts, removed {1} phantom words in instrumental parts"
+  },
+  {
+   "zh": "Scene {0} (自動轉 1920x1080)",
+   "en": "Scene {0} (auto 1920x1080)"
+  },
+  {
+   "zh": "已將第 {0} 段結束時間拉長 +{1}s 至 {2} ({3}s)",
+   "en": "Extended section {0} end by +{1}s to {2} ({3}s)"
+  },
+  {
+   "zh": "{0}　第 {1} 段 · Scene {2}　→ 同一張照片",
+   "en": "{0}　Section {1} · Scene {2}　→ same photo"
+  },
+  {
+   "zh": "第 {0} 段 {1} ~ {2}：「{3}」　下一個轉場：（片尾）",
+   "en": "Section {0} {1} ~ {2}: \"{3}\"　Next transition: (ending)"
+  },
+  {
+   "zh": "預覽第 {0} 段 [Scene {1}] {2} ~ {3}：「{4}」",
+   "en": "Preview section {0} [Scene {1}] {2} ~ {3}: \"{4}\""
+  },
+  {
+   "zh": "⚠️ 間奏「{0}」{1}~{2}s 跟鎖定段落重疊，沒有放回",
+   "en": "⚠️ Interlude \"{0}\" {1}~{2}s overlaps a locked section and was not restored"
+  },
+  {
+   "zh": "· ✔ 含完整伴奏＋人聲 (前奏RMS={0})",
+   "en": "· ✔ Full backing track ＋ vocals (intro RMS={0})"
+  },
+  {
+   "zh": "沿用 Scene {0} 照片（尚未放專屬照片）",
+   "en": "Using the Scene {0} photo (no dedicated photo yet)"
+  },
+  {
+   "zh": "刪除間奏「{0}」（{1} ~ {2}）？\n這段時間會併到{3}。{4}",
+   "en": "Delete interlude \"{0}\" ({1} ~ {2})?\nIts time will be merged into {3}.{4}"
+  },
+  {
+   "zh": "已自動為下方 {0} 張照片卡片填入連續時間軸！",
+   "en": "Filled a continuous timeline into the {0} photo cards below!"
+  },
+  {
+   "zh": "已將第 {0} 段 {1} 設為目前播放時間 {2} ({3}s)",
+   "en": "Set section {0} {1} to the current playback time {2} ({3}s)"
+  },
+  {
+   "zh": "❌ 無法連線至 SIGN2MV 伺服器：{0}",
+   "en": "❌ Cannot connect to the SIGN2MV server: {0}"
+  },
+  {
+   "zh": "未變更：Scene {0} 仍鎖定，交界維持 {1}",
+   "en": "No change: Scene {0} is still locked; boundary stays at {1}"
+  },
+  {
+   "zh": "🎻 已加入「{0}」（第 {1} 行），對齊後生效。",
+   "en": "🎻 Added \"{0}\" (line {1}); takes effect after aligning."
+  },
+  {
+   "zh": "第 {0} 段歌詞（可直接修改文字與微調時間）",
+   "en": "Lyric section {0} (edit the text and fine-tune the time directly)"
+  },
+  {
+   "zh": "{0} 張照片卡片 (Scene 01 ~ {1})",
+   "en": "{0} photo cards (Scene 01 ~ {1})"
+  },
+  {
+   "zh": "✔ 母帶音檔已綁定並儲存：總長 {0}s ({1})",
+   "en": "✔ Audio linked and saved: length {0}s ({1})"
+  },
+  {
+   "zh": "正在依檔名順序批次上傳 {0} 張分鏡圖...",
+   "en": "Batch uploading {0} scene photos in filename order..."
+  },
+  {
+   "zh": "⚠️ 照片最多 36 張，有 {0} 張沒放：{1}{2}",
+   "en": "⚠️ Up to 36 photos; {0} were not added: {1}{2}"
+  },
+  {
+   "zh": "已從提前 {0}s 調整成提前 {1}s（移動 {2}s）",
+   "en": "Lead-in changed from {0}s to {1}s (shifted {2}s)"
+  },
+  {
+   "zh": "對齊時發生錯誤：{0}（目前的時間軸沒有變更）",
+   "en": "Error during alignment: {0} (the current timeline was not changed)"
+  },
+  {
+   "zh": "點擊或拖曳圖片更換 Scene {0} 照片",
+   "en": "Click or drag an image to replace the Scene {0} photo"
+  },
+  {
+   "zh": "⚡ 已自動完成保底時間軸配置（原因：{0}）",
+   "en": "⚡ Fallback timeline applied automatically (reason: {0})"
+  },
+  {
+   "zh": "（含開場卡與片尾卡共 {0} 段無縫時間軸）",
+   "en": "({0}-section seamless timeline including intro and outro cards)"
+  },
+  {
+   "zh": "已將 {0} 段歌詞與時間填入下方照片卡片！",
+   "en": "Filled {0} lyric sections and times into the photo cards below!"
+  },
+  {
+   "zh": "✔ 已成功放入 Scene {0} 分鏡圖！",
+   "en": "✔ Scene {0} photo added!"
+  },
+  {
+   "zh": "✔ 已在 Scene {0} 插入空白照片格",
+   "en": "✔ Inserted an empty photo slot at Scene {0}"
+  },
+  {
+   "zh": "這首歌已經有叫「{0}」的專案，請換一個代碼",
+   "en": "This song already has a project called \"{0}\"; choose another code"
+  },
+  {
+   "zh": "目前時間軸已經是提前 {0}s，不需要再移動",
+   "en": "The timeline already has a {0}s lead-in; no shift needed"
+  },
+  {
+   "zh": "MV 合成失敗：找不到指定的音源檔案：{0}",
+   "en": "MV render failed: audio file not found: {0}"
+  },
+  {
+   "zh": "LRC 匯入 (已套用 {0}s 提前進字)",
+   "en": "LRC import ({0}s lead-in applied)"
+  },
+  {
+   "zh": "✔ 已新增 Scene {0} 照片槽位！",
+   "en": "✔ Added photo slot Scene {0}!"
+  },
+  {
+   "zh": "⚠️ 對齊沒有完成，時間軸保持原樣：{0}",
+   "en": "⚠️ Alignment did not finish; timeline unchanged: {0}"
+  },
+  {
+   "zh": "第 {0} 段 {1} ~ {2}：「{3}」　下一個轉場：{4}",
+   "en": "Section {0} {1} ~ {2}: \"{3}\"　Next transition: {4}"
+  },
+  {
+   "zh": "正在上傳 Scene {0} 分鏡圖...",
+   "en": "Uploading Scene {0} photo..."
+  },
+  {
+   "zh": "🗑️ 已刪除 {0}，後面的照片往前補號",
+   "en": "🗑️ Deleted {0}; later photos shifted up"
+  },
+  {
+   "zh": "找不到專案 \"{0}\" (HTTP {1})",
+   "en": "Project \"{0}\" not found (HTTP {1})"
+  },
+  {
+   "zh": "間奏 {0} ~ {1} 疊到已鎖定的段落：",
+   "en": "Interlude {0} ~ {1} overlaps locked sections:"
+  },
+  {
+   "zh": "後端回傳非 JSON 回應 ({0})",
+   "en": "Server returned a non-JSON response ({0})"
+  },
+  {
+   "zh": "✔ 字幕與時間軸配置完成 ({0})！",
+   "en": "✔ Subtitles and timeline ready ({0})!"
+  },
+  {
+   "zh": "總耗時 {0}s ({1}) | 輸出路徑：{2}",
+   "en": "Total {0}s ({1}) | Output: {2}"
+  },
+  {
+   "zh": "套用 {0}s 提前進字與無縫轉場銜接",
+   "en": "Applying {0}s lead-in and seamless transitions"
+  },
+  {
+   "zh": "：Scene {0} (開始 {1}s) ➔",
+   "en": ": Scene {0} (start {1}s) ➔"
+  },
+  {
+   "zh": "：Scene {0} (結束 {1}s) ➔",
+   "en": ": Scene {0} (end {1}s) ➔"
+  },
+  {
+   "zh": "確定要刪除勾選的 {0} 個專案嗎？",
+   "en": "Delete the {0} selected projects?"
+  },
+  {
+   "zh": "結束；中間停 {0} 秒以上的地方：",
+   "en": "; pauses of {0} s or longer:"
+  },
+  {
+   "zh": "🎞️ 轉場：前幾個交界：{0}（{1}s）",
+   "en": "🎞️ Transitions: first boundaries: {0} ({1}s)"
+  },
+  {
+   "zh": "點擊更換 Scene {0} 分鏡圖",
+   "en": "Click to replace the Scene {0} photo"
+  },
+  {
+   "zh": "✔ {0} 當前奏：畫面字幕是「{1}」",
+   "en": "✔ {0} used as intro: on-screen subtitle is \"{1}\""
+  },
+  {
+   "zh": "✔ {0} 當尾奏：畫面字幕是「{1}」",
+   "en": "✔ {0} used as outro: on-screen subtitle is \"{1}\""
+  },
+  {
+   "zh": "⚠️ 找不到指定的音檔路徑：{0}",
+   "en": "⚠️ Audio path not found: {0}"
+  },
+  {
+   "zh": "{0}　第 {1} 段 · Scene {2}{3}{4}",
+   "en": "{0}　Section {1} · Scene {2}{3}{4}"
+  },
+  {
+   "zh": "{0}　第 {1} 段 · Scene {2}",
+   "en": "{0}　Section {1} · Scene {2}"
+  },
+  {
+   "zh": "建議進字(-0.7s): {0}s",
+   "en": "Suggested cue (-0.7s): {0}s"
+  },
+  {
+   "zh": "❌ 無法連線至後端伺服器：{0}",
+   "en": "❌ Cannot connect to the server: {0}"
+  },
+  {
+   "zh": "{0} (耗時 {1}s ｜ 來源：{2})",
+   "en": "{0} (took {1}s ｜ source: {2})"
+  },
+  {
+   "zh": "✔ 金色比人聲提前 {0} 秒亮",
+   "en": "✔ Gold lights up {0} s before the voice"
+  },
+  {
+   "zh": "🎞️ 轉場：全片「{0}」（{1}s）",
+   "en": "🎞️ Transitions: whole video \"{0}\" ({1}s)"
+  },
+  {
+   "zh": "📥 已成功匯出專案設定檔：{0}",
+   "en": "📥 Exported project file: {0}"
+  },
+  {
+   "zh": "Whisper 分析失敗：{0}",
+   "en": "Whisper analysis failed: {0}"
+  },
+  {
+   "zh": "Whisper 沒有完成：{0}",
+   "en": "Whisper did not finish: {0}"
+  },
+  {
+   "zh": "（間奏改用簡易方式放回：{0}）",
+   "en": "(Interludes restored the simple way: {0})"
+  },
+  {
+   "zh": "🗑️ 已刪除 {0} 個專案：{1}",
+   "en": "🗑️ Deleted {0} projects: {1}"
+  },
+  {
+   "zh": "在 {0} ~ {1} 加一段間奏？",
+   "en": "Add an interlude at {0} ~ {1}?"
+  },
+  {
+   "zh": "（人聲停 {0} 秒：{1} → {2}）",
+   "en": "(vocal pause {0} s: {1} → {2})"
+  },
+  {
+   "zh": "刪除間奏「{0}」（{1} ~ {2}）？",
+   "en": "Delete interlude \"{0}\" ({1} ~ {2})?"
+  },
+  {
+   "zh": "✔ {0} 當{1}：畫面字幕是「{2}」",
+   "en": "✔ {0} used as {1}: on-screen subtitle is \"{2}\""
+  },
+  {
+   "zh": "把第 {0} 段（{1} ~ {2}）的字",
+   "en": "Change the text of section {0} ({1} ~ {2})"
+  },
+  {
+   "zh": "✔ {0}（{1} 句，鎖定段不動）",
+   "en": "✔ {0} ({1} lines; locked sections unchanged)"
+  },
+  {
+   "zh": "Scene {0}（尚無照片）",
+   "en": "Scene {0} (no photo yet)"
+  },
+  {
+   "zh": "✔ 專案《{0}》已成功儲存！",
+   "en": "✔ Project \"{0}\" saved!"
+  },
+  {
+   "zh": "🎉 已成功建立《{0}》專案！",
+   "en": "🎉 Project \"{0}\" created!"
+  },
+  {
+   "zh": "照片最多 {0} 張，已經滿了",
+   "en": "Up to {0} photos; already full"
+  },
+  {
+   "zh": "{0}（目前的時間軸沒有變更）",
+   "en": "{0} (the current timeline was not changed)"
+  },
+  {
+   "zh": "✔ 已放入專屬照片（{0}）",
+   "en": "✔ Dedicated photo added ({0})"
+  },
+  {
+   "zh": "❌ 上傳專屬照片失敗：{0}",
+   "en": "❌ Failed to upload dedicated photo: {0}"
+  },
+  {
+   "zh": "✔ 已加入間奏 {0} ~ {1}",
+   "en": "✔ Interlude added {0} ~ {1}"
+  },
+  {
+   "zh": "：Scene {0} 更新為",
+   "en": ": Scene {0} updated to"
+  },
+  {
+   "zh": "❌ 新增照片槽位失敗：{0}",
+   "en": "❌ Failed to add photo slot: {0}"
+  },
+  {
+   "zh": "共更新 {0} 個時間軸段落",
+   "en": "Updated {0} timeline sections"
+  },
+  {
+   "zh": "📤 專案《{0}》匯入成功！",
+   "en": "📤 Project \"{0}\" imported!"
+  },
+  {
+   "zh": "找不到指定的音源檔案：{0}",
+   "en": "Audio file not found: {0}"
+  },
+  {
+   "zh": "片尾前字幕延展 ({0}s)",
+   "en": "Subtitle extension before ending ({0}s)"
+  },
+  {
+   "zh": "片尾榮譽名牌卡 ({0}s)",
+   "en": "Outro title card ({0}s)"
+  },
+  {
+   "zh": "間奏前延展包覆 ({0}s)",
+   "en": "Extension before interlude ({0}s)"
+  },
+  {
+   "zh": "間奏後副歌切換 ({0}s)",
+   "en": "Chorus entry after interlude ({0}s)"
+  },
+  {
+   "zh": "原曲音訊 ({0} MB)",
+   "en": "Original track ({0} MB)"
+  },
+  {
+   "zh": "✔ 已加入 {0} 段間奏{1}{2}",
+   "en": "✔ Added {0} interludes{1}{2}"
+  },
+  {
+   "zh": "✔ 已下載 {0}（{1} 段）",
+   "en": "✔ Downloaded {0} ({1} sections)"
+  },
+  {
+   "zh": "編碼器：{0} | 輸出：{1}",
+   "en": "Encoder: {0} | Output: {1}"
+  },
+  {
+   "zh": "已合成 {0}/{1} 張過渡幀",
+   "en": "Rendered {0}/{1} transition frames"
+  },
+  {
+   "zh": "🎤 已用{0}校正字的時間",
+   "en": "🎤 Word timing corrected using {0}"
+  },
+  {
+   "zh": "❌ 載入專案失敗：{0}",
+   "en": "❌ Failed to load project: {0}"
+  },
+  {
+   "zh": "❌ 新增間奏失敗：{0}",
+   "en": "❌ Failed to add interlude: {0}"
+  },
+  {
+   "zh": "⚠️ 會把 {0} 壓短",
+   "en": "⚠️ Will shorten {0}"
+  },
+  {
+   "zh": "：共 {0} 段（已套用",
+   "en": ": {0} sections ("
+  },
+  {
+   "zh": "🎞️ 轉場：{0}（{1}s）",
+   "en": "🎞️ Transitions: {0} ({1}s)"
+  },
+  {
+   "zh": "❌ 檢測音檔失敗：{0}",
+   "en": "❌ Audio check failed: {0}"
+  },
+  {
+   "zh": "❌ 匯入專案失敗：{0}",
+   "en": "❌ Project import failed: {0}"
+  },
+  {
+   "zh": "❌ 匯入儲存失敗：{0}",
+   "en": "❌ Import/save failed: {0}"
+  },
+  {
+   "zh": "❌ 上傳照片失敗：{0}",
+   "en": "❌ Photo upload failed: {0}"
+  },
+  {
+   "zh": "❌ 批次上傳失敗：{0}",
+   "en": "❌ Batch upload failed: {0}"
+  },
+  {
+   "zh": "❌ 清空照片失敗：{0}",
+   "en": "❌ Failed to clear photos: {0}"
+  },
+  {
+   "zh": "❌ 建立專案失敗：{0}",
+   "en": "❌ Failed to create project: {0}"
+  },
+  {
+   "zh": "音源檔案不存在: {0}",
+   "en": "Audio file does not exist: {0}"
+  },
+  {
+   "zh": "這段時間會併到{0}。{1}",
+   "en": "Its time will be merged into {0}.{1}"
+  },
+  {
+   "zh": "歌詞框已經有「{0}」",
+   "en": "The lyrics box already has \"{0}\""
+  },
+  {
+   "zh": "{0} 張分鏡卡片時間",
+   "en": "times for {0} scene cards"
+  },
+  {
+   "zh": "刪除 {0} 的照片？",
+   "en": "Delete the photo of {0}?"
+  },
+  {
+   "zh": "照片代號不正確：{0}",
+   "en": "Invalid photo ID: {0}"
+  },
+  {
+   "zh": "讀不到這張圖片：{0}",
+   "en": "Cannot read this image: {0}"
+  },
+  {
+   "zh": "對齊時發生錯誤：{0}",
+   "en": "Error during alignment: {0}"
+  },
+  {
+   "zh": "MV 合成失敗：{0}",
+   "en": "MV render failed: {0}"
+  },
+  {
+   "zh": "間奏空鏡 ({0}s)",
+   "en": "Interlude scenery shot ({0}s)"
+  },
+  {
+   "zh": "❌ 刪除失敗：{0}",
+   "en": "❌ Delete failed: {0}"
+  },
+  {
+   "zh": "❌ 重置失敗：{0}",
+   "en": "❌ Reset failed: {0}"
+  },
+  {
+   "zh": "{0} 沒有加 ～。",
+   "en": "{0} is missing ～."
+  },
+  {
+   "zh": "渲染發生錯誤：{0}",
+   "en": "Render error: {0}"
+  },
+  {
+   "zh": "❌ 插入失敗：{0}",
+   "en": "❌ Insert failed: {0}"
+  },
+  {
+   "zh": "❌ 對調失敗：{0}",
+   "en": "❌ Swap failed: {0}"
+  },
+  {
+   "zh": "照片最多 {0} 張",
+   "en": "Up to {0} photos"
+  },
+  {
+   "zh": "自訂檢驗點 {0}s",
+   "en": "Custom checkpoint {0}s"
+  },
+  {
+   "zh": "辨識片段：「{0}」",
+   "en": "Recognized: \"{0}\""
+  },
+  {
+   "zh": "[第{0}段 {1}] {2}",
+   "en": "[#{0} {1}] {2}"
+  },
+  {
+   "zh": "{0} 那段沒加：{1}",
+   "en": "Interlude at {0} not added: {1}"
+  },
+  {
+   "zh": "，跳過 {0} 段",
+   "en": ", {0} skipped"
+  },
+  {
+   "zh": "{0} 已經是間奏",
+   "en": "{0} is already an interlude"
+  },
+  {
+   "zh": "第 {0} 行「{1}」",
+   "en": "line {0} \"{1}\""
+  },
+  {
+   "zh": "找不到音檔：{0}",
+   "en": "Audio file not found: {0}"
+  },
+  {
+   "zh": "🎻 間奏 {0}",
+   "en": "🎻 Interlude {0}"
+  },
+  {
+   "zh": "已耗時 {0}s",
+   "en": "Elapsed {0}s"
+  },
+  {
+   "zh": "：{0}（已套用",
+   "en": ": {0} ("
+  },
+  {
+   "zh": "無法播放：{0}",
+   "en": "Cannot play: {0}"
+  },
+  {
+   "zh": "渲染失敗：{0}",
+   "en": "Render failed: {0}"
+  },
+  {
+   "zh": "{0} 張分鏡圖",
+   "en": "{0} scene photos"
+  },
+  {
+   "zh": "輸出檔案：{0}",
+   "en": "Output file: {0}"
+  },
+  {
+   "zh": "共 {0} 段",
+   "en": "{0} sections"
+  },
+  {
+   "zh": "唱錄：{0}",
+   "en": "Recording: {0}"
+  },
+  {
+   "zh": "翻唱：{0}",
+   "en": "Cover: {0}"
+  },
+  {
+   "zh": "上傳：{0}",
+   "en": "Uploaded: {0}"
+  },
+  {
+   "zh": "原因：{0}",
+   "en": "Reason: {0}"
+  },
+  {
+   "zh": "🎞️ 《{0}》 ({1}段)",
+   "en": "🎞️ \"{0}\" ({1} sections)"
+  }
+ ]
+}

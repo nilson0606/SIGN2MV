@@ -65,6 +65,15 @@ class Paths:
         return self.root / "models"
 
     @property
+    def voices(self) -> Path:
+        """RVC voice models: voices/<Name>/<file>.pth (+ .index, epochs/)."""
+        return self.models / "voices"
+
+    @property
+    def soundfonts(self) -> Path:
+        return self.models / "soundfonts"
+
+    @property
     def config(self) -> Path:
         return self.root / "config"
 

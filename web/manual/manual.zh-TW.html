@@ -1,1 +1,225 @@
-<!doctype html><meta charset=utf-8><title>SIGN2MV 手冊</title><p>手冊撰寫中。</p>
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIGN2MV 操作手冊</title>
+<style>
+:root { --bg:#0f1317; --panel:#1b232b; --line:#2c3945; --text:#dbe6ee; --muted:#8a9aa8; --accent:#3dd9f5; --warn:#f2b84b; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font:15px/1.6 "Segoe UI","Microsoft JhengHei",system-ui,sans-serif; }
+header { padding:22px 24px 10px; border-bottom:1px solid var(--line); }
+header h1 { margin:0; letter-spacing:.08em; } header h1 span { color:var(--accent); }
+.wrap { display:grid; grid-template-columns:240px 1fr; gap:24px; max-width:1180px; margin:0 auto; padding:18px 16px 60px; }
+nav { position:sticky; top:12px; align-self:start; font-size:.92em; }
+nav a { display:block; color:var(--muted); text-decoration:none; padding:3px 0; } nav a:hover { color:var(--accent); }
+main section { background:var(--panel); border:1px solid #0b0f12; border-radius:10px; padding:16px 20px; margin-bottom:16px; }
+h2 { margin:0 0 .5em; font-size:1.2rem; color:var(--accent); } h3 { margin:1.1em 0 .3em; font-size:1rem; }
+code, kbd { background:#0b1014; border:1px solid var(--line); border-radius:4px; padding:0 5px; font-family:Consolas,monospace; font-size:.92em; }
+.note { border-left:3px solid var(--warn); padding:4px 12px; color:#e9d8b0; background:#2a2414; border-radius:4px; }
+table { border-collapse:collapse; width:100%; } td, th { border:1px solid var(--line); padding:5px 8px; text-align:left; vertical-align:top; }
+a { color:var(--accent); }
+@media (max-width:820px) { .wrap { grid-template-columns:1fr; } nav { position:static; } }
+</style>
+</head>
+<body>
+<header><h1>SIGN<span>2</span>MV</h1><p>唱錄、AI 翻唱、歌詞 MV 合在一個程式裡。本手冊是英文版（主版本）的翻譯。</p></header>
+<div class="wrap">
+<nav>
+<a href="#overview">1. 概觀</a>
+<a href="#install">2. 安裝</a>
+<a href="#start">3. 開啟與關閉</a>
+<a href="#library">4. 歌曲庫</a>
+<a href="#sing">5. 唱錄</a>
+<a href="#cover">6. AI 翻唱</a>
+<a href="#models">7. 音色模型與訓練</a>
+<a href="#mv">8. MV</a>
+<a href="#jobs">9. 工作佇列</a>
+<a href="#settings">10. 設定</a>
+<a href="#data">11. 檔案存放位置</a>
+<a href="#trouble">12. 疑難排解</a>
+<a href="#licences">13. 授權</a>
+</nav>
+<main>
+
+<section id="overview">
+<h2>1. 概觀</h2>
+<p>SIGN2MV 用一個程式、一個歌曲庫，取代原本的三個程式（唱錄、AI 翻唱工作室、MV 工作站）：</p>
+<ul>
+<li><b>歌曲庫</b>：每首歌只要匯入一次（YouTube 或檔案）。分離出來的分軌也只算一次，所有工作區共用。</li>
+<li><b>唱錄</b>：跟著音高提示唱、評分，錄整首或分段，混音後儲存。</li>
+<li><b>AI 翻唱</b>：用 RVC 音色模型轉換歌曲的人聲、混音、保留多個版本、修正局部段落，也能訓練自己的音色模型。</li>
+<li><b>MV</b>：用照片和歌詞做 1080p 60fps 的歌詞 MV，有 Whisper 歌詞對齊與卡拉 OK 變色。音檔可以是原曲、任何一次唱錄，或任何一個翻唱版本。</li>
+</ul>
+<p>全部在這台電腦上執行，不會上傳任何東西。吃重的工作（分離、音色轉換、Whisper、影片渲染、訓練）在顯示卡上一次跑一個；較輕的工作可以同時進行。</p>
+<p class="note">SIGN2MV 不會讀取、修改或關閉舊程式。它用自己的資料夾和 9700 埠，舊程式可以繼續留著。</p>
+</section>
+
+<section id="install">
+<h2>2. 安裝</h2>
+<ol>
+<li>把 SIGN2MV 資料夾放在要用的位置（例如 <code>D:\AI_SIGN2MV</code>）。Python、AI 模型、快取、暫存檔全部裝在這個資料夾裡，不會裝到 C 槽。</li>
+<li>雙擊 <code>install.bat</code>。第一次會下載約 10 GB，需要一段時間。</li>
+<li>問到 <b>Sucial</b> 男女分離模型時，只有在你接受它的「非商業使用」授權時才回答 yes。不裝的話，男女對唱改用 aufr33 模型。</li>
+<li>等到出現 <code>Done. Double-click start.bat to open SIGN2MV.</code>。</li>
+</ol>
+<p>安裝中斷（網路斷線、磁碟滿）時，再執行一次 <code>install.bat</code> 即可，已完成的步驟會跳過。記錄檔在 <code>logs\install.log</code>。首頁的「安裝」與檢查清單會顯示哪些已就緒。</p>
+<p>有 NVIDIA 顯示卡會自動使用；沒有也能用 CPU 執行，只是比較慢（用 CPU 訓練非常慢）。</p>
+</section>
+
+<section id="start">
+<h2>3. 開啟與關閉</h2>
+<ol>
+<li>雙擊 <code>start.bat</code>。會開一個主控台視窗（伺服器）和 SIGN2MV 視窗。使用期間請保持主控台視窗開著。</li>
+<li>結束時按右上角的 <b>全部關閉</b>。如果有工作在跑，或某個工作區正在忙（錄音、轉換、渲染），SIGN2MV 會列出來，問你要不要取消。</li>
+</ol>
+<p>介面語言跟著 Windows；可用上方的語言選單切換。「操作手冊」連結會開啟本頁。</p>
+</section>
+
+<section id="library">
+<h2>4. 歌曲庫</h2>
+<ol>
+<li>打開 <b>歌曲庫</b>，輸入歌名，按 <b>新增歌曲</b>。</li>
+<li>匯入音樂：貼上 YouTube 網址按 <b>從 YouTube 匯入</b>（也會下載影片，最高 1080p）；或選一個音檔／影片按 <b>上傳本機檔案</b>（最大 2 GB、15 分鐘）。原始檔案不會被改動。</li>
+<li>匯入完成後，歌曲會顯示原曲播放器和三個按鈕：<b>唱錄這首</b>、<b>製作 MV</b>、<b>AI 翻唱</b>。</li>
+</ol>
+<h3>分軌與升降 Key</h3>
+<p>在「分軌與升降 Key」可以準備並試聽分離後的音軌：選分離模型（Demucs、BS-RoFormer、Mel-RoFormer Kim），可選伴奏二次分離、拆主唱／和聲，以及升降 Key。分離結果每首歌只存一份，任何工作區需要同樣的分軌都會直接沿用。</p>
+<p><b>改名</b> 改歌名。<b>刪除</b> 會在確認後刪除這首歌和它產生的所有東西（分軌、錄音、翻唱、MV）。</p>
+</section>
+
+<section id="sing">
+<h2>5. 唱錄</h2>
+<p>這就是原本的唱錄程式，只是歌曲改從歌曲庫選。在頁面上方選歌（或在歌曲庫按 <b>唱錄這首</b>）。</p>
+<ol>
+<li><b>準備歌曲</b>：選 Key（−12 到 +12，速度不變），按「準備歌曲參考」，等到狀態顯示就緒。預設是整首分析＋RMVPE 音高。</li>
+<li><b>麥克風</b>：選瀏覽器收音；如果一開麥克風伴奏就變小聲，改選原生收音。開啟麥克風並確認輸入。</li>
+<li><b>唱歌</b>：選要聽到什麼（原唱＋伴奏，或只有伴奏／和聲）和要錄什麼（只錄人聲、混音、不錄），按「從頭開始唱」。停止或唱完後，這次錄音會放在「待審核」；滿意再存進後製。</li>
+<li><b>分段</b>：開啟分段模式，播放時切段，每段想錄幾次就錄幾次，每段選一個版本，再組成整首。組好的混音可以加上「原唱段落」。</li>
+<li><b>後製</b>：音量、時間校正、平滑、EQ、壓縮、殘響／延遲、降噪、去呼吸聲、音準修正；同一句做 A/B 比較；重新渲染（原始人聲永遠保留）。</li>
+<li>完成的錄音可以按 <b>製作 MV</b>：錄音會存成這首歌的 MV 音檔，並直接打開 MV 工作區。</li>
+</ol>
+<p>「排除錯誤的參考段落」裡的遮罩，可以讓錯誤的參考音（例如間奏）不計入分數。</p>
+</section>
+
+<section id="cover">
+<h2>6. AI 翻唱</h2>
+<p>打開 <b>AI 翻唱</b>（或在歌曲庫的歌曲上按 <b>AI 翻唱</b>），在上方選歌。左邊是設定，右邊是版本、音色模型、訓練與樂器音色。</p>
+<h3>製作翻唱</h3>
+<ol>
+<li><b>音色模型</b>：選一個模型（有保留訓練中間版本的，也可以選某一輪）。新的歌會預設上次用過的模型。清單是空的話，先匯入或訓練模型（第 7 章）。</li>
+<li><b>變調</b>：人聲的半音數（女轉男約 −12、男轉女約 +12）。</li>
+<li><b>整首升降 Key</b>：−8 到 +8。伴奏和原唱和聲用 Rubber Band 升降（速度不變），人聲轉換時一起加上同樣的變調。「▶ 試聽升降後」播放升降後的原曲。</li>
+<li>可選 <b>RVC 微調</b>：子音／呼吸保護（0.33）、特徵檢索比例（0.75）、音量包絡（0＝跟著原唱的大小聲）、音高偵測（rmvpe）、音高自動修正、降噪。</li>
+<li>可選 <b>分離與和聲</b>：分離模型；人聲處理＝拆出主唱轉換、保留原唱和聲（預設），或整條人聲一起轉，或三人以上和聲時拆兩次；伴奏單次或二次分離；原唱和聲要不要混進成品。</li>
+<li><b>混音</b>：轉換後人聲音量（95%）、伴奏（85%）、可選旋律樂器（鋼弦吉他、揚琴、古箏、笛子、古箏＋笛子）與樂器音量（0%＝不加）、八度、空間混響。</li>
+<li>按 <b>🎤 製作翻唱（新版本）</b>。進度顯示在按鈕下方和工作佇列。</li>
+</ol>
+<p>分離與轉換結果都會沿用。同樣設定再做一次不會重算；只改混音很快。</p>
+<h3>版本</h3>
+<p>每做一次就是一個版本（#1、#2…），各有自己的 MP3。版本上的按鈕：</p>
+<table>
+<tr><td><b>載入設定</b></td><td>把這個版本的設定帶回左側。</td></tr>
+<tr><td><b>🎛️ 快速混音</b></td><td>把左側的混音、人聲分段處理、分段音量、和聲選擇、男女音量套用到這個版本並取代它的音檔。模型、變調、Key、分離維持原樣。</td></tr>
+<tr><td><b>另存新版本</b></td><td>同上，但保留舊版本、另外新增一個。</td></tr>
+<tr><td><b>🎬 製作 MV</b></td><td>用這個版本當音檔，打開 MV 工作區。</td></tr>
+<tr><td><b>下載</b>／<b>分軌試聽</b></td><td>下載 MP3；試聽這個版本用到的原曲、分軌和轉換後人聲。</td></tr>
+<tr><td><b>改名</b>／<b>刪除</b></td><td>刪除也會刪掉這個版本的音檔；沒有其他版本使用的暫存檔會一起清掉。</td></tr>
+</table>
+<p>每個版本也會出現在這首歌的 MV 音檔清單。</p>
+<h3>人聲分段處理</h3>
+<p>播放任一版本或原曲，按 <b>⏱</b> 把播放時間帶入「起點」／「終點」。每一段可以選：</p>
+<ul>
+<li><b>改用原唱</b>：這段用原唱（音量自動對齊），例如這段是別人唱的。</li>
+<li><b>靜音</b>：這段不要有人聲。</li>
+<li><b>重轉</b>：這段用別的模型、變調或參數重新轉換（前後多取 1 秒當上下文）。也可以讓這段用自己的分離模型與拆主唱設定重新分離，這時這段的伴奏也會一起換掉。</li>
+<li><b>換成外部音檔</b>：上傳自己錄的或別的版本。可以只取代轉換後人聲，或在檔案已含伴奏時取代整段混音。檔案的 0 秒會對齊「起點＋位移」。外部人聲也可以轉成模型音色。</li>
+</ul>
+<h3>分段音量</h3>
+<p>只調整某兩個時間點之間的轉換後人聲、伴奏或原唱和聲音量（0–200%，邊界 80 毫秒平滑）。</p>
+<h3>男女對唱</h3>
+<p>勾選「啟用男女對唱」：人聲會拆成男聲和女聲（aufr33 模型；有安裝的話也可用 Sucial）。每一邊有自己的模型、變調、音量與微調，也可以保留原唱。之後只改兩邊音量時用快速混音即可。</p>
+<h3>樂器音色</h3>
+<p>鋼弦吉他、揚琴用 GeneralUser GS 音色庫（已安裝）。古箏、笛子需要它們的音色資料夾：在「樂器音色」輸入舊程式的資料夾（例如 <code>D:\AI_COVER_MV\workspace\soundfonts</code>），按 <b>匯入（複製）</b>。</p>
+</section>
+
+<section id="models">
+<h2>7. 音色模型與訓練</h2>
+<h3>帶入既有模型</h3>
+<ol>
+<li>在 <b>AI 翻唱</b> →「音色模型」→「從資料夾匯入」，輸入 <code>D:\AI_COVER_MV\models</code>（裝了多個模型資料夾的資料夾），按 <b>匯入（複製）</b>。每個含 <code>.pth</code> 的模型資料夾都會連同 <code>.index</code>、說明檔、保留的中間版本一起複製過來，來源不會被改動。</li>
+<li>也可以只給一個模型資料夾或一個 <code>.pth</code> 檔；「上傳模型檔」可以上傳 <code>.pth</code> 和選用的 <code>.index</code>。</li>
+</ol>
+<p>模型名稱限英文、數字與 <code>_ . -</code>。名稱含其他字元的資料夾會被略過，請單獨匯入並自己輸入名稱。</p>
+<p>模型的 <b>收斂曲線</b> 顯示訓練過程（每一輪的 mel 與總 loss；虛線是保留的中間版本）。中間版本可以一個一個刪除，最終版會保留。</p>
+<h3>訓練音色模型</h3>
+<ol>
+<li>輸入模型名稱，加入語料（上傳檔案，或輸入這台電腦上的資料夾／檔案，每行一個）。乾淨的清唱或說話、合計約 10 分鐘以上效果最好。</li>
+<li>預設：100 輪、批次 8、每 10 輪存一版、40 kHz。</li>
+<li>按 <b>🚀 開始訓練</b>。六個步驟會自動完成：匯入、語料切片、特徵提取（RMVPE＋ContentVec）、訓練、建索引、安裝。訓練中收斂曲線會更新。</li>
+<li>完成後模型出現在清單，附最後 4 個中間版本和收斂曲線；訓練暫存資料夾會自動刪除。</li>
+</ol>
+<p><b>⏹ 中止訓練</b> 會停止訓練，模型不會安裝。<b>🧹 清理訓練暫存</b> 刪除中止的訓練留下的檔案。訓練使用顯示卡，期間其他顯示卡工作會排隊等它結束。</p>
+</section>
+
+<section id="mv">
+<h2>8. MV</h2>
+<p>這就是原本的 MV 工作站。每個專案屬於一首歌；可以從歌曲庫（<b>製作 MV</b>）、從一次錄音或從一個翻唱版本打開。</p>
+<ol>
+<li><b>建立專案</b>：選歌、專案名稱、標題與製作群。名牌卡上的翻唱者與工作室名稱來自 <b>設定</b>。</li>
+<li><b>音檔</b>：這首歌的原曲、一次唱錄、一個翻唱版本，或上傳的檔案。</li>
+<li><b>照片</b>：每個場景一張（批次上傳會依序填入空格）。</li>
+<li><b>歌詞</b>：貼上含 <code>[Scene 01]</code> 標記的歌詞，按 Whisper 對齊。Whisper 會聽分離後的人聲（來自這首歌的分軌快取）替每一句定時間；之後可以調整句子、間奏與卡拉 OK 時間。</li>
+<li><b>預覽</b> 單一畫面，再 <b>渲染</b>：1080p 60fps MP4，有卡拉 OK 變色。渲染是顯示卡工作；新的 MV 完成前，舊的會保留。完成後會自動抽檢畫面。</li>
+</ol>
+<p>MV 畫面不會出現「AI」字樣：製作群使用設定裡的翻唱者名稱。</p>
+</section>
+
+<section id="jobs">
+<h2>9. 工作佇列</h2>
+<p><b>工作佇列</b> 列出所有工作與進度。顯示卡工作（分離、轉換、Whisper、渲染、訓練）一次跑一個，其他的顯示排隊順位；一般工作（匯入、升降 Key、快速混音）可以同時跑。<b>取消</b> 會停止工作和它的輔助程式。</p>
+</section>
+
+<section id="settings">
+<h2>10. 設定</h2>
+<ul>
+<li><b>歌曲庫位置</b>：歌曲存放的資料夾（預設是 SIGN2MV 資料夾裡的 <code>library</code>）。</li>
+<li><b>翻唱者名稱</b>與<b>工作室名稱</b>：顯示在 MV 名牌卡上。</li>
+</ul>
+</section>
+
+<section id="data">
+<h2>11. 檔案存放位置</h2>
+<table>
+<tr><th>資料夾（在 SIGN2MV 裡）</th><th>內容</th></tr>
+<tr><td><code>library\songs\&lt;歌曲&gt;\</code></td><td><code>source</code>（原曲）、<code>stems</code>、<code>keys</code>、<code>sing</code>、<code>recordings</code>、<code>renders</code>（當 MV 音檔用的錄音與翻唱版本）、<code>cover</code>（翻唱版本與快取）、<code>mv</code>（MV 專案）</td></tr>
+<tr><td><code>models\</code></td><td>AI 模型；<code>models\voices</code>＝你的 RVC 音色模型；<code>models\soundfonts</code>＝樂器音色</td></tr>
+<tr><td><code>runtime\</code></td><td>Python 環境、Applio、ffmpeg、快取、暫存檔、訓練暫存</td></tr>
+<tr><td><code>config\</code>、<code>logs\</code></td><td>設定、記錄檔</td></tr>
+</table>
+<p>要移除時，先關閉 SIGN2MV 再刪除整個資料夾（想保留的話先複製 <code>library</code> 和 <code>models\voices</code>）。</p>
+</section>
+
+<section id="trouble">
+<h2>12. 疑難排解</h2>
+<table>
+<tr><td>「無法連到伺服器」</td><td>主控台視窗被關掉了，再執行一次 <code>start.bat</code>。</td></tr>
+<tr><td>頁面要求重新載入或重新啟動</td><td>按 F5；或按「全部關閉」後再執行 <code>start.bat</code>。</td></tr>
+<tr><td>缺少模型／元件</td><td>再執行一次 <code>install.bat</code>；首頁會列出檢查結果。</td></tr>
+<tr><td>音色轉換元件未安裝</td><td>安裝的 Applio 部分沒有完成，再執行一次 <code>install.bat</code>。</td></tr>
+<tr><td>升降 Key 失敗</td><td>ffmpeg 沒有 Rubber Band，再執行一次 <code>install.bat</code>。</td></tr>
+<tr><td>工作很慢</td><td>到 <b>工作佇列</b> 看看是不是有別的顯示卡工作（例如訓練）在跑。</td></tr>
+<tr><td>古箏／笛子顯示「未安裝」</td><td>匯入它們的音色資料夾（第 6 章「樂器音色」）。</td></tr>
+</table>
+<p>伺服器的詳細記錄在 <code>logs\server.log</code>。</p>
+</section>
+
+<section id="licences">
+<h2>13. 授權</h2>
+<p>SIGN2MV 使用的開源元件與模型各有授權，列在 <code>THIRD_PARTY.md</code>。主要有：Applio（MIT）、RMVPE（取自 lj1995/VoiceConversionWebUI，MIT）、basic-pitch（Apache-2.0）、GeneralUser GS 音色庫（GeneralUser GS License v2.0）、Sucial 男女分離模型（CC BY-NC-SA 4.0，限非商業，選用）。請只對你有權使用的聲音使用音色模型。</p>
+</section>
+
+</main>
+</div>
+</body>
+</html>

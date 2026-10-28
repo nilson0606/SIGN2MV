@@ -149,3 +149,30 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .workspace-frame { width: 100%; height: calc(100vh - 92px); border: 1px solid var(--line, #22303d); border-radius: 10px; background: #0b1118; display: block; }
 .workspace-actions { margin: 8px 0 4px; }
 #confirm-text { white-space: pre-line; }
+/* ---------- AI cover workspace ---------- */
+.cv-grid { display: grid; grid-template-columns: minmax(380px, 1fr) minmax(380px, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .cv-grid { grid-template-columns: 1fr; } }
+.cv-col > .panel + .panel { margin-top: 16px; }
+.cv-field { display: grid; grid-template-columns: 170px 1fr; gap: 4px 10px; align-items: center; margin: 6px 0; }
+.cv-field > .muted { grid-column: 2; }
+.cv-label { color: var(--muted); }
+.cv-field select { max-width: 100%; }
+@media (max-width: 560px) { .cv-field { grid-template-columns: 1fr; } .cv-field > .muted { grid-column: 1; } }
+.cv-details { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.cv-details > summary { cursor: pointer; color: var(--accent); }
+.cv-body { padding: 6px 0 2px 4px; }
+.cv-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+@media (max-width: 700px) { .cv-sides { grid-template-columns: 1fr; } }
+.cv-side { background: var(--panel-lo); box-shadow: var(--inset); border-radius: 8px; padding: 8px 10px; }
+.cv-side h4 { margin: 0 0 6px; }
+.cv-side .cv-field { grid-template-columns: 110px 1fr; }
+.cv-side input[type=range], .cv-sub input[type=range] { width: 110px; }
+.cv-editor { background: var(--panel-lo); box-shadow: var(--inset); border-radius: 8px; padding: 8px 10px; margin: 6px 0; }
+.cv-sub { margin: 4px 0 4px 8px; }
+.cv-version { padding: 10px; border-radius: 8px; background: var(--panel-lo); box-shadow: var(--inset); display: grid; gap: 6px; }
+.cv-version.selected { outline: 1px solid var(--accent); }
+.cv-versions { max-height: 640px; }
+.cv-model { padding: 8px 10px; border-radius: 8px; background: var(--panel-lo); box-shadow: var(--inset); }
+.cv-model .tag a { color: var(--bad); text-decoration: none; }
+.cv-loss { margin-top: 8px; }
+.cv-chart { width: 100%; max-width: 560px; background: #0b1014; border-radius: 6px; }

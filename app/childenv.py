@@ -34,7 +34,7 @@ def cache_vars(paths: Paths) -> dict[str, str]:
         # old Applio desktop app on this computer). Keep ours separate.
         "APPLIO_ROOT": str(paths.applio),
         "APPLIO_CONFIG_DIR": str(paths.runtime / "applio-config"),
-        "APPLIO_LOGS_DIR": str(paths.models / "voices"),
+        "APPLIO_LOGS_DIR": str(paths.runtime / "applio-logs"),   # training scratch (cleaned after training)
         "TEMP": str(paths.tmp),
         "TMP": str(paths.tmp),
         "PYTHONUTF8": "1",

@@ -15,5 +15,10 @@ yt-dlp[default]>=2026.10.26
 pillow>=11
 pretty_midi==0.2.11.post0
 tinysoundfont>=0.3.6
+# melody transcription for the cover instrument track: basic-pitch itself is installed
+# with --no-deps by install.py (its TensorFlow dependency has no Python 3.12 build; the
+# ONNX model runs on onnxruntime); these are the dependencies it really uses.
+mir-eval==0.8.2
+scikit-learn>=1.5
 requests>=2.32
 SoundCard==0.4.6

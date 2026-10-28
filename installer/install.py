@@ -259,7 +259,10 @@ def step_engine_env(state: dict) -> None:
          f"torchvision=={tv['torchvision']}", "--index-url", index])
     req = ROOT / "installer" / "requirements"
     _pip_install(py, [], lock=req / "engine.lock.txt", fallback=req / "engine.txt")
-    run([py, "-c", "import torch, demucs, audio_separator, faster_whisper, soundfile, librosa, yt_dlp; print('engine imports OK', torch.__version__)"])
+    # basic-pitch (cover melody track) without its TensorFlow dependency: SIGN2MV runs its ONNX model.
+    run([uv(), "pip", "install", "--python", py, "--no-deps", f"basic-pitch=={MANIFEST['basic_pitch']['version']}"])
+    run([py, "-c", "import torch, demucs, audio_separator, faster_whisper, soundfile, librosa, yt_dlp, pretty_midi, "
+                   "tinysoundfont, basic_pitch.inference; print('engine imports OK', torch.__version__)"])
 
 
 def step_engine_models(state: dict) -> None:

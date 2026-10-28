@@ -6,7 +6,6 @@ a file only gets its final name once completely downloaded.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import logging
 import os
@@ -83,6 +82,13 @@ def fetch_rmvpe() -> None:
     verify("rmvpe")
 
 
+def fetch_soundfont() -> None:
+    info = M["soundfont_generaluser"]
+    say("GeneralUser GS sound font (cover instrument track)...")
+    download(info["url"], MODELS / info["file"], sha256=info["sha256"], size=info["size"])
+    verify("soundfont_generaluser")
+
+
 def fetch_whisper() -> None:
     from faster_whisper.utils import download_model
     for key, size in (("whisper_medium", "medium"), ("whisper_small", "small")):
@@ -100,7 +106,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--with-sucial", action="store_true")
     args = parser.parse_args()
-    (MODELS / "separation").mkdir(parents=True, exist_ok=True)
+    for sub in ("separation", "soundfonts", "voices"):
+        (MODELS / sub).mkdir(parents=True, exist_ok=True)
     try:
         fetch_htdemucs()
         dl = _Downloader()
@@ -109,6 +116,7 @@ def main() -> int:
         if args.with_sucial:
             dl.get("male_female_sucial")
         fetch_rmvpe()
+        fetch_soundfont()
         fetch_whisper()
     except InstallError as exc:
         say(f"ERROR: {exc}")

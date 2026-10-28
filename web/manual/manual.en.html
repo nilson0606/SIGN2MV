@@ -1,1 +1,225 @@
-<!doctype html><meta charset=utf-8><title>SIGN2MV manual</title><p>Manual coming soon.</p>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIGN2MV manual</title>
+<style>
+:root { --bg:#0f1317; --panel:#1b232b; --line:#2c3945; --text:#dbe6ee; --muted:#8a9aa8; --accent:#3dd9f5; --warn:#f2b84b; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font:15px/1.6 "Segoe UI","Microsoft JhengHei",system-ui,sans-serif; }
+header { padding:22px 24px 10px; border-bottom:1px solid var(--line); }
+header h1 { margin:0; letter-spacing:.08em; } header h1 span { color:var(--accent); }
+.wrap { display:grid; grid-template-columns:240px 1fr; gap:24px; max-width:1180px; margin:0 auto; padding:18px 16px 60px; }
+nav { position:sticky; top:12px; align-self:start; font-size:.92em; }
+nav a { display:block; color:var(--muted); text-decoration:none; padding:3px 0; } nav a:hover { color:var(--accent); }
+main section { background:var(--panel); border:1px solid #0b0f12; border-radius:10px; padding:16px 20px; margin-bottom:16px; }
+h2 { margin:0 0 .5em; font-size:1.2rem; color:var(--accent); } h3 { margin:1.1em 0 .3em; font-size:1rem; }
+code, kbd { background:#0b1014; border:1px solid var(--line); border-radius:4px; padding:0 5px; font-family:Consolas,monospace; font-size:.92em; }
+.note { border-left:3px solid var(--warn); padding:4px 12px; color:#e9d8b0; background:#2a2414; border-radius:4px; }
+table { border-collapse:collapse; width:100%; } td, th { border:1px solid var(--line); padding:5px 8px; text-align:left; vertical-align:top; }
+a { color:var(--accent); }
+@media (max-width:820px) { .wrap { grid-template-columns:1fr; } nav { position:static; } }
+</style>
+</head>
+<body>
+<header><h1>SIGN<span>2</span>MV</h1><p>Sing &amp; record, AI cover and lyric music videos in one program. This is the master (English) manual; the Chinese manual is a translation of it.</p></header>
+<div class="wrap">
+<nav>
+<a href="#overview">1. Overview</a>
+<a href="#install">2. Install</a>
+<a href="#start">3. Start and shut down</a>
+<a href="#library">4. Song library</a>
+<a href="#sing">5. Sing &amp; record</a>
+<a href="#cover">6. AI cover</a>
+<a href="#models">7. Voice models and training</a>
+<a href="#mv">8. MV</a>
+<a href="#jobs">9. Job queue</a>
+<a href="#settings">10. Settings</a>
+<a href="#data">11. Where things are stored</a>
+<a href="#trouble">12. Troubleshooting</a>
+<a href="#licences">13. Licences</a>
+</nav>
+<main>
+
+<section id="overview">
+<h2>1. Overview</h2>
+<p>SIGN2MV replaces three older programs (the sing &amp; record app, the AI cover studio and the MV studio) with one program and one song library:</p>
+<ul>
+<li><b>Library</b> — import a song once (YouTube or a file). Its separated stems are computed once and shared by every workspace.</li>
+<li><b>Sing &amp; record</b> — sing along with pitch guidance and scoring, record whole songs or segments, mix and save takes.</li>
+<li><b>AI cover</b> — convert the song's vocal with an RVC voice model, mix it, keep versions, fix sections, train your own voice models.</li>
+<li><b>MV</b> — build a 1080p 60 fps lyric video from photos and lyrics, with Whisper lyric alignment and karaoke colouring. The audio can be the original, any of your recordings or any cover version.</li>
+</ul>
+<p>Everything runs on this computer. Nothing is uploaded. The heavy work (separation, voice conversion, Whisper, video rendering, training) runs one job at a time on the graphics card; lighter jobs run beside it.</p>
+<p class="note">SIGN2MV does not read, change or stop the old programs. It uses its own folder and port 9700, so the old programs can stay installed.</p>
+</section>
+
+<section id="install">
+<h2>2. Install</h2>
+<ol>
+<li>Put the SIGN2MV folder where it should live (for example <code>D:\AI_SIGN2MV</code>). Everything — Python, AI models, caches, temporary files — is installed inside this folder, not on C:.</li>
+<li>Double-click <code>install.bat</code>. The first run downloads about 10 GB and can take a long time.</li>
+<li>When asked about the <b>Sucial</b> male/female separation model, answer yes only if you accept its non-commercial licence. Without it, duet mode uses the aufr33 model.</li>
+<li>Wait for <code>Done. Double-click start.bat to open SIGN2MV.</code></li>
+</ol>
+<p>If installation stops (network drop, full disk), run <code>install.bat</code> again: finished steps are skipped. The log is in <code>logs\install.log</code>. On the Home page, <i>Installation</i> and the checks list show what is ready.</p>
+<p>An NVIDIA graphics card is used automatically when present. Without one everything still works on the CPU, only slower (training on the CPU is very slow).</p>
+</section>
+
+<section id="start">
+<h2>3. Start and shut down</h2>
+<ol>
+<li>Double-click <code>start.bat</code>. A console window (the server) and a SIGN2MV window open. Keep the console window open while you work.</li>
+<li>To finish, press <b>Shut down</b> at the top right. If jobs are running or a workspace is busy (recording, converting, rendering), SIGN2MV lists them and asks before cancelling them.</li>
+</ol>
+<p>The interface language follows Windows; change it with the language menu at the top. The <b>Manual</b> link opens this page.</p>
+</section>
+
+<section id="library">
+<h2>4. Song library</h2>
+<ol>
+<li>Open <b>Library</b>, type a title and press <b>Add song</b>.</li>
+<li>Import the music: paste a YouTube URL and press <b>Import from YouTube</b> (the video is downloaded too, up to 1080p), or choose an audio/video file and press <b>Upload a file</b> (up to 2 GB and 15 minutes). The original is kept unchanged.</li>
+<li>When the import finishes, the song shows its original player and three buttons: <b>Sing this song</b>, <b>Make an MV</b>, <b>AI cover</b>.</li>
+</ol>
+<h3>Stems and key</h3>
+<p>Under <i>Stems and key</i> you can prepare and listen to the separated tracks: choose the separator (Demucs, BS-RoFormer, Mel-RoFormer Kim), optionally a second pass on the instrumental and a lead/backing split, and a key. Separation is cached per song: any workspace that needs the same stems reuses them.</p>
+<p><b>Rename</b> changes the title. <b>Delete</b> removes the song and everything made from it (stems, recordings, covers, MVs) after a confirmation.</p>
+</section>
+
+<section id="sing">
+<h2>5. Sing &amp; record</h2>
+<p>This is the former sing &amp; record app, with the song chosen from the library. Pick the song at the top of the page (or press <b>Sing this song</b> in the library).</p>
+<ol>
+<li><b>Prepare the song</b>: choose the key (−12 to +12, tempo unchanged) and press <i>Prepare song reference</i>. Wait until the status says ready. The default is full-song analysis with RMVPE pitch.</li>
+<li><b>Microphone</b>: choose browser capture, or native capture if enabling the microphone lowers your backing audio; enable the microphone and check the input.</li>
+<li><b>Sing</b>: choose what you hear (original vocals + backing, or backing/harmonies only) and what is recorded (singer only, mixed, or nothing), then <i>Sing from the start</i>. Stop, or let the song end; the take waits under <i>Pending review</i>. Save it for post-production when satisfied.</li>
+<li><b>Segments</b>: enable segment mode, split the song while it plays, record each segment as many times as you like, choose a take per segment and assemble the full mix. Original-vocal regions can be added to the assembled mix.</li>
+<li><b>Post-production</b>: levels, timing correction, smoothing, EQ, compression, reverb/delay, noise and breath reduction, pitch correction; compare A/B on the same phrase; render again (the original vocal is always kept).</li>
+<li><b>Make an MV</b> from a finished recording: the recording is saved as an MV audio of the song and the MV workspace opens with it.</li>
+</ol>
+<p>Masks in <i>Exclude incorrect reference regions</i> stop wrong reference notes (instrumental passages) from counting in the score.</p>
+</section>
+
+<section id="cover">
+<h2>6. AI cover</h2>
+<p>Open <b>AI cover</b> (or press <b>AI cover</b> on a song in the library) and pick the song at the top. The left side is the form; the right side holds the versions, voice models, training and instrument sounds.</p>
+<h3>Make a cover</h3>
+<ol>
+<li><b>Voice model</b>: choose a model (and, if it has them, one of its kept training epochs). The last model you used is selected for new songs. If the list is empty, import or train a model first (chapter 7).</li>
+<li><b>Pitch</b>: semitones for the voice (about −12 for female→male, +12 for male→female).</li>
+<li><b>Key (whole song)</b>: −8 to +8. The accompaniment and original backing vocals are shifted with Rubber Band (tempo unchanged) and the voice conversion gets the same shift. <i>▶ Preview this key</i> plays the original in that key.</li>
+<li>Optional <b>Conversion fine-tuning</b>: consonant/breath protect (0.33), index rate (0.75), volume envelope (0 = follow the original singer's loudness), pitch detection (rmvpe), auto-tune, noise clean-up.</li>
+<li>Optional <b>Separation and backing vocals</b>: separator; vocals = convert the lead and keep the original backing vocals (default), convert all vocals, or split twice for songs with three or more voices; accompaniment single or second pass; whether the original backing vocals are mixed into the cover.</li>
+<li><b>Mix</b>: converted vocal volume (95%), accompaniment (85%), optional melody instrument (steel guitar, yangqin, guzheng, dizi, guzheng + dizi) with its volume (0% = no instrument), octave and room.</li>
+<li>Press <b>🎤 Make cover (new version)</b>. The progress appears under the button and in the job queue.</li>
+</ol>
+<p>Separation and conversions are cached. Running again with the same settings reuses them; changing only the mix is fast.</p>
+<h3>Versions</h3>
+<p>Every run creates a version (#1, #2, …) with its own MP3. On a version:</p>
+<table>
+<tr><td><b>Load settings</b></td><td>puts that version's settings back into the form.</td></tr>
+<tr><td><b>🎛️ Quick remix</b></td><td>applies the form's mix, vocal sections, volume sections, backing-vocal choice and duet volumes to this version and replaces its audio. Model, pitch, key and separation stay as they were.</td></tr>
+<tr><td><b>Remix as new version</b></td><td>the same, but keeps the old version and adds a new one.</td></tr>
+<tr><td><b>🎬 Make MV</b></td><td>opens the MV workspace with this version as the audio.</td></tr>
+<tr><td><b>Download</b> / <b>Stems</b></td><td>download the MP3; listen to the original, separated tracks and the converted vocal used by this version.</td></tr>
+<tr><td><b>Rename</b> / <b>Delete</b></td><td>deleting also deletes the version's audio; cached files no other version uses are cleaned up.</td></tr>
+</table>
+<p>Every version also appears as MV audio of the song.</p>
+<h3>Vocal sections</h3>
+<p>Play a version or the original and use <b>⏱</b> to take the player time for <i>From</i> / <i>to</i>. For each section choose:</p>
+<ul>
+<li><b>Original singer</b> — this part uses the original vocal (level-matched), for example where someone else sings.</li>
+<li><b>Mute</b> — no vocal in this part.</li>
+<li><b>Re-convert</b> — this part is converted again with another model, pitch or settings (1 s of context on each side). Optionally the section is separated again with its own separator and lead split; its accompaniment is then replaced as well.</li>
+<li><b>External clip</b> — upload your own recording or another version. It replaces the converted vocal only, or the whole mix if the clip contains accompaniment. The clip's 0 s is placed at <i>From</i> + offset. A vocal clip can also be converted with a voice model.</li>
+</ul>
+<h3>Volume sections</h3>
+<p>Change the volume of the converted vocal, the accompaniment or the original backing vocals between two times (0–200%, 80 ms crossfades).</p>
+<h3>Male / female duet</h3>
+<p>Turn on <i>Use male / female duet</i>: the vocals are split into a male and a female line (aufr33 model, or Sucial if installed). Each side has its own model, pitch, volume and fine-tuning, or keeps the original singer. Changing only the two volumes later is a quick remix.</p>
+<h3>Instrument sounds</h3>
+<p>Steel guitar and yangqin use the GeneralUser GS sound font (installed). Guzheng and dizi need their sample folders: under <i>Instrument sounds</i> enter the old program's folder (for example <code>D:\AI_COVER_MV\workspace\soundfonts</code>) and press <b>Import (copy)</b>.</p>
+</section>
+
+<section id="models">
+<h2>7. Voice models and training</h2>
+<h3>Bring your existing models</h3>
+<ol>
+<li>In <b>AI cover</b> → <i>Voice models</i> → <i>Import from a folder</i>, type <code>D:\AI_COVER_MV\models</code> (a folder of model folders) and press <b>Import (copy)</b>. Every model folder with a <code>.pth</code> is copied with its <code>.index</code>, notes and kept epochs. The source is not changed.</li>
+<li>A single model folder or a single <code>.pth</code> file works too, and <i>Upload a model</i> accepts a <code>.pth</code> and an optional <code>.index</code>.</li>
+</ol>
+<p>Model names use English letters, digits and <code>_ . -</code>. A folder whose name has other characters is skipped; import it on its own and type a name.</p>
+<p>A model's <b>Loss curve</b> shows its training (mel and total loss per epoch; dashed lines mark the kept epoch versions). Kept epochs can be deleted one by one; the final version stays.</p>
+<h3>Train a voice model</h3>
+<ol>
+<li>Type a model name, add recordings (upload files, or type folders/files on this computer, one per line). Clean solo singing or speech, about 10 minutes or more in total, works best.</li>
+<li>Defaults: 100 epochs, batch 8, a version saved every 10 epochs, 40 kHz.</li>
+<li>Press <b>🚀 Start training</b>. The six steps run automatically: import, slicing, feature extraction (RMVPE + ContentVec), training, index, installing. The loss curve updates while it trains.</li>
+<li>When it finishes, the model is in the list with its last four epoch versions and loss curve. The training scratch folder is deleted.</li>
+</ol>
+<p><b>⏹ Stop training</b> stops it; the model is not installed. <b>🧹 Clean training leftovers</b> removes scratch files of stopped trainings. Training uses the graphics card, so other GPU jobs wait until it ends.</p>
+</section>
+
+<section id="mv">
+<h2>8. MV</h2>
+<p>This is the former MV studio. A project belongs to a song; open it from the library (<b>Make an MV</b>), from a recording or from a cover version.</p>
+<ol>
+<li><b>Create a project</b>: choose the song, a project name, the title and credits. The cover singer and studio names on the title cards come from <b>Settings</b>.</li>
+<li><b>Audio</b>: the song's original, a sing &amp; record take, a cover version, or an uploaded file.</li>
+<li><b>Photos</b>: upload one photo per scene (batch upload fills the empty slots in order).</li>
+<li><b>Lyrics</b>: paste the lyrics with <code>[Scene 01]</code> markers and press the Whisper alignment button. Whisper listens to the separated vocals (from the song's stem cache) and times every line; you can adjust lines, interludes and karaoke timing afterwards.</li>
+<li><b>Preview</b> single frames, then <b>render</b>: a 1080p 60 fps MP4 with karaoke colouring. Rendering is a GPU job; the previous MV is kept until the new one is finished. Verification frames are checked automatically.</li>
+</ol>
+<p>The MV never shows the word “AI”: credits use the cover singer name from Settings.</p>
+</section>
+
+<section id="jobs">
+<h2>9. Job queue</h2>
+<p><b>Jobs</b> lists every job with its progress. GPU jobs (separation, conversion, Whisper, rendering, training) run one at a time; the others wait with their position. General jobs (imports, key changes, quick remixes) run beside them. <b>Cancel</b> stops a job and its helper programs.</p>
+</section>
+
+<section id="settings">
+<h2>10. Settings</h2>
+<ul>
+<li><b>Library folder</b> — where songs are stored (default <code>library</code> inside the SIGN2MV folder).</li>
+<li><b>Cover singer name</b> and <b>Studio name</b> — shown on the MV title cards.</li>
+</ul>
+</section>
+
+<section id="data">
+<h2>11. Where things are stored</h2>
+<table>
+<tr><th>Folder (inside SIGN2MV)</th><th>Contents</th></tr>
+<tr><td><code>library\songs\&lt;song&gt;\</code></td><td><code>source</code> (original), <code>stems</code>, <code>keys</code>, <code>sing</code>, <code>recordings</code>, <code>renders</code> (takes and cover versions used as MV audio), <code>cover</code> (cover versions and caches), <code>mv</code> (MV projects)</td></tr>
+<tr><td><code>models\</code></td><td>AI models; <code>models\voices</code> = your RVC voice models; <code>models\soundfonts</code> = instrument sounds</td></tr>
+<tr><td><code>runtime\</code></td><td>Python environments, Applio, ffmpeg, caches, temporary files, training scratch</td></tr>
+<tr><td><code>config\</code>, <code>logs\</code></td><td>settings, logs</td></tr>
+</table>
+<p>To uninstall, shut SIGN2MV down and delete its folder (copy <code>library</code> and <code>models\voices</code> first if you want to keep them).</p>
+</section>
+
+<section id="trouble">
+<h2>12. Troubleshooting</h2>
+<table>
+<tr><td>“Cannot reach the server”</td><td>The console window was closed. Run <code>start.bat</code> again.</td></tr>
+<tr><td>The page says to reload or restart</td><td>Press F5, or Shut down and run <code>start.bat</code> again.</td></tr>
+<tr><td>A model / component is missing</td><td>Run <code>install.bat</code> again; the Home page lists the checks.</td></tr>
+<tr><td>Voice conversion is not installed</td><td>The Applio part of the installation is incomplete: run <code>install.bat</code> again.</td></tr>
+<tr><td>Key change fails</td><td>ffmpeg without Rubber Band: run <code>install.bat</code> again.</td></tr>
+<tr><td>A job is slow</td><td>Check whether another GPU job (for example a training) is running in <b>Jobs</b>.</td></tr>
+<tr><td>Guzheng / dizi are “not installed”</td><td>Import their sample folders (chapter 6, Instrument sounds).</td></tr>
+</table>
+<p>Server details are in <code>logs\server.log</code>.</p>
+</section>
+
+<section id="licences">
+<h2>13. Licences</h2>
+<p>SIGN2MV uses open-source components and models with their own licences, listed in <code>THIRD_PARTY.md</code>. Notably: Applio (MIT), RMVPE (downloaded from lj1995/VoiceConversionWebUI, MIT), basic-pitch (Apache-2.0), GeneralUser GS sound font (GeneralUser GS licence v2.0), the Sucial male/female model (CC BY-NC-SA 4.0, non-commercial, optional). Use voice models only for voices you have the right to use.</p>
+</section>
+
+</main>
+</div>
+</body>
+</html>
