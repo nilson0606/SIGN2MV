@@ -128,11 +128,16 @@ async function remove(song) {
   } catch (err) { toast(errorText(err), true); }
 }
 
+// YouTube video id from the usual link shapes (watch, youtu.be, shorts, embed, music)
+function youtubeId(text) {
+  const m = String(text || '').match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : '';
+}
+
 function importSection(song) {
   const jb = jobBox();
   const url = el('input', { type: 'url', placeholder: 'https://www.youtube.com/watch?v=...', style: 'flex:1;min-width:240px' });
   const file = el('input', { type: 'file', accept: 'audio/*,video/*,.mkv,.flac,.m4a,.wav,.mp3,.mp4,.mov,.webm' });
-  const progress = el('span', { class: 'muted small' });
   async function afterJob(job) {
     const fin = await jb.follow(job);
     if (fin.status === 'succeeded') toast(t('lib.import_done'));
@@ -142,29 +147,111 @@ function importSection(song) {
     try { await afterJob(await api.post(`/api/songs/${song.song_id}/import/youtube`, { url: url.value })); }
     catch (err) { toast(errorText(err), true); }
   } }, t('lib.import_youtube'));
-  const fileBtn = el('button', { class: 'btn', onclick: () => {
-    const f = file.files && file.files[0];
+  // old 📋 貼上
+  const pasteBtn = el('button', { class: 'btn', title: t('lib.paste'), onclick: async () => {
+    try { url.value = (await navigator.clipboard.readText()).trim(); preview(); }
+    catch { toast(t('lib.paste_denied'), true); url.focus(); }
+  } }, '📋');
+  // preview card before importing (old YouTube preview: thumbnail, title, id, link, player)
+  const card = el('div', { class: 'yt-card hidden' });
+  let previewTimer = null;
+  let previewFor = '';
+  function preview() {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(showPreview, 500);
+  }
+  async function showPreview() {
+    const u = url.value.trim();
+    if (u === previewFor) return;
+    previewFor = u;
+    if (!/^https?:\/\/\S+$/.test(u)) { card.classList.add('hidden'); card.replaceChildren(); return; }
+    const id = youtubeId(u);
+    const title = el('b', {}, t('lib.yt_reading'));
+    const meta = el('div', { class: 'muted small' }, id ? `ID: ${id}` : '');
+    const player = el('div', {});
+    const thumb = id ? el('img', { class: 'yt-thumb', src: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`, alt: '',
+      onerror: (e) => { e.target.style.visibility = 'hidden'; } }) : el('div');
+    const links = el('div', { class: 'row', style: 'gap:6px' },
+      el('a', { class: 'btn small', href: u, target: '_blank', rel: 'noopener' }, t('lib.yt_open')),
+      id ? el('button', { class: 'btn small', onclick: () => {
+        if (player.firstChild) { player.replaceChildren(); return; }
+        player.replaceChildren(el('iframe', { class: 'yt-frame', src: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`,
+          allow: 'autoplay; encrypted-media; fullscreen', allowfullscreen: true, referrerpolicy: 'strict-origin-when-cross-origin' }));
+      } }, t('lib.yt_play')) : null);
+    card.replaceChildren(el('div', { class: 'row', style: 'align-items:flex-start;gap:12px' },
+      thumb, el('div', { class: 'grow' }, title, meta, links)), player);
+    card.classList.remove('hidden');
+    try {
+      const info = await api.get(`/api/youtube/info?url=${encodeURIComponent(u)}`);
+      if (previewFor !== u) return;
+      title.textContent = info.title || u;
+      meta.textContent = [info.uploader, info.duration ? fmtTime(info.duration) : '', info.id ? `ID: ${info.id}` : ''].filter(Boolean).join(' · ');
+      if (!id && info.thumbnail) thumb.replaceWith(el('img', { class: 'yt-thumb', src: info.thumbnail, alt: '', onerror: (e) => { e.target.style.visibility = 'hidden'; } }));
+    } catch {
+      if (previewFor !== u) return;
+      title.textContent = t('lib.yt_no_info');
+    }
+  }
+  url.addEventListener('input', preview);
+  url.addEventListener('paste', () => setTimeout(preview, 0));
+  // local file: pick or drop (old 拖檔進來即上傳), with a progress bar and the file name
+  const bar = el('progress', { max: 100, value: 0, class: 'hidden', style: 'width:160px' });
+  const progress = el('span', { class: 'muted small' });
+  function upload(f) {
     if (!f) { toast(t('lib.pick_file'), true); return; }
     const fd = new FormData();
     fd.append('file', f, f.name);
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `/api/songs/${song.song_id}/import/file`);
     xhr.setRequestHeader('X-SIGN2MV', '1');
-    xhr.upload.onprogress = (e) => { if (e.lengthComputable) progress.textContent = t('lib.uploading', Math.round(e.loaded * 100 / e.total)); };
+    bar.value = 0;
+    bar.classList.remove('hidden');
+    progress.className = 'muted small';
+    progress.textContent = `${f.name} · ${fmtBytes(f.size)}`;
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      bar.value = Math.round(e.loaded * 100 / e.total);
+      progress.textContent = `${f.name} · ${t('lib.uploading', bar.value)}`;
+    };
     xhr.onload = async () => {
-      progress.textContent = '';
+      bar.classList.add('hidden');
       let data = null;
       try { data = JSON.parse(xhr.responseText); } catch { /* ignore */ }
-      if (xhr.status >= 400) { toast(errorText({ code: (data && data.error) || `http_${xhr.status}` }), true); return; }
+      if (xhr.status >= 400) {
+        const msg = errorText({ code: (data && data.error) || `http_${xhr.status}` });
+        progress.className = 'small cv-warn';
+        progress.textContent = `${f.name}：${msg}`;   // the reason stays in the box
+        toast(msg, true);
+        return;
+      }
+      progress.textContent = f.name;
       await afterJob(data);
     };
-    xhr.onerror = () => { progress.textContent = ''; toast(errorText({ code: 'server_unreachable' }), true); };
+    xhr.onerror = () => {
+      bar.classList.add('hidden');
+      progress.className = 'small cv-warn';
+      progress.textContent = `${f.name}：${errorText({ code: 'server_unreachable' })}`;
+      toast(errorText({ code: 'server_unreachable' }), true);
+    };
     xhr.send(fd);
-  } }, t('lib.import_file'));
+  }
+  const fileBtn = el('button', { class: 'btn', onclick: () => upload(file.files && file.files[0]) }, t('lib.import_file'));
+  const drop = el('div', { class: 'dropzone' },
+    el('div', { class: 'row' }, file, fileBtn, bar, progress),
+    el('div', { class: 'muted small' }, t('lib.drop_hint')));
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault();
+    drop.classList.remove('over');
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) upload(f);
+  });
   const sec = el('div', { class: 'section' },
     el('h3', {}, song.source ? t('lib.reimport') : t('lib.import')),
-    el('div', { class: 'row' }, url, ytBtn),
-    el('div', { class: 'row' }, file, fileBtn, progress),
+    el('div', { class: 'row' }, url, pasteBtn, ytBtn),
+    card,
+    drop,
     el('p', { class: 'muted small' }, t('lib.import_hint')),
     jb.el);
   if (song.source) {
@@ -180,12 +267,13 @@ function sourceSection(song) {
     t(`lib.source.${s.type}`), fmtTime(s.duration),
     s.video_size && s.video_size[0] ? `${s.video_size[0]}×${s.video_size[1]}` : t('lib.no_video'),
   ];
-  if (s.url) info.push(s.url);
   if (s.original_name) info.push(s.original_name);
   const media = s.video
     ? el('video', { src: mediaUrl(song.song_id, s.video), controls: true, muted: true, style: 'max-height:240px' })
     : null;
-  return fold('source', t('lib.source_title'), el('span', { class: 'muted small' }, info.join(' · ')), false,
+  const link = s.url && /^https?:\/\//.test(s.url)
+    ? el('a', { href: s.url, target: '_blank', rel: 'noopener', class: 'small', onclick: (e) => e.stopPropagation() }, s.url) : null;   // old 前往 YouTube 原站
+  return fold('source', t('lib.source_title'), el('span', { class: 'muted small' }, info.join(' · '), link ? ' · ' : '', link), false,
     el('audio', { src: mediaUrl(song.song_id, s.audio), controls: true, preload: 'none' }),
     media);
 }

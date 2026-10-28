@@ -586,4 +586,12 @@ export default {
   "cover.karaoke.becruily": "becruily",
   "cover.becruily_missing": "becruily is not downloaded (about 1.7 GB). To use it, download mel_band_roformer_karaoke_becruily.ckpt and put it here: {0}",
   "cover.becruily_link": "Download link",
+  "lib.paste": "Paste the link from the clipboard",
+  "lib.paste_denied": "The browser did not allow reading the clipboard. Press Ctrl+V in the box instead.",
+  "lib.yt_reading": "Reading the title…",
+  "lib.yt_open": "Open the original page",
+  "lib.yt_play": "▶ Preview",
+  "lib.yt_no_info": "Could not read the title (the import may still work).",
+  "lib.drop_hint": "You can also drop an audio or video file here; it is uploaded right away.",
+  "err.youtube_info_failed": "Could not read this link.",
 };

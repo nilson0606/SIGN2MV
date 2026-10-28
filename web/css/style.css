@@ -272,3 +272,10 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .cv-mvbanner { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 .cv-batch { margin-bottom: 8px; }
 .banner.row { display: flex; align-items: center; gap: 8px; }
+
+/* import: link preview card and file drop zone (old YouTube preview / 拖檔上傳) */
+.yt-card { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin: 6px 0 10px; }
+.yt-thumb { width: 160px; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; background: #0b1420; }
+.yt-frame { width: 100%; max-width: 640px; aspect-ratio: 16/9; border: 0; border-radius: 8px; margin-top: 8px; }
+.dropzone { border: 1.5px dashed var(--line); border-radius: 10px; padding: 10px; margin: 6px 0; }
+.dropzone.over { border-color: var(--accent); background: rgba(127, 224, 214, 0.06); }

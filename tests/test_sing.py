@@ -180,3 +180,25 @@ def test_sing_diagnostics_roundtrip(client):
     assert fin["saved"]
     assert client.get("/sr/diagnostics", headers=h).json()["count"] == 1
     assert client.delete("/sr/diagnostics", headers=h).json()["cleared"] == 1
+
+
+def test_link_preview_info(client, tmp_path):
+    """Old YouTube preview card: title before importing; bad links are refused, unreachable ones say so."""
+    assert client.get("/api/youtube/info", params={"url": "notaurl"}).status_code == 400
+    r = client.get("/api/youtube/info", params={"url": "http://127.0.0.1:9/nothing.mp4"})
+    assert r.status_code == 502 and r.json()["error"] == "youtube_info_failed"
+    # a direct media link (generic extractor): title from the file name, nothing downloaded
+    import functools
+    import http.server
+    import threading
+    folder = tmp_path / "link"
+    folder.mkdir()
+    (folder / "song_preview.wav").write_bytes(wav_bytes(1.0))
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(http.server.SimpleHTTPRequestHandler,
+                                                                             directory=str(folder)))
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        info = client.get("/api/youtube/info", params={"url": f"http://127.0.0.1:{srv.server_port}/song_preview.wav"}).json()
+        assert info["title"] == "song_preview" and info["id"]
+    finally:
+        srv.shutdown()

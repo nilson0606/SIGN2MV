@@ -586,4 +586,12 @@ export default {
   "cover.karaoke.becruily": "becruily",
   "cover.becruily_missing": "becruily 還沒下載（約 1.7 GB）。要用它，請下載 mel_band_roformer_karaoke_becruily.ckpt 放到：{0}",
   "cover.becruily_link": "下載網址",
+  "lib.paste": "從剪貼簿貼上網址",
+  "lib.paste_denied": "瀏覽器不允許讀剪貼簿，請在框內按 Ctrl+V 貼上。",
+  "lib.yt_reading": "正在讀取標題…",
+  "lib.yt_open": "前往原站",
+  "lib.yt_play": "▶ 預覽",
+  "lib.yt_no_info": "讀不到標題（仍可試著匯入）。",
+  "lib.drop_hint": "也可以把音訊或影片檔拖到這裡，放開就開始上傳。",
+  "err.youtube_info_failed": "讀不到這個網址的資訊。",
 };

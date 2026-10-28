@@ -166,6 +166,41 @@ def router(ctx: Context) -> APIRouter:
                           title=f"import: {song['title']}", song_id=song_id, timeout_s=3600,
                           dedupe="import")
 
+    info_cache: dict[str, dict] = {}
+
+    @r.get("/api/youtube/info")
+    async def youtube_info(url: str = ""):
+        """Title, length and thumbnail before importing (old /api/yt_info preview card). Read only, nothing downloaded."""
+        from starlette.concurrency import run_in_threadpool
+        import subprocess
+        url = url.strip()
+        if not re.match(r"^https?://\S+$", url) or len(url) > 500:
+            return err("invalid_url")
+        if url in info_cache:
+            return info_cache[url]
+        from .childenv import child_env
+        cmd = [ctx.python("engine"), "-m", "yt_dlp", "--ignore-config", "--no-playlist", "--no-cache-dir",
+               "--js-runtimes", "deno", "--socket-timeout", "15", "--skip-download", "-J", url]
+        try:
+            res = await run_in_threadpool(subprocess.run, cmd, capture_output=True, text=True, encoding="utf-8",
+                                          errors="replace", timeout=45, env=child_env(ctx.paths),
+                                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except (OSError, subprocess.TimeoutExpired):
+            return err("youtube_info_failed", 502)
+        try:
+            data = json.loads(res.stdout) if res.returncode == 0 else None
+        except ValueError:
+            data = None
+        if not isinstance(data, dict):
+            return err("youtube_info_failed", 502)
+        out = {"id": data.get("id") or "", "title": data.get("title") or "", "duration": data.get("duration"),
+               "uploader": data.get("uploader") or data.get("channel") or "", "thumbnail": data.get("thumbnail") or "",
+               "url": data.get("webpage_url") or url, "site": data.get("extractor_key") or ""}
+        if len(info_cache) > 200:
+            info_cache.clear()
+        info_cache[url] = out
+        return out
+
     @r.post("/api/songs/{song_id}/import/file")
     async def import_file(song_id: str, file: UploadFile = File(...)):
         lib, song, e = song_or_err(song_id)
