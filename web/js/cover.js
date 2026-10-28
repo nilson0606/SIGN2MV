@@ -539,16 +539,43 @@ function renderVersions(highlight) {
   if (!vs.length) { versionsBox.replaceChildren(el('div', { class: 'empty' }, t('cover.no_versions'))); return; }
   versionsBox.replaceChildren(...vs.map((v) => versionItem(v, v.id === highlight)));
 }
+// Switch a player to another file and continue from the same second (A/B with the original, stems)
+function switchSource(player, url, chips, active) {
+  const at = player.currentTime || 0;
+  const wasPlaying = !player.paused;
+  player.src = url;
+  player.load();
+  player.addEventListener('loadedmetadata', () => {
+    try { player.currentTime = Math.min(at, player.duration || at); } catch { /* ignore */ }
+    if (wasPlaying) player.play().catch(() => {});
+  }, { once: true });
+  chips.forEach((c) => c.classList.toggle('on', c === active));
+}
+
 function versionItem(v, hi) {
-  const tracksBox = el('div', { class: 'tracks hidden' });
+  const tracksBox = el('div', { class: 'cv-chips hidden' });
   // ?v= makes the browser fetch the audio again after a remix replaced it under the same name
   const src = v.audio ? `${mediaUrl(songId, v.audio)}?v=${Math.round(v.updated_at || v.created_at || 0)}` : '';
+  const song = songById(songId);
+  const origUrl = song && song.source ? mediaUrl(songId, song.source.audio) : '';
+  const player = src ? audioEl(src) : null;
+  const chips = [];
+  const chip = (label, url) => {
+    const b = el('button', { class: 'cv-chip', onclick: () => switchSource(player, url, chips, b) }, label);
+    chips.push(b);
+    return b;
+  };
+  const abRow = player && origUrl ? el('div', { class: 'cv-ab' },
+    chip(t('cover.ab_cover'), src), chip(t('cover.ab_original'), origUrl),
+    el('span', { class: 'muted small' }, t('cover.ab_hint'))) : null;
+  if (chips[0]) chips[0].classList.add('on');
   const box = el('div', { class: 'cv-version' + (hi ? ' selected cv-new' : ''), dataset: { vid: v.id } },
     el('div', { class: 'row' },
       el('b', { class: 'grow' }, v.title),
       el('span', { class: 'muted small' }, `${fmtDate(v.updated_at || v.created_at)}${v.duration ? ' · ' + fmtTime(v.duration) : ''}`)),
     el('div', { class: 'muted small' }, v.label + (v.source_version ? ` · ${t('cover.remixed')}` : '')),
-    src ? audioEl(src) : el('div', { class: 'muted' }, t('cover.audio_missing')),
+    abRow,
+    player || el('div', { class: 'muted' }, t('cover.audio_missing')),
     el('div', { class: 'row' },
       el('button', { class: 'btn small', title: t('cover.use_settings_hint'), onclick: () => { writeForm(v.params); changed(); toast(t('cover.settings_loaded')); } }, t('cover.use_settings')),
       el('button', { class: 'btn small', title: t('cover.remix_hint'), onclick: () => remix(v, false) }, t('cover.remix')),
@@ -562,8 +589,9 @@ function versionItem(v, hi) {
         if (!tracksBox.classList.contains('hidden')) { tracksBox.classList.add('hidden'); return; }
         try {
           const res = await api.get(`/api/cover/songs/${songId}/versions/${v.id}/tracks`);
-          tracksBox.replaceChildren(...res.tracks.map((tr) => el('div', { class: 'track' },
-            el('span', {}, t(`cover.track.${tr.key}`)), audioEl(mediaUrl(songId, tr.path)))));
+          chips.splice(2);   // keep the cover / original chips, rebuild the stems
+          tracksBox.replaceChildren(el('span', { class: 'muted small' }, t('cover.stems_hint')),
+            ...res.tracks.filter((tr) => tr.key !== 'mix').map((tr) => chip(t(`cover.track.${tr.key}`), mediaUrl(songId, tr.path))));
           tracksBox.classList.remove('hidden');
         } catch (err) { toast(errorText(err), true); }
       } }, t('cover.tracks')),

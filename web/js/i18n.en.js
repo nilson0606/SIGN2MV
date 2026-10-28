@@ -335,4 +335,8 @@ export default {
   "cover.done_hint": "It is now in Versions (top right) and in this song's MV audio list.",
   "cover.done_play": "▶ Play it",
   "cover.done_show": "Show the version",
+  "cover.ab_cover": "🎧 Cover",
+  "cover.ab_original": "🎤 Original",
+  "cover.ab_hint": "switching continues from the same second",
+  "cover.stems_hint": "Stems (same player, same second):",
 };

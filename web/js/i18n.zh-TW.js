@@ -335,4 +335,8 @@ export default {
   "cover.done_hint": "已經加到右上方「版本」，也出現在這首歌的 MV 音檔清單。",
   "cover.done_play": "▶ 立刻播放",
   "cover.done_show": "跳到這個版本",
+  "cover.ab_cover": "🎧 成品（翻唱）",
+  "cover.ab_original": "🎤 原曲（原唱）",
+  "cover.ab_hint": "切換時從同一秒接著播",
+  "cover.stems_hint": "分軌（同一個播放器、同一秒接著播）：",
 };
