@@ -176,3 +176,36 @@ def test_storage_usage(client, root):
     assert res["total"] == sum(c.values()) and res["disk"]["free"] > 0
     lib = client.get("/api/storage").json()
     assert lib["songs"][sid] == res["total"] and lib["total"] >= res["total"]
+
+
+def test_cover_versions_mvs_batch_delete_open_folder(client, root):
+    """A version lists the MVs made from it; several versions are deleted at once; open-folder stays inside the song."""
+    import json
+    sid = client.post("/api/songs", json={"title": "V"}).json()["song_id"]
+    sd = next(p for p in root.rglob(sid) if p.is_dir())
+    for vid, rid in (("v0000000001", "r000000000001"), ("v0000000002", "r000000000002")):
+        (sd / "cover" / "versions" / vid).mkdir(parents=True)
+        (sd / "cover" / "versions" / vid / "version.json").write_text(json.dumps(
+            {"id": vid, "number": int(vid[-1]), "title": f"#{vid[-1]}", "label": "M", "render_id": rid, "created_at": 1}))
+        (sd / "renders" / rid).mkdir(parents=True)
+        (sd / "renders" / rid / "audio.mp3").write_bytes(b"ID3" + b"x" * 500)
+        (sd / "renders" / rid / "render.json").write_text(json.dumps({"id": rid, "kind": "cover", "audio": "audio.mp3", "bytes": 503}))
+    q = sd / "quickmv" / "q000000000001"
+    q.mkdir(parents=True)
+    (q / "video.mp4").write_bytes(b"v")
+    (q / "info.json").write_text(json.dumps({"source": "r000000000001", "title": "Q"}))
+    m = sd / "mv" / "proj"
+    (m / "output").mkdir(parents=True)
+    (m / "project.json").write_text(json.dumps({"audio_file": "renders/r000000000001/audio.mp3", "output_mv": "P_MV.mp4", "title": "P"}))
+    (m / "output" / "P_MV.mp4").write_bytes(b"v")
+    vs = {v["id"]: v for v in client.get(f"/api/cover/songs/{sid}").json()["versions"]}
+    one = vs["v0000000001"]
+    assert one["format"] == "MP3" and one["bytes"] == 503
+    assert sorted(x["kind"] for x in one["mvs"]) == ["full", "quick"] and vs["v0000000002"]["mvs"] == []
+    assert client.post(f"/api/open-folder", json={"song_id": sid, "rel": "../.."}).status_code == 404
+    r = client.post(f"/api/open-folder", json={"song_id": sid, "rel": one["audio"]})
+    assert r.json().get("error") == "open_folder_windows_only" or r.json().get("ok")
+    res = client.post(f"/api/cover/songs/{sid}/versions/delete", json={"ids": ["v0000000001", "v0000000002", "vnope"]}).json()
+    assert res["deleted"] == 2 and client.get(f"/api/cover/songs/{sid}").json()["versions"] == []
+    assert not (sd / "renders" / "r000000000001").exists()
+    assert client.post(f"/api/cover/songs/{sid}/versions/delete", json={"ids": []}).status_code == 400

@@ -219,7 +219,31 @@ def router(ctx: Context) -> APIRouter:
                                       "params", "duration", "instrument_used", "source_version", "stats")}
         out["audio"] = f"renders/{rid}/{audio}" if audio and (sdir / "renders" / rid / audio).is_file() else None
         out["bytes"] = info.get("bytes")
+        out["format"] = Path(audio).suffix.lstrip(".").upper() if audio else ""
+        out["mvs"] = mvs_from(sdir, out["audio"], rid) if rid else []
         return out
+
+    def mvs_from(sdir: Path, audio_rel: str | None, rid: str) -> list[dict]:
+        """Finished MVs that use this version as their audio (old 「🎬 立即觀看」 banner)."""
+        found = []
+        qd = sdir / "quickmv"
+        if qd.is_dir():
+            for d in sorted(qd.iterdir()):
+                info = cover.read_json(d / "info.json", {}) or {}
+                if info.get("source") == rid and (d / "video.mp4").is_file():
+                    found.append({"kind": "quick", "id": d.name, "path": f"quickmv/{d.name}/video.mp4",
+                                  "title": info.get("title") or "", "created_at": info.get("created_at")})
+        md = sdir / "mv"
+        if audio_rel and md.is_dir():
+            for d in sorted(md.iterdir()):
+                proj = cover.read_json(d / "project.json", {}) or {}
+                a = str(proj.get("audio_file") or "").replace("\\", "/")
+                out = os.path.basename(str(proj.get("output_mv") or ""))
+                if out and (a == audio_rel or a.endswith("/" + audio_rel)) and (d / "output" / out).is_file():
+                    found.append({"kind": "full", "slug": f"{sdir.name}_{d.name}", "path": f"mv/{d.name}/output/{out}",
+                                  "title": proj.get("title") or d.name,
+                                  "created_at": (d / "output" / out).stat().st_mtime})
+        return found
 
     # ------------------------------------------------------------------ status / models
     @r.get("/api/cover/status")
@@ -662,6 +686,31 @@ def router(ctx: Context) -> APIRouter:
         shutil.rmtree(cover.cover_dir(sdir) / "versions" / vid, ignore_errors=True)
         freed = cover.collect_garbage(sdir, min_age_s=0)
         return {"freed": freed}
+
+    @r.post("/api/cover/songs/{song_id}/versions/delete")
+    async def delete_versions(song_id: str, request: Request):
+        """Delete several versions at once (old 刪除勾選). Body: {"ids": [...]}."""
+        body = await body_json(request)
+        ids = body.get("ids")
+        if not isinstance(ids, list) or not 1 <= len(ids) <= 500:
+            return err("versions_selection")
+        try:
+            _lib, _song, sdir = song_ctx(song_id)
+        except Exception as exc:  # noqa: BLE001
+            return fail(exc)
+        if ctx.pending_job(song_id, "cover"):
+            return err("cover_busy", 409)
+        deleted = 0
+        for vid in ids:
+            try:
+                v = cover.load_version(sdir, str(vid))
+            except CoverError:
+                continue
+            if v.get("render_id"):
+                delete_render(ctx, song_id, v["render_id"])
+            shutil.rmtree(cover.cover_dir(sdir) / "versions" / str(vid), ignore_errors=True)
+            deleted += 1
+        return {"deleted": deleted, "freed": cover.collect_garbage(sdir, min_age_s=0)}
 
     @r.get("/api/cover/songs/{song_id}/versions/{vid}/tracks")
     def version_tracks(song_id: str, vid: str):

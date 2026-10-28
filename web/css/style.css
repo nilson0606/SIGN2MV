@@ -269,3 +269,6 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .cv-note { color: #93c5fd; }
 .cv-mfstatus { font-size: .85em; color: #6ee7b7; }
 .cv-details > summary[data-count]::after { content: attr(data-count); color: var(--muted); font-weight: normal; }
+.cv-mvbanner { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.cv-batch { margin-bottom: 8px; }
+.banner.row { display: flex; align-items: center; gap: 8px; }

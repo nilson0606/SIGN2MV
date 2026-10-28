@@ -328,6 +328,28 @@ def router(ctx: Context) -> APIRouter:
             freed += size
         return {"deleted": gone, "bytes": freed}
 
+    @r.post("/api/open-folder")
+    async def open_folder(request: Request):
+        """Show a song file (or the song folder) in Windows Explorer (old 「📂 開啟電腦資料夾」).
+        Body: {"song_id", "rel"?}. Only files inside that song's folder."""
+        import subprocess
+        body = await body_json(request)
+        try:
+            lib = ctx.library()
+            song_dir = lib.song_dir(str(body.get("song_id") or "")).resolve()
+        except LibraryError as exc:
+            return err(exc.code, exc.status)
+        target = (song_dir / str(body.get("rel") or "")).resolve()
+        if target != song_dir and song_dir not in target.parents:
+            return err("file_not_found", 404)
+        if not target.exists():
+            return err("file_not_found", 404)
+        if os.name != "nt":
+            return err("open_folder_windows_only")
+        args = ["explorer", f"/select,{target}"] if target.is_file() else ["explorer", str(target)]
+        subprocess.Popen(args)
+        return {"ok": True, "path": str(target)}
+
     # ---------------- media ----------------
     @r.get("/media/{song_id}/{rel:path}")
     def media(song_id: str, rel: str, request: Request):

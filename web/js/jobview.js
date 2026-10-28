@@ -31,7 +31,10 @@ export function jobBox({ cancel = true, onUpdate = null } = {}) {
     const pct = job.percent;
     let text;
     if (job.status === 'queued') text = t('jobs.queued_pos', job.position || 1);
-    else if (job.status === 'running') text = `${t('jobs.status.running')}${job.stage ? ' · ' + t(`stage.${job.stage}`) : ''}${pct != null ? ` ${pct.toFixed(0)}%` : ''}${job.message ? ' · ' + job.message : ''}`;
+    else if (job.status === 'running') {
+      const took = job.started_at ? Math.max(0, Math.round(Date.now() / 1000 - job.started_at)) : null;   // old progress showed the seconds
+      text = `${t('jobs.status.running')}${job.stage ? ' · ' + t(`stage.${job.stage}`) : ''}${pct != null ? ` ${pct.toFixed(0)}%` : ''}${job.message ? ' · ' + job.message : ''}${took != null ? ` （${took >= 60 ? `${Math.floor(took / 60)}:${String(took % 60).padStart(2, '0')}` : t('jobs.seconds', took)}）` : ''}`;
+    }
     else if (job.status === 'succeeded') text = t('jobs.status.succeeded');
     else text = `${t(`jobs.status.${job.status}`)}: ${errorText({ code: job.error_code })}${job.error_message ? ' — ' + job.error_message.slice(-300) : ''}`;
     label.textContent = text;

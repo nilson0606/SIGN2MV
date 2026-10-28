@@ -5,6 +5,8 @@ import { $, $$, el, toast, confirmDialog, fmtBytes } from './ui.js';
 import { bus, pages, registerPage } from './app-state.js';
 import { logView } from './joblog.js';
 
+let bannerDismissed = '';   // version banner closed for this mismatch
+
 const WEB_API_LEVEL = 1;
 let status = null;
 
@@ -62,11 +64,13 @@ async function loadStatus(first = false) {
       updateManualLink();
     }
     const banner = $('#version-banner');
-    if (status.api_level > WEB_API_LEVEL) {
-      banner.textContent = t('banner.reload_page');
-      banner.classList.remove('hidden');
-    } else if (status.api_level < WEB_API_LEVEL) {
-      banner.textContent = t('banner.restart_server');
+    // old banner: "reload page" and ✕ (the same mismatch is not shown again in this window)
+    const kind = status.api_level > WEB_API_LEVEL ? 'reload_page' : (status.api_level < WEB_API_LEVEL ? 'restart_server' : '');
+    if (kind && bannerDismissed !== kind) {
+      banner.replaceChildren(el('span', { class: 'grow' }, t(`banner.${kind}`)),
+        kind === 'reload_page' ? el('button', { class: 'btn small', onclick: () => location.reload() }, t('banner.reload_btn')) : null,
+        el('button', { class: 'btn small', title: t('common.close'), onclick: () => { bannerDismissed = kind; banner.classList.add('hidden'); } }, '✕'));
+      banner.classList.add('row');
       banner.classList.remove('hidden');
     } else {
       banner.classList.add('hidden');

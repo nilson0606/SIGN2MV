@@ -676,14 +676,14 @@ async function follow(job, remixCard = null, asNew = false) {
     const a = remixCard.querySelector('audio');   // let go of the file that is about to be replaced
     if (a) { a.pause(); a.removeAttribute('src'); a.load(); }
     box = jobBox();
-    remixCard.querySelector('.cv-vjob').replaceChildren(box.el);
+    remixCard.querySelector('.cv-vjob').replaceChildren(el('div', { class: 'small cv-note' }, t('cover.busy_track')), box.el);
     remixCard.querySelectorAll('button').forEach((b) => { b.disabled = true; });
   }
   const fin = await box.follow(job);
   busyJob = null;
   runBtn.disabled = false;
   reloadJobs();
-  if (fin.status === 'succeeded') toast(t(remixCard ? 'cover.remix_toast' : 'cover.done'));
+  if (fin.status === 'succeeded') { toast(t(remixCard ? 'cover.remix_toast' : 'cover.done')); flashTitle(t('cover.tab_done')); }
   if (songId) {
     try { songState = await api.get(`/api/cover/songs/${songId}`); } catch { /* ignore */ }
     if (remixCard && fin.status !== 'succeeded') {
@@ -694,6 +694,18 @@ async function follow(job, remixCard = null, asNew = false) {
     }
   }
   bus.dispatchEvent(new Event('renders-changed'));
+}
+
+// the old "🎉 製作完成！" in the tab title while the window is in the background (up to ~3 minutes)
+function flashTitle(text) {
+  if (!document.hidden) return;
+  const orig = document.title;
+  let n = 0;
+  const timer = setInterval(() => {
+    document.title = n % 2 ? orig : text;
+    n += 1;
+    if (!document.hidden || n > 180) { clearInterval(timer); document.title = orig; }
+  }, 1000);
 }
 
 async function runCover() {
@@ -757,11 +769,44 @@ function statsText(st) {
 }
 
 // ------------------------------------------------------------------ versions
+// batch bar (old 批次刪除): select all (with the half state), count, delete selected
+const vSelAll = el('input', { type: 'checkbox', onchange: () => { versionsBox.querySelectorAll('input.cv-pick').forEach((c) => { c.checked = vSelAll.checked; }); updateBatch(); } });
+const vSelCount = el('span', { class: 'muted small' });
+const vDelSel = el('button', { class: 'btn small danger', onclick: async () => {
+  const ids = [...versionsBox.querySelectorAll('input.cv-pick:checked')].map((c) => c.dataset.vid);
+  if (!ids.length) return;
+  if (!(await confirmDialog(t('cover.delete_n_confirm', ids.length), t('common.delete')))) return;
+  versionsBox.querySelectorAll('audio, video').forEach((a) => { a.pause(); a.removeAttribute('src'); a.load(); });   // release files
+  try {
+    const res = await api.post(`/api/cover/songs/${songId}/versions/delete`, { ids });
+    toast(t('cover.deleted_n', res.deleted, fmtBytes(res.freed || 0)));
+  } catch (err) { toast(errorText(err), true); }
+  await openSong(songId);
+  bus.dispatchEvent(new Event('renders-changed'));
+} });
+const vBatch = el('div', { class: 'row cv-batch', style: 'align-items:center;gap:8px' },
+  el('label', { class: 'check small' }, vSelAll, el('span', { 'data-i18n': 'qmv.select_all' })), vSelCount, vDelSel);
+function updateBatch() {
+  const all = [...versionsBox.querySelectorAll('input.cv-pick')];
+  const n = all.filter((c) => c.checked).length;
+  vSelAll.checked = n > 0 && n === all.length;
+  vSelAll.indeterminate = n > 0 && n < all.length;
+  vSelCount.textContent = n ? t('cover.selected_n', n) : '';
+  vDelSel.textContent = t('qmv.delete_selected');
+  vDelSel.disabled = !n;
+  vBatch.classList.toggle('hidden', all.length < 2);
+}
 function renderVersions(highlight) {
   const vs = (songState && songState.versions) || [];
-  if (!songId) { versionsBox.replaceChildren(el('div', { class: 'empty' }, t('cover.pick_song'))); return; }
-  if (!vs.length) { versionsBox.replaceChildren(el('div', { class: 'empty' }, t('cover.no_versions'))); return; }
+  if (!songId) { versionsBox.replaceChildren(el('div', { class: 'empty' }, t('cover.pick_song'))); updateBatch(); return; }
+  if (!vs.length) { versionsBox.replaceChildren(el('div', { class: 'empty' }, t('cover.no_versions'))); updateBatch(); return; }
   versionsBox.replaceChildren(...vs.map((v) => versionItem(v, v.id === highlight)));
+  vSelAll.checked = false;
+  updateBatch();
+}
+async function openFolder(rel) {
+  try { await api.post('/api/open-folder', { song_id: songId, rel }); toast(t('common.opened_folder')); }
+  catch (err) { toast(errorText(err), true); }
 }
 // Switch a player to another file and continue from the same second (A/B with the original, stems)
 function switchSource(player, url, chips, active) {
@@ -774,6 +819,8 @@ function switchSource(player, url, chips, active) {
     if (wasPlaying) player.play().catch(() => {});
   }, { once: true });
   chips.forEach((c) => c.classList.toggle('on', c === active));
+  const now = player.parentElement && player.parentElement.querySelector('.cv-now');
+  if (now && active) now.textContent = t('cover.now_playing', active.textContent);
 }
 
 function versionItem(v, hi) {
@@ -793,20 +840,33 @@ function versionItem(v, hi) {
     chip(t('cover.ab_cover'), src), chip(t('cover.ab_original'), origUrl),
     el('span', { class: 'muted small' }, t('cover.ab_hint'))) : null;
   if (chips[0]) chips[0].classList.add('on');
+  const mvBox = el('div', {});
+  const mvRow = (v.mvs || []).length ? el('div', { class: 'cv-mvbanner' }, ...(v.mvs || []).map((m) =>
+    el('button', { class: 'btn small primary', onclick: () => {
+      if (mvBox.firstChild) { mvBox.replaceChildren(); return; }
+      const vid = el('video', { src: mediaUrl(songId, m.path), controls: true, playsinline: true, style: 'width:100%;aspect-ratio:16/9;background:#000;border-radius:8px;margin-top:6px' });
+      mvBox.replaceChildren(vid);
+      vid.play().catch(() => {});
+    } }, t(m.kind === 'quick' ? 'cover.watch_quick_mv' : 'cover.watch_full_mv', m.title || '')))) : null;
+  const pick = el('input', { type: 'checkbox', class: 'cv-pick', 'data-vid': v.id, onchange: () => updateBatch() });
   const box = el('div', { class: 'cv-version' + (hi ? ' selected cv-new' : ''), dataset: { vid: v.id } },
     el('div', { class: 'row' },
+      pick,
       el('b', { class: 'grow' }, v.title),
-      el('span', { class: 'muted small' }, `${fmtDate(v.updated_at || v.created_at)}${v.duration ? ' · ' + fmtTime(v.duration) : ''}`)),
+      el('span', { class: 'muted small' }, [fmtDate(v.updated_at || v.created_at), v.duration ? fmtTime(v.duration) : '',
+        v.format || '', v.bytes ? fmtBytes(v.bytes) : ''].filter(Boolean).join(' · '))),
     el('div', { class: 'muted small' }, v.label + (v.source_version ? ` · ${t('cover.remixed')}` : '')),
     v.stats ? el('div', { class: 'muted small', title: statsTitle(v.stats) }, statsText(v.stats)) : null,
     abRow,
-    player || el('div', { class: 'muted' }, t('cover.audio_missing')),
+    player ? el('div', {}, player, el('div', { class: 'muted small cv-now' })) : el('div', { class: 'muted' }, t('cover.audio_missing')),
+    mvRow, mvBox,
     el('div', { class: 'row' },
       el('button', { class: 'btn small', title: t('cover.use_settings_hint'), onclick: () => { writeForm(v.params); changed(); toast(t('cover.settings_loaded')); } }, t('cover.use_settings')),
       el('button', { class: 'btn small', title: t('cover.remix_hint'), onclick: () => remix(v, false) }, t('cover.remix')),
       el('button', { class: 'btn small', onclick: () => remix(v, true) }, t('cover.remix_new')),
       ...mvButtons(v, 'btn small'),
-      src ? el('a', { class: 'btn small', href: src, download: `${v.title}.mp3` }, t('common.download')) : null,
+      src ? el('a', { class: 'btn small', href: src, download: `${v.title}.${(v.format || 'mp3').toLowerCase()}` }, t('common.download')) : null,
+      v.audio ? el('button', { class: 'btn small', title: t('common.open_folder'), onclick: () => openFolder(v.audio) }, '📂') : null,
       el('button', { class: 'btn small', onclick: async () => {
         if (!tracksBox.classList.contains('hidden')) { tracksBox.classList.add('hidden'); return; }
         try {
@@ -1206,7 +1266,7 @@ function build() {
     el('div', { class: 'cv-grid' },
       el('div', { class: 'cv-col' }, sectionSong(), sectionVoice(), sectionMix()),
       el('div', { class: 'cv-col' },
-        el('div', { class: 'panel' }, el('h3', {}, t('cover.versions')), el('p', { class: 'muted small' }, t('cover.versions_hint')), versionsBox),
+        el('div', { class: 'panel' }, el('h3', {}, t('cover.versions')), el('p', { class: 'muted small' }, t('cover.versions_hint')), vBatch, versionsBox),
         sectionModels(), sectionTrain())));
 }
 
