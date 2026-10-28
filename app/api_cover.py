@@ -221,7 +221,20 @@ def router(ctx: Context) -> APIRouter:
         out["bytes"] = info.get("bytes")
         out["format"] = Path(audio).suffix.lstrip(".").upper() if audio else ""
         out["mvs"] = mvs_from(sdir, out["audio"], rid) if rid else []
+        out["mv_projects"] = mv_projects_using(sdir, out["audio"])
         return out
+
+    def mv_projects_using(sdir: Path, audio_rel: str | None) -> list[dict]:
+        """MV projects whose music is this version: deleting it leaves them silent (the page warns first)."""
+        found = []
+        md = sdir / "mv"
+        if audio_rel and md.is_dir():
+            for d in sorted(md.iterdir()):
+                proj = cover.read_json(d / "project.json", {}) or {}
+                a = str(proj.get("audio_file") or "").replace("\\", "/")
+                if a == audio_rel or a.endswith("/" + audio_rel):
+                    found.append({"slug": f"{sdir.name}_{d.name}", "title": proj.get("title") or d.name})
+        return found
 
     def mvs_from(sdir: Path, audio_rel: str | None, rid: str) -> list[dict]:
         """Finished MVs that use this version as their audio (old 「🎬 立即觀看」 banner)."""

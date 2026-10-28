@@ -565,4 +565,6 @@ export default {
   "err.versions_selection": "Choose 1 to 500 versions.",
   "jobs.seconds": "{0} s",
   "banner.reload_btn": "Reload page",
+  "jobs.lane_mv": "MV",
+  "cover.delete_used_by_mv": "⚠ MV project {0} uses this version as its music. After deleting, that project has no audio until you pick another; MV videos already exported are kept.",
 };

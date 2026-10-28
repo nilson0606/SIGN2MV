@@ -1,8 +1,10 @@
-"""Job queue with two lanes.
+"""Job queue with three lanes.
 
-* "gpu" lane: one job at a time. Everything that uses the graphics card
-  (separation, RVC, Whisper, MV rendering) goes here, so jobs never fight over
-  the card's memory.
+* "gpu" lane: one job at a time. Everything that uses the graphics card's memory
+  (separation, RVC, training, Whisper) goes here, so jobs never fight over it.
+* "mv" lane: one MV render at a time. Rendering draws frames on the CPU and encodes
+  with NVENC (no CUDA memory), so like the old MV studio it starts right away even
+  while a model is training.
 * "cpu" lane: a small number of jobs in parallel (downloads, conversions,
   key shifting, mixing).
 
@@ -21,7 +23,7 @@ from typing import Any, Callable
 
 from .proc import ManagedProcess
 
-LANES = {"gpu": 1, "cpu": 2}
+LANES = {"gpu": 1, "mv": 1, "cpu": 2}
 LOG_LINES = 3000
 FINISHED = ("succeeded", "failed", "cancelled", "timeout")
 MAX_FINISHED_KEPT = 200

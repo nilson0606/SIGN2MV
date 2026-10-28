@@ -8,7 +8,7 @@ import { bus, registerPage, state, goto, mediaUrl } from './app-state.js';
 import { jobBox } from './jobview.js';
 
 const page = $('#page-mv');
-const frame = el('iframe', { id: 'mv-frame', class: 'workspace-frame', title: 'mv', allow: 'autoplay' });
+const frame = el('iframe', { id: 'mv-frame', class: 'workspace-frame', title: 'mv', allow: 'autoplay; fullscreen', allowfullscreen: true });
 const tabQuick = el('button', { class: 'cv-chip', onclick: () => setTab('quick') });
 const tabFull = el('button', { class: 'cv-chip', onclick: () => setTab('full') });
 const tabs = el('div', { class: 'mv-tabs' }, tabQuick, tabFull);

@@ -202,6 +202,7 @@ def test_cover_versions_mvs_batch_delete_open_folder(client, root):
     one = vs["v0000000001"]
     assert one["format"] == "MP3" and one["bytes"] == 503
     assert sorted(x["kind"] for x in one["mvs"]) == ["full", "quick"] and vs["v0000000002"]["mvs"] == []
+    assert one["mv_projects"] == [{"slug": f"{sid}_proj", "title": "P"}] and vs["v0000000002"]["mv_projects"] == []
     assert client.post(f"/api/open-folder", json={"song_id": sid, "rel": "../.."}).status_code == 404
     r = client.post(f"/api/open-folder", json={"song_id": sid, "rel": one["audio"]})
     assert r.json().get("error") == "open_folder_windows_only" or r.json().get("ok")

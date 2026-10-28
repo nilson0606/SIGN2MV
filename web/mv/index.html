@@ -1364,9 +1364,11 @@
         infoEl.style.color = (ap.has_bgm === false) ? '#f87171' : '#86efac';
         audioEl.src = `/api/mv/media?path=${encodeURIComponent(audioFilePath)}&t=${Date.now()}`;
       } else {
-        infoEl.textContent =
-          `⚠️ 目前尚未綁定母帶音檔！請從上方「從現有音檔庫快速選擇」下拉選單挑選音檔，或點擊「📥 點擊置入音檔」`;
-        infoEl.style.color = '#fbbf24';
+        // [SIGN2MV] a project whose audio was deleted (e.g. its cover version) said "not bound yet": say what happened
+        infoEl.textContent = audioFilePath
+          ? `⚠️ 這個專案的音檔已經不存在（可能是用到的翻唱版本被刪了）：${audioFilePath.split(/[\\/]/).pop()}。請從上方「從現有音檔庫快速選擇」重新挑選音檔，或點擊「📥 點擊置入音檔」`
+          : `⚠️ 目前尚未綁定母帶音檔！請從上方「從現有音檔庫快速選擇」下拉選單挑選音檔，或點擊「📥 點擊置入音檔」`;
+        infoEl.style.color = audioFilePath ? '#f87171' : '#fbbf24';
         audioEl.removeAttribute('src');
       }
     }
@@ -3479,17 +3481,26 @@
         if (!importedProj.slug) {
           importedProj.slug = file.name.replace(/\.json$/i, '').replace(/_mv_project$/i, '') || 'imported_project';
         }
-        const res = await fetch('/api/mv/project/import', {
+        const send = (extra) => fetch('/api/mv/project/import', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ song_id: currentProject ? currentProject.song_id : '', project: importedProj })
+          body: JSON.stringify({ song_id: currentProject ? currentProject.song_id : '', project: importedProj, ...extra })
         });
-        const data = await res.json();
+        let res = await send({});
+        let data = await res.json();
+        if (res.status === 409 && data.status === 'exists') {
+          // old MV Studio overwrote the project of the same name; ask instead of guessing
+          const over = confirm(`這首歌已經有叫「${data.name}」的專案。\n\n按「確定」覆蓋它（還原成這個 JSON 的內容）；\n按「取消」另存成新專案。`);
+          res = await send({ replace: over });
+          data = await res.json();
+        }
         if (data.status === 'ok') {
           currentSlug = data.project.slug;
           await refreshProjectList();
           await loadProject(currentSlug, false);
-          showToast(`📤 專案《${data.project.title || currentSlug}》匯入成功！`);
+          const c = data.copied || {};
+          const extras = [c.photos ? `${c.photos} 張照片` : '', c.whisper ? '歌詞辨識結果' : '', c.mv ? '已輸出的 MV' : '', c.audio ? '音檔' : ''].filter(Boolean);
+          showToast(`📤 專案《${data.project.title || currentSlug}》匯入成功！${extras.length ? '（一併複製：' + extras.join('、') + '）' : ''}`);
         } else {
           showToast('❌ 匯入儲存失敗：' + JSON.stringify(data), true);
         }

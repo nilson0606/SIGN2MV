@@ -555,7 +555,11 @@
   "🧹 已清空歌詞輸入框，請貼入新歌詞或直接點下方 Whisper 按鈕。": "🧹 Lyrics box cleared. Paste new lyrics or click the Whisper button below.",
   "🧹 清空": "🧹 Clear",
   "🪪 名牌卡": "🪪 Title card",
-  "📤 專屬照片": "📤 Own photo"
+  "📤 專屬照片": "📤 Own photo",
+  "按「確定」覆蓋它（還原成這個 JSON 的內容）；": "Click \"OK\" to overwrite it (restore it to this JSON);",
+  "按「取消」另存成新專案。": "Click \"Cancel\" to save it as a new project.",
+  "歌詞辨識結果": "lyrics recognition result",
+  "已輸出的 MV": "exported MV"
  },
  "patterns": [
   {
@@ -1477,6 +1481,26 @@
   {
    "zh": "🎞️ 《{0}》 ({1}段)",
    "en": "🎞️ \"{0}\" ({1} sections)"
+  },
+  {
+   "zh": "這首歌已經有叫「{0}」的專案。",
+   "en": "This song already has a project named \"{0}\"."
+  },
+  {
+   "zh": "📤 專案《{0}》匯入成功！（一併複製：{1}）",
+   "en": "📤 Project \"{0}\" imported! (Also copied: {1})"
+  },
+  {
+   "zh": "{0} 張照片",
+   "en": "{0} photos"
+  },
+  {
+   "zh": "{0}、{1}",
+   "en": "{0}, {1}"
+  },
+  {
+   "zh": "⚠️ 這個專案的音檔已經不存在（可能是用到的翻唱版本被刪了）：{0}。請從上方「從現有音檔庫快速選擇」重新挑選音檔，或點擊「📥 點擊置入音檔」",
+   "en": "⚠️ This project's audio file no longer exists (perhaps the cover version it used was deleted): {0}. Pick audio again from \"quick select from existing audio\" above, or click \"📥 Click to add audio\""
   }
  ]
 }

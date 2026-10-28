@@ -775,7 +775,8 @@ const vSelCount = el('span', { class: 'muted small' });
 const vDelSel = el('button', { class: 'btn small danger', onclick: async () => {
   const ids = [...versionsBox.querySelectorAll('input.cv-pick:checked')].map((c) => c.dataset.vid);
   if (!ids.length) return;
-  if (!(await confirmDialog(t('cover.delete_n_confirm', ids.length), t('common.delete')))) return;
+  const used = ((songState && songState.versions) || []).filter((v) => ids.includes(v.id)).flatMap((v) => v.mv_projects || []);
+  if (!(await confirmDialog(t('cover.delete_n_confirm', ids.length) + mvUseWarning(used), t('common.delete')))) return;
   versionsBox.querySelectorAll('audio, video').forEach((a) => { a.pause(); a.removeAttribute('src'); a.load(); });   // release files
   try {
     const res = await api.post(`/api/cover/songs/${songId}/versions/delete`, { ids });
@@ -786,6 +787,11 @@ const vDelSel = el('button', { class: 'btn small danger', onclick: async () => {
 } });
 const vBatch = el('div', { class: 'row cv-batch', style: 'align-items:center;gap:8px' },
   el('label', { class: 'check small' }, vSelAll, el('span', { 'data-i18n': 'qmv.select_all' })), vSelCount, vDelSel);
+// MV projects that play this version: deleting it leaves them without music (finished videos are kept)
+function mvUseWarning(projects) {
+  const names = [...new Set((projects || []).map((p) => `「${p.title}」`))];
+  return names.length ? '\n\n' + t('cover.delete_used_by_mv', names.join('、')) : '';
+}
 function updateBatch() {
   const all = [...versionsBox.querySelectorAll('input.cv-pick')];
   const n = all.filter((c) => c.checked).length;
@@ -884,7 +890,7 @@ function versionItem(v, hi) {
         catch (err) { toast(errorText(err), true); }
       } }, t('common.rename')),
       el('button', { class: 'btn small danger', onclick: async () => {
-        if (!(await confirmDialog(t('cover.delete_confirm', v.title), t('common.delete')))) return;
+        if (!(await confirmDialog(t('cover.delete_confirm', v.title) + mvUseWarning(v.mv_projects), t('common.delete')))) return;
         try {
           const res = await api.del(`/api/cover/songs/${songId}/versions/${v.id}`);
           toast(t('cover.deleted', fmtBytes(res.freed || 0)));

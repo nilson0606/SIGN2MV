@@ -5,7 +5,7 @@ import { t, language, onLanguageChange } from './i18n.js';
 import { bus, registerPage, state, goto } from './app-state.js';
 
 const page = $('#page-sing');
-const frame = el('iframe', { id: 'sing-frame', class: 'workspace-frame', title: 'sing', allow: 'microphone; autoplay; speaker-selection' });
+const frame = el('iframe', { id: 'sing-frame', class: 'workspace-frame', title: 'sing', allow: 'microphone; autoplay; speaker-selection; fullscreen', allowfullscreen: true });
 page.replaceChildren(frame);
 let loaded = false;
 let ready = false;

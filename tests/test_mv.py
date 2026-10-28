@@ -126,9 +126,32 @@ def test_mv_project_whisper_render(client, root, tmp_path, fake_whisper):
     old_style = {k: v for k, v in full["project"].items() if k not in ("name", "song_id")}   # like an old MV Studio JSON
     imp = client.post("/api/mv/project/import", json={"song_id": sid, "project": dict(old_style, slug="old_slug")}).json()
     assert imp["project"]["slug"] == f"{sid}_old_slug" and imp["project"]["timeline"] == full["project"]["timeline"]
+    # old JSONs carry full paths: photos, Whisper result, finished MV and outside audio are copied in
+    ext = tmp_path / "old_project"
+    (ext / "illust").mkdir(parents=True)
+    Image.new("RGB", (64, 64), (200, 30, 30)).save(ext / "illust" / "p1.png")
+    (ext / "illust" / "notes.txt").write_text("x")
+    (ext / "whisper.json").write_text('{"segments": []}', encoding="utf-8")
+    import shutil as _sh
+    _sh.copy2(root / "library" / "songs" / sid / "source" / "audio.wav", ext / "cover.wav")
+    old_full = dict(old_style, slug="old_full", illust_dir=str(ext / "illust"), whisper_json=str(ext / "whisper.json"),
+                    output_mv=str(mp4), audio_file=str(ext / "cover.wav"))
+    imp2 = client.post("/api/mv/project/import", json={"song_id": sid, "project": old_full}).json()
+    assert imp2["copied"] == {"photos": 1, "whisper": True, "mv": True, "audio": True}
+    p2 = Path(client.get(f"/api/mv/project/{imp2['project']['slug']}").json()["project"]["audio_file"])
+    assert p2.is_file() and ext not in p2.parents                       # served from the project, not the old path
+    assert client.get("/api/mv/media", params={"path": str(p2)}, headers={"Range": "bytes=0-9"}).status_code == 206
+    # same name again: the page is asked first; replace keeps the slug, "no" makes a copy
+    again = client.post("/api/mv/project/import", json={"song_id": sid, "project": old_full})
+    assert again.status_code == 409 and again.json()["status"] == "exists"
+    rep = client.post("/api/mv/project/import", json={"song_id": sid, "project": old_full, "replace": True}).json()
+    assert rep["project"]["slug"] == imp2["project"]["slug"]
+    cp = client.post("/api/mv/project/import", json={"song_id": sid, "project": old_full, "replace": False}).json()
+    assert cp["project"]["slug"] == f"{sid}_old_full_2"
 
-    d = client.post("/api/mv/projects/delete", json={"slugs": [slug, imp["project"]["slug"]]}).json()
-    assert sorted(d["deleted"]) == sorted([slug, imp["project"]["slug"]]) and not pdir.exists()
+    gone = [slug, imp["project"]["slug"], imp2["project"]["slug"], cp["project"]["slug"]]
+    d = client.post("/api/mv/projects/delete", json={"slugs": gone}).json()
+    assert sorted(d["deleted"]) == sorted(gone) and not pdir.exists()
     assert (root / "library" / "songs" / sid / "source" / "audio.wav").is_file()   # song audio untouched
 
 

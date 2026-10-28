@@ -116,7 +116,8 @@ def router(ctx: Context) -> APIRouter:
             await asyncio.sleep(0.4)
 
     def start_job(kind: str, script: str, payload: Dict[str, Any], title: str, song_id: str, timeout: float) -> str:
-        job = ctx.submit(kind=kind, lane="gpu", script=script, input=payload, title=title, song_id=song_id,
+        lane = "mv" if kind == "mv_render" else "gpu"   # renders do not wait behind training (old MV studio)
+        job = ctx.submit(kind=kind, lane=lane, script=script, input=payload, title=title, song_id=song_id,
                          timeout_s=timeout, dedupe=f"{kind}:{payload.get('slug') or payload.get('w_json')}")
         current.update({"job": job["id"], "kind": "render" if kind == "mv_render" else "whisper",
                         "started": time.time()})
@@ -378,7 +379,9 @@ def router(ctx: Context) -> APIRouter:
     @r.post("/api/mv/project/import")
     async def api_import_project(request: Request):
         """A project JSON (exported here or by the old MV Studio) becomes a new project of a song.
-        Timeline, texts and settings are kept; photos are not part of the JSON."""
+        Timeline, texts and settings are kept. Old JSONs carry full paths: the photos, Whisper result and
+        finished MV found there are copied in, and audio outside the library is copied into the project.
+        If the project already exists the page is asked first (replace: true overwrites, false makes a copy)."""
         configure()
         body = await request.json()
         sid = str(body.get("song_id", ""))
@@ -393,18 +396,54 @@ def router(ctx: Context) -> APIRouter:
         if base.startswith(sid + "_"):
             base = base[len(sid) + 1:] or "imported"
         name, n = base, 2
-        while (Path(core.project_dir(f"{sid}_{name}")) / "project.json").exists():
+        replace = body.get("replace") is True   # old MV Studio: importing over the same project restored it
+        if "replace" not in body and (Path(core.project_dir(f"{sid}_{name}")) / "project.json").exists():
+            return JSONResponse({"status": "exists", "name": name}, status_code=409)
+        while not replace and (Path(core.project_dir(f"{sid}_{name}")) / "project.json").exists():
             name, n = f"{base}_{n}", n + 1
         proj = {k: v for k, v in src.items() if k not in ("slug", "song_id", "name", "illust_dir", "whisper_json", "output_mv")}
         proj["slug"] = f"{sid}_{name}"
+        pdir = Path(core.project_dir(proj["slug"]))
+        (pdir / "scenes").mkdir(parents=True, exist_ok=True)
+        copied = {"photos": 0, "whisper": False, "mv": False, "audio": False}
         audio = str(src.get("audio_file") or "")
-        if not audio or not os.path.isfile(audio):
+        if audio and os.path.isfile(audio):
+            try:
+                Path(audio).resolve().relative_to(songs_root().resolve())
+            except (ValueError, OSError):
+                # outside the library (e.g. the old AI_COVER_MV output): copy it into the project so the
+                # page can play it (only library files are served)
+                if Path(audio).suffix.lower() in AUDIO_EXT:
+                    (pdir / "audio").mkdir(exist_ok=True)
+                    dst = pdir / "audio" / Path(audio).name
+                    shutil.copy2(audio, dst)
+                    audio = str(dst)
+                    copied["audio"] = True
+        else:
             s_src = song.get("source") or {}
             audio = str(ctx.library().song_dir(sid) / s_src["audio"]) if s_src.get("audio") else ""
         proj["audio_file"] = audio
-        proj["output_mv"] = f"{core.safe_file_title(proj.get('title', ''), name)}_MV.mp4"
-        (Path(core.project_dir(proj["slug"])) / "scenes").mkdir(parents=True, exist_ok=True)
-        return {"status": "ok", "project": save_project_dict(proj)}
+        # photos, the Whisper result and the finished MV the old project pointed to (old JSONs keep full paths)
+        old_dir = str(src.get("illust_dir") or "")
+        if old_dir and os.path.isdir(old_dir):
+            for f in sorted(Path(old_dir).iterdir()):
+                if f.is_file() and f.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"):
+                    dst = pdir / "scenes" / f.name
+                    if replace or not dst.exists():
+                        shutil.copy2(f, dst)
+                        copied["photos"] += 1
+        old_w = str(src.get("whisper_json") or "")
+        if old_w and os.path.isfile(old_w):
+            shutil.copy2(old_w, pdir / "whisper.json")
+            copied["whisper"] = True
+        out_name = f"{core.safe_file_title(proj.get('title', ''), name)}_MV.mp4"
+        old_mv = str(src.get("output_mv") or "")
+        if old_mv and os.path.isfile(old_mv):
+            (pdir / "output").mkdir(exist_ok=True)
+            shutil.copy2(old_mv, pdir / "output" / out_name)
+            copied["mv"] = True
+        proj["output_mv"] = out_name
+        return {"status": "ok", "project": save_project_dict(proj), "copied": copied}
 
     def _fit_timeline_to_audio(proj: Dict[str, Any], probe: Dict[str, Any], min_dur: float) -> None:
         if probe.get("exists") and probe.get("duration", 0) > min_dur and proj.get("timeline"):

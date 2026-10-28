@@ -122,7 +122,7 @@ function jobLine(j) {
   const detail = j.error_code ? errorText({ code: j.error_code }) + (j.error_message ? ` (${j.error_message.slice(0, 160)})` : '') : (j.message || '');
   const row = el('div', { class: 'item' },
     el('div', { class: 'grow' },
-      el('div', {}, el('span', { class: 'badge gpu' }, j.lane === 'gpu' ? t('jobs.lane_gpu') : t('jobs.lane_cpu')), ' ',
+      el('div', {}, el('span', { class: 'badge gpu' }, t(`jobs.lane_${j.lane}`)), ' ',
         el('b', {}, j.title || j.kind), ' ', el('span', { class: `badge ${j.status}` }, statusText),
         pct !== null && pct !== undefined && j.status === 'running' ? ` ${pct.toFixed(0)}%` : ''),
       el('div', { class: 'muted small' }, detail),

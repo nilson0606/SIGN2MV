@@ -565,4 +565,6 @@ export default {
   "err.versions_selection": "請勾選 1 到 500 個版本。",
   "jobs.seconds": "{0} 秒",
   "banner.reload_btn": "重新載入網頁",
+  "jobs.lane_mv": "MV 輸出",
+  "cover.delete_used_by_mv": "⚠ MV 專案 {0} 正用這個版本當音樂。刪掉後該專案會沒有聲音，要重新選音檔；已輸出的 MV 影片會保留。",
 };
