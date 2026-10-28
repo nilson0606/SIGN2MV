@@ -761,11 +761,8 @@ async function loadStatus() {
   banner.classList.toggle('hidden', !!a.ready);
   const keep = songId ? readForm() : null;
   translateOptions();
-  if (keep) writeForm(keep);
-  else {
-    fillModelSelect(modelSel.el);
-    [male.model, female.model, mr.model].forEach((c) => fillModelSelect(c.el));
-  }
+  // no song yet: show the defaults so every number box has a value
+  writeForm(keep || status.defaults);
   renderModels();
   renderInstruments();
   updateVis();
