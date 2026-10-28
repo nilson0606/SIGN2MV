@@ -1,6 +1,7 @@
 """Song library, import, separation, key versions and media files."""
 from __future__ import annotations
 
+import json
 import os
 import re
 import uuid
@@ -15,6 +16,31 @@ from .library import LibraryError
 from .util import body_json, err, media_response
 
 SEPARATION_TIMEOUT = 3600.0
+
+
+def delete_song_recordings(library_root: Path, song_id: str) -> int:
+    """Sing & record keeps its takes in <library>/recordings/<id>/ (shared folder of the
+    sign_record format); delete the takes of this song with it."""
+    from .api_sing import video_id_for
+    from .sing_archive import RecordingArchive
+    root = Path(library_root) / "recordings"
+    if not root.is_dir():
+        return 0
+    vid = video_id_for(song_id)
+    arc = RecordingArchive(root)
+    n = 0
+    for d in root.iterdir():
+        meta = d / "metadata.json"
+        if not meta.is_file():
+            continue
+        try:
+            rec = json.loads(meta.read_text(encoding="utf-8")).get("recording") or {}
+            if rec.get("videoId") == vid:
+                arc.delete(d.name)
+                n += 1
+        except Exception:  # noqa: BLE001  (a damaged take must not block deleting the song)
+            continue
+    return n
 
 
 def router(ctx: Context) -> APIRouter:
@@ -69,8 +95,10 @@ def router(ctx: Context) -> APIRouter:
         if ctx.song_busy(song_id):
             return err("song_busy", 409)
         try:
-            ctx.library().delete(song_id)
-            return {"ok": True}
+            lib = ctx.library()
+            lib.delete(song_id)
+            removed = delete_song_recordings(lib.root, song_id)
+            return {"ok": True, "recordings_deleted": removed}
         except LibraryError as exc:
             return err(exc.code, exc.status)
         except OSError:

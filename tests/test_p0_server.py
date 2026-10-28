@@ -57,3 +57,31 @@ def test_shutdown_requires_force_when_busy(client):
     r = client.post("/api/system/shutdown", json={})
     assert r.status_code == 409 and r.json()["error"] == "jobs_running"
     client.post(f"/api/jobs/{j['id']}/cancel")
+
+
+def test_delete_song_removes_its_recordings(client, root):
+    """Sing & record takes live in <library>/recordings; deleting the song deletes its takes too."""
+    import json
+    import struct
+    import uuid
+    from app.api_sing import video_id_for
+    from app.sing_archive import RecordingArchive
+    a = client.post("/api/songs", json={"title": "A"}).json()["song_id"]
+    b = client.post("/api/songs", json={"title": "B"}).json()["song_id"]
+    arc = RecordingArchive(root / "library" / "recordings")
+    arc.ready()
+    ids = {}
+    for sid in (a, b):
+        rid = str(uuid.uuid4())
+        mix = b"RIFF" + b"\0" * 60
+        meta = {"id": rid, "title": "t", "mime": "audio/wav", "created": 1, "seconds": 1, "bytes": len(mix),
+                "videoId": video_id_for(sid), "complete": True}
+        raw = json.dumps(meta).encode()
+        bundle = root / f"{rid}.bin"
+        bundle.write_bytes(struct.pack("<I", len(raw)) + raw + mix)
+        arc.import_bundle(rid, bundle)
+        ids[sid] = rid
+    res = client.delete(f"/api/songs/{a}").json()
+    assert res["ok"] and res["recordings_deleted"] == 1
+    remaining = [r["id"] for r in arc.list()["records"]]
+    assert remaining == [ids[b]]
