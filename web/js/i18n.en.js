@@ -398,4 +398,6 @@ export default {
   "stored.children": "{0} below",
   "stored.more": "+{0} more",
   "stage.prepare": "Starting (loading programs)",
+  "cover.st_rvc_load": "start",
+  "cover.st_rvc_convert": "convert",
 };

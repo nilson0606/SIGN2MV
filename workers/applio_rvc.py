@@ -24,6 +24,8 @@ from pathlib import Path
 
 import protocol
 
+T0 = time.time()   # process start (imports above are light)
+
 if os.environ.get("SIGN2MV_FORCE_CPU"):
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -55,6 +57,8 @@ def main() -> None:
     with protocol.Heartbeat(0, "rvc_load"), contextlib.redirect_stdout(sys.stderr):
         from rvc.infer.infer import VoiceConverter
         vc = VoiceConverter()
+    load_s = round(time.time() - T0, 1)
+    protocol.log(f"Applio loaded in {load_s} s")
     dev = str(getattr(vc.config, "device", "") or "")
     gpu = getattr(vc.config, "gpu_name", None)
     where = f"GPU {gpu}" if dev.startswith("cuda") and gpu else ("GPU" if dev.startswith("cuda") else "CPU")
@@ -108,7 +112,8 @@ def main() -> None:
         done.append({"output": str(out), "seconds": round(time.time() - started, 1), "audio_s": round(audio_s, 1)})
         protocol.log(f"converted {t.get('label', '')} in {done[-1]['seconds']} s")
     protocol.progress(100, "rvc", "")
-    protocol.result({"done": done, "device": dev, "gpu": gpu if dev.startswith("cuda") else "",
+    protocol.result({"done": done, "device": dev, "gpu": gpu if dev.startswith("cuda") else "", "load_s": load_s,
+                     "convert_s": round(sum(d.get("seconds", 0) for d in done), 1),
                      "audio_seconds": round(sum(d.get("audio_s", 0) for d in done), 1)})
 
 

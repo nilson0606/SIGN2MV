@@ -16,7 +16,7 @@
     "sha256": "cba84b26e0df5ae7f74fc66b86a95b866872a86292ebd84fa1e959927edd93bf"
   },
   "torch": {
-    "engine": {"torch": "2.8.0", "torchaudio": "2.8.0", "torchvision": "0.23.0"},
+    "engine": {"torch": "2.11.0", "torchaudio": "2.11.0", "torchvision": "0.26.0"},
     "cuda_index": "https://download.pytorch.org/whl/cu128",
     "cpu_index": "https://download.pytorch.org/whl/cpu"
   },

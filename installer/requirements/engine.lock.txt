@@ -73,7 +73,7 @@ rotary-embedding-torch==0.6.5  # via audio-separator
 samplerate==0.1.0         # via audio-separator
 scikit-learn==1.9.1       # via librosa, -r installer/requirements/engine.txt
 scipy==1.18.1             # via audio-separator, librosa, mir-eval, scikit-learn, -r installer/requirements/engine.txt
-setuptools==84.2.1        # via torch
+setuptools==81.0.0        # via torch
 six==1.17.0               # via audio-separator, pretty-midi
 soundcard==0.4.6          # via -r installer/requirements/engine.txt
 soundfile==0.13.1         # via audio-separator, librosa, -r installer/requirements/engine.txt
@@ -83,9 +83,9 @@ sympy==1.14.0             # via torch
 threadpoolctl==3.7.0      # via scikit-learn
 tinysoundfont==0.3.7      # via -r installer/requirements/engine.txt
 tokenizers==0.23.3        # via faster-whisper
-torch==2.8.0              # via audio-separator, demucs, diffq-fixed, dora-search, julius, onnx2torch-py313, openunmix, rotary-embedding-torch, torchaudio, torchvision, -r installer/requirements/engine.txt
-torchaudio==2.8.0         # via demucs, openunmix, -r installer/requirements/engine.txt
-torchvision==0.23.0       # via onnx2torch-py313, -r installer/requirements/engine.txt
+torch==2.11.0             # via audio-separator, demucs, diffq-fixed, dora-search, julius, onnx2torch-py313, openunmix, rotary-embedding-torch, torchvision, -r installer/requirements/engine.txt
+torchaudio==2.11.0        # via demucs, openunmix, -r installer/requirements/engine.txt
+torchvision==0.26.0       # via onnx2torch-py313, -r installer/requirements/engine.txt
 tqdm==4.70.1              # via audio-separator, demucs, faster-whisper, huggingface-hub, openunmix
 treetable==0.2.6          # via dora-search
 truststore==0.10.5        # via httpcore2, httpx2

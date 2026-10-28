@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Engine environment moves to PyTorch 2.11 (CUDA 12.8), the same build as Applio: both
+  environments now share one copy of the PyTorch files (uv hard links), so Windows keeps one
+  set warm instead of loading two 4 GB sets in turn. Re-run install.bat to update.
+- Cover: PyTorch is loaded only when a cover actually has to separate; progress shows while
+  programs and models load and the elapsed time during voice conversion; the finished line
+  splits voice conversion into start-up and conversion, with the mix steps on hover.
 - Library: *Saved stems* lists every separation layer and key copy of a song as a
   tree, with size, date and the cover versions / sing references that use it; each
   can be deleted (with everything made from it). Users separate again when needed.

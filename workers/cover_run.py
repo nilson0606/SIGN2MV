@@ -173,6 +173,8 @@ def run_applio(tasks: list[dict], applio: dict, report: Step) -> dict:
 def free_gpu() -> None:
     import gc
     gc.collect()
+    if "torch" not in sys.modules:   # nothing was loaded on the graphics card
+        return
     try:
         import torch
         if torch.cuda.is_available():
@@ -227,7 +229,14 @@ def main() -> None:
     protocol.progress(0, "prepare", "")   # loading torch below takes a while on Windows
     song_dir = Path(data["song_dir"])
     plan = data["plan"]
-    device = pick_device(data.get("device", "auto"))
+    # PyTorch is only loaded when something has to be separated: loading it takes a while on
+    # Windows and most covers reuse the library's stems.
+    dev_cache: dict[str, str] = {}
+
+    def device() -> str:
+        if "d" not in dev_cache:
+            dev_cache["d"] = pick_device(data.get("device", "auto"))
+        return dev_cache["d"]
     A = lambda rel: song_dir / rel  # noqa: E731
     try:
         stats: dict = {"started_at": time.time()}
@@ -246,7 +255,7 @@ def main() -> None:
             hi = 35 * (i + 1) / max(1, len(layers))
             stage = "separate" if layer["kind"] == "mix" else layer["kind"]
             try:
-                sep.run_layer(layer, song_dir, device, sep.Progress(lo, hi, stage, device))
+                sep.run_layer(layer, song_dir, device(), sep.Progress(lo, hi, stage, device()))
             except FileNotFoundError:
                 raise
             except Exception as exc:  # noqa: BLE001
@@ -260,7 +269,7 @@ def main() -> None:
         seg = [j for j in plan.get("seg_jobs") or [] if not (A(j["vocal"]).is_file() and A(j["bgm"]).is_file())]
         for i, j in enumerate(seg):
             try:
-                separate_segment(j, song_dir, device, Step(40 + 5 * i / len(seg), 40 + 5 * (i + 1) / len(seg),
+                separate_segment(j, song_dir, device(), Step(40 + 5 * i / len(seg), 40 + 5 * (i + 1) / len(seg),
                                                            "section_separate"))
             except Exception as exc:  # noqa: BLE001  (the old program kept the converted vocal there)
                 protocol.log(f"section {j['start']:.1f}s could not be separated again, kept as it was: {str(exc)[-300:]}")
@@ -300,6 +309,8 @@ def main() -> None:
             stats["rvc_device"] = info_rvc.get("device", "")
             stats["rvc_gpu"] = info_rvc.get("gpu", "")
             stats["rvc_audio_s"] = info_rvc.get("audio_seconds")
+            stats["rvc_load_s"] = info_rvc.get("load_s")         # starting Applio (Python, PyTorch, Applio)
+            stats["rvc_convert_s"] = info_rvc.get("convert_s")   # the conversions (incl. loading the voice model)
         lap("rvc_s")
         # 5. male + female
         vocal = plan["vocal"]
@@ -319,6 +330,17 @@ def main() -> None:
                 protocol.log(f"melody transcription failed, mixed without the instrument: {str(exc)[-300:]}")
         # 7. mix
         protocol.progress(90, "mix", "")
+        mix_times: dict[str, float] = {}
+        mix_cur = {"stage": "mix_start", "t": time.time()}
+
+        def mix_lap(stage: str | None) -> None:
+            now = time.time()
+            mix_times[mix_cur["stage"]] = round(mix_times.get(mix_cur["stage"], 0) + now - mix_cur["t"], 1)
+            mix_cur.update(stage=stage, t=now)
+
+        def mix_progress(stage: str) -> None:
+            mix_lap(stage)
+            protocol.progress(MIX_STEPS.get(stage, 90), stage, "")
         import cover_mix
         mix = plan["mix"]
         sfonts = Path(data.get("soundfonts") or "")
@@ -337,7 +359,9 @@ def main() -> None:
             midi_path=str(A(midi["out"])) if midi else None, octave_shift=mix["octave_shift"],
             reverb_wet=mix["reverb_wet"], vocal_masks=masks or None, orig_vocal_path=str(A(plan["orig_vocal"])),
             vol_segments=plan.get("vol_segments") or None, backing_paths=[str(A(b)) for b in plan.get("backings") or []],
-            log=protocol.log, progress=lambda stage: protocol.progress(MIX_STEPS.get(stage, 90), stage, ""))
+            log=protocol.log, progress=mix_progress)
+        mix_lap(None)
+        stats["mix_steps"] = mix_times
         lap("mix_s")
         stats["total_s"] = round(time.time() - stats.pop("started_at"), 1)
         protocol.log("timing: " + json.dumps(stats))

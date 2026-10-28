@@ -398,4 +398,6 @@ export default {
   "stored.children": "底下 {0} 份",
   "stored.more": "另外 {0} 個",
   "stage.prepare": "啟動中（載入程式）",
+  "cover.st_rvc_load": "啟動",
+  "cover.st_rvc_convert": "轉換",
 };
