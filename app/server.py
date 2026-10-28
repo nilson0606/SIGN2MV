@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import threading
 from pathlib import Path
@@ -118,9 +119,57 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
         cfg["effective_language"] = settings_mod.effective_language(cfg)
         return cfg
 
+    picker: dict[str, Any] = {"proc": None}
+
+    @app.post("/api/settings/pick-library")
+    async def pick_library():
+        """Windows folder dialog for the library location (sign_record's 「選擇資料夾」)."""
+        import subprocess
+        from starlette.concurrency import run_in_threadpool
+        if os.name != "nt":
+            return err("folder_picker_windows_only")
+        if picker["proc"] is not None:
+            return err("folder_picker_open", 409)
+        script = Path(__file__).with_name("select_folder.ps1")
+        current = settings_mod.load(paths).get("library_dir") or ""
+
+        def run() -> dict[str, Any]:
+            proc = subprocess.Popen(["powershell.exe", "-NoProfile", "-STA", "-ExecutionPolicy", "Bypass", "-File",
+                                     str(script), "-InitialPath", current], stdout=subprocess.PIPE,
+                                    stderr=subprocess.DEVNULL)
+            picker["proc"] = proc
+            try:
+                out, _ = proc.communicate(timeout=300)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                return {"cancelled": True}
+            finally:
+                picker["proc"] = None
+            try:
+                return json.loads(out.decode("utf-8", "replace").lstrip("\ufeff").strip().splitlines()[-1])
+            except (ValueError, IndexError):
+                return {"cancelled": True}
+        return await run_in_threadpool(run)
+
+    @app.post("/api/settings/pick-library/cancel")
+    def cancel_pick():
+        proc = picker["proc"]
+        if proc is not None:
+            proc.kill()
+        return {"cancelled": True}
+
     @app.put("/api/settings")
     async def put_settings(request: Request):
         body = await body_json(request)
+        if "library_dir" in body and body["library_dir"] != settings_mod.load(paths).get("library_dir"):
+            busy = list(jobs.active())
+            for hook in getattr(ctx, "busy_hooks", []):
+                try:
+                    busy += list(hook() or [])
+                except Exception:  # noqa: BLE001
+                    pass
+            if busy:   # sign_record refused too: songs, audio or MV work in progress
+                return err("library_change_busy", 409)
         try:
             cfg = settings_mod.update(paths, body)
         except settings_mod.SettingsError as exc:

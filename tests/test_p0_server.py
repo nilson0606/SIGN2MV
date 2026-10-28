@@ -23,6 +23,19 @@ def test_settings_language(client):
     assert client.put("/api/settings", json={"nope": 1}).status_code == 400
 
 
+def test_library_location_rules(client, root, tmp_path):
+    """sign_record's rules: full path, not a drive root, not a program folder, writable."""
+    bad = {"relative/lib": "library_dir_not_absolute", "/": "library_dir_root",
+           str(root / "runtime" / "x"): "library_dir_reserved", "": "invalid_library_dir"}
+    for value, code in bad.items():
+        r = client.put("/api/settings", json={"library_dir": value})
+        assert r.status_code == 400 and r.json()["error"] == code, (value, r.json())
+    new = tmp_path / "newlib"
+    s = client.put("/api/settings", json={"library_dir": str(new)}).json()
+    assert s["library_dir"] == str(new.resolve()) and new.is_dir() and not list(new.glob(".sign2mv-write-test-*"))
+    assert client.post("/api/settings/pick-library", json={}).json()["error"] == "folder_picker_windows_only"
+
+
 def test_library_crud(client):
     s = client.post("/api/songs", json={"title": "  南都夜曲  "}).json()
     assert s["title"] == "南都夜曲" and s["song_id"].startswith("s")

@@ -59,6 +59,33 @@ class SettingsError(ValueError):
         self.code = code
 
 
+def check_library_dir(paths: Paths, value: Any) -> str:
+    """Same rules as sign_record's library location: a full local path, not a drive root, not one
+    of SIGN2MV's own folders, created if missing and writable."""
+    import uuid
+    if not isinstance(value, str) or not value.strip():
+        raise SettingsError("invalid_library_dir")
+    requested = Path(value.strip()).expanduser()
+    if not requested.is_absolute():
+        raise SettingsError("library_dir_not_absolute")
+    requested = Path(os.path.abspath(requested))
+    if requested == Path(requested.anchor):
+        raise SettingsError("library_dir_root")
+    for reserved in (paths.runtime, paths.root / "models", paths.root / "app", paths.root / "workers",
+                     paths.root / "web", paths.root / "installer"):
+        inside = requested == reserved or reserved in requested.parents
+        if inside:
+            raise SettingsError("library_dir_reserved")
+    try:
+        requested.mkdir(parents=True, exist_ok=True)
+        probe = requested / f".sign2mv-write-test-{uuid.uuid4().hex}"
+        probe.write_bytes(b"")
+        probe.unlink()
+    except OSError:
+        raise SettingsError("library_dir_not_writable")
+    return str(requested.resolve())
+
+
 def update(paths: Paths, changes: dict[str, Any]) -> dict[str, Any]:
     with _lock:
         data = load(paths)
@@ -67,9 +94,7 @@ def update(paths: Paths, changes: dict[str, Any]) -> dict[str, Any]:
                 if value is not None and value not in LANGUAGES:
                     raise SettingsError("invalid_language")
             elif key == "library_dir":
-                if not isinstance(value, str) or not value.strip():
-                    raise SettingsError("invalid_library_dir")
-                value = str(Path(value.strip()))
+                value = check_library_dir(paths, value)
             elif key in ("cover_singer_name", "studio_name"):
                 if not isinstance(value, str) or len(value) > 80:
                     raise SettingsError("invalid_name")

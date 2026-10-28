@@ -198,4 +198,18 @@ def test_quick_mv(client, root, tmp_path, monkeypatch):
     resp = client.delete(f"/api/songs/{sid}/quickmv/{it['id']}").json()
     assert resp.get("ok"), resp
     assert client.get(f"/api/songs/{sid}/quickmv").json()["items"] == []
+
+    # every song's quick MVs: list, delete selected, delete all (sign_record's saved-MV panel)
+    for name in ("one", "two"):
+        j = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": name, "artist": "Nilson"}).json()
+        assert wait_job(client, j["job"]["id"], 600)["status"] == "succeeded"
+    allq = client.get("/api/quickmv").json()
+    assert sorted(i["title"] for i in allq["items"]) == ["one", "two"] and allq["bytes"] > 0
+    assert all(i["song_id"] == sid and i["song_title"] for i in allq["items"])
+    first = allq["items"][0]
+    assert client.post("/api/quickmv/delete", json={"items": [{"song_id": sid, "id": first["id"]},
+                                                               {"song_id": sid, "id": "qbad"}]}).json() == {"deleted": 1, "skipped": 1}
+    assert client.post("/api/quickmv/delete", json={"items": []}).status_code == 400
+    assert client.post("/api/quickmv/delete", json={"all": True}).json()["deleted"] == 1
+    assert client.get("/api/quickmv").json()["items"] == []
     assert client.delete(f"/api/songs/{sid}/quickmv/qzzzzzzzzzzzz").status_code == 404

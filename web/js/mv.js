@@ -75,6 +75,19 @@ const quick = (() => {
   const jb = jobBox();
   const makeBtn = el('button', { class: 'btn primary', onclick: () => make() });
   const list = el('div', { class: 'list' });
+  // list scope: this song or every song (sign_record's saved-MV panel: search, select, delete, clear all)
+  let scope = 'song';
+  try { scope = localStorage.getItem('sign2mv.qmv.scope') === 'all' ? 'all' : 'song'; } catch { /* ignore */ }
+  const scopeSong = el('button', { class: 'cv-chip', onclick: () => setScope('song') });
+  const scopeAll = el('button', { class: 'cv-chip', onclick: () => setScope('all') });
+  const search = el('input', { type: 'search', style: 'min-width:200px', oninput: () => renderList() });
+  const selAll = el('input', { type: 'checkbox', onchange: () => { list.querySelectorAll('input.qmv-pick').forEach((c) => { c.checked = selAll.checked; }); } });
+  const selAllLabel = el('label', { class: 'check' }, selAll, el('span'));
+  const delSel = el('button', { class: 'btn small danger', onclick: () => deleteSelected() });
+  const clearAll = el('button', { class: 'btn small danger', onclick: () => deleteAll() });
+  const folder = el('div', { class: 'muted small' });
+  const tools = el('div', { class: 'row', style: 'align-items:center;gap:8px' }, scopeSong, scopeAll, search, selAllLabel, delSel, clearAll);
+  let allData = null;
   const head = el('h2', { style: 'margin:0' });
   const hint = el('p', { class: 'muted small' });
   const labels = { song: el('span'), source: el('span'), title: el('span'), artist: el('span'), list: el('h3') };
@@ -85,7 +98,7 @@ const quick = (() => {
     el('div', { class: 'row' }, el('label', { style: 'display:flex;gap:6px;align-items:center' }, labels.artist, labelSpan, artist)),
     singerHint, fontWarn,
     el('div', { class: 'row' }, makeBtn), jb.el,
-    labels.list, list));
+    labels.list, tools, folder, list));
   let songId = null;
   let data = null;
   let wantSource = null;
@@ -97,10 +110,64 @@ const quick = (() => {
     labels.source.textContent = t('qmv.source');
     labels.title.textContent = t('qmv.mv_title');
     labels.artist.textContent = t('qmv.artist');
-    labels.list.textContent = t('qmv.list');
+    labels.list.textContent = t(scope === 'all' ? 'qmv.list_all' : 'qmv.list');
     makeBtn.textContent = t('qmv.make');
     singerHint.textContent = t('qmv.singer_hint');
     fontWarn.textContent = t('qmv.font_missing');
+    scopeSong.textContent = t('qmv.scope_song');
+    scopeAll.textContent = t('qmv.scope_all');
+    search.placeholder = t('qmv.search');
+    selAllLabel.lastChild.textContent = t('qmv.select_all');
+    delSel.textContent = t('qmv.delete_selected');
+    clearAll.textContent = t('qmv.clear_all');
+    scopeSong.classList.toggle('active', scope === 'song');
+    scopeAll.classList.toggle('active', scope === 'all');
+  }
+
+  async function setScope(v) {
+    scope = v === 'all' ? 'all' : 'song';
+    try { localStorage.setItem('sign2mv.qmv.scope', scope); } catch { /* ignore */ }
+    texts();
+    if (scope === 'all') await loadAll(); else renderList();
+  }
+
+  async function loadAll() {
+    try { allData = await api.get('/api/quickmv'); } catch (err) { toast(errorText(err), true); return; }
+    renderList();
+  }
+
+  function picked() {
+    return [...list.querySelectorAll('input.qmv-pick:checked')].map((c) => ({ song_id: c.dataset.song, id: c.dataset.id }));
+  }
+
+  async function deleteSelected() {
+    const items = picked();
+    if (!items.length) { toast(t('qmv.pick_some'), true); return; }
+    if (!(await confirmDialog(t('qmv.delete_n', items.length), t('common.delete')))) return;
+    list.querySelectorAll('video').forEach((v) => v.remove());   // release files first (Windows locks open files)
+    try { const r = await api.post('/api/quickmv/delete', { items }); toast(t('qmv.deleted_n', r.deleted)); } catch (err) { toast(errorText(err), true); }
+    selAll.checked = false;
+    await refreshAfterDelete();
+  }
+
+  async function deleteAll() {
+    const n = scope === 'all' ? ((allData && allData.items) || []).length : ((data && data.items) || []).length;
+    if (!n) return;
+    const items = scope === 'all' ? null : data.items.map((it) => ({ song_id: songId, id: it.id }));
+    const msg = scope === 'all' ? t('qmv.clear_all_confirm', n) : t('qmv.clear_song_confirm', n);
+    if (!(await confirmDialog(msg, t('qmv.clear_all')))) return;
+    list.querySelectorAll('video').forEach((v) => v.remove());
+    try {
+      const r = await api.post('/api/quickmv/delete', items ? { items } : { all: true });
+      toast(t('qmv.deleted_n', r.deleted));
+    } catch (err) { toast(errorText(err), true); }
+    await refreshAfterDelete();
+  }
+
+  async function refreshAfterDelete() {
+    if (songId) await loadSong(songId);
+    if (scope === 'all') await loadAll();
+    bus.dispatchEvent(new CustomEvent('storage-changed'));
   }
 
   function fillSongs() {
@@ -142,29 +209,36 @@ const quick = (() => {
   }
 
   function renderList(highlight) {
-    const items = (data && data.items) || [];
-    if (!items.length) { list.replaceChildren(el('div', { class: 'empty' }, t('qmv.none'))); return; }
+    texts();
+    const all = scope === 'all';
+    let items = all ? ((allData && allData.items) || []) : ((data && data.items) || []).map((it) => ({ ...it, song_id: songId }));
+    folder.textContent = all && allData ? t('qmv.folder', allData.folder, fmtBytes(allData.bytes || 0)) : '';
+    const q = search.value.trim().toLowerCase();
+    if (q) items = items.filter((it) => [it.title, it.artist_line, it.song_title, it.source_title].some((v) => (v || '').toLowerCase().includes(q)));
+    if (!items.length) { list.replaceChildren(el('div', { class: 'empty' }, t(q ? 'qmv.no_match' : 'qmv.none'))); return; }
     list.replaceChildren(...items.map((it) => {
+      const sid = it.song_id;
       const holder = el('div', {});
       const play = el('button', { class: 'btn small primary', onclick: () => {
         if (holder.firstChild) { holder.replaceChildren(); return; }
-        const v = el('video', { src: mediaUrl(songId, it.path), controls: true, playsinline: true, preload: 'metadata',
+        const v = el('video', { src: mediaUrl(sid, it.path), controls: true, playsinline: true, preload: 'metadata',
           style: 'width:100%;max-width:960px;aspect-ratio:16/9;background:#101d2c;border-radius:10px;margin-top:8px' });
         holder.replaceChildren(v);
         v.play().catch(() => {});
       } }, t('qmv.play'));
-      const meta = [it.artist_line, it.source_title ? `${t('qmv.from')} ${it.source_title}` : '', it.duration ? fmtTime(it.duration) : '',
+      const meta = [all ? it.song_title : '', it.artist_line, it.source_title ? `${t('qmv.from')} ${it.source_title}` : '', it.duration ? fmtTime(it.duration) : '',
         it.bytes ? fmtBytes(it.bytes) : '', fmtDate(it.created_at)].filter(Boolean).join(' · ');
       const row = el('div', { class: 'item' + (it.id === highlight ? ' cv-new' : ''), style: 'display:block' },
         el('div', { class: 'row', style: 'align-items:center' },
+          el('input', { type: 'checkbox', class: 'qmv-pick', 'data-song': sid, 'data-id': it.id }),
           el('div', { class: 'grow', style: 'white-space:normal' }, el('b', {}, it.title || it.id), el('div', { class: 'muted small' }, meta)),
           play,
-          el('a', { class: 'btn small', href: `/api/songs/${songId}/quickmv/${it.id}/download` }, t('common.download')),
+          el('a', { class: 'btn small', href: `/api/songs/${sid}/quickmv/${it.id}/download` }, t('common.download')),
           el('button', { class: 'btn small danger', onclick: async () => {
             if (!(await confirmDialog(t('qmv.delete_confirm', it.title || it.id), t('common.delete')))) return;
             holder.replaceChildren();   // release the video file first (Windows keeps open files locked)
-            try { await api.del(`/api/songs/${songId}/quickmv/${it.id}`); toast(t('qmv.deleted')); } catch (err) { toast(errorText(err), true); }
-            loadSong(songId);
+            try { await api.del(`/api/songs/${sid}/quickmv/${it.id}`); toast(t('qmv.deleted')); } catch (err) { toast(errorText(err), true); }
+            await refreshAfterDelete();
           } }, t('common.delete'))),
         holder);
       if (it.id === highlight) setTimeout(() => { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); play.click(); }, 50);
@@ -181,7 +255,9 @@ const quick = (() => {
       if (fin.status === 'succeeded') {
         toast(t('qmv.done'));
         await loadSong(songId);
+        if (scope === 'all') await loadAll();
         renderList(fin.result && fin.result.id);
+        bus.dispatchEvent(new CustomEvent('storage-changed'));
       }
     } catch (err) { toast(errorText(err), true); }
     makeBtn.disabled = false;
@@ -189,7 +265,7 @@ const quick = (() => {
 
   texts();
   return {
-    show() { fillSongs(); },
+    show() { fillSongs(); if (scope === 'all') loadAll(); },
     open(id, renderId) { loadSong(id, renderId || 'original'); fillSongs(); },
     refreshSongs() { fillSongs(); },
     reload() { if (songId) loadSong(songId); },

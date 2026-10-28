@@ -164,6 +164,49 @@ def router(ctx: Context) -> APIRouter:
             return err("file_in_use", 409)
         return {"ok": True}
 
+    # ---------------- all songs (sign_record's "saved MVs" panel: list, search, select, delete, clear all)
+    @r.get("/api/quickmv")
+    def list_all():
+        lib = ctx.library()
+        out = []
+        for song in lib.list():
+            for it in list_quick(lib.song_dir(song["song_id"])):
+                out.append({**it, "song_id": song["song_id"], "song_title": song["title"]})
+        out.sort(key=lambda x: x.get("created_at", 0), reverse=True)
+        return {"items": out, "folder": str(lib.root / "songs"), "bytes": sum(int(i.get("bytes") or 0) for i in out)}
+
+    @r.post("/api/quickmv/delete")
+    async def delete_many(request: Request):
+        """Body: {"items": [{"song_id", "id"}]} or {"all": true}. Busy songs are skipped."""
+        body = await body_json(request)
+        lib = ctx.library()
+        if body.get("all") is True:
+            targets = [(s["song_id"], it["id"]) for s in lib.list() for it in list_quick(lib.song_dir(s["song_id"]))]
+        else:
+            raw = body.get("items")
+            if not isinstance(raw, list) or not 1 <= len(raw) <= 500:
+                return err("quickmv_selection")
+            targets = [(str(x.get("song_id") or ""), str(x.get("id") or "")) for x in raw if isinstance(x, dict)]
+        deleted, skipped = 0, 0
+        for sid, qid in targets:
+            if not QID.match(qid):
+                skipped += 1
+                continue
+            try:
+                d = quick_dir(lib.song_dir(sid)) / qid
+            except LibraryError:
+                skipped += 1
+                continue
+            if not d.is_dir():   # a quick MV appears only when finished (renamed in at the end)
+                skipped += 1
+                continue
+            try:
+                shutil.rmtree(d)
+                deleted += 1
+            except OSError:
+                skipped += 1
+        return {"deleted": deleted, "skipped": skipped}
+
     @r.get("/api/songs/{song_id}/quickmv/{qid}/download")
     def download_quick(song_id: str, qid: str):
         if not QID.match(qid or ""):

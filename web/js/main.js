@@ -170,6 +170,18 @@ async function loadSettings() {
     bus.dispatchEvent(new CustomEvent('settings', { detail: s }));
   } catch (err) { toast(errorText(err), true); }
 }
+$('#set-library-pick').addEventListener('click', async () => {
+  const cancelBtn = $('#set-library-pick-cancel');
+  cancelBtn.classList.remove('hidden');
+  $('#set-library-pick').disabled = true;
+  try {
+    const res = await api.post('/api/settings/pick-library', {});
+    if (res.path) $('#set-library').value = res.path;
+  } catch (err) { toast(errorText(err), true); }
+  cancelBtn.classList.add('hidden');
+  $('#set-library-pick').disabled = false;
+});
+$('#set-library-pick-cancel').addEventListener('click', () => { api.post('/api/settings/pick-library/cancel', {}).catch(() => {}); });
 $('#set-library-save').addEventListener('click', async () => {
   try { await api.put('/api/settings', { library_dir: $('#set-library').value }); toast(t('common.saved')); await loadSettings(); bus.dispatchEvent(new Event('reload-songs')); }
   catch (err) { toast(errorText(err), true); }
