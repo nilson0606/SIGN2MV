@@ -474,11 +474,10 @@ def router(ctx: Context) -> APIRouter:
         }
         if shift:
             names = list(base_rel.keys())
-            kdir_name = stems_mod.key_dir_name(base_rel, names, shift)
-            payload["key"] = {"semitones": shift, "dir": str(sing_dir(sid) / key_id), "out_dir": str(song_dir / "keys" / kdir_name),
-                              "stems": names, "stems_abs": {n: str(song_dir / base_rel[n]) for n in names},
-                              "stems_rel": {n: f"keys/{kdir_name}/{n}.wav" for n in names},
-                              "sources": {n: base_rel[n] for n in names},
+            # one shared key copy per track (also used by the library page and AI cover)
+            payload["key"] = {"semitones": shift, "dir": str(sing_dir(sid) / key_id),
+                              "items": [stems_mod.key_item(song_dir, rel, shift) for rel in sorted(set(base_rel.values()))],
+                              "stems_rel": {n: stems_mod.key_track(base_rel[n], shift)[1] for n in names},
                               "meta": {"cacheId": key_id}}
         job = ctx.submit(kind="sing_prepare", lane="gpu", script="sing_prepare.py", input=payload,
                          title=f"準備唱錄：{s['title']}", song_id=sid, timeout_s=3600 * max(1, len(layers) + 1),

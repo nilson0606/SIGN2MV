@@ -197,6 +197,13 @@ a { color:var(--accent); }
 
 <section id="data">
 <h2>11. 檔案存放位置</h2>
+<p>一首歌用到的東西只有三種：</p>
+<ul>
+<li><b>原曲</b>（<code>source</code>）：歌曲在就一直保留。</li>
+<li><b>暫存</b>：分軌（<code>stems</code>，每種分離設定一份）、升降 Key（<code>keys</code>，每一軌每個 Key 一份）、唱錄的準備資料、翻唱暫存。所有工作區共用：誰先需要誰做，其他直接沿用。刪掉暫存不會讓任何東西壞掉，要用時會自動重新產生。</li>
+<li><b>你的作品</b>：唱錄錄音、AI 翻唱版本、MV 專案與影片。刪了就沒了。錄音和翻唱版本可以當 MV 的音源。</li>
+</ul>
+<p>翻唱的「變調」只改 AI 轉出來的人聲，結果放在翻唱暫存；「Key」（歌曲庫、唱錄、AI 翻唱都有）才會用到共用的升降 Key 檔。</p>
 <table>
 <tr><th>資料夾（在 SIGN2MV 裡）</th><th>內容</th></tr>
 <tr><td><code>library\songs\&lt;歌曲&gt;\</code></td><td><code>source</code>（原曲）、<code>stems</code>、<code>keys</code>、<code>sing</code>、<code>renders</code>（當 MV 音檔用的錄音與翻唱版本）、<code>cover</code>（翻唱版本與快取）、<code>mv</code>（MV 專案）</td></tr>

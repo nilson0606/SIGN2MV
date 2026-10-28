@@ -270,9 +270,9 @@ def main() -> None:
             if j.get("dir"):
                 import key_shift
                 if not (A(j["dir"]) / "info.json").is_file():
+                    stem = Path(j["src"]).stem
                     key_shift.shift_files([{"src": str(A(j["src"])), "dst": str(A(j["dst"]))}], int(plan["key"]),
-                                          A(j["dir"]), {"tracks": [j["name"]], "by": "cover",
-                                           "sources": {j["name"]: j["src"]}})
+                                          A(j["dir"]), {"tracks": [stem], "sources": {stem: j["src"]}})
             elif j["src"] in failed or not A(j["src"]).is_file():
                 failed.add(j["dst"])
             else:

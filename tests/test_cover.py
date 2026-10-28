@@ -55,6 +55,8 @@ def test_params_and_plan(tmp_path):
     assert main["pitch"] == 5 and main["input"] == pl["tracks"]["lead"]           # pitch + key, lead converted
     assert pl["bgm"].startswith("keys/") and pl["backings"][0].startswith("keys/")  # accompaniment shifted
     assert pl["orig_vocal"].startswith("keys/")                                    # 'original' sections in key
+    from app import stems as stems_mod                                             # key copies shared per track
+    assert pl["bgm"] == stems_mod.key_track(pl["tracks"]["instrumental"], 3)[1]
     assert len(pl["rvc_tasks"]) == 3 and len(pl["cut_jobs"]) == 1 and len(pl["seg_jobs"]) == 1
     assert [m["target"] for m in pl["masks"] if m["mode"] == "replace"] == ["vocal", "vocal", "bgm"]
     # same settings -> same cache names; another model -> another converted vocal

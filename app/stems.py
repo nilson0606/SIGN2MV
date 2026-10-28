@@ -112,9 +112,21 @@ def plan(song_dir: Path, song: dict[str, Any], recipe: dict[str, Any]) -> tuple[
     return layers, tracks
 
 
-def key_dir_name(tracks: dict[str, str], names: list[str], semitones: int) -> str:
-    base = _h("key", sorted((n, tracks[n]) for n in names))
-    return f"{base}_{'m' if semitones < 0 else 'p'}{abs(semitones)}"
+def key_track(rel: str, semitones: int) -> tuple[str, str]:
+    """Key copy of one track: (dir name under keys/, relative file path).
+
+    One folder per source track and key, shared by the library page, sing & record
+    and AI cover: whichever needs it first makes it, the others reuse it."""
+    d = f"{_h('keytrack', rel)}_{'m' if semitones < 0 else 'p'}{abs(semitones)}"
+    return d, f"keys/{d}/{Path(rel).name}"
+
+
+def key_item(song_dir: Path, rel: str, semitones: int) -> dict[str, Any]:
+    """Work item for workers/key_shift.py (absolute paths) for one track."""
+    d, dst = key_track(rel, semitones)
+    name = Path(rel).stem
+    return {"src": str(song_dir / rel), "dst": str(song_dir / dst), "out_dir": str(song_dir / "keys" / d),
+            "info": {"tracks": [name], "sources": {name: rel}}}
 
 
 def recipe_id(recipe: dict[str, Any]) -> str:

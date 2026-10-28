@@ -99,6 +99,14 @@ def test_sing_prepare_key_and_recordings(client, root, tmp_path):
     acc = client.get(f"/sr/library/{kref['cacheId']}/accompaniment", headers=h)
     assert acc.status_code == 200 and acc.content[:4] == b"RIFF"
     assert len(client.get("/sr/library", headers=h).json()["songs"]) == 2
+    # the key copies are shared: the library page asks for the same tracks at +2 -> nothing to do
+    from app.api_sing import SEP_MODELS
+    lk = client.post(f"/api/songs/{sid}/key", json={"recipe": {"model": SEP_MODELS[kref["separationModel"]]},
+                                                    "semitones": 2, "tracks": ["instrumental", "vocals"]}).json()
+    assert lk["ready"] and lk["job"] is None
+    inv = client.get(f"/api/songs/{sid}/stems").json()["items"]
+    keys = [i for i in inv if i["type"] == "key"]
+    assert len(keys) == 2 and all(len(k["parents"]) == 1 and k["used_by"] for k in keys)
 
     # recordings archive: bundle import, metadata update, audio, mp3, delete
     rec_id = str(uuid.uuid4())

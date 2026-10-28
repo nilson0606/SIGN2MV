@@ -197,6 +197,13 @@ a { color:var(--accent); }
 
 <section id="data">
 <h2>11. Where things are stored</h2>
+<p>Everything a song uses is one of three kinds:</p>
+<ul>
+<li><b>Original</b> (<code>source</code>): kept as long as the song exists.</li>
+<li><b>Caches</b>: stems (<code>stems</code>, one copy per separation setting), key copies (<code>keys</code>, one copy per track and key), sing &amp; record preparation, the cover cache. Every workspace shares them: whichever needs a copy first makes it, the others reuse it. Deleting a cache never breaks anything; it is made again when needed.</li>
+<li><b>Your work</b>: sing &amp; record takes, AI cover versions, MV projects and videos. Deleting them is final. Takes and cover versions can be used as MV audio.</li>
+</ul>
+<p>The cover's <i>Pitch</i> only changes the converted voice and is kept in the cover cache; the <i>Key</i> setting (in the library, sing &amp; record and AI cover) uses the shared key copies.</p>
 <table>
 <tr><th>Folder (inside SIGN2MV)</th><th>Contents</th></tr>
 <tr><td><code>library\songs\&lt;song&gt;\</code></td><td><code>source</code> (original), <code>stems</code>, <code>keys</code>, <code>sing</code>, <code>renders</code> (takes and cover versions used as MV audio), <code>cover</code> (cover versions and caches), <code>mv</code> (MV projects)</td></tr>

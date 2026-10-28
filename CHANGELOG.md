@@ -7,7 +7,11 @@
   can be deleted (with everything made from it). Users separate again when needed.
 - Library: storage overview per song (original, stems, covers, cover cache, sing &
   record, MV, other), song sizes in the list, library total and free disk space.
-- Key copies record which stems they were made from.
+- Key copies are shared: one folder per track and key (`keys/<track hash>_p2/`), made
+  by whichever of library, sing & record or AI cover needs it first and reused by the
+  others. Each records the stem it was made from. Older key folders are still listed
+  and can be deleted; they are no longer reused.
+- Manual: how originals, caches and your work relate.
 
 ## 0.1.0 — first complete version
 

@@ -1,6 +1,8 @@
 """Pitch-only key change of a set of WAV files (Rubber Band via ffmpeg).
 
-Input: {"files": [{"src": "<abs wav>", "dst": "<abs wav>"}], "semitones": -12..12, "out_dir": "<abs>", "info": {...}}
+Input: {"semitones": -12..12, "items": [{"src", "dst", "out_dir", "info"}]}
+  one item per track; each track has its own folder keys/<hash of source>_<p|m><n>/
+  (app/stems.key_track) so every workspace shares the same key copies.
 tempo=1 keeps every song-time boundary; the output is padded/trimmed to the
 exact source length. Output is written to out_dir + ".tmp" and renamed at the end.
 """
@@ -49,16 +51,21 @@ def shift_files(files: list[dict], semis: int, out_dir: Path, info: dict, report
         raise
 
 
+def shift_items(items: list[dict], semis: int, report=lambda pct: None) -> int:
+    """Make the key copy of every item that does not exist yet. Returns how many were made."""
+    todo = [it for it in items if not (Path(it["out_dir"]) / "info.json").is_file()]
+    for i, it in enumerate(todo):
+        shift_files([{"src": it["src"], "dst": it["dst"]}], semis, Path(it["out_dir"]), it.get("info") or {},
+                    lambda pct, i=i: report((i + pct / 100) * 100 / len(todo)))
+    return len(todo)
+
+
 def main() -> None:
     data = protocol.read_input()
     semis = int(data["semitones"])
-    out_dir = Path(data["out_dir"])
-    if (out_dir / "info.json").is_file():
-        protocol.result({"out_dir": str(out_dir), "cached": True})
-        return
+    items = data.get("items") or []
     try:
-        shift_files(data["files"], semis, out_dir, data.get("info") or {},
-                    lambda pct: protocol.progress(pct, "key", ""))
+        shift_items(items, semis, lambda pct: protocol.progress(round(pct, 1), "key", ""))
     except ValueError as exc:
         protocol.fail(str(exc))
     except Exception as exc:  # noqa: BLE001
@@ -66,7 +73,7 @@ def main() -> None:
         protocol.fail("rubberband_missing" if "rubberband" in msg.lower() and "no such filter" in msg.lower()
                       else "key_shift_failed", msg[-800:])
     protocol.progress(100, "done", "")
-    protocol.result({"out_dir": str(out_dir)})
+    protocol.result({"files": [it["dst"] for it in items]})
 
 
 if __name__ == "__main__":

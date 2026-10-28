@@ -193,18 +193,16 @@ def router(ctx: Context) -> APIRouter:
             return err("invalid_tracks")
         if semis == 0:
             return {"ready": True, "tracks": {n: tracks[n] for n in names}, "job": None}
-        dir_name = stems_mod.key_dir_name(tracks, names, semis)
         song_dir = lib.song_dir(song_id)
-        out_dir = song_dir / "keys" / dir_name
-        mapped = {n: f"keys/{dir_name}/{n}.wav" for n in names}
-        if (out_dir / "info.json").is_file():
+        mapped = {n: stems_mod.key_track(tracks[n], semis)[1] for n in names}
+        items = [stems_mod.key_item(song_dir, tracks[n], semis) for n in names]
+        items = [it for it in items if not (Path(it["out_dir"]) / "info.json").is_file()]
+        if not items:
             return {"ready": True, "tracks": mapped, "job": None}
         job = ctx.submit(kind="key", lane="cpu", script="key_shift.py",
-                         input={"semitones": semis, "out_dir": str(out_dir),
-                                "files": [{"src": str(song_dir / tracks[n]), "dst": str(out_dir / f"{n}.wav")} for n in names],
-                                "info": {"tracks": names, "sources": {n: tracks[n] for n in names}}},
-                         title=f"key {semis:+d}: {song['title']}", song_id=song_id, timeout_s=3600,
-                         dedupe="key:" + dir_name)
+                         input={"semitones": semis, "items": items},
+                         title=f"key {semis:+d}: {song['title']}", song_id=song_id, timeout_s=1800 * len(items),
+                         dedupe="key:" + ",".join(sorted(Path(it["out_dir"]).name for it in items)))
         return {"ready": False, "tracks": mapped, "job": job}
 
     def stored_copies(song_id: str, song_dir: Path) -> dict[str, Any]:

@@ -343,8 +343,7 @@ def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict],
             return rel
         if name in keyed:
             return keyed[name]
-        d = stems_mod.key_dir_name({name: rel}, [name], key)
-        dst = f"keys/{d}/{name}.wav"
+        d, dst = stems_mod.key_track(rel, key)   # shared with the library page and sing & record
         key_jobs.append({"name": name, "src": rel, "dst": dst, "dir": f"keys/{d}"})
         keyed[name] = dst
         return dst
