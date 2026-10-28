@@ -255,3 +255,17 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .cv-epoch { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--line, #22303d); border-radius: 8px; font-size: .88em; }
 .cv-flash { box-shadow: 0 0 0 3px var(--ok, #34d399); transition: box-shadow .3s; }
 @media (max-width: 700px) { .cv-steps { grid-template-columns: repeat(3, 1fr); } .cv-cards { grid-template-columns: repeat(2, 1fr); } }
+
+/* cover: run summary, key badge, notes */
+.cv-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; padding: 8px 12px; border: 1px solid var(--line, #22303d); border-radius: 10px; font-size: .9em; background: #0d141c; }
+.cv-summary.key-on { border-color: #b7791f; }
+.cv-summary.key-on .cv-sumkey { color: #fbbf24; font-weight: 600; }
+.cv-summary .cv-sumfresh { color: #7dd3fc; }
+.cv-summary .btn { margin-left: auto; }
+.cv-keybadge { font-size: .85em; padding: 2px 8px; border-radius: 6px; background: #34d39926; color: #6ee7b7; font-weight: 600; }
+.cv-keybadge.on { background: #f59e0b33; color: #fbbf24; }
+.cv-warn { color: #fbbf24; }
+.cv-ok { color: #6ee7b7; }
+.cv-note { color: #93c5fd; }
+.cv-mfstatus { font-size: .85em; color: #6ee7b7; }
+.cv-details > summary[data-count]::after { content: attr(data-count); color: var(--muted); font-weight: normal; }

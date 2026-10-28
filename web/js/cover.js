@@ -96,17 +96,22 @@ const keyCtl = slider('key', -8, 8, 1);
 const keyAudio = audioEl('');
 const keyBtn = el('button', { class: 'btn small', onclick: () => keyPreview(), 'data-i18n': 'cover.key_preview' });
 
-const modelSel = select('model', []);
+const modelSel = select('model', [], () => updateSummary());
 const pitchCtl = slider('pitch', -24, 24, 1);
+pitchCtl.el.addEventListener('input', () => updateSummary());
+pitchCtl.el.addEventListener('change', () => updateSummary());
+const pitchPresets = el('div', { class: 'row', style: 'gap:6px' },
+  ...[[0, 'cover.pitch_p0'], [-12, 'cover.pitch_m12'], [12, 'cover.pitch_p12']].map(([v, k]) =>
+    el('button', { class: 'btn small', onclick: () => { pitchCtl.set(v); changed(); updateSummary(); } }, t(k))));
 const sepSel = select('sep_model', [['demucs', ''], ['bs_roformer', ''], ['mel_roformer', '']]);
 const vmodeSel = select('vocal_mode', [['full', ''], ['lead_keep_backing', ''], ['lead_keep_backing_x2', '']], () => updateVis());
 const refineSel = select('bgm_refine', [['none', ''], ['second_pass', '']]);
-const backingCtl = check('backing_on', 'cover.backing_on');
+const backingCtl = check('backing_on', 'cover.backing_on', () => updateVis());
 const rvc = {
   protect: slider('rvc.protect', 0, 0.5, 0.01), index_rate: slider('rvc.index_rate', 0, 1, 0.01),
   envelope: slider('rvc.envelope', 0, 1, 0.01), f0: select('rvc.f0', [['rmvpe', ''], ['fcpe', ''], ['crepe', '']]),
-  autotune: check('rvc.autotune', 'cover.autotune'), autotune_strength: slider('rvc.autotune_strength', 0, 1, 0.05),
-  clean: check('rvc.clean', 'cover.clean'), clean_strength: slider('rvc.clean_strength', 0, 1, 0.05),
+  autotune: check('rvc.autotune', 'cover.autotune', () => updateVis()), autotune_strength: slider('rvc.autotune_strength', 0, 1, 0.01),
+  clean: check('rvc.clean', 'cover.clean', () => updateVis()), clean_strength: slider('rvc.clean_strength', 0, 1, 0.01),
 };
 const mfOn = check(null, 'cover.mf_enable', () => updateVis());
 const mfSep = select(null, [['aufr33', ''], ['sucial', '']]);
@@ -117,11 +122,16 @@ function sideControls(side) {
     pitch: slider(`${p}.pitch`, -24, 24, 1), vol: slider(`${p}.vol`, 0, 200, 1, 100),
     protect: slider(`${p}.protect`, 0, 0.5, 0.01), index_rate: slider(`${p}.index_rate`, 0, 1, 0.01),
     envelope: slider(`${p}.envelope`, 0, 1, 0.01), f0: select(`${p}.f0`, [['rmvpe', 'rmvpe'], ['fcpe', 'fcpe'], ['crepe', 'crepe']]),
-    autotune: check(`${p}.autotune`, 'cover.autotune'), autotune_strength: slider(`${p}.autotune_strength`, 0, 1, 0.05),
-    clean: check(`${p}.clean`, 'cover.clean'), clean_strength: slider(`${p}.clean_strength`, 0, 1, 0.05),
+    autotune: check(`${p}.autotune`, 'cover.autotune', () => updateVis()), autotune_strength: slider(`${p}.autotune_strength`, 0, 1, 0.01),
+    clean: check(`${p}.clean`, 'cover.clean', () => updateVis()), clean_strength: slider(`${p}.clean_strength`, 0, 1, 0.01),
   };
   c.box = el('div', { class: 'cv-side' });
-  c.render = () => c.box.replaceChildren(el('h4', {}, t(`cover.mf_${side}`)), c.keep.el,
+  c.render = () => c.box.replaceChildren(el('div', { class: 'row', style: 'align-items:center' }, el('h4', { class: 'grow', style: 'margin:0' }, t(`cover.mf_${side}`)),
+    el('button', { class: 'btn small', onclick: () => {
+      const d = (status && status.defaults && status.defaults.rvc) || {};
+      ['protect', 'index_rate', 'envelope', 'f0', 'autotune', 'autotune_strength', 'clean', 'clean_strength'].forEach((k) => { if (d[k] !== undefined) c[k].set(d[k]); });
+      c.pitch.set(side === 'male' ? -12 : 0); c.vol.set(1); c.keep.set(false); updateVis(); changed();
+    } }, t('cover.restore_defaults'))), c.keep.el,
     el('div', { class: 'cv-side-body' },
       field(t('cover.model'), c.model), field(t('cover.pitch'), c.pitch), field(t('cover.volume'), c.vol),
       details(t('cover.rvc_tune'), field(t('cover.protect'), c.protect), field(t('cover.index_rate'), c.index_rate),
@@ -145,21 +155,56 @@ const versionsBox = el('div', { class: 'list cv-versions' });
 const maskList = el('div', { class: 'list' });
 const vsegList = el('div', { class: 'list' });
 
+// key: the value as words, preview in the original's player from the same second (old 試聽升降後 / 原調)
+const keyBadge = el('span', { class: 'cv-keybadge' });
+const keyOrigBtn = el('button', { class: 'btn small', onclick: () => keyListen(false) });
+const keyNow = el('span', { class: 'muted small' });
+function keyWords(k) { return k ? t(k > 0 ? 'cover.key_up' : 'cover.key_down', Math.abs(k)) : t('cover.key_orig'); }
+function updateKeyUi() {
+  const k = keyCtl.get();
+  keyBadge.textContent = keyWords(k);
+  keyBadge.classList.toggle('on', !!k);
+  keyBtn.textContent = k ? t('cover.key_preview_n', keyWords(k)) : t('cover.key_preview');
+  keyBtn.disabled = !k || (status && status.rubberband === false);
+  keyOrigBtn.textContent = t('cover.key_listen_orig');
+  keyCtl.el.querySelectorAll('input').forEach((i) => { i.disabled = !!(status && status.rubberband === false); });
+  updateSummary();
+}
+keyCtl.el.addEventListener('input', updateKeyUi);
+keyCtl.el.addEventListener('change', updateKeyUi);
+
 function sectionSong() {
   return el('div', { class: 'panel' },
     el('div', { class: 'row' }, el('h2', { style: 'margin:0' }, t('nav.cover')), songSel),
     songInfo,
     el('div', { class: 'track' }, el('span', {}, t('track.mix')), origPlayer),
     el('div', { class: 'section' },
-      field(t('cover.key'), keyCtl, t('cover.key_hint')),
-      el('div', { class: 'row' }, keyBtn, keyAudio)));
+      el('div', { class: 'row', style: 'align-items:center' }, el('span', {}, t('cover.key')), keyBadge),
+      field('', keyCtl, t('cover.key_hint')),
+      el('div', { class: 'row' }, keyBtn, keyOrigBtn,
+        el('button', { class: 'btn small', onclick: () => { keyCtl.set(0); updateKeyUi(); changed(); } }, t('cover.key_reset')), keyNow),
+      rubberNote));
 }
+const rubberNote = el('p', { class: 'small cv-warn hidden' });
 
+const mfActiveNote = el('p', { class: 'small cv-note hidden' });
+const mfStatus = el('span', { class: 'cv-mfstatus hidden' });
+const mfCapNote = el('p', { class: 'small cv-warn hidden' });
+const mfKeepWarn = el('p', { class: 'small cv-warn hidden' });
+const backingHint = el('p', { class: 'muted small' });
+const sepStatus = el('p', { class: 'small' });
+let mfDetails = null;
 function sectionVoice() {
   return el('div', { class: 'panel' },
     el('h3', {}, t('cover.voice')),
-    field(t('cover.model'), modelSel), field(t('cover.pitch'), pitchCtl, t('cover.pitch_hint')),
+    mfActiveNote,
+    field(t('cover.model'), modelSel), field(t('cover.pitch'), pitchCtl, t('cover.pitch_hint')), pitchPresets,
     details(t('cover.rvc_tune'),
+      el('div', { class: 'row' }, el('button', { class: 'btn small', onclick: () => {
+        const d = (status && status.defaults && status.defaults.rvc) || {};
+        Object.entries(rvc).forEach(([k, c]) => { if (d[k] !== undefined) c.set(d[k]); });
+        updateVis(); changed();
+      } }, t('cover.restore_defaults'))),
       field(t('cover.protect'), rvc.protect, t('cover.protect_hint')),
       field(t('cover.index_rate'), rvc.index_rate, t('cover.index_hint')),
       field(t('cover.envelope'), rvc.envelope, t('cover.envelope_hint')),
@@ -168,21 +213,56 @@ function sectionVoice() {
       el('div', { class: 'row' }, rvc.clean.el, rvc.clean_strength.el)),
     details(t('cover.separation'),
       field(t('sep.model'), sepSel), field(t('cover.vocal_mode'), vmodeSel), field(t('cover.bgm_refine'), refineSel),
-      el('div', { class: 'cv-backing' }, backingCtl.el), el('p', { class: 'muted small' }, t('cover.sep_hint'))),
-    details(t('cover.mf'),
+      el('div', { class: 'cv-backing' }, backingCtl.el), backingHint, sepStatus, el('p', { class: 'muted small' }, t('cover.sep_hint'))),
+    mfDetails = details(t('cover.mf'),
       el('p', { class: 'muted small' }, t('cover.mf_hint')),
       el('div', { class: 'row' }, mfOn.el, el('span', { class: 'muted' }, t('cover.mf_sep')), mfSep.el),
-      el('p', { class: 'muted small cv-sucial-note' }, t('cover.sucial_note')),
+      el('p', { class: 'muted small cv-sucial-note' }, t('cover.sucial_note')), mfCapNote, mfKeepWarn,
       el('div', { class: 'cv-sides' }, (male.render(), male.box), (female.render(), female.box))));
+}
+
+let masksDetails = null;
+let vsegsDetails = null;
+// "這次會用" (what this run will use) above the button; the key highlighted when the song is shifted
+const runSummary = el('div', { class: 'cv-summary' });
+const freshBox = el('input', { type: 'checkbox', onchange: () => updateSummary() });
+const freshCtl = el('label', { class: 'check small', title: '' }, freshBox, el('span', { 'data-i18n': 'cover.fresh_sep' }));
+function sg(n) { return `${n > 0 ? '+' : ''}${n}`; }
+function updateSummary() {
+  if (!runSummary.isConnected && !songId) return;
+  const k = keyCtl.get();
+  const pitch = pitchCtl.get();
+  const keyTxt = k ? t('cover.sum_key', k > 0 ? t('cover.up') : t('cover.down'), Math.abs(k)) : t('cover.sum_key0');
+  const parts = [el('b', {}, t('cover.sum_label'))];
+  if (mfOn.get()) {
+    const side = (c) => (c.keep.get() ? t('cover.mf_keep_short') : `${(c.model.el.selectedOptions[0] || {}).textContent || c.model.get()}（${sg(c.pitch.get())}）`);
+    parts.push(el('span', {}, t('cover.sum_mf', side(male), side(female))));
+    if (k) parts.push('｜', el('span', {}, t('cover.sum_voice_key', sg(k))));
+  } else {
+    const opt = modelSel.el.selectedOptions[0];
+    const model = opt ? opt.textContent.trim() : '—';
+    const pName = pitch === -12 ? t('cover.pn_f2m') : pitch === 12 ? t('cover.pn_m2f') : pitch === 0 ? t('cover.pn_orig') : '';
+    const voice = k ? t('cover.sum_voice_k', sg(pitch), pName, sg(k), sg(pitch + k)) : t('cover.sum_voice', sg(pitch), pName);
+    parts.push(el('span', {}, `🎤 ${model}`), '｜', el('span', {}, voice));
+  }
+  parts.push('｜', el('span', { class: 'cv-sumkey' }, keyTxt));
+  if (freshBox.checked) parts.push('｜', el('span', { class: 'cv-sumfresh' }, t('cover.sum_fresh')));
+  parts.push(el('button', { class: 'btn small', onclick: () => { keyCtl.set(0); updateKeyUi(); changed(); } }, t('cover.key_back')));
+  runSummary.replaceChildren(...parts);
+  runSummary.classList.toggle('key-on', !!k);
+  runSummary.classList.toggle('fresh-on', freshBox.checked);
 }
 
 function sectionMix() {
   return el('div', { class: 'panel' },
-    el('h3', {}, t('cover.mix')),
+    el('div', { class: 'row', style: 'align-items:center' }, el('h3', { class: 'grow', style: 'margin:0' }, t('cover.mix')),
+      ...[['cover.vol_vocal', 1.05, 0.8], ['cover.vol_golden', 0.95, 0.85], ['cover.vol_bgm', 0.85, 0.95]].map(([k, v, b]) =>
+        el('button', { class: 'btn small', onclick: () => { mix.vocal_vol.set(v); mix.bgm_vol.set(b); changed(); } }, t(k)))),
     field(t('cover.vocal_vol'), mix.vocal_vol), field(t('cover.bgm_vol'), mix.bgm_vol),
-    details(t('cover.masks'), el('p', { class: 'muted small' }, t('cover.masks_hint')), maskEditor(), maskList),
-    details(t('cover.vsegs'), el('p', { class: 'muted small' }, t('cover.vsegs_hint')), vsegEditor(), vsegList),
-    el('div', { class: 'row', style: 'margin-top:12px' }, runBtn),
+    masksDetails = details(t('cover.masks'), el('p', { class: 'muted small' }, t('cover.masks_hint')), maskEditor(), maskList),
+    vsegsDetails = details(t('cover.vsegs'), el('p', { class: 'muted small' }, t('cover.vsegs_hint')), vsegEditor(), vsegList),
+    runSummary,
+    el('div', { class: 'row', style: 'margin-top:12px;align-items:center' }, runBtn, freshCtl),
     el('p', { class: 'muted small' }, t('cover.run_hint')),
     runJob.el, doneBox);
 }
@@ -197,7 +277,7 @@ function timeInput() {
   return { el: el('span', { class: 'row', style: 'gap:4px;flex-wrap:nowrap' }, i, set), get: () => parseTime(i.value), set: (v) => { i.value = v == null ? '' : fmtTime(v); } };
 }
 function parseTime(s) {
-  s = String(s || '').trim();
+  s = String(s || '').trim().replace(/：/g, ':');
   if (!s) return NaN;
   const parts = s.split(':').map(Number);
   if (parts.some((x) => !Number.isFinite(x))) return NaN;
@@ -211,6 +291,8 @@ const mr = {
   model: select(null, []), pitch: slider(null, -24, 24, 1), protect: slider(null, 0, 0.5, 0.01),
   index_rate: slider(null, 0, 1, 0.01), envelope: slider(null, 0, 1, 0.01),
   f0: select(null, [['rmvpe', 'rmvpe'], ['fcpe', 'fcpe'], ['crepe', 'crepe']]),
+  autotune: check(null, 'cover.autotune', () => updateMaskVis()), autotune_strength: slider(null, 0, 1, 0.01),
+  clean: check(null, 'cover.clean', () => updateMaskVis()), clean_strength: slider(null, 0, 1, 0.01),
   sep_on: check(null, 'cover.mask_sep_on', () => updateMaskVis()),
   sep_model: select(null, [['demucs', ''], ['bs_roformer', ''], ['mel_roformer', '']]),
   vocal_mode: select(null, [['full', ''], ['lead_keep_backing', ''], ['lead_keep_backing_x2', '']]),
@@ -246,7 +328,8 @@ function maskEditor() {
     field(t('cover.mask_target'), mf_.target), field(t('cover.mask_offset'), mf_.offset, t('cover.mask_offset_hint')), mf_.to_ai.el);
   mRvcWrap.replaceChildren(el('div', { class: 'cv-sub' },
     field(t('cover.model'), mr.model), field(t('cover.pitch'), mr.pitch), field(t('cover.protect'), mr.protect),
-    field(t('cover.index_rate'), mr.index_rate), field(t('cover.envelope'), mr.envelope), field(t('cover.f0'), mr.f0)), mr.sep_on.el, mSepBox);
+    field(t('cover.index_rate'), mr.index_rate), field(t('cover.envelope'), mr.envelope), field(t('cover.f0'), mr.f0),
+    el('div', { class: 'row' }, mr.autotune.el, mr.autotune_strength.el), el('div', { class: 'row' }, mr.clean.el, mr.clean_strength.el)), mr.sep_on.el, mSepBox);
   return el('div', { class: 'cv-editor' },
     el('div', { class: 'row' }, el('span', {}, t('cover.start')), mStart.el, el('span', {}, t('cover.end')), mEnd.el),
     field(t('cover.mask_mode'), mMode), mRvcWrap, mFileBox,
@@ -262,14 +345,22 @@ function updateMaskVis() {
   mf_.to_ai.el.classList.toggle('hidden', mf_.target.get() !== 'vocal');
   maskAdd.textContent = editingMask >= 0 ? t('cover.update') : t('cover.add');
   maskCancel.classList.toggle('hidden', editingMask < 0);
+  mr.autotune_strength.el.querySelectorAll('input').forEach((i) => { i.disabled = !mr.autotune.get(); });
+  mr.clean_strength.el.querySelectorAll('input').forEach((i) => { i.disabled = !mr.clean.get(); });
 }
 function addMask() {
   const start = mStart.get();
-  const end = mEnd.get();
+  let end = mEnd.get();
+  // an outside clip without an end: it lasts as long as the clip (old behaviour)
+  if (mMode.get() === 'file' && !(end > start) && mf_.uploaded && mf_.uploaded.duration && start >= 0) {
+    end = Math.round((start + mf_.uploaded.duration) * 1000) / 1000;
+    mEnd.set(end);
+  }
   if (!(start >= 0) || !(end > start)) { toast(t('cover.bad_range'), true); return; }
   const m = { start, end, mode: mMode.get() };
   const rvcParams = () => ({ model: mr.model.get(), pitch: mr.pitch.get(), protect: mr.protect.get(), index_rate: mr.index_rate.get(),
-    envelope: mr.envelope.get(), f0: mr.f0.get() });
+    envelope: mr.envelope.get(), f0: mr.f0.get(), autotune: mr.autotune.get(), autotune_strength: mr.autotune_strength.get(),
+    clean: mr.clean.get(), clean_strength: mr.clean_strength.get() });
   if (m.mode === 'rvc') {
     m.rvc = rvcParams();
     if (mr.sep_on.get()) m.sep = { sep_model: mr.sep_model.get(), vocal_mode: mr.vocal_mode.get(), bgm_refine: mr.bgm_refine.get() };
@@ -295,6 +386,8 @@ function editMask(i) {
   const cur = readForm();
   mr.model.set(r.model || cur.model); mr.pitch.set(r.pitch ?? cur.pitch); mr.protect.set(r.protect ?? cur.rvc.protect);
   mr.index_rate.set(r.index_rate ?? cur.rvc.index_rate); mr.envelope.set(r.envelope ?? cur.rvc.envelope); mr.f0.set(r.f0 || cur.rvc.f0);
+  mr.autotune.set(r.autotune ?? cur.rvc.autotune); mr.autotune_strength.set(r.autotune_strength ?? cur.rvc.autotune_strength);
+  mr.clean.set(r.clean ?? cur.rvc.clean); mr.clean_strength.set(r.clean_strength ?? cur.rvc.clean_strength);
   mr.sep_on.set(!!m.sep);
   if (m.sep) { mr.sep_model.set(m.sep.sep_model); mr.vocal_mode.set(m.sep.vocal_mode); mr.bgm_refine.set(m.sep.bgm_refine); }
   if (m.mode === 'file') {
@@ -309,8 +402,18 @@ function maskText(m) {
   if (m.mode === 'file') s += ` · ${m.name}${m.target === 'mix' ? ' · ' + t('cover.mask_target.mix') : ''}${m.to_ai ? ' · ' + t('cover.mask_to_ai') : ''}`;
   return s;
 }
+// ▶ on a section: play from 1.5 s before it in the player last used (or the original)
+function previewAt(start) {
+  const a = lastAudio || origPlayer;
+  if (!a || !a.src) { toast(t('cover.play_first'), true); return; }
+  const go = () => { try { a.currentTime = Math.max(0, start - 1.5); } catch { /* ignore */ } a.play().catch(() => {}); };
+  if (a.readyState >= 1) go(); else { a.addEventListener('loadedmetadata', go, { once: true }); a.load(); }
+  a.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 function renderMasks() {
+  updateCounts();
   maskList.replaceChildren(...(masks.length ? masks.map((m, i) => el('div', { class: 'item' },
+    el('button', { class: 'btn small', title: t('cover.preview_section'), onclick: () => previewAt(m.start) }, '▶'),
     el('div', { class: 'grow' }, maskText(m)),
     el('button', { class: 'btn small', onclick: () => editMask(i) }, t('cover.edit')),
     el('button', { class: 'btn small', onclick: () => { masks.splice(i, 1); editingMask = -1; renderMasks(); updateMaskVis(); changed(); } }, t('common.delete'))))
@@ -322,24 +425,37 @@ const vStart = timeInput();
 const vEnd = timeInput();
 const vTrack = select(null, [['vocal', ''], ['bgm', ''], ['backing', '']]);
 const vGain = slider(null, 0, 200, 1, 100);
+vGain.set(0.7);   // old default for a volume section
+let editingVseg = -1;
+const vsegAdd = el('button', { class: 'btn small primary', onclick: () => {
+  const start = vStart.get(); const end = vEnd.get();
+  if (!(start >= 0) || !(end > start + 0.09)) { toast(t('cover.bad_range'), true); return; }
+  const seg = { track: vTrack.get(), start, end, gain: vGain.get() };
+  if (editingVseg >= 0) vsegs[editingVseg] = seg; else vsegs.push(seg);
+  editingVseg = -1;
+  vsegs.sort((a, b) => a.start - b.start);
+  renderVsegs(); changed();
+} });
+const vsegCancel = el('button', { class: 'btn small hidden', onclick: () => { editingVseg = -1; renderVsegs(); } });
 function vsegEditor() {
   return el('div', { class: 'cv-editor' },
     el('div', { class: 'row' }, el('span', {}, t('cover.start')), vStart.el, el('span', {}, t('cover.end')), vEnd.el),
     field(t('cover.vseg_track'), vTrack), field(t('cover.vseg_gain'), vGain),
-    el('div', { class: 'row' },
-      el('button', { class: 'btn small primary', onclick: () => {
-        const start = vStart.get(); const end = vEnd.get();
-        if (!(start >= 0) || !(end > start + 0.09)) { toast(t('cover.bad_range'), true); return; }
-        vsegs.push({ track: vTrack.get(), start, end, gain: vGain.get() });
-        vsegs.sort((a, b) => a.start - b.start);
-        renderVsegs(); changed();
-      } }, t('cover.add')),
-      el('button', { class: 'btn small', onclick: () => { vsegs = []; renderVsegs(); changed(); } }, t('cover.vseg_reset'))));
+    el('div', { class: 'row' }, vsegAdd, vsegCancel,
+      el('button', { class: 'btn small', onclick: () => { vsegs = []; editingVseg = -1; renderVsegs(); changed(); } }, t('cover.vseg_reset'))));
 }
 function renderVsegs() {
-  vsegList.replaceChildren(...(vsegs.length ? vsegs.map((s, i) => el('div', { class: 'item' },
+  updateCounts();
+  vsegAdd.textContent = editingVseg >= 0 ? t('cover.update') : t('cover.add');
+  vsegCancel.textContent = t('common.cancel');
+  vsegCancel.classList.toggle('hidden', editingVseg < 0);
+  vsegList.replaceChildren(...(vsegs.length ? vsegs.map((s, i) => el('div', { class: 'item' + (i === editingVseg ? ' selected' : '') },
+    el('button', { class: 'btn small', title: t('cover.preview_section'), onclick: () => previewAt(s.start) }, '▶'),
     el('div', { class: 'grow' }, `${fmtTime(s.start)} – ${fmtTime(s.end)} · ${t(`cover.vseg.${s.track}`)} · ${pctText(s.gain)}`),
-    el('button', { class: 'btn small', onclick: () => { vsegs.splice(i, 1); renderVsegs(); changed(); } }, t('common.delete'))))
+    el('button', { class: 'btn small', title: t('cover.edit'), onclick: () => {
+      editingVseg = i; vStart.set(s.start); vEnd.set(s.end); vTrack.set(s.track); vGain.set(s.gain); renderVsegs();
+    } }, '✏️'),
+    el('button', { class: 'btn small', onclick: () => { vsegs.splice(i, 1); editingVseg = -1; renderVsegs(); changed(); } }, t('common.delete'))))
     : [el('div', { class: 'empty small' }, t('cover.no_vsegs'))]));
 }
 
@@ -403,6 +519,41 @@ function updateVis() {
   [sepSel.el, mr.sep_model.el].forEach((s) => [...s.options].forEach((o) => { o.disabled = seps[o.value] === false; }));
   [...mfSep.el.options].forEach((o) => { o.disabled = seps[o.value] === false; });
   [vmodeSel.el, mr.vocal_mode.el].forEach((s) => [...s.options].forEach((o) => { o.disabled = o.value !== 'full' && seps.karaoke === false; }));
+  // strength boxes only count when their switch is on
+  [rvc, male, female].forEach((c) => {
+    c.autotune_strength.el.querySelectorAll('input').forEach((i) => { i.disabled = !c.autotune.get(); });
+    c.clean_strength.el.querySelectorAll('input').forEach((i) => { i.disabled = !c.clean.get(); });
+  });
+  // separation availability (old "分離模型就緒／不可用")
+  const missing = Object.entries(seps).filter(([, ok]) => ok === false).map(([k]) => t(`sep.name.${k}`));
+  sepStatus.textContent = missing.length ? t('cover.sep_missing', missing.join('、')) : t('cover.sep_ready');
+  sepStatus.className = `small ${missing.length ? 'cv-warn' : 'cv-ok'}`;
+  // what the original backing does in this mode
+  const vm = vmodeSel.get();
+  backingHint.textContent = mf ? '' : (vm === 'full' ? t('cover.backing_hint_full') : (backingCtl.get() ? t('cover.backing_hint_on') : t('cover.backing_hint_off')));
+  // duet: status chip, note above the model, both-kept warning, model availability
+  mfActiveNote.classList.toggle('hidden', !mf);
+  mfActiveNote.textContent = t('cover.mf_active_note');
+  const side = (c) => (c.keep.get() ? t('cover.mf_keep_short') : `${c.model.get()}（${sg(c.pitch.get())}）`);
+  mfStatus.textContent = mf ? t('cover.mf_status', side(male), side(female)) : '';
+  mfStatus.classList.toggle('hidden', !mf);
+  if (mfDetails && !mfStatus.isConnected) mfDetails.querySelector('summary').append(' ', mfStatus);
+  mfKeepWarn.textContent = t('cover.mf_both_kept');
+  mfKeepWarn.classList.toggle('hidden', !(mf && male.keep.get() && female.keep.get()));
+  const mfAvail = ['aufr33', 'sucial'].filter((k) => seps[k] !== false);
+  mfCapNote.textContent = t('cover.mf_unavailable');
+  mfCapNote.classList.toggle('hidden', mfAvail.length > 0);
+  // volume sections: "original backing" only when this mode keeps a backing track
+  [...vTrack.el.options].forEach((o) => { if (o.value === 'backing') o.disabled = mf || vm === 'full' || !backingCtl.get(); });
+  rubberNote.textContent = t('cover.no_rubberband');
+  rubberNote.classList.toggle('hidden', !(status && status.rubberband === false));
+  updateKeyUi();
+  updateCounts();
+}
+function updateCounts() {
+  const setCount = (d, n) => { if (!d) return; const sm = d.querySelector('summary'); sm.dataset.count = n ? t('cover.n_sections', n) : ''; };
+  setCount(masksDetails, masks.length);
+  setCount(vsegsDetails, vsegs.length);
 }
 
 function translateOptions() {
@@ -452,15 +603,27 @@ function updateSongInfo() {
   songInfo.textContent = song && song.source ? `${fmtTime(song.source.duration)} · ${t(`lib.source.${song.source.type}`)}` : '';
 }
 
-async function keyPreview() {
+async function keyPreview() { return keyListen(true); }
+// switch the original's player between the key-changed preview and the original, same second
+async function keyListen(shifted) {
   if (!songId) { toast(t('common.select_song'), true); return; }
-  keyBtn.disabled = true;
-  try {
-    const res = await api.post(`/api/cover/songs/${songId}/key_preview`, { key: keyCtl.get() });
-    keyAudio.src = mediaUrl(songId, res.path);
-    keyAudio.play().catch(() => {});
-  } catch (err) { toast(errorText(err), true); }
-  keyBtn.disabled = false;
+  const song = songById(songId);
+  let url = song && song.source ? mediaUrl(songId, song.source.audio) : '';
+  if (shifted) {
+    keyBtn.disabled = true;
+    const old = keyBtn.textContent;
+    keyBtn.textContent = t('cover.key_making');
+    try {
+      const res = await api.post(`/api/cover/songs/${songId}/key_preview`, { key: keyCtl.get() });
+      url = mediaUrl(songId, res.path);
+    } catch (err) { toast(errorText(err), true); keyBtn.textContent = old; keyBtn.disabled = false; return; }
+    keyBtn.textContent = old;
+    keyBtn.disabled = false;
+  }
+  if (!url) return;
+  switchSource(origPlayer, url, [], null);
+  origPlayer.play().catch(() => {});
+  keyNow.textContent = t('cover.key_now', shifted ? keyWords(keyCtl.get()) : t('cover.key_orig'));
 }
 
 // ------------------------------------------------------------------ jobs
@@ -536,7 +699,11 @@ async function follow(job, remixCard = null, asNew = false) {
 async function runCover() {
   if (!songId) { toast(t('common.select_song'), true); return; }
   try {
-    const res = await api.post(`/api/cover/songs/${songId}/run`, { params: readForm() });
+    const body = { params: readForm() };
+    if (freshBox.checked) body.fresh = true;
+    const res = await api.post(`/api/cover/songs/${songId}/run`, body);
+    freshBox.checked = false;   // like the old switch: only for this run
+    updateSummary();
     follow(res.job);
   } catch (err) { toast(errorText(err), true); }
 }

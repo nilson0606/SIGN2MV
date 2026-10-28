@@ -58,6 +58,21 @@ def _ffmpeg() -> str:
     return shutil.which("ffmpeg") or "ffmpeg"
 
 
+_RUBBERBAND: dict[str, bool] = {}
+
+
+def rubberband_ok() -> bool:
+    """ffmpeg has the rubberband filter (the key change needs it); checked once."""
+    if "ok" not in _RUBBERBAND:
+        try:
+            out = subprocess.run([_ffmpeg(), "-hide_banner", "-filters"], capture_output=True, text=True, timeout=20,
+                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
+            _RUBBERBAND["ok"] = " rubberband " in out
+        except (OSError, subprocess.TimeoutExpired):
+            _RUBBERBAND["ok"] = False
+    return _RUBBERBAND["ok"]
+
+
 def disk_space() -> list[dict]:
     """Free space of C: and of the drive SIGN2MV is on (old training cleanup showed both)."""
     out, seen = [], set()
@@ -211,6 +226,7 @@ def router(ctx: Context) -> APIRouter:
     def status():
         train = active_job("cover_train")
         return {"applio": applio_status(), "separators": separators(), "instruments": instruments(),
+                "rubberband": rubberband_ok(),
                 "models": cover.list_models(voices()), "defaults": defaults(), "training": train,
                 "voices_dir": str(voices()), "soundfonts_dir": str(paths.soundfonts)}
 
@@ -558,6 +574,15 @@ def router(ctx: Context) -> APIRouter:
             cover.validate(p)
             cover.write_json(cover.cover_dir(sdir) / "settings.json", p)
             cover.write_json(paths.config / DEFAULTS_FILE, {k: v for k, v in p.items() if k not in ("masks", "vol_segments")})
+            if body.get("fresh") is True:
+                # "separate again" (old 重新下載與分離): drop this recipe's stems so they are made anew
+                if ctx.song_busy(song_id):
+                    raise CoverError("song_busy", 409)
+                _layers, tracks = cover.stems_mod.plan(sdir, song, cover.recipe_for(p))
+                for rel in set(tracks.values()):
+                    d = (sdir / rel).parent
+                    if d.parent.name == "stems" and d.parent.parent == sdir:
+                        shutil.rmtree(d, ignore_errors=True)
             number = cover.next_number(sdir)
             label = cover.version_label(p)
             vid = cover.new_version_id()
