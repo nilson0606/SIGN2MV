@@ -349,4 +349,10 @@ export default {
   "stage.mix_master": "母帶限幅與輸出 MP3",
   "jobs.clear": "🧹 清除已完成",
   "jobs.cleared": "已從清單清除 {0} 個已結束的工作",
+  "cover.st_total": "耗時 {0}",
+  "cover.st_separate": "分離",
+  "cover.st_prepare": "升降 Key／分段",
+  "cover.st_rvc": "音色轉換",
+  "cover.st_rvc_cached": "音色轉換沿用",
+  "cover.st_mix": "混音",
 };

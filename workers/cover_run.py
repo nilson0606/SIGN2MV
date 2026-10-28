@@ -122,7 +122,7 @@ def separate_segment(job: dict, song_dir: Path, device: str, report: Step) -> No
         shutil.rmtree(work, ignore_errors=True)
 
 
-def run_applio(tasks: list[dict], applio: dict, report: Step) -> None:
+def run_applio(tasks: list[dict], applio: dict, report: Step) -> dict:
     worker = Path(__file__).resolve().parent / "applio_rvc.py"
     py, cwd = applio.get("python") or "", applio.get("dir") or ""
     if not (py and Path(py).exists() and Path(cwd, "core.py").is_file()):
@@ -142,6 +142,7 @@ def run_applio(tasks: list[dict], applio: dict, report: Step) -> None:
     proc.stdin.write(json.dumps({"tasks": tasks}, ensure_ascii=False).encode("utf-8"))
     proc.stdin.close()
     error = None
+    result: dict = {}
     n = max(1, len(tasks))
     for raw in proc.stdout:
         try:
@@ -158,11 +159,14 @@ def run_applio(tasks: list[dict], applio: dict, report: Step) -> None:
             protocol.log(msg.get("message", ""))
         elif msg.get("type") == "error":
             error = (msg.get("code"), msg.get("message"))
+        elif msg.get("type") == "result":
+            result = msg.get("data") or {}
     rc = proc.wait()
     err_thread.join(timeout=5)
     if error or rc != 0:
         detail = (error[1] if error else "") or "\n".join(err_tail[-8:])
         raise RuntimeError("rvc_failed:" + str(detail)[-800:])
+    return result
 
 
 def free_gpu() -> None:
@@ -224,6 +228,14 @@ def main() -> None:
     device = pick_device(data.get("device", "auto"))
     A = lambda rel: song_dir / rel  # noqa: E731
     try:
+        stats: dict = {"started_at": time.time()}
+        mark = {"t": time.time()}
+
+        def lap(name: str) -> None:
+            now = time.time()
+            stats[name] = round(now - mark["t"], 1)
+            mark["t"] = now
+
         # 1. stems
         import separate as sep
         layers = plan.get("layers") or []
@@ -238,6 +250,7 @@ def main() -> None:
             except Exception as exc:  # noqa: BLE001
                 shutil.rmtree(song_dir / "stems" / (layer["key"] + ".tmp"), ignore_errors=True)
                 protocol.fail("separation_failed", str(exc)[-1500:])
+        lap("separate_s")
         # 2. sections with their own separation, and plain cuts for re-converted sections
         for msg in plan.get("skipped") or []:
             protocol.log("section skipped: " + msg)
@@ -266,6 +279,7 @@ def main() -> None:
         for j in plan.get("cut_jobs") or []:
             if not A(j["dst"]).is_file():
                 cut(A(j["src"]), A(j["dst"]), j["start"], j["dur"])
+        lap("prepare_s")
         # 4. RVC
         for t in plan.get("rvc_tasks") or []:
             if t["input"] in failed:
@@ -279,7 +293,11 @@ def main() -> None:
                 protocol.fail("model_changed", Path(t["pth"]).name)
         if tasks:
             free_gpu()   # Applio runs in its own process: give it the graphics memory separation used
-            run_applio(tasks, data.get("applio") or {}, Step(45, 85, "rvc"))
+            info_rvc = run_applio(tasks, data.get("applio") or {}, Step(45, 85, "rvc"))
+            stats["rvc_device"] = info_rvc.get("device", "")
+            stats["rvc_gpu"] = info_rvc.get("gpu", "")
+            stats["rvc_audio_s"] = info_rvc.get("audio_seconds")
+        lap("rvc_s")
         # 5. male + female
         vocal = plan["vocal"]
         if vocal.get("combine") and not A(vocal["path"]).is_file():
@@ -317,6 +335,9 @@ def main() -> None:
             reverb_wet=mix["reverb_wet"], vocal_masks=masks or None, orig_vocal_path=str(A(plan["orig_vocal"])),
             vol_segments=plan.get("vol_segments") or None, backing_paths=[str(A(b)) for b in plan.get("backings") or []],
             log=protocol.log, progress=lambda stage: protocol.progress(MIX_STEPS.get(stage, 90), stage, ""))
+        lap("mix_s")
+        stats["total_s"] = round(time.time() - stats.pop("started_at"), 1)
+        protocol.log("timing: " + json.dumps(stats))
         # 8. records
         protocol.progress(97, "save", "")
         v = dict(data["version"])
@@ -331,11 +352,13 @@ def main() -> None:
         now = time.time()
         v.update({"schema_version": 1, "render_id": render["id"], "params": data["params"], "plan": {
             k: plan[k] for k in ("recipe", "tracks", "voice", "vocal", "bgm", "backings", "orig_vocal", "midi", "files", "key")},
-            "duration": round(info["duration"], 3), "instrument_used": info["instrument_used"], "updated_at": now})
+            "duration": round(info["duration"], 3), "instrument_used": info["instrument_used"], "updated_at": now,
+            "stats": stats})
         v.setdefault("created_at", now)
         write_json(song_dir / "cover" / "versions" / v["id"] / "version.json", v)
         protocol.progress(100, "done", "")
-        protocol.result({"version_id": v["id"], "render_id": render["id"], "title": render.get("title", "")})
+        protocol.result({"version_id": v["id"], "render_id": render["id"], "title": render.get("title", ""),
+                         "stats": stats})
     except FileNotFoundError as exc:
         msg = str(exc)
         protocol.fail("model_missing" if msg.startswith("model_missing") else "file_not_found", msg[-500:])

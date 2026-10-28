@@ -349,4 +349,10 @@ export default {
   "stage.mix_master": "Mastering and MP3",
   "jobs.clear": "🧹 Clear finished",
   "jobs.cleared": "Cleared {0} finished job(s) from the list",
+  "cover.st_total": "Took {0}",
+  "cover.st_separate": "separation",
+  "cover.st_prepare": "key / sections",
+  "cover.st_rvc": "voice conversion",
+  "cover.st_rvc_cached": "voice conversion reused",
+  "cover.st_mix": "mix",
 };

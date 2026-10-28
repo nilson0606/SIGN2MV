@@ -474,6 +474,7 @@ function showDone(fin) {
   doneBox.replaceChildren(
     el('div', { class: 'cv-done-title' }, `✅ ${t('cover.done_title', v.title)}${v.duration ? ` · ${fmtTime(v.duration)}` : ''}`),
     el('div', { class: 'muted small' }, t('cover.done_hint')),
+    v.stats ? el('div', { class: 'small' }, statsText(v.stats)) : null,
     el('div', { class: 'row' },
       el('button', { class: 'btn primary', onclick: () => {
         const box = item();
@@ -553,6 +554,20 @@ async function remix(v, asNew) {
   } catch (err) { toast(errorText(err), true); }
 }
 
+// how long the last make / remix took and where the voice was converted
+function dur(sec) { return sec >= 60 ? `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}` : `${Math.round(sec)} ${t('common.seconds')}`; }
+function statsText(st) {
+  if (!st || st.total_s == null) return '';
+  const parts = [];
+  if (st.separate_s >= 1) parts.push(`${t('cover.st_separate')} ${dur(st.separate_s)}`);
+  if (st.prepare_s >= 1) parts.push(`${t('cover.st_prepare')} ${dur(st.prepare_s)}`);
+  parts.push(st.rvc_device ? `${t('cover.st_rvc')} ${dur(st.rvc_s)}` : t('cover.st_rvc_cached'));
+  parts.push(`${t('cover.st_mix')} ${dur(st.mix_s)}`);
+  let text = `${t('cover.st_total', dur(st.total_s))}（${parts.join(' · ')}）`;
+  if (st.rvc_device) text += ` · ${st.rvc_device.startsWith('cuda') ? `GPU ${st.rvc_gpu || ''}`.trim() : 'CPU'}`;
+  return text;
+}
+
 // ------------------------------------------------------------------ versions
 function renderVersions(highlight) {
   const vs = (songState && songState.versions) || [];
@@ -595,6 +610,7 @@ function versionItem(v, hi) {
       el('b', { class: 'grow' }, v.title),
       el('span', { class: 'muted small' }, `${fmtDate(v.updated_at || v.created_at)}${v.duration ? ' · ' + fmtTime(v.duration) : ''}`)),
     el('div', { class: 'muted small' }, v.label + (v.source_version ? ` · ${t('cover.remixed')}` : '')),
+    v.stats ? el('div', { class: 'muted small' }, statsText(v.stats)) : null,
     abRow,
     player || el('div', { class: 'muted' }, t('cover.audio_missing')),
     el('div', { class: 'row' },

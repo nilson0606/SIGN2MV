@@ -185,7 +185,7 @@ def router(ctx: Context) -> APIRouter:
         info = cover.read_json(renders_dir(ctx, song_id) / rid / "render.json", {}) or {}
         audio = info.get("audio")
         out = {k: v.get(k) for k in ("id", "number", "title", "label", "created_at", "updated_at", "render_id",
-                                      "params", "duration", "instrument_used", "source_version")}
+                                      "params", "duration", "instrument_used", "source_version", "stats")}
         out["audio"] = f"renders/{rid}/{audio}" if audio and (sdir / "renders" / rid / audio).is_file() else None
         out["bytes"] = info.get("bytes")
         return out

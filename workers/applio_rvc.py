@@ -56,12 +56,16 @@ def main() -> None:
     with contextlib.redirect_stdout(sys.stderr):
         from rvc.infer.infer import VoiceConverter
         vc = VoiceConverter()
+    dev = str(getattr(vc.config, "device", "") or "")
+    gpu = getattr(vc.config, "gpu_name", None)
+    where = f"GPU {gpu}" if dev.startswith("cuda") and gpu else ("GPU" if dev.startswith("cuda") else "CPU")
+    protocol.log(f"Applio device: {dev} ({where})")
     done = []
     for i, t in enumerate(tasks):
         out = Path(t["output"])
         out.parent.mkdir(parents=True, exist_ok=True)
         raw = out.with_name(out.stem + f".{os.getpid()}.native.wav")
-        protocol.progress(round(i * 100 / max(1, len(tasks)), 1), "rvc", t.get("label", ""))
+        protocol.progress(round(i * 100 / max(1, len(tasks)), 1), "rvc", f"{t.get('label', '')} · {where}")
         kwargs = {}
         if t.get("autotune"):
             kwargs.update(f0_autotune=True, f0_autotune_strength=float(t.get("autotune_strength", 1.0)))
@@ -96,10 +100,16 @@ def main() -> None:
         raw.unlink(missing_ok=True)
         if tmp_index:
             tmp_index.unlink(missing_ok=True)
-        done.append({"output": str(out), "seconds": round(time.time() - started, 1)})
+        try:
+            import soundfile
+            audio_s = soundfile.info(str(out)).duration
+        except Exception:  # noqa: BLE001
+            audio_s = 0
+        done.append({"output": str(out), "seconds": round(time.time() - started, 1), "audio_s": round(audio_s, 1)})
         protocol.log(f"converted {t.get('label', '')} in {done[-1]['seconds']} s")
     protocol.progress(100, "rvc", "")
-    protocol.result({"done": done})
+    protocol.result({"done": done, "device": dev, "gpu": gpu if dev.startswith("cuda") else "",
+                     "audio_seconds": round(sum(d.get("audio_s", 0) for d in done), 1)})
 
 
 if __name__ == "__main__":
