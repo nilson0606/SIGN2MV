@@ -233,6 +233,30 @@ let vsegsDetails = null;
 const runSummary = el('div', { class: 'cv-summary' });
 const freshBox = el('input', { type: 'checkbox', onchange: () => updateSummary() });
 const freshCtl = el('label', { class: 'check small', title: '' }, freshBox, el('span', { 'data-i18n': 'cover.fresh_sep' }));
+// old 一鍵全自動 made the MV right after the MP3: optional here, remembered (look and size as on the MV page)
+const autoMvBox = el('input', { type: 'checkbox', onchange: () => { try { localStorage.setItem('sign2mv.cover.automv', autoMvBox.checked ? '1' : '0'); } catch { /* ignore */ } } });
+try { autoMvBox.checked = localStorage.getItem('sign2mv.cover.automv') === '1'; } catch { /* ignore */ }
+const autoMvCtl = el('label', { class: 'check small' }, autoMvBox, el('span', { 'data-i18n': 'cover.auto_mv' }));
+async function autoQuickMv(renderId) {
+  const sid = songId;
+  try {
+    const info = await api.get(`/api/songs/${sid}/quickmv`);
+    const src = info.sources.find((x) => x.id === renderId);
+    if (!src) return;
+    const pref = (k, d) => { try { return localStorage.getItem(`sign2mv.qmv.${k}`) || d; } catch { return d; } };
+    const style = pref('style', 'card');
+    if (!info.defaults.artist) { toast(t('cover.auto_mv_no_singer'), true); return; }   // the card needs a singer name
+    const body = { source: renderId, title: info.defaults.title, artist: info.defaults.artist,
+      style, resolution: pref('res', '1080p'), ...(style === 'studio' ? src.studio : {}) };
+    const job = await api.post(`/api/songs/${sid}/quickmv`, body);
+    toast(t('cover.auto_mv_started'));
+    const fin = await runJob.follow(job.job);
+    if (fin.status === 'succeeded') {
+      toast(t('cover.auto_mv_done'));
+      if (songId === sid) { songState = await api.get(`/api/cover/songs/${sid}`); renderVersions(); }
+    }
+  } catch (err) { toast(errorText(err), true); }
+}
 function sg(n) { return `${n > 0 ? '+' : ''}${n}`; }
 function updateSummary() {
   if (!runSummary.isConnected && !songId) return;
@@ -268,7 +292,7 @@ function sectionMix() {
     masksDetails = details(t('cover.masks'), el('p', { class: 'muted small' }, t('cover.masks_hint')), maskEditor(), maskList),
     vsegsDetails = details(t('cover.vsegs'), el('p', { class: 'muted small' }, t('cover.vsegs_hint')), vsegEditor(), vsegList),
     runSummary,
-    el('div', { class: 'row', style: 'margin-top:12px;align-items:center' }, runBtn, freshCtl),
+    el('div', { class: 'row', style: 'margin-top:12px;align-items:center' }, runBtn, freshCtl, autoMvCtl),
     el('p', { class: 'muted small' }, t('cover.run_hint')),
     runJob.el, doneBox);
 }
@@ -713,6 +737,7 @@ async function follow(job, remixCard = null, asNew = false) {
     } else {
       renderVersions(fin.result && fin.result.version_id);
       if (remixCard) showRemixDone(fin, asNew); else showDone(fin);
+      if (!remixCard && fin.status === 'succeeded' && autoMvBox.checked && fin.result && fin.result.render_id) autoQuickMv(fin.result.render_id);
     }
   }
   bus.dispatchEvent(new Event('renders-changed'));

@@ -80,7 +80,7 @@ a { color:var(--accent); }
 <h2>4. Song library</h2>
 <ol>
 <li>Open <b>Library</b>, type a title and press <b>Add song</b>.</li>
-<li>Import the music: paste a YouTube URL and press <b>Import from YouTube</b> (the video is downloaded too, up to 1080p), or choose an audio/video file and press <b>Upload a file</b> (up to 2 GB and 15 minutes). The original is kept unchanged.</li>
+<li>Import the music: paste a YouTube URL (or press <b>📋</b> to paste it) and press <b>Import from YouTube</b> (the video is downloaded too, up to 1080p). As soon as a link is pasted a preview card shows the thumbnail, title, length and video ID, with <b>Open the original page</b> and <b>▶ Preview</b> to watch it before importing. Or choose an audio/video file and press <b>Upload a file</b>, or drop the file on the dashed box (it uploads at once, with a progress bar; up to 2 GB and 15 minutes). The original is kept unchanged.</li>
 <li>When the import finishes, the song shows its original player and three buttons: <b>Sing this song</b>, <b>Make an MV</b>, <b>AI cover</b>.</li>
 </ol>
 <h3>Stems and key</h3>
@@ -91,7 +91,7 @@ a { color:var(--accent); }
 <p>The library list shows each song's size, and under it the library total and the free space on the drive. A song's <i>Storage</i> section splits its size into original, stems &amp; key copies, finished AI covers, cover cache, sing &amp; record, MV projects and other, with where to clean up each one:</p>
 <ul>
 <li>Stems &amp; key copies: delete them one by one in <i>Saved stems</i>.</li>
-<li>AI covers and their cache: delete versions on the AI cover page; the cache that only those versions used is cleaned up with them.</li>
+<li>AI covers and their cache: delete versions on the AI cover page; the cache that only those versions used is cleaned up with them. <b>🧹 Clean up unused files</b> (above the versions) lists left-over converted vocals, section pieces and key previews with their sizes and deletes them after you confirm.</li>
 <li>Sing &amp; record: delete takes and prepared references on the Sing &amp; record page.</li>
 <li>MV: delete projects on the MV page.</li>
 </ul>
@@ -102,7 +102,7 @@ a { color:var(--accent); }
 <h2>5. Sing &amp; record</h2>
 <p>This is the former sing &amp; record app, with the song chosen from the library. Pick the song at the top of the page (or press <b>Sing this song</b> in the library).</p>
 <ol>
-<li><b>Prepare the song</b>: choose the key (−12 to +12, tempo unchanged) and press <i>Prepare song reference</i>. Wait until the status says ready. The default is full-song analysis with RMVPE pitch.</li>
+<li><b>Prepare the song</b>: choose the key (−12 to +12, tempo unchanged) and press <i>Prepare song reference</i>. Wait until the status says ready. The default is full-song analysis with RMVPE pitch. <i>Analysis range</i> can instead try only the first 15, 30 or 60 seconds (separated on its own, the whole-song stems are not touched). Untick <i>Keep separated tracks</i> to keep only the pitch reference: the stems this preparation made are removed afterwards (previews and backing-only playback then need them rebuilt).</li>
 <li><b>Microphone</b>: choose browser capture, or native capture if enabling the microphone lowers your backing audio; enable the microphone and check the input.</li>
 <li><b>Sing</b>: choose what you hear (original vocals + backing, or backing/harmonies only) and what is recorded (singer only, mixed, or nothing), then <i>Sing from the start</i>. Stop, or let the song end; the take waits under <i>Pending review</i>. Save it for post-production when satisfied.</li>
 <li><b>Segments</b>: enable segment mode, split the song while it plays, record each segment as many times as you like, choose a take per segment and assemble the full mix. Original-vocal regions can be added to the assembled mix.</li>
@@ -110,6 +110,7 @@ a { color:var(--accent); }
 <li><b>Make an MV</b> from a finished recording: the recording is saved as an MV audio of the song and the MV workspace opens with it.</li>
 </ol>
 <p>Masks in <i>Exclude incorrect reference regions</i> stop wrong reference notes (instrumental passages) from counting in the score.</p>
+<p>Deleting a prepared song in the library list also deletes the stems only it used and tells you how much was freed. The sing &amp; record manual (button in the page) explains every control in detail.</p>
 </section>
 
 <section id="cover">
@@ -118,12 +119,13 @@ a { color:var(--accent); }
 <h3>Make a cover</h3>
 <ol>
 <li><b>Voice model</b>: choose a model (and, if it has them, one of its kept training epochs). The last model you used is selected for new songs. If the list is empty, import or train a model first (chapter 7).</li>
-<li><b>Pitch</b>: semitones for the voice (about −12 for female→male, +12 for male→female).</li>
-<li><b>Key (whole song)</b>: −8 to +8. The accompaniment and original backing vocals are shifted with Rubber Band (tempo unchanged) and the voice conversion gets the same shift. <i>▶ Preview this key</i> plays the original in that key.</li>
+<li><b>Pitch</b>: semitones for the voice (about −12 for female→male, +12 for male→female). The buttons <i>0</i>, <i>−12</i> and <i>+12</i> set it in one click.</li>
+<li><b>Key (whole song)</b>: −8 to +8. The accompaniment and original backing vocals are shifted with Rubber Band (tempo unchanged) and the voice conversion gets the same shift. <i>▶ Preview this key</i> plays the original in that key; the original button continues from the same second, so you can switch back and forth. <i>Reset</i> returns to the original key. If Rubber Band is missing the page says so and the key cannot be changed.</li>
 <li>Optional <b>Conversion fine-tuning</b>: consonant/breath protect (0.33), index rate (0.75), volume envelope (0 = follow the original singer's loudness), pitch detection (rmvpe), auto-tune, noise clean-up.</li>
-<li>Optional <b>Separation and backing vocals</b>: separator; vocals = convert the lead and keep the original backing vocals (default), convert all vocals, or split twice for songs with three or more voices; accompaniment single or second pass; whether the original backing vocals are mixed into the cover.</li>
-<li><b>Mix</b>: converted vocal volume (95%) and accompaniment (85%).</li>
-<li>Press <b>🎤 Make cover (new version)</b>. The progress appears under the button and in the job queue.</li>
+<li>Optional <b>Separation and backing vocals</b>: separator; vocals = convert the lead and keep the original backing vocals (default), convert all vocals, or split twice for songs with three or more voices; the lead split model (aufr33 / viperx, or becruily if you have downloaded it: the page shows where to put the 1.7 GB file and its download link); accompaniment single or second pass; whether the original backing vocals are mixed into the cover. The section says which separators are ready.</li>
+<li><b>Mix</b>: converted vocal volume (95%) and accompaniment (85%), with presets <i>Vocal forward</i>, <i>Standard balance</i> and <i>Backing forward</i>. Each fine-tuning group has <b>Restore defaults</b>.</li>
+<li>Check the <b>This run uses</b> line above the button (model, pitch + key, accompaniment key, duet sides). Tick <i>Separate again this time</i> to ignore the cached stems once. Tick <i>Make a quick MV when done</i> to get a quick MV right after the MP3 (look and size as last chosen on the MV page).</li>
+<li>Press <b>🎤 Make cover (new version)</b>. The progress appears under the button and in the job queue; <b>Log</b> opens the running log and <b>Cancel</b> stops it. When the window is in the background the tab title tells you when it is finished.</li>
 </ol>
 <p>Separation and conversions are cached. Running again with the same settings reuses them; changing only the mix is fast.</p>
 <h3>Versions</h3>
@@ -134,21 +136,24 @@ a { color:var(--accent); }
 <tr><td><b>Remix as new version</b></td><td>the same, but keeps the old version and adds a new one.</td></tr>
 <tr><td><b>🎬 Make MV</b></td><td>opens the MV workspace with this version as the audio.</td></tr>
 <tr><td><b>Download</b> / <b>Stems</b></td><td>download the MP3; listen to the original, separated tracks and the converted vocal used by this version.</td></tr>
-<tr><td><b>Rename</b> / <b>Delete</b></td><td>deleting also deletes the version's audio; cached files no other version uses are cleaned up.</td></tr>
+<tr><td><b>Rename</b> / <b>Delete</b></td><td>deleting also deletes the version's audio; cached files no other version uses are cleaned up. If an MV project uses the version as its music, the confirmation names it (exported MV videos are kept).</td></tr>
+<tr><td><b>📂</b></td><td>shows the MP3 in Windows Explorer.</td></tr>
+<tr><td><b>🎬 Watch quick MV / full MV</b></td><td>appears when an MV was made from this version; plays it right there.</td></tr>
 </table>
+<p>Tick versions to delete several at once (<i>Select all</i>, <i>Delete selected</i>). Each version shows its file format and size. While a version plays, the bars above the list show its spectrum. <b>📚 Every song's cover versions</b> lists the versions of all songs with a search box; <b>Open this song</b> switches to it.</p>
 <p>Every version also appears as MV audio of the song.</p>
 <h3>Vocal sections</h3>
-<p>Play a version or the original and use <b>⏱</b> to take the player time for <i>From</i> / <i>to</i>. For each section choose:</p>
+<p>Play a version or the original and use <b>⏱</b> to take the player time for <i>From</i> / <i>to</i> (times can be typed as <code>1:23.4</code> or <code>83.4</code>). Each listed section has <b>▶</b> to listen from just before it, and can be edited or deleted; the fold title shows how many sections there are. For each section choose:</p>
 <ul>
 <li><b>Original singer</b> — this part uses the original vocal (level-matched), for example where someone else sings.</li>
 <li><b>Mute</b> — no vocal in this part.</li>
-<li><b>Re-convert</b> — this part is converted again with another model, pitch or settings (1 s of context on each side). Optionally the section is separated again with its own separator and lead split; its accompaniment is then replaced as well.</li>
-<li><b>External clip</b> — upload your own recording or another version. It replaces the converted vocal only, or the whole mix if the clip contains accompaniment. The clip's 0 s is placed at <i>From</i> + offset. A vocal clip can also be converted with a voice model.</li>
+<li><b>Re-convert</b> — this part is converted again with another model, pitch or settings, including auto-tune and noise clean-up (1 s of context on each side). Optionally the section is separated again with its own separator, lead split and lead split model; its accompaniment is then replaced as well.</li>
+<li><b>External clip</b> — upload your own recording or another version. It replaces the converted vocal only, or the whole mix if the clip contains accompaniment. The clip's 0 s is placed at <i>From</i> + offset; without an end time the section lasts as long as the clip. A vocal clip can also be converted with a voice model.</li>
 </ul>
 <h3>Volume sections</h3>
-<p>Change the volume of the converted vocal, the accompaniment or the original backing vocals between two times (0–200%, 80 ms crossfades).</p>
+<p>Change the volume of the converted vocal, the accompaniment or the original backing vocals between two times (0–200%, 80 ms crossfades). <b>▶</b> listens to a section, <b>✏️</b> brings it back into the fields to change it.</p>
 <h3>Male / female duet</h3>
-<p>Turn on <i>Use male / female duet</i>: the vocals are split into a male and a female line (aufr33 model, or Sucial if installed). Each side has its own model, pitch, volume and fine-tuning, or keeps the original singer. Changing only the two volumes later is a quick remix.</p>
+<p>Turn on <i>Use male / female duet</i>: the vocals are split into a male and a female line (aufr33 model, or Sucial if installed). Each side has its own model, pitch, volume and fine-tuning, or keeps the original singer. Changing only the two volumes later is a quick remix. The fold title shows what each side uses; the page warns when both sides keep the original singer.</p>
 </section>
 
 <section id="models">
@@ -159,48 +164,54 @@ a { color:var(--accent); }
 <li>A single model folder or a single <code>.pth</code> file works too, and <i>Upload a model</i> accepts a <code>.pth</code> and an optional <code>.index</code>.</li>
 </ol>
 <p>Model names use English letters, digits and <code>_ . -</code>. A folder whose name has other characters is skipped; import it on its own and type a name.</p>
-<p>A model's <b>Loss curve</b> shows its training (mel and total loss per epoch; dashed lines mark the kept epoch versions). Kept epochs can be deleted one by one; the final version stays.</p>
+<p>The <b>convergence</b> panel shows a model's training: mel loss per epoch with a 5-epoch average, grid values and the value under the mouse, and a verdict (still improving / levelled off / rising again, compare an earlier version). The list below it has the kept epoch versions with their size: <b>Use this version</b> selects it in the model list, 🗑 deletes it (the final version stays). While a model trains, the curve updates live.</p>
 <h3>Train a voice model</h3>
 <ol>
-<li>Type a model name, add recordings (upload files, or type folders/files on this computer, one per line). Clean solo singing or speech, about 10 minutes or more in total, works best.</li>
-<li>Defaults: 100 epochs, batch 8, a version saved every 10 epochs, 40 kHz.</li>
-<li>Press <b>🚀 Start training</b>. The six steps run automatically: import, slicing, feature extraction (RMVPE + ContentVec), training, index, installing. The loss curve updates while it trains.</li>
+<li>Type a model name (default <code>My_Voice_Ver1</code>), add recordings (upload files, or type folders/files on this computer, one per line), or press <b>⚡ Use this song's separated vocals</b>. Clean solo singing or speech, about 10 minutes or more in total, works best.</li>
+<li>Defaults: 100 epochs (buttons 30 / 100 / 200), batch 8, a version saved every 10 epochs, 40 kHz.</li>
+<li>Press <b>🚀 Start training</b>. The six steps run automatically: import, slicing, feature extraction (RMVPE + ContentVec), training, index, installing. The dashboard shows the step, a status light and cards for epoch, step, best loss and progress; <b>Log</b> shows the training output.</li>
 <li>When it finishes, the model is in the list with its last four epoch versions and loss curve. The training scratch folder is deleted.</li>
 </ol>
-<p><b>⏹ Stop training</b> stops it; the model is not installed. <b>🧹 Clean training leftovers</b> removes scratch files of stopped trainings. Training uses the graphics card, so other GPU jobs wait until it ends.</p>
+<p><b>⏹ Stop training</b> stops it; the model is not installed. <b>🧹 Clean training leftovers</b> removes scratch files of stopped trainings and shows the free space left on each drive. Training uses the graphics card, so other GPU jobs wait until it ends. A newly trained or imported model is selected in the form.</p>
 </section>
 
 <section id="mv">
 <h2>8. MV</h2>
 <p>The MV page has two tabs.</p>
 <h3>Quick MV</h3>
-<p>A video made straight from the audio, the same picture as sing &amp; record's MV: dark card, “COVER SESSION”, the title, “Cover｜singer” and frequency bars that move with the music (1080p, 30 fps). No lyrics, no photos.</p>
+<p>A video made straight from the audio, no lyrics, no photos. Two looks:</p>
+<ul>
+<li><b>Card</b> (default) — sing &amp; record's picture: dark card, “COVER SESSION”, the title, “Cover｜singer” and frequency bars that move with the music (30 fps).</li>
+<li><b>Studio</b> — the old AI cover MV: gradient background, title, subtitle, credits line, a badge at the top right, a record in the middle and spectrum bars along the bottom (60 fps). Subtitle, badge and credits are filled in from the chosen audio (voice model, pitch, key) and can be changed; leave subtitle or credits empty to leave that line out.</li>
+</ul>
+<p>Both come in 1080p or 720p (faster, smaller file). The page remembers the look and size.</p>
 <ol>
 <li>Press <b>Quick MV</b> on a cover version or on a sing &amp; record take, or open the <b>Quick MV</b> tab and choose the song and the audio (original, a cover version or a take).</li>
 <li>Check the <b>title</b> and the <b>singer</b> (filled in from Settings → Cover singer name) and press <b>Make quick MV</b>. A 4-minute song takes about a minute with an NVIDIA graphics card.</li>
-<li>The list below plays, downloads (MP4) or deletes the song's quick MVs. They are stored with the song and counted under MV in its storage overview.</li>
+<li>The list below plays, downloads (MP4), shows in Explorer (📂) or deletes the song's quick MVs. <i>All songs</i> lists every song's quick MVs with a search box, select all, delete selected and delete all. They are stored with the song and counted under MV in its storage overview.</li>
 </ol>
 <h3>Full MV</h3>
 <p>This is the former MV studio. A project belongs to a song; open it from the library (<b>Make an MV</b>), from a recording or from a cover version.</p>
 <ol>
 <li><b>Create a project</b>: choose the song, a project name, the title and credits. The cover singer and studio names on the title cards come from <b>Settings</b>.</li>
-<li><b>Audio</b>: the song's original, a sing &amp; record take, a cover version, or an uploaded file.</li>
+<li><b>Audio</b>: the song's original, a sing &amp; record take, a cover version, or an uploaded file (any format; one the browser cannot play is converted to FLAC). If the chosen audio was deleted later (for example its cover version), the page says so.</li>
 <li><b>Photos</b>: upload one photo per scene (batch upload fills the empty slots in order).</li>
-<li><b>Lyrics</b>: paste the lyrics with <code>[Scene 01]</code> markers and press the Whisper alignment button. Whisper listens to the separated vocals (from the song's stem cache) and times every line; you can adjust lines, interludes and karaoke timing afterwards.</li>
+<li><b>Lyrics</b>: paste the lyrics (or press <b>📋 Paste clipboard</b>) with <code>[Scene 01]</code> markers and press the Whisper alignment button. Whisper listens to the separated vocals (from the song's stem cache) and times every line; you can adjust lines, interludes and karaoke timing afterwards.</li>
 <li><b>Preview</b> single frames, then <b>render</b>: a 1080p 60 fps MP4 with karaoke colouring. Rendering is a GPU job; the previous MV is kept until the new one is finished. Verification frames are checked automatically.</li>
 </ol>
+<p><b>📂 Open folder</b> shows the finished MV in Explorer. <b>📤 Import project</b> reads a project JSON exported here or by the old MV studio: photos, the Whisper result, the finished MV and audio outside the library found at the paths in the JSON are copied into the project. If the song already has a project with that name you are asked whether to overwrite it or keep both.</p>
 <p>The MV never shows the word “AI”: credits use the cover singer name from Settings.</p>
 </section>
 
 <section id="jobs">
 <h2>9. Job queue</h2>
-<p><b>Jobs</b> lists every job with its progress. GPU jobs (separation, conversion, Whisper, rendering, training) run one at a time; the others wait with their position. General jobs (imports, key changes, quick remixes) run beside them. <b>Cancel</b> stops a job and its helper programs.</p>
+<p><b>Jobs</b> lists every job with its progress and elapsed time. GPU jobs (separation, conversion, Whisper, training) run one at a time; the others wait with their position. Full MV renders have their own lane, so a long render does not hold up a cover. General jobs (imports, key changes, quick remixes, quick MVs) run beside them. <b>Cancel</b> stops a job and its helper programs. <b>Log</b> shows a job's output (coloured, follows the end, copy and clear), also while it runs.</p>
 </section>
 
 <section id="settings">
 <h2>10. Settings</h2>
 <ul>
-<li><b>Library folder</b> — where songs are stored (default <code>library</code> inside the SIGN2MV folder).</li>
+<li><b>Library folder</b> — where songs are stored (default <code>library</code> inside the SIGN2MV folder). <b>Choose folder…</b> opens a folder dialog. The folder must be a full path, not a drive root or a program folder, and writable; it cannot be changed while work is running.</li>
 <li><b>Cover singer name</b> and <b>Studio name</b> — shown on the MV title cards.</li>
 </ul>
 </section>

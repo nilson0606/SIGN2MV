@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+Parity with the three old programs (every small tuning, preview and check they had):
+
+- Sing & record: first 15 / 30 / 60 s trial (separated on its own), keep-separated-tracks
+  option, deleting a prepared song frees its unused stems, real environment check, playback
+  trace, mask rules exactly as sign_record, MP3 export stops when the page leaves, one render
+  per sent take, the sing manual is reachable, shutdown asks about the native microphone.
+- Jobs: a log viewer (the old terminal) on every job box and on the Jobs page, a cancel
+  button everywhere, elapsed time; MV renders run on their own lane.
+- Cover training: 6-step dashboard with status light and epoch / step / best-loss cards,
+  convergence panel (5-epoch average, grid values, hover, verdict, live badge, kept epochs
+  with size, use / delete), presets 30 / 100 / 200, default name, this song's vocals as
+  training material, cleanup shows free disk space, new or imported models are selected.
+- Cover form: "this run uses" summary with back-to-original-key, key badge, same-second
+  A/B key preview, pitch and volume presets, restore-defaults buttons, separate-again switch,
+  separation and rubberband availability, duet status and warnings, per-section preview and
+  edit, autotune / denoise per re-converted section, clip end from its length, full-width
+  colon in times, lead split model aufr33 or becruily (optional hand download).
+- Cover versions: select all / delete selected, format and size, show in Explorer, watch the
+  quick or full MV made from a version, now-playing text, busy note, tab title on finish,
+  live spectrum bars, every song's versions in one list, 🧹 clean up unused files (listed
+  first), optional quick MV right after a cover, a warning naming the MV projects that use a
+  version before it is deleted.
+- Quick MV: every song's list with search, select, delete; the old AI cover look ("studio":
+  subtitle, badge, credits line, 60 fps) as a second style; 720p for both styles; open folder.
+- MV workspace: project import copies photos, Whisper result, finished MV and outside audio
+  and asks before replacing a project of the same name; any audio format can be dropped in
+  (converted to FLAC when the browser cannot play it); open folder; paste lyrics from the
+  clipboard; new projects start with the old picture style; a project whose audio was deleted
+  says so.
+- Library: link preview before importing (thumbnail, title, length, page link, player), paste
+  button, drop a file to upload with a progress bar, clickable source link; library location
+  picked with a folder dialog and checked.
+
 - Quick MV (sing_record's audio-reactive title card, same filter and layout): MV page tabs
   "Quick MV" / "Full MV"; Quick MV / Full MV buttons on cover versions and sing & record takes;
   any of the song's audio as source; NVENC with libx264 fallback; stored in songs/<id>/quickmv/.
