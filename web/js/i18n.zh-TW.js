@@ -581,4 +581,9 @@ export default {
   "qmv.studio_note": "預設文字依所選音檔（聲音模型、音高）帶入。副標或版權列留空就不顯示那一行。徽章裡的表情符號會拿掉（字型畫不出來）。",
   "err.quickmv_style": "畫面樣式或畫質不正確。",
   "err.quickmv_text": "副標、徽章或版權列太長，或含有不能用的字元。",
+  "cover.karaoke_model": "拆主唱模型",
+  "cover.karaoke.aufr33": "aufr33 / viperx（預設）",
+  "cover.karaoke.becruily": "becruily",
+  "cover.becruily_missing": "becruily 還沒下載（約 1.7 GB）。要用它，請下載 mel_band_roformer_karaoke_becruily.ckpt 放到：{0}",
+  "cover.becruily_link": "下載網址",
 };

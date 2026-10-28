@@ -20,6 +20,7 @@ from typing import Any
 
 SEPARATORS = ("demucs", "bs_roformer", "mel_roformer")
 MF_MODELS = ("aufr33", "sucial")
+KARAOKE_MODELS = {"aufr33": "karaoke", "becruily": "karaoke_becruily"}   # lead/backing split
 DEMUCS_PARAMS = {"name": "htdemucs", "shifts": 1, "overlap": 0.25, "v": 1}
 ROFORMER_PARAMS = {"batch_size": 1, "segment_size": 256, "overlap": 4, "v": 1}
 
@@ -52,6 +53,11 @@ def normalize(recipe: dict[str, Any] | None) -> dict[str, Any]:
            "lead_from": lead_from, "male_female": mf}
     if out["lead"] and int(r.get("lead_passes") or 1) == 2:
         out["lead_passes"] = 2
+    karaoke = r.get("karaoke", "aufr33")
+    if karaoke not in KARAOKE_MODELS:
+        raise RecipeError("invalid_karaoke_model")
+    if out["lead"] and karaoke != "aufr33":
+        out["karaoke"] = karaoke
     return out
 
 
@@ -87,14 +93,15 @@ def plan(song_dir: Path, song: dict[str, Any], recipe: dict[str, Any]) -> tuple[
 
     voice_rel = tracks["residual_vocals"] if (r["lead"] and r["lead_from"] == "residual") else tracks["vocals"]
     if r["lead"]:
-        k3 = _h("lead", voice_rel, "karaoke", ROFORMER_PARAMS)
-        need(k3, {"kind": "lead", "model": "karaoke", "input": str(song_dir / voice_rel), "input_ref": voice_rel,
+        km = KARAOKE_MODELS[r.get("karaoke", "aufr33")]
+        k3 = _h("lead", voice_rel, km, ROFORMER_PARAMS)
+        need(k3, {"kind": "lead", "model": km, "input": str(song_dir / voice_rel), "input_ref": voice_rel,
                   "params": ROFORMER_PARAMS})
         tracks["lead"] = f"stems/{k3}/lead.wav"
         tracks["backing"] = f"stems/{k3}/backing.wav"
         if r.get("lead_passes") == 2:
-            k3b = _h("lead", tracks["lead"], "karaoke", ROFORMER_PARAMS)
-            need(k3b, {"kind": "lead", "model": "karaoke", "input": str(song_dir / tracks["lead"]),
+            k3b = _h("lead", tracks["lead"], km, ROFORMER_PARAMS)
+            need(k3b, {"kind": "lead", "model": km, "input": str(song_dir / tracks["lead"]),
                        "input_ref": tracks["lead"], "params": ROFORMER_PARAMS})
             tracks["lead_first"] = tracks["lead"]
             tracks["lead"] = f"stems/{k3b}/lead.wav"

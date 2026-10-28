@@ -911,15 +911,15 @@
 
           <div class="form-group">
             <label>作詞人</label>
-            <input type="text" id="inpLyricist" oninput="syncProjectFields(); scheduleAutoSave()" />
+            <input type="text" id="inpLyricist" placeholder="作詞人" oninput="syncProjectFields(); scheduleAutoSave()" />
           </div>
           <div class="form-group">
             <label>作曲人</label>
-            <input type="text" id="inpComposer" oninput="syncProjectFields(); scheduleAutoSave()" />
+            <input type="text" id="inpComposer" placeholder="作曲人" oninput="syncProjectFields(); scheduleAutoSave()" />
           </div>
           <div class="form-group">
             <label>原唱人</label>
-            <input type="text" id="inpOrigSinger" oninput="syncProjectFields(); scheduleAutoSave()" />
+            <input type="text" id="inpOrigSinger" placeholder="原唱人" oninput="syncProjectFields(); scheduleAutoSave()" />
           </div>
 
           <div class="form-group">
@@ -983,6 +983,7 @@
             <button class="btn btn-sm" onclick="switchPreviewMode('frame')">🖼️ 合成單幀預覽</button>
             <button class="btn btn-sm btn-gold" onclick="switchPreviewMode('video')">🎬 播放成品 MV (.mp4)</button>
             <button class="btn btn-sm" id="btnDownloadMvVideo" style="border-color:#22c55e; color:#86efac; display:none;" onclick="downloadRenderedMv()" title="將已渲染完成的 1080p 60fps MP4 影片下載至本機">⬇️ 匯出/下載 MV 影片</button>
+            <button class="btn btn-sm" id="btnOpenMvFolder" style="display:none;" onclick="openMvFolder()" title="在檔案總管顯示已輸出的 MV 檔案">📂 開啟資料夾</button>
           </div>
         </div>
 
@@ -3509,10 +3510,24 @@
       }
     }
 
+    // [SIGN2MV] old 「📂 開啟 MV 所在資料夾」: show the finished MV in Windows Explorer
+    async function openMvFolder() {
+      if (!currentProject || !currentProject.output_mv) return;
+      try {
+        const res = await fetch('/api/open-folder', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ song_id: currentProject.song_id, rel: currentProject.output_mv }) });
+        const data = await res.json();
+        if (data.ok) showToast('📂 已在檔案總管開啟');
+        else showToast(data.error === 'open_folder_windows_only' ? '只有在 Windows 上才能開啟資料夾' : '❌ 找不到 MV 檔案', true);
+      } catch (err) { showToast(`❌ 開啟資料夾失敗：${err.message}`, true); }
+    }
+
     function updateMvDownloadButtons(exists) {
       const btnVid = document.getElementById('btnDownloadMvVideo');
       const btnTop = document.getElementById('btnDownloadMvTop');
       if (btnVid) btnVid.style.display = exists ? 'inline-flex' : 'none';
+      const btnOpen = document.getElementById('btnOpenMvFolder');
+      if (btnOpen) btnOpen.style.display = exists ? 'inline-flex' : 'none';
       if (btnTop) {
         if (exists) {
           btnTop.style.borderColor = '#22c55e';

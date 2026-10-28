@@ -581,4 +581,9 @@ export default {
   "qmv.studio_note": "Defaults come from the chosen audio (voice model, pitch). Leave subtitle or credits empty to leave that line out. Emoji in the badge are removed (the font cannot draw them).",
   "err.quickmv_style": "Unknown look or size.",
   "err.quickmv_text": "Subtitle, badge or credits is too long or has control characters.",
+  "cover.karaoke_model": "Lead split model",
+  "cover.karaoke.aufr33": "aufr33 / viperx (default)",
+  "cover.karaoke.becruily": "becruily",
+  "cover.becruily_missing": "becruily is not downloaded (about 1.7 GB). To use it, download mel_band_roformer_karaoke_becruily.ckpt and put it here: {0}",
+  "cover.becruily_link": "Download link",
 };

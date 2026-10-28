@@ -277,6 +277,10 @@ const quick = (() => {
           el('div', { class: 'grow', style: 'white-space:normal' }, el('b', {}, it.title || it.id), el('div', { class: 'muted small' }, meta)),
           play,
           el('a', { class: 'btn small', href: `/api/songs/${sid}/quickmv/${it.id}/download` }, t('common.download')),
+          el('button', { class: 'btn small', title: t('common.open_folder'), onclick: async () => {
+            try { await api.post('/api/open-folder', { song_id: sid, rel: it.path }); toast(t('common.opened_folder')); }
+            catch (err) { toast(errorText(err), true); }
+          } }, '📂'),
           el('button', { class: 'btn small danger', onclick: async () => {
             if (!(await confirmDialog(t('qmv.delete_confirm', it.title || it.id), t('common.delete')))) return;
             holder.replaceChildren();   // release the video file first (Windows keeps open files locked)

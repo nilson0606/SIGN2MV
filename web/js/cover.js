@@ -106,6 +106,9 @@ const pitchPresets = el('div', { class: 'row', style: 'gap:6px' },
 const sepSel = select('sep_model', [['demucs', ''], ['bs_roformer', ''], ['mel_roformer', '']]);
 const vmodeSel = select('vocal_mode', [['full', ''], ['lead_keep_backing', ''], ['lead_keep_backing_x2', '']], () => updateVis());
 const refineSel = select('bgm_refine', [['none', ''], ['second_pass', '']]);
+// old 卡拉OK（拆主唱）模型: aufr33/viperx (default) or becruily (downloaded by hand)
+const karaokeSel = select('karaoke_model', [['aufr33', ''], ['becruily', '']], () => updateVis());
+const karaokeNote = el('p', { class: 'small hidden' });
 const backingCtl = check('backing_on', 'cover.backing_on', () => updateVis());
 const rvc = {
   protect: slider('rvc.protect', 0, 0.5, 0.01), index_rate: slider('rvc.index_rate', 0, 1, 0.01),
@@ -212,7 +215,8 @@ function sectionVoice() {
       el('div', { class: 'row' }, rvc.autotune.el, rvc.autotune_strength.el),
       el('div', { class: 'row' }, rvc.clean.el, rvc.clean_strength.el)),
     details(t('cover.separation'),
-      field(t('sep.model'), sepSel), field(t('cover.vocal_mode'), vmodeSel), field(t('cover.bgm_refine'), refineSel),
+      field(t('sep.model'), sepSel), field(t('cover.vocal_mode'), vmodeSel), field(t('cover.karaoke_model'), karaokeSel), karaokeNote,
+      field(t('cover.bgm_refine'), refineSel),
       el('div', { class: 'cv-backing' }, backingCtl.el), backingHint, sepStatus, el('p', { class: 'muted small' }, t('cover.sep_hint'))),
     mfDetails = details(t('cover.mf'),
       el('p', { class: 'muted small' }, t('cover.mf_hint')),
@@ -295,7 +299,8 @@ const mr = {
   clean: check(null, 'cover.clean', () => updateMaskVis()), clean_strength: slider(null, 0, 1, 0.01),
   sep_on: check(null, 'cover.mask_sep_on', () => updateMaskVis()),
   sep_model: select(null, [['demucs', ''], ['bs_roformer', ''], ['mel_roformer', '']]),
-  vocal_mode: select(null, [['full', ''], ['lead_keep_backing', ''], ['lead_keep_backing_x2', '']]),
+  vocal_mode: select(null, [['full', ''], ['lead_keep_backing', ''], ['lead_keep_backing_x2', '']], () => updateMaskVis()),
+  karaoke_model: select(null, [['aufr33', ''], ['becruily', '']]),
   bgm_refine: select(null, [['none', ''], ['second_pass', '']]),
 };
 const mf_ = {
@@ -323,7 +328,8 @@ const mFileBox = el('div', { class: 'cv-sub' });
 const mRvcWrap = el('div', {});
 
 function maskEditor() {
-  mSepBox.replaceChildren(field(t('sep.model'), mr.sep_model), field(t('cover.vocal_mode'), mr.vocal_mode), field(t('cover.bgm_refine'), mr.bgm_refine));
+  mSepBox.replaceChildren(field(t('sep.model'), mr.sep_model), field(t('cover.vocal_mode'), mr.vocal_mode),
+    field(t('cover.karaoke_model'), mr.karaoke_model), field(t('cover.bgm_refine'), mr.bgm_refine));
   mFileBox.replaceChildren(el('div', { class: 'row' }, mf_.file, mf_.info),
     field(t('cover.mask_target'), mf_.target), field(t('cover.mask_offset'), mf_.offset, t('cover.mask_offset_hint')), mf_.to_ai.el);
   mRvcWrap.replaceChildren(el('div', { class: 'cv-sub' },
@@ -342,6 +348,7 @@ function updateMaskVis() {
   mRvcWrap.classList.toggle('hidden', !rvcVisible);
   mr.sep_on.el.classList.toggle('hidden', mode !== 'rvc');
   mSepBox.classList.toggle('hidden', mode !== 'rvc' || !mr.sep_on.get());
+  mr.karaoke_model.el.closest('.cv-field')?.classList.toggle('hidden', mr.vocal_mode.get() === 'full');
   mf_.to_ai.el.classList.toggle('hidden', mf_.target.get() !== 'vocal');
   maskAdd.textContent = editingMask >= 0 ? t('cover.update') : t('cover.add');
   maskCancel.classList.toggle('hidden', editingMask < 0);
@@ -363,7 +370,10 @@ function addMask() {
     clean: mr.clean.get(), clean_strength: mr.clean_strength.get() });
   if (m.mode === 'rvc') {
     m.rvc = rvcParams();
-    if (mr.sep_on.get()) m.sep = { sep_model: mr.sep_model.get(), vocal_mode: mr.vocal_mode.get(), bgm_refine: mr.bgm_refine.get() };
+    if (mr.sep_on.get()) {
+      m.sep = { sep_model: mr.sep_model.get(), vocal_mode: mr.vocal_mode.get(), bgm_refine: mr.bgm_refine.get() };
+      if (m.sep.vocal_mode !== 'full' && mr.karaoke_model.get() === 'becruily') m.sep.karaoke_model = 'becruily';
+    }
   } else if (m.mode === 'file') {
     const prev = editingMask >= 0 ? masks[editingMask] : null;
     const up = mf_.uploaded || (prev && prev.file ? { file: prev.file, name: prev.name } : null);
@@ -389,7 +399,7 @@ function editMask(i) {
   mr.autotune.set(r.autotune ?? cur.rvc.autotune); mr.autotune_strength.set(r.autotune_strength ?? cur.rvc.autotune_strength);
   mr.clean.set(r.clean ?? cur.rvc.clean); mr.clean_strength.set(r.clean_strength ?? cur.rvc.clean_strength);
   mr.sep_on.set(!!m.sep);
-  if (m.sep) { mr.sep_model.set(m.sep.sep_model); mr.vocal_mode.set(m.sep.vocal_mode); mr.bgm_refine.set(m.sep.bgm_refine); }
+  if (m.sep) { mr.sep_model.set(m.sep.sep_model); mr.vocal_mode.set(m.sep.vocal_mode); mr.bgm_refine.set(m.sep.bgm_refine); mr.karaoke_model.set(m.sep.karaoke_model || 'aufr33'); }
   if (m.mode === 'file') {
     mf_.target.set(m.target || 'vocal'); mf_.offset.value = m.offset || 0; mf_.to_ai.set(!!m.to_ai);
     mf_.info.textContent = m.name || m.file;
@@ -481,6 +491,7 @@ function writeForm(p) {
     const v = getPath(p, path);
     if (v !== undefined && v !== null) ctl.set(v);
   }
+  karaokeSel.set(p.karaoke_model || 'aufr33');   // only stored when it is becruily
   mfOn.set(!!p.mf);
   const mf = p.mf || { sep_model: 'aufr33', male: { model: p.model, pitch: p.pitch, vol: 1, keep: false, ...p.rvc }, female: { model: p.model, pitch: p.pitch, vol: 1, keep: false, ...p.rvc } };
   mfSep.set(mf.sep_model || 'aufr33');
@@ -519,13 +530,21 @@ function updateVis() {
   [sepSel.el, mr.sep_model.el].forEach((s) => [...s.options].forEach((o) => { o.disabled = seps[o.value] === false; }));
   [...mfSep.el.options].forEach((o) => { o.disabled = seps[o.value] === false; });
   [vmodeSel.el, mr.vocal_mode.el].forEach((s) => [...s.options].forEach((o) => { o.disabled = o.value !== 'full' && seps.karaoke === false; }));
+  [karaokeSel.el, mr.karaoke_model.el].forEach((s) => { const b = [...s.options].find((o) => o.value === 'becruily'); if (b) b.disabled = !seps.becruily; });
+  karaokeSel.el.closest('.cv-field')?.classList.toggle('hidden', mf || vmodeSel.get() === 'full');
+  mr.karaoke_model.el.closest('.cv-field')?.classList.toggle('hidden', mr.vocal_mode.get() === 'full');
+  const becPath = status && status.becruily ? status.becruily.path : '';
+  const becUrl = status && status.becruily ? status.becruily.url : '';
+  karaokeNote.replaceChildren(seps.becruily ? '' : t('cover.becruily_missing', becPath),
+    !seps.becruily && becUrl ? el('a', { href: becUrl, target: '_blank', rel: 'noopener', style: 'margin-left:6px' }, t('cover.becruily_link')) : '');
+  karaokeNote.className = `small muted ${seps.becruily || mf || vmodeSel.get() === 'full' ? 'hidden' : ''}`;
   // strength boxes only count when their switch is on
   [rvc, male, female].forEach((c) => {
     c.autotune_strength.el.querySelectorAll('input').forEach((i) => { i.disabled = !c.autotune.get(); });
     c.clean_strength.el.querySelectorAll('input').forEach((i) => { i.disabled = !c.clean.get(); });
   });
   // separation availability (old "分離模型就緒／不可用")
-  const missing = Object.entries(seps).filter(([, ok]) => ok === false).map(([k]) => t(`sep.name.${k}`));
+  const missing = Object.entries(seps).filter(([k, ok]) => ok === false && k !== 'becruily').map(([k]) => t(`sep.name.${k}`));
   sepStatus.textContent = missing.length ? t('cover.sep_missing', missing.join('、')) : t('cover.sep_ready');
   sepStatus.className = `small ${missing.length ? 'cv-warn' : 'cv-ok'}`;
   // what the original backing does in this mode
@@ -560,6 +579,7 @@ function translateOptions() {
   const lab = (sel, prefix) => [...sel.options].forEach((o) => { o.textContent = t(`${prefix}${o.value}`); });
   [sepSel.el, mr.sep_model.el].forEach((s) => lab(s, 'sep.model.'));
   [vmodeSel.el, mr.vocal_mode.el].forEach((s) => lab(s, 'cover.vmode.'));
+  [karaokeSel.el, mr.karaoke_model.el].forEach((s) => lab(s, 'cover.karaoke.'));
   [refineSel.el, mr.bgm_refine.el].forEach((s) => lab(s, 'cover.refine.'));
   lab(rvc.f0.el, 'cover.f0.');
   lab(mfSep.el, 'cover.mfsep.');

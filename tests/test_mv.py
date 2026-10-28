@@ -149,6 +149,15 @@ def test_mv_project_whisper_render(client, root, tmp_path, fake_whisper):
     cp = client.post("/api/mv/project/import", json={"song_id": sid, "project": old_full, "replace": False}).json()
     assert cp["project"]["slug"] == f"{sid}_old_full_2"
 
+    # any audio format can be dropped in (old MV Studio); ones the browser cannot play become FLAC
+    aif = tmp_path / "take.aiff"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=2", str(aif)], check=True)
+    with open(aif, "rb") as fh:
+        up = client.post("/api/mv/upload_audio", data={"slug": cp["project"]["slug"]}, files={"file": ("take.aiff", fh)}).json()
+    assert up["status"] == "ok" and up["filename"].endswith("_master.flac") and up["probe"]["exists"]
+    assert not [f for f in Path(up["audio_file"]).parent.iterdir() if f.name.startswith("upload_") or ".part" in f.name]
+    bad = client.post("/api/mv/upload_audio", data={"slug": cp["project"]["slug"]}, files={"file": ("x.aiff", b"not audio")})
+    assert bad.status_code == 400
     gone = [slug, imp["project"]["slug"], imp2["project"]["slug"], cp["project"]["slug"]]
     d = client.post("/api/mv/projects/delete", json={"slugs": gone}).json()
     assert sorted(d["deleted"]) == sorted(gone) and not pdir.exists()

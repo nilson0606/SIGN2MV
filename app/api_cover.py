@@ -39,6 +39,9 @@ TRAIN_TIMEOUT = 48 * 3600.0
 MAX_UPLOAD = 2 * 1024 ** 3
 AUDIO_EXTS = (".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aac", ".wma", ".opus", ".webm", ".mp4", ".mkv", ".mov",
               ".m4v", ".avi")
+BECRUILY_MIN_BYTES = 1_600_000_000   # AI_COVER_MV: the full file is about 1.72 GB
+BECRUILY_URL = ("https://github.com/nomadkaraoke/python-audio-separator/releases/download/model-configs/"
+                "mel_band_roformer_karaoke_becruily.ckpt")
 NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 TOKEN = re.compile(r"^[a-f0-9]{16}$")
 DEFAULTS_FILE = "cover_defaults.json"
@@ -166,8 +169,20 @@ def router(ctx: Context) -> APIRouter:
                        ("karaoke", "karaoke_aufr33")):
             f = manifest_file(key)
             out[k] = bool(f) and (paths.models / f).is_file()
+        out["becruily"] = becruily_ready()
         out["demucs"] = True
         return out
+
+    def becruily_file() -> Path:
+        return paths.models / (manifest_file("karaoke_becruily") or "separation/mel_band_roformer_karaoke_becruily.ckpt")
+
+    def becruily_ready() -> bool:
+        # downloaded by hand (about 1.7 GB, like AI_COVER_MV); a smaller file is an unfinished download
+        f = becruily_file()
+        try:
+            return f.is_file() and f.stat().st_size >= BECRUILY_MIN_BYTES
+        except OSError:
+            return False
 
     def instruments() -> dict[str, bool]:
         sf = paths.soundfonts
@@ -264,6 +279,7 @@ def router(ctx: Context) -> APIRouter:
         train = active_job("cover_train")
         return {"applio": applio_status(), "separators": separators(), "instruments": instruments(),
                 "rubberband": rubberband_ok(),
+                "becruily": {"path": str(becruily_file()), "url": BECRUILY_URL, "ready": becruily_ready()},
                 "models": cover.list_models(voices()), "defaults": defaults(), "training": train,
                 "voices_dir": str(voices()), "soundfonts_dir": str(paths.soundfonts)}
 
@@ -574,11 +590,14 @@ def router(ctx: Context) -> APIRouter:
         have = separators()
         need = set()
         for layer in plan["layers"]:
-            need.add("karaoke" if layer["kind"] == "lead" else layer["model"])
+            if layer["kind"] == "lead":
+                need.add("becruily" if layer["model"] == "karaoke_becruily" else "karaoke")
+            else:
+                need.add(layer["model"])
         for j in plan["seg_jobs"]:
             need.add(j["sep"]["sep_model"])
             if j["sep"]["vocal_mode"] != "full":
-                need.add("karaoke")
+                need.add("becruily" if j["sep"].get("karaoke_model") == "becruily" else "karaoke")
         missing = sorted(n for n in need if have.get(n) is False)
         if missing:
             raise CoverError("separator_missing:" + ",".join(missing))

@@ -110,7 +110,8 @@ def separate_segment(job: dict, song_dir: Path, device: str, report: Step) -> No
         passes = {"lead_keep_backing": 1, "lead_keep_backing_x2": 2}.get(s["vocal_mode"], 0)
         for i in range(passes):
             kd = work / f"k{i + 1}"
-            sep.roformer_separate("karaoke", vocal, kd, device, prog)
+            sep.roformer_separate("karaoke_becruily" if s.get("karaoke_model") == "becruily" else "karaoke",
+                                  vocal, kd, device, prog)
             vocal = kd / "lead.wav"
             backings.append(kd / "backing.wav")
         if backings:

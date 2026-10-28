@@ -290,7 +290,7 @@ function storageSection(song) {
 
 // ------------------------------------------------------------------ stored copies
 const MODEL_NAME = { demucs: 'Demucs', bs_roformer: 'BS-RoFormer', mel_roformer: 'Mel-RoFormer',
-  karaoke: 'Karaoke', aufr33: 'aufr33', sucial: 'Sucial' };
+  karaoke: 'Karaoke', karaoke_becruily: 'Karaoke becruily', aufr33: 'aufr33', sucial: 'Sucial' };
 
 function trackName(n) {
   const key = `track.${n}`;

@@ -34,6 +34,7 @@ LEAD_MODES = ("lead_keep_backing", "lead_keep_backing_x2")
 INSTRUMENTS = ("none", "steel_guitar", "yangqin", "guzheng", "dizi", "duet")
 OCTAVES = (99, 0, 1, -1)
 MF_MODELS = ("aufr33", "sucial")
+KARAOKE_MODELS = ("aufr33", "becruily")   # old 卡拉OK（拆主唱）模型
 KEY_MIN, KEY_MAX = -8, 8
 PATCH_PAD = 1.0          # seconds of context on each side when a section is re-converted
 VERSION_ID = re.compile(r"^v[a-f0-9]{10}$")
@@ -117,9 +118,12 @@ def clean_side(p: Any, model: str, pitch: int, rvc: dict) -> dict:
 
 def clean_sep(p: Any) -> dict:
     p = p if isinstance(p, dict) else {}
-    return {"sep_model": p.get("sep_model") if p.get("sep_model") in SEPARATORS else "demucs",
-            "vocal_mode": p.get("vocal_mode") if p.get("vocal_mode") in VOCAL_MODES else "full",
-            "bgm_refine": "second_pass" if p.get("bgm_refine") == "second_pass" else "none"}
+    out = {"sep_model": p.get("sep_model") if p.get("sep_model") in SEPARATORS else "demucs",
+           "vocal_mode": p.get("vocal_mode") if p.get("vocal_mode") in VOCAL_MODES else "full",
+           "bgm_refine": "second_pass" if p.get("bgm_refine") == "second_pass" else "none"}
+    if out["vocal_mode"] in LEAD_MODES and p.get("karaoke_model") == "becruily":
+        out["karaoke_model"] = "becruily"
+    return out
 
 
 def clean_masks(masks: Any, model: str, pitch: int, rvc: dict) -> list[dict]:
@@ -186,6 +190,8 @@ def clean_params(p: Any) -> dict:
            "backing_on": p.get("backing_on") is not False, "mf": None, "mix": clean_mix(p.get("mix")),
            "masks": clean_masks(p.get("masks"), model, pitch, rvc),
            "vol_segments": clean_vol_segments(p.get("vol_segments"))}
+    if p.get("karaoke_model") == "becruily":
+        out["karaoke_model"] = "becruily"
     mf = p.get("mf")
     if isinstance(mf, dict) and mf.get("enabled", True):
         out["mf"] = {"sep_model": mf.get("sep_model") if mf.get("sep_model") in MF_MODELS else "aufr33",
@@ -314,6 +320,8 @@ def recipe_for(p: dict) -> dict:
     r = {"model": p["sep_model"], "second_pass": p["bgm_refine"] == "second_pass", "lead": lead}
     if lead and p["vocal_mode"] == "lead_keep_backing_x2":
         r["lead_passes"] = 2
+    if lead and p.get("karaoke_model") == "becruily":
+        r["karaoke"] = "becruily"
     if p.get("mf"):
         r["male_female"] = p["mf"]["sep_model"]
     return r

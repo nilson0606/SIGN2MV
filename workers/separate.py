@@ -35,6 +35,8 @@ ROFORMER_FILES = {
     "bs_roformer": ("model_bs_roformer_ep_317_sdr_12.9755.ckpt", ("vocals", "instrumental")),
     "mel_roformer": ("vocals_mel_band_roformer.ckpt", ("vocals", "instrumental")),
     "karaoke": ("mel_band_roformer_karaoke_aufr33_viperx_sdr_10.1956.ckpt", ("lead", "backing")),
+    # optional, downloaded by hand like in AI_COVER_MV (about 1.7 GB); its config comes with audio-separator
+    "karaoke_becruily": ("mel_band_roformer_karaoke_becruily.ckpt", ("lead", "backing")),
     "aufr33": ("bs_roformer_male_female_by_aufr33_sdr_7.2889.ckpt", ("male", "female")),
     "sucial": ("model_chorus_bs_roformer_ep_267_sdr_24.1275.ckpt", ("male", "female")),
 }
@@ -156,7 +158,7 @@ def roformer_separate(model_key: str, src: Path, out: Path, device: str, report:
     if not (a.is_file() and b.is_file()):
         raise RuntimeError(f"separation did not produce {first}/{second}: {produced}")
     # Karaoke models sometimes swap labels: the lead must be clearly louder than backing.
-    if model_key == "karaoke":
+    if model_key in ("karaoke", "karaoke_becruily"):
         ra, rb = rms(a), rms(b)
         if ra is not None and rb is not None and ra < 0.25 * rb:
             tmp = out / "_swap.wav"
@@ -245,7 +247,8 @@ def run_layer(layer: dict, song_dir: Path, device: str, report: Progress) -> str
             else:
                 roformer_separate(model, ensure_float_wav(src, tmp), tmp, dev, report)
         elif kind == "lead":
-            roformer_separate("karaoke", ensure_float_wav(src, tmp), tmp, dev, report)
+            roformer_separate(model if model in ("karaoke", "karaoke_becruily") else "karaoke",
+                              ensure_float_wav(src, tmp), tmp, dev, report)
         elif kind == "male_female":
             roformer_separate(model, ensure_float_wav(src, tmp), tmp, dev, report)
         else:

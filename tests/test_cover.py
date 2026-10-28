@@ -67,6 +67,18 @@ def test_params_and_plan(tmp_path):
     px = cover.clean_params({"model": "A", "vocal_mode": "lead_keep_backing_x2"})
     plx = cover.plan(song_dir, song, px, resolve)
     assert [l["kind"] for l in plx["layers"]] == ["mix", "lead", "lead"] and len(plx["backings"]) == 2
+    # becruily lead split (old 卡拉OK模型): own cache keys; aufr33 keeps the old keys and is not stored
+    assert "karaoke_model" not in cover.clean_params({"model": "A", "karaoke_model": "aufr33"})
+    pb = cover.clean_params({"model": "A", "karaoke_model": "becruily"})
+    plb = cover.plan(song_dir, song, pb, resolve)
+    pla = cover.plan(song_dir, song, cover.clean_params({"model": "A"}), resolve)
+    assert [l["model"] for l in plb["layers"] if l["kind"] == "lead"] == ["karaoke_becruily"]
+    assert plb["tracks"]["lead"] != pla["tracks"]["lead"] and plb["tracks"]["vocals"] == pla["tracks"]["vocals"]
+    assert stems_mod.normalize({"lead": True, "karaoke": "aufr33"}) == stems_mod.normalize({"lead": True})
+    with pytest.raises(stems_mod.RecipeError):
+        stems_mod.normalize({"lead": True, "karaoke": "nope"})
+    assert cover.clean_sep({"vocal_mode": "lead_keep_backing", "karaoke_model": "becruily"})["karaoke_model"] == "becruily"
+    assert "karaoke_model" not in cover.clean_sep({"vocal_mode": "full", "karaoke_model": "becruily"})
     pm = cover.clean_params({"model": "A", "mf": {"sep_model": "aufr33", "male": {"keep": True},
                                                   "female": {"model": "B", "pitch": 3, "vol": 1.2}}})
     plm = cover.plan(song_dir, song, pm, resolve)
@@ -110,6 +122,8 @@ def test_voice_models(client, root, tmp_path):
     (old / "中文模型" / "x.pth").write_bytes(b"x")
     st = client.get("/api/cover/status").json()
     assert [m["name"] for m in st["models"]] == ["Alice"]
+    assert st["separators"]["becruily"] is False and st["becruily"]["path"].endswith("mel_band_roformer_karaoke_becruily.ckpt")
+    assert st["becruily"]["url"].startswith("https://")
     assert client.delete("/api/cover/models/Alice").status_code == 200
     res = client.post("/api/cover/models/import", json={"path": str(old)}).json()
     assert sorted(res["imported"]) == ["Voice_A", "Voice_B"]

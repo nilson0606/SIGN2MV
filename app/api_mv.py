@@ -19,7 +19,9 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import time
+import uuid
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -46,6 +48,8 @@ from .mvstudio.core import (Image, KARAOKE_TIMING_MODES, MAX_SCENES, FRAME_W, FR
 from .renders import list_renders
 from .util import media_response
 
+STYLE_THEME_DEFAULT = {"zh": "電影級寫實敘事畫風（人物故事線＋純風景空鏡穿插）",
+                       "en": "Cinematic realistic storytelling (a character story line mixed with pure scenery shots)"}
 AUDIO_EXT = (".wav", ".mp3", ".m4a", ".flac", ".webm", ".ogg", ".aac")
 MEDIA_TYPES = {".mp4": "video/mp4", ".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "audio/mp4",
                ".webm": "audio/webm", ".flac": "audio/flac", ".ogg": "audio/ogg", ".png": "image/png",
@@ -368,7 +372,8 @@ def router(ctx: Context) -> APIRouter:
                 "original_singer": sanitize_no_ai(body.get("original_singer", ""), ""),
                 "cover_singer": core.BRAND["singer"], "studio": core.BRAND["studio"], "credit_lang": lang,
                 "intro_desc": core.default_intro(lang), "outro_desc": "",
-                "style_theme": body.get("style_theme", ""), "audio_file": audio_file,
+                # old MV Studio started new projects with this picture style filled in
+                "style_theme": body.get("style_theme") or STYLE_THEME_DEFAULT[lang], "audio_file": audio_file,
                 "output_mv": f"{core.safe_file_title(title, name)}_MV.mp4", "scene_count": scene_count,
                 "early_lead_sec": -0.70, "tail_extend_sec": 2.50, "timeline": []}
         proj["outro_desc"] = core.default_outro(proj)
@@ -984,14 +989,30 @@ def router(ctx: Context) -> APIRouter:
         except ProjectNotFound as exc:
             return jerr(404, str(exc))
         ext = os.path.splitext(file.filename or "")[1].lower() or ".wav"
-        if ext not in AUDIO_EXT:
-            return jerr(400, "請選擇 WAV／MP3／M4A／FLAC 音檔")
-        out_filename = f"{core.safe_file_title(proj.get('title', ''), proj['name'])}_master{ext}"
+        # old MV Studio took any file; formats the browser cannot play (AIFF, WMA, Opus, APE…) are converted
+        # to FLAC (lossless) so the page can still play them
+        convert = ext not in AUDIO_EXT
+        if convert and not re.fullmatch(r"\.[a-z0-9]{1,8}", ext):
+            return jerr(400, "讀不到這個音檔，請選擇 WAV／MP3／M4A／FLAC 音檔")
+        out_ext = ".flac" if convert else ext
+        out_filename = f"{core.safe_file_title(proj.get('title', ''), proj['name'])}_master{out_ext}"
         out_path = Path(core.project_dir(slug)) / "audio" / out_filename
+        raw_path = out_path.with_name(f"upload_{uuid.uuid4().hex[:8]}{ext}") if convert else out_path
         try:
-            await save_upload(file, out_path)
+            await save_upload(file, raw_path)
         except ValueError as exc:
             return jerr(400, str(exc))
+        if convert:
+            tmp_out = out_path.with_name(out_path.stem + ".part.flac")
+            res = await asyncio.to_thread(subprocess.run, [core.FFMPEG, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+                                                           "-i", str(raw_path), "-map", "0:a:0", "-vn", "-c:a", "flac",
+                                                           str(tmp_out)], capture_output=True, text=True,
+                                          encoding="utf-8", errors="replace", creationflags=core.NO_WINDOW)
+            raw_path.unlink(missing_ok=True)
+            if res.returncode != 0 or not tmp_out.is_file():
+                tmp_out.unlink(missing_ok=True)
+                return jerr(400, "讀不到這個音檔，請選擇 WAV／MP3／M4A／FLAC 音檔")
+            os.replace(tmp_out, out_path)
         probe = probe_media_file(str(out_path))
         old_audio = proj.get("audio_file", "")
         proj["audio_file"] = str(out_path)
