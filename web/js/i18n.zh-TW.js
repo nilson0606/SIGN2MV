@@ -331,4 +331,8 @@ export default {
   "err.model_changed": "這個工作排隊後音色模型被更換（重新訓練或取代）了，請重新製作。",
   "err.file_in_use": "音檔正被其他程式使用（播放器或 MV 渲染），關掉後再試一次。",
   "cover.models_n": "共 {0} 個 · 點一下展開／收合",
+  "cover.done_title": "翻唱完成：{0}",
+  "cover.done_hint": "已經加到右上方「版本」，也出現在這首歌的 MV 音檔清單。",
+  "cover.done_play": "▶ 立刻播放",
+  "cover.done_show": "跳到這個版本",
 };

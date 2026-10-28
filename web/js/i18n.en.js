@@ -331,4 +331,8 @@ export default {
   "err.model_changed": "The voice model was changed (retrained or replaced) after this job was queued. Start it again.",
   "err.file_in_use": "The audio file is in use by another program (a player or an MV render). Close it and try again.",
   "cover.models_n": "{0} model(s) · click to open",
+  "cover.done_title": "Cover finished: {0}",
+  "cover.done_hint": "It is now in Versions (top right) and in this song's MV audio list.",
+  "cover.done_play": "▶ Play it",
+  "cover.done_show": "Show the version",
 };

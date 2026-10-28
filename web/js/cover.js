@@ -138,6 +138,7 @@ const mix = {
 };
 
 const runJob = jobBox();
+const doneBox = el('div', { class: 'cv-done hidden' });
 const runBtn = el('button', { class: 'btn primary', onclick: () => runCover(), 'data-i18n': 'cover.run' });
 const versionsBox = el('div', { class: 'list cv-versions' });
 const maskList = el('div', { class: 'list' });
@@ -184,7 +185,7 @@ function sectionMix() {
     details(t('cover.vsegs'), el('p', { class: 'muted small' }, t('cover.vsegs_hint')), vsegEditor(), vsegList),
     el('div', { class: 'row', style: 'margin-top:12px' }, runBtn),
     el('p', { class: 'muted small' }, t('cover.run_hint')),
-    runJob.el);
+    runJob.el, doneBox);
 }
 
 // ------------------------------------------------------------------ sections (masks)
@@ -437,6 +438,7 @@ async function openSong(id) {
   songSel.value = id || '';
   songState = null;
   editingMask = -1;
+  doneBox.classList.add('hidden');
   mf_.uploaded = null; mf_.file.value = ''; mf_.info.textContent = '';
   keyAudio.removeAttribute('src');
   if (!id) { origPlayer.removeAttribute('src'); songInfo.textContent = ''; renderVersions(); return; }
@@ -468,9 +470,36 @@ async function keyPreview() {
 }
 
 // ------------------------------------------------------------------ jobs
+// a clear "finished" box under the button: what was made, play it, go to the version or the MV
+function showDone(fin) {
+  const vid = fin.result && fin.result.version_id;
+  const v = ((songState && songState.versions) || []).find((x) => x.id === vid);
+  if (fin.status !== 'succeeded' || !v) { doneBox.classList.add('hidden'); return; }
+  runJob.hide();
+  const item = () => versionsBox.querySelector(`[data-vid="${vid}"]`);
+  doneBox.replaceChildren(
+    el('div', { class: 'cv-done-title' }, `✅ ${t('cover.done_title', v.title)}${v.duration ? ` · ${fmtTime(v.duration)}` : ''}`),
+    el('div', { class: 'muted small' }, t('cover.done_hint')),
+    el('div', { class: 'row' },
+      el('button', { class: 'btn primary', onclick: () => {
+        const box = item();
+        if (!box) return;
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const a = box.querySelector('audio');
+        if (a) a.play().catch(() => {});
+      } }, t('cover.done_play')),
+      el('button', { class: 'btn', onclick: () => item()?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, t('cover.done_show')),
+      el('button', { class: 'btn', onclick: () => {
+        bus.dispatchEvent(new CustomEvent('mv-open', { detail: { songId, renderId: v.render_id } }));
+        goto('mv');
+      } }, t('cover.to_mv'))));
+  doneBox.classList.remove('hidden');
+}
+
 async function follow(job) {
   if (busyJob && busyJob.id === job.id) return;   // already followed
   busyJob = job;
+  doneBox.classList.add('hidden');
   runBtn.disabled = true;
   const fin = await runJob.follow(job);
   busyJob = null;
@@ -480,6 +509,7 @@ async function follow(job) {
   if (songId) {
     try { songState = await api.get(`/api/cover/songs/${songId}`); } catch { /* ignore */ }
     renderVersions(fin.result && fin.result.version_id);
+    showDone(fin);
   }
   bus.dispatchEvent(new Event('renders-changed'));
 }
@@ -513,7 +543,7 @@ function versionItem(v, hi) {
   const tracksBox = el('div', { class: 'tracks hidden' });
   // ?v= makes the browser fetch the audio again after a remix replaced it under the same name
   const src = v.audio ? `${mediaUrl(songId, v.audio)}?v=${Math.round(v.updated_at || v.created_at || 0)}` : '';
-  const box = el('div', { class: 'cv-version' + (hi ? ' selected' : '') },
+  const box = el('div', { class: 'cv-version' + (hi ? ' selected cv-new' : ''), dataset: { vid: v.id } },
     el('div', { class: 'row' },
       el('b', { class: 'grow' }, v.title),
       el('span', { class: 'muted small' }, `${fmtDate(v.updated_at || v.created_at)}${v.duration ? ' · ' + fmtTime(v.duration) : ''}`)),

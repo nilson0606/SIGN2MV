@@ -182,3 +182,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .cv-fold > summary::before { content: '▸'; color: var(--accent); }
 .cv-fold[open] > summary::before { content: '▾'; }
 .cv-fold[open] > summary { margin-bottom: 10px; }
+.cv-done { margin-top: 10px; padding: 12px 14px; border-radius: 10px; background: #0f3326; border: 1px solid #2c7a52; display: grid; gap: 8px; }
+.cv-done-title { font-size: 1.08rem; font-weight: 600; color: var(--ok); }
+.cv-version.cv-new { animation: cvflash 1.6s ease-out 3; }
+@keyframes cvflash { 0% { box-shadow: 0 0 0 3px var(--ok); } 100% { box-shadow: 0 0 0 0 transparent; } }
