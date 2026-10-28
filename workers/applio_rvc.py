@@ -69,10 +69,19 @@ def main() -> None:
             kwargs.update(cleanup_mode="light", cleanup_stage="output",
                           cleanup_strength=cleanup_db(t.get("clean_strength", 0.5)))
         started = time.time()
+        index = str(t.get("index") or "")
+        tmp_index = None
+        if index and "trained" in index.lower():
+            # Applio rewrites "trained" to "added" in index paths: give it a copy under a neutral name
+            import shutil
+            import tempfile
+            tmp_index = Path(tempfile.gettempdir()) / f"sign2mv_{os.getpid()}_{i}.index"
+            shutil.copyfile(index, tmp_index)
+            index = str(tmp_index)
         try:
             with contextlib.redirect_stdout(sys.stderr):
                 vc.convert_audio(audio_input_path=str(t["input"]), audio_output_path=str(raw),
-                                 model_path=str(t["pth"]), index_path=str(t.get("index") or ""),
+                                 model_path=str(t["pth"]), index_path=index,
                                  pitch=int(t.get("pitch", 0)), f0_method=t.get("f0", "rmvpe"),
                                  index_rate=float(t.get("index_rate", 0.75)),
                                  volume_envelope=float(t.get("envelope", 1.0)),
@@ -85,6 +94,8 @@ def main() -> None:
             raw.unlink(missing_ok=True)
             protocol.fail("rvc_failed", f"{t.get('label', '')}: {str(exc)[-600:]}")
         raw.unlink(missing_ok=True)
+        if tmp_index:
+            tmp_index.unlink(missing_ok=True)
         done.append({"output": str(out), "seconds": round(time.time() - started, 1)})
         protocol.log(f"converted {t.get('label', '')} in {done[-1]['seconds']} s")
     protocol.progress(100, "rvc", "")

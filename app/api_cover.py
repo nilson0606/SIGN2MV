@@ -19,7 +19,6 @@ import os
 import re
 import shutil
 import subprocess
-import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -43,6 +42,16 @@ AUDIO_EXTS = (".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aac", ".wma", ".opus", 
 NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 TOKEN = re.compile(r"^[a-f0-9]{16}$")
 DEFAULTS_FILE = "cover_defaults.json"
+
+
+def time_now() -> float:
+    import time
+    return time.time()
+
+
+def glob_escape(s: str) -> str:
+    import glob
+    return glob.escape(s)
 
 
 def _ffmpeg() -> str:
@@ -73,7 +82,8 @@ def _copy_model(src_dir: Path | None, pth: Path | None, dest: Path, index: Path 
                         shutil.copy2(f, tmp / "epochs" / f.name)
         if pth is not None:
             shutil.copy2(pth, tmp / pth.name)
-            idx = index or next(iter(sorted(pth.parent.glob(pth.stem.split("_")[0] + "*.index"))), None)
+            base = re.sub(r"_\d+e(_\d+s)?$", "", pth.stem)
+            idx = index or next(iter(sorted(pth.parent.glob(glob_escape(base) + "*.index"))), None)
             if idx and idx.is_file():
                 shutil.copy2(idx, tmp / idx.name)
         if not any(tmp.glob("*.pth")):
@@ -159,6 +169,8 @@ def router(ctx: Context) -> APIRouter:
         return resolve
 
     def fail(exc: Exception):
+        if isinstance(exc, CoverError) and exc.code.startswith("separator_missing:"):
+            return err("separator_missing", 409, missing=exc.code.split(":", 1)[1].split(","))
         if isinstance(exc, (CoverError, LibraryError)):
             return err(exc.code, getattr(exc, "status", 400))
         if isinstance(exc, cover.stems_mod.RecipeError):
@@ -218,7 +230,7 @@ def router(ctx: Context) -> APIRouter:
             if src.is_file():
                 if src.suffix.lower() != ".pth":
                     raise CoverError("no_model_file")
-                one(body.get("name") or src.stem.split("_")[0] or src.stem, None, src)
+                one(body.get("name") or re.sub(r"_\d+e(_\d+s)?$", "", src.stem) or src.stem, None, src)
             elif any(src.glob("*.pth")):
                 one(body.get("name") or src.name, src, None)
             else:
@@ -274,6 +286,8 @@ def router(ctx: Context) -> APIRouter:
         train = active_job("cover_train")
         if train and (train.get("title") or "").endswith(f": {d.name}"):
             return err("model_training", 409)
+        if active_job("cover"):
+            return err("model_in_use", 409)
         shutil.rmtree(d, ignore_errors=True)
         if d.exists():
             return err("delete_failed", 500)
@@ -391,7 +405,11 @@ def router(ctx: Context) -> APIRouter:
                         pass
                 shutil.rmtree(d, ignore_errors=True)
         for d in voices().glob("_*"):
-            shutil.rmtree(d, ignore_errors=True)
+            try:
+                if d.stat().st_mtime < time_now() - 600:   # not an import / upload in progress
+                    shutil.rmtree(d, ignore_errors=True)
+            except OSError:
+                pass
         return {"freed": freed}
 
     # ------------------------------------------------------------------ instrument sounds
@@ -457,8 +475,23 @@ def router(ctx: Context) -> APIRouter:
         cover.write_json(cover.cover_dir(sdir) / "settings.json", p)
         return {"settings": p}
 
-    def submit_cover(song_id: str, song: dict, sdir: Path, p: dict, version: dict, render: dict) -> dict:
-        plan = cover.plan(sdir, song, p, resolver())
+    def check_separators(plan: dict) -> None:
+        have = separators()
+        need = set()
+        for layer in plan["layers"]:
+            need.add("karaoke" if layer["kind"] == "lead" else layer["model"])
+        for j in plan["seg_jobs"]:
+            need.add(j["sep"]["sep_model"])
+            if j["sep"]["vocal_mode"] != "full":
+                need.add("karaoke")
+        missing = sorted(n for n in need if have.get(n) is False)
+        if missing:
+            raise CoverError("separator_missing:" + ",".join(missing))
+
+    def submit_cover(song_id: str, song: dict, sdir: Path, p: dict, version: dict, render: dict,
+                     reuse: dict | None = None) -> dict:
+        plan = cover.plan(sdir, song, p, resolver(), reuse=reuse)
+        check_separators(plan)
         if plan["need_gpu"] and not applio_status()["ready"] and any(
                 not (sdir / t["output"]).is_file() for t in plan["rvc_tasks"]):
             raise CoverError("applio_missing", 409)
@@ -522,9 +555,8 @@ def router(ctx: Context) -> APIRouter:
             else:
                 version = {k: base[k] for k in ("id", "number", "title", "created_at") if k in base}
                 version.update(label=label, source_version=base.get("source_version"))
-                render = {"id": base.get("render_id") or "r" + uuid.uuid4().hex[:12], "replace": True,
-                          "title": f"{song['title']} · {label} #{base.get('number')}"}
-            job = submit_cover(song_id, song, sdir, p, version, render)
+                render = {"id": base.get("render_id") or "r" + uuid.uuid4().hex[:12], "replace": True, "title": None}
+            job = submit_cover(song_id, song, sdir, p, version, render, reuse=(base.get("plan") or {}).get("vocal"))
         except Exception as exc:  # noqa: BLE001
             return fail(exc)
         return {"job": job, "version_id": version["id"]}

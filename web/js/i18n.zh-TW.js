@@ -326,4 +326,8 @@ export default {
   "err.no_instrument_files": "那裡找不到古箏／笛子音色（.ogg）或音色庫。",
   "err.unsupported_audio": "無法讀取這個音檔。",
   "mv.busy": "MV 正在渲染或對齊歌詞，關閉會中斷它。",
+  "err.separator_missing": "這組設定需要的分離模型沒有安裝（請再執行 install.bat，或改選其他分離模型／人聲處理）。",
+  "err.model_in_use": "有翻唱正在進行或排隊，等它完成再刪除模型。",
+  "err.model_changed": "這個工作排隊後音色模型被更換（重新訓練或取代）了，請重新製作。",
+  "err.file_in_use": "音檔正被其他程式使用（播放器或 MV 渲染），關掉後再試一次。",
 };

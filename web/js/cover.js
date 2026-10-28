@@ -375,8 +375,10 @@ function writeForm(p) {
   masks = (p.masks || []).map((m) => ({ ...m }));
   vsegs = (p.vol_segments || []).map((s) => ({ ...s }));
   renderMasks(); renderVsegs();
-  mr.model.set(p.model); mr.pitch.set(p.pitch); mr.protect.set(p.rvc.protect); mr.index_rate.set(p.rvc.index_rate);
-  mr.envelope.set(p.rvc.envelope); mr.f0.set(p.rvc.f0);
+  if (editingMask < 0) {   // keep a section that is being edited
+    mr.model.set(p.model); mr.pitch.set(p.pitch); mr.protect.set(p.rvc.protect); mr.index_rate.set(p.rvc.index_rate);
+    mr.envelope.set(p.rvc.envelope); mr.f0.set(p.rvc.f0);
+  }
   updateVis(); updateMaskVis();
 }
 function scheduleSave() {
@@ -434,6 +436,8 @@ async function openSong(id) {
   songId = id;
   songSel.value = id || '';
   songState = null;
+  editingMask = -1;
+  mf_.uploaded = null; mf_.file.value = ''; mf_.info.textContent = '';
   keyAudio.removeAttribute('src');
   if (!id) { origPlayer.removeAttribute('src'); songInfo.textContent = ''; renderVersions(); return; }
   try {
@@ -465,6 +469,7 @@ async function keyPreview() {
 
 // ------------------------------------------------------------------ jobs
 async function follow(job) {
+  if (busyJob && busyJob.id === job.id) return;   // already followed
   busyJob = job;
   runBtn.disabled = true;
   const fin = await runJob.follow(job);
@@ -506,7 +511,8 @@ function renderVersions(highlight) {
 }
 function versionItem(v, hi) {
   const tracksBox = el('div', { class: 'tracks hidden' });
-  const src = v.audio ? mediaUrl(songId, v.audio) : '';
+  // ?v= makes the browser fetch the audio again after a remix replaced it under the same name
+  const src = v.audio ? `${mediaUrl(songId, v.audio)}?v=${Math.round(v.updated_at || v.created_at || 0)}` : '';
   const box = el('div', { class: 'cv-version' + (hi ? ' selected' : '') },
     el('div', { class: 'row' },
       el('b', { class: 'grow' }, v.title),

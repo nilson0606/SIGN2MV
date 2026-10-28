@@ -71,6 +71,13 @@ def test_params_and_plan(tmp_path):
     assert [l["kind"] for l in plm["layers"]] == ["mix", "male_female"] and plm["backings"] == []
     assert plm["vocal"]["combine"]["male"] == plm["tracks"]["male"] and len(plm["rvc_tasks"]) == 1
     assert cover.version_label(pm) == "Original + B +3"
+    # remix reuses the version's converted vocal: no model needed, file stays referenced
+    (song_dir / "cover" / "rvc").mkdir(parents=True)
+    (song_dir / "cover" / "rvc" / "old.wav").write_bytes(b"x")
+    def no_model(name):
+        raise AssertionError("model resolved")
+    plr = cover.plan(song_dir, song, cover.clean_params({"model": "Gone"}), no_model, reuse={"path": "cover/rvc/old.wav"})
+    assert plr["vocal"]["path"] == "cover/rvc/old.wav" and plr["rvc_tasks"] == [] and "cover/rvc/old.wav" in plr["files"]
 
 
 def fake_model(folder: Path, name: str, epochs=(10, 20)) -> Path:
@@ -86,13 +93,22 @@ def fake_model(folder: Path, name: str, epochs=(10, 20)) -> Path:
 
 
 def test_voice_models(client, root, tmp_path):
+    from app import cover
+    d = tmp_path / "logs_like"
+    d.mkdir()
+    (d / "G_2333333.pth").write_bytes(b"g")
+    (d / "Alice_100e_700s.pth").write_bytes(b"a")
+    assert cover.model_files(d)[0].name == "Alice_100e_700s.pth"
+    single = client.post("/api/cover/models/import", json={"path": str(d / "Alice_100e_700s.pth")}).json()
+    assert single["imported"] == ["Alice"]
     old = tmp_path / "old_models"
     fake_model(old, "Voice_A")
     fake_model(old, "Voice_B")
     (old / "中文模型").mkdir()
     (old / "中文模型" / "x.pth").write_bytes(b"x")
     st = client.get("/api/cover/status").json()
-    assert st["models"] == [] and st["defaults"]["model"] == ""
+    assert [m["name"] for m in st["models"]] == ["Alice"]
+    assert client.delete("/api/cover/models/Alice").status_code == 200
     res = client.post("/api/cover/models/import", json={"path": str(old)}).json()
     assert sorted(res["imported"]) == ["Voice_A", "Voice_B"]
     assert res["skipped"] == [{"source": "中文模型", "reason": "invalid_model_name"}]
@@ -217,6 +233,12 @@ def test_cover_full_flow(client, root, tmp_path):
     # key preview of the original
     kp = client.post(f"/api/cover/songs/{sid}/key_preview", json={"key": -3}).json()
     assert kp["path"].endswith("_k-3.mp3") and (sdir / kp["path"]).is_file()
+    # the voice model is deleted: a volume remix still works from the version's converted vocal
+    assert client.delete(f"/api/cover/models/{voice}").status_code == 200
+    d5, job5 = run_job(client, client.post(f"/api/cover/songs/{sid}/versions/{v1['id']}/remix",
+                                           json={"mix": {"vocal_vol": 0.8}}))
+    assert job5["lane"] == "cpu"
+    assert client.post(f"/api/cover/songs/{sid}/run", json={"params": params}).json()["error"] == "model_not_found"
 
 
 @need_applio

@@ -27,7 +27,7 @@ import numpy as np
 import soundfile as sf
 
 import protocol
-from common import NO_WINDOW, ROOT, ffmpeg, pick_device, run, write_json
+from common import NO_WINDOW, ROOT, ffmpeg, file_sig, pick_device, replace_retry, run, write_json
 
 sys.path.insert(0, str(ROOT))
 
@@ -137,7 +137,8 @@ def run_applio(tasks: list[dict], applio: dict, report: Step) -> None:
             if line:
                 err_tail.append(line)
                 del err_tail[:-30]
-    threading.Thread(target=read_err, daemon=True).start()
+    err_thread = threading.Thread(target=read_err, daemon=True)
+    err_thread.start()
     proc.stdin.write(json.dumps({"tasks": tasks}, ensure_ascii=False).encode("utf-8"))
     proc.stdin.close()
     error = None
@@ -158,6 +159,7 @@ def run_applio(tasks: list[dict], applio: dict, report: Step) -> None:
         elif msg.get("type") == "error":
             error = (msg.get("code"), msg.get("message"))
     rc = proc.wait()
+    err_thread.join(timeout=5)
     if error or rc != 0:
         detail = (error[1] if error else "") or "\n".join(err_tail[-8:])
         raise RuntimeError("rvc_failed:" + str(detail)[-800:])
@@ -191,11 +193,11 @@ def write_render(song_dir: Path, render: dict, mp3: Path, extra: dict) -> dict:
     if render.get("replace") and (target / "render.json").is_file():
         info = json.loads((target / "render.json").read_text(encoding="utf-8"))
         old_audio = target / info.get("audio", "audio.mp3")
-        os.replace(mp3, target / "audio.mp3")
+        replace_retry(mp3, target / "audio.mp3")
         if old_audio.name != "audio.mp3":
             old_audio.unlink(missing_ok=True)
         info.update({"audio": "audio.mp3", "bytes": (target / "audio.mp3").stat().st_size, "updated_at": now,
-                     "title": render.get("title") or info.get("title", "")})
+                     "title": info.get("title", "")})
         info.update(extra)
         write_json(target / "render.json", info)
         return info
@@ -233,7 +235,19 @@ def main() -> None:
             except Exception as exc:  # noqa: BLE001
                 shutil.rmtree(song_dir / "stems" / (layer["key"] + ".tmp"), ignore_errors=True)
                 protocol.fail("separation_failed", str(exc)[-1500:])
-        # 2. key
+        # 2. sections with their own separation, and plain cuts for re-converted sections
+        for msg in plan.get("skipped") or []:
+            protocol.log("section skipped: " + msg)
+        failed: set[str] = set()
+        seg = [j for j in plan.get("seg_jobs") or [] if not (A(j["vocal"]).is_file() and A(j["bgm"]).is_file())]
+        for i, j in enumerate(seg):
+            try:
+                separate_segment(j, song_dir, device, Step(40 + 5 * i / len(seg), 40 + 5 * (i + 1) / len(seg),
+                                                           "section_separate"))
+            except Exception as exc:  # noqa: BLE001  (the old program kept the converted vocal there)
+                protocol.log(f"section {j['start']:.1f}s could not be separated again, kept as it was: {str(exc)[-300:]}")
+                failed |= {j["vocal"], j["bgm"]}
+        # 3. key
         kjobs = [j for j in plan.get("key_jobs") or [] if not A(j["dst"]).is_file()]
         for i, j in enumerate(kjobs):
             protocol.progress(round(35 + 5 * i / max(1, len(kjobs)), 1), "key", j["name"])
@@ -242,23 +256,24 @@ def main() -> None:
                 if not (A(j["dir"]) / "info.json").is_file():
                     key_shift.shift_files([{"src": str(A(j["src"])), "dst": str(A(j["dst"]))}], int(plan["key"]),
                                           A(j["dir"]), {"tracks": [j["name"]], "by": "cover"})
+            elif j["src"] in failed or not A(j["src"]).is_file():
+                failed.add(j["dst"])
             else:
-                if not A(j["src"]).is_file():
-                    for sj in plan.get("seg_jobs") or []:   # the section has to be separated first
-                        if sj["bgm"] == j["src"]:
-                            separate_segment(sj, song_dir, device, Step(40, 45, "section_separate"))
                 key_shift_file(A(j["src"]), A(j["dst"]), int(plan["key"]))
-        # 3. sections with their own separation, and plain cuts for re-converted sections
-        seg = [j for j in plan.get("seg_jobs") or [] if not (A(j["vocal"]).is_file() and A(j["bgm"]).is_file())]
-        for i, j in enumerate(seg):
-            separate_segment(j, song_dir, device, Step(40 + 5 * i / len(seg), 40 + 5 * (i + 1) / len(seg),
-                                                       "section_separate"))
         for j in plan.get("cut_jobs") or []:
             if not A(j["dst"]).is_file():
                 cut(A(j["src"]), A(j["dst"]), j["start"], j["dur"])
         # 4. RVC
+        for t in plan.get("rvc_tasks") or []:
+            if t["input"] in failed:
+                failed.add(t["output"])
         tasks = [dict(t, input=str(A(t["input"])), output=str(A(t["output"])))
-                 for t in plan.get("rvc_tasks") or [] if not A(t["output"]).is_file()]
+                 for t in plan.get("rvc_tasks") or [] if not A(t["output"]).is_file() and t["output"] not in failed]
+        for t in tasks:   # the model must still be the one the plan was made with
+            if not Path(t["pth"]).is_file():
+                protocol.fail("model_not_found", Path(t["pth"]).name)
+            if t.get("sig") and file_sig(t["pth"]) != t["sig"].split("#")[0]:
+                protocol.fail("model_changed", Path(t["pth"]).name)
         if tasks:
             free_gpu()   # Applio runs in its own process: give it the graphics memory separation used
             run_applio(tasks, data.get("applio") or {}, Step(45, 85, "rvc"))
@@ -272,9 +287,12 @@ def main() -> None:
         midi = plan.get("midi")
         if midi and not A(midi["out"]).is_file():
             protocol.progress(86, "melody", "")
-            import cover_melody
-            n = cover_melody.transcribe_vocal_to_midi(str(A(midi["from"])), str(A(midi["out"])))
-            protocol.log(f"melody notes: {n}")
+            try:
+                import cover_melody
+                n = cover_melody.transcribe_vocal_to_midi(str(A(midi["from"])), str(A(midi["out"])))
+                protocol.log(f"melody notes: {n}")
+            except Exception as exc:  # noqa: BLE001  (mix without the instrument, as the old program did)
+                protocol.log(f"melody transcription failed, mixed without the instrument: {str(exc)[-300:]}")
         # 7. mix
         protocol.progress(90, "mix", "")
         import cover_mix
@@ -284,7 +302,8 @@ def main() -> None:
         if instrument != "none" and mix["inst_vol"] > 0 and not cover_mix.instrument_available(instrument, sfonts):
             protocol.log(f"instrument {instrument} is not installed; mixed without it")
             instrument = "none"
-        masks = [dict(m, src=str(A(m["src"]))) if m.get("src") else dict(m) for m in plan.get("masks") or []]
+        masks = [dict(m, src=str(A(m["src"]))) if m.get("src") else dict(m) for m in plan.get("masks") or []
+                 if not (m.get("src") in failed)]
         tmp_dir = song_dir / "cover" / "tmp"
         tmp_dir.mkdir(parents=True, exist_ok=True)
         out_mp3 = tmp_dir / f"{data['render']['id']}_{os.getpid()}.mp3"
@@ -298,6 +317,12 @@ def main() -> None:
         # 8. records
         protocol.progress(97, "save", "")
         v = dict(data["version"])
+        vfile = song_dir / "cover" / "versions" / v["id"] / "version.json"
+        if vfile.is_file():   # keep a title the user changed while this job ran
+            try:
+                v["title"] = json.loads(vfile.read_text(encoding="utf-8")).get("title") or v.get("title")
+            except (OSError, ValueError):
+                pass
         render = write_render(song_dir, data["render"], out_mp3,
                               {"cover_version": v["id"], "duration": round(info["duration"], 3)})
         now = time.time()
@@ -313,6 +338,8 @@ def main() -> None:
         protocol.fail("model_missing" if msg.startswith("model_missing") else "file_not_found", msg[-500:])
     except RuntimeError as exc:
         msg = str(exc)
+        if msg.startswith("file_in_use:"):
+            protocol.fail("file_in_use", msg.split(":", 1)[1])
         if msg.startswith("rvc_failed:"):
             protocol.fail("rvc_failed", msg[len("rvc_failed:"):])
         if msg == "rubberband_missing":

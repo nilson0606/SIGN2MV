@@ -20,7 +20,8 @@ from common import ffmpeg, run, write_json
 def shift_files(files: list[dict], semis: int, out_dir: Path, info: dict, report=lambda pct: None) -> None:
     if not -12 <= semis <= 12 or semis == 0:
         raise ValueError("invalid_key")
-    tmp = out_dir.with_name(out_dir.name + ".tmp")
+    # unique scratch name: the library page and a cover job may shift the same track at the same time
+    tmp = out_dir.with_name(f"{out_dir.name}.tmp{os.getpid()}")
     shutil.rmtree(tmp, ignore_errors=True)
     tmp.mkdir(parents=True)
     ratio = 2 ** (semis / 12)
@@ -36,9 +37,12 @@ def shift_files(files: list[dict], semis: int, out_dir: Path, info: dict, report
                  "-c:a", "pcm_f32le", tmp / Path(item["dst"]).name], timeout=1800)
         write_json(tmp / "info.json", {"schema_version": 1, "semitones": semis, **(info or {}),
                                        "files": [Path(f["dst"]).name for f in files], "created_at": time.time()})
-        if out_dir.exists():
-            shutil.rmtree(out_dir, ignore_errors=True)
-        os.replace(tmp, out_dir)
+        if (out_dir / "info.json").is_file():   # finished by the other job meanwhile
+            shutil.rmtree(tmp, ignore_errors=True)
+        else:
+            if out_dir.exists():
+                shutil.rmtree(out_dir, ignore_errors=True)
+            os.replace(tmp, out_dir)
         report(100)
     except Exception:
         shutil.rmtree(tmp, ignore_errors=True)

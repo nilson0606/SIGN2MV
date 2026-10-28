@@ -326,4 +326,8 @@ export default {
   "err.no_instrument_files": "No guzheng / dizi samples (.ogg) or sound font there.",
   "err.unsupported_audio": "This audio file cannot be read.",
   "mv.busy": "An MV is being rendered or aligned; closing will stop it.",
+  "err.separator_missing": "A separation model these settings need is not installed (run install.bat again, or choose another separator / vocal mode).",
+  "err.model_in_use": "A cover is running or queued; delete the model after it finishes.",
+  "err.model_changed": "The voice model was changed (retrained or replaced) after this job was queued. Start it again.",
+  "err.file_in_use": "The audio file is in use by another program (a player or an MV render). Close it and try again.",
 };

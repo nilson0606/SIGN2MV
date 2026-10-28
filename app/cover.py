@@ -222,7 +222,8 @@ def validate(p: dict) -> None:
 
 # ------------------------------------------------------------------ voice models
 def model_files(d: Path) -> tuple[Path | None, Path | None]:
-    pths = sorted((x for x in d.glob("*.pth") if x.is_file()), key=lambda x: x.stat().st_mtime, reverse=True)
+    pths = sorted((x for x in d.glob("*.pth") if x.is_file() and not re.match(r"^[GD]_\d+\.pth$", x.name)),
+                  key=lambda x: x.stat().st_mtime, reverse=True)
     idx = sorted((x for x in d.glob("*.index") if x.is_file()),
                  key=lambda x: (not x.name.startswith("added_"), -x.stat().st_mtime))
     return (pths[0] if pths else None), (idx[0] if idx else None)
@@ -318,8 +319,15 @@ def recipe_for(p: dict) -> dict:
     return r
 
 
-def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict]) -> dict:
-    """Everything the worker has to do (paths relative to the song folder)."""
+def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict],
+         reuse: dict | None = None) -> dict:
+    """Everything the worker has to do (paths relative to the song folder).
+
+    reuse: the "vocal" entry of the version being remixed. Its converted vocal
+    (or male / female sides) is used as it is, so a remix never needs the voice
+    model again (the model may have been deleted or retrained since).
+    """
+    skipped: list[str] = []
     layers, tracks = stems_mod.plan(song_dir, song, recipe_for(p))
     key = p["key"]
     lead = p["vocal_mode"] in LEAD_MODES and not p.get("mf")
@@ -349,7 +357,7 @@ def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict]) ->
         out = f"cover/rvc/{h}.wav"
         if not any(t["output"] == out for t in rvc_tasks):
             rvc_tasks.append({"input": input_rel, "output": out, "pth": m["pth"], "index": m["index"], "pitch": pitch,
-                              "label": label, **{k: r[k] for k in RVC_DEFAULTS}})
+                              "label": label, "sig": m["sig"], **{k: r[k] for k in RVC_DEFAULTS}})
         return out
 
     files: list[str] = []
@@ -357,9 +365,12 @@ def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict]) ->
     if p.get("mf"):
         mf = p["mf"]
         sides = {}
+        old_sides = (reuse or {}).get("combine") or {}
         for side in ("male", "female"):
             sp = mf[side]
-            if sp["keep"]:
+            if old_sides.get(side) and (song_dir / old_sides[side]).is_file():
+                sides[side] = old_sides[side]
+            elif sp["keep"]:
                 sides[side] = shifted(side, tracks[side])
             else:
                 sides[side] = rvc_task(tracks[side], sp["model"], sp["pitch"] + key, sp, side)
@@ -367,6 +378,10 @@ def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict]) ->
         vocal = {"path": mixed, "combine": {"male": sides["male"], "female": sides["female"],
                                             "male_vol": mf["male"]["vol"], "female_vol": mf["female"]["vol"]}}
         files += [mixed] + [v for v in sides.values() if v.startswith("cover/")]
+    elif reuse and not reuse.get("combine") and reuse.get("path") and (song_dir / reuse["path"]).is_file():
+        out = reuse["path"]
+        vocal = {"path": out}
+        files.append(out)
     else:
         out = rvc_task(voice, p["model"], p["pitch"] + key, p["rvc"], "main")
         vocal = {"path": out}
@@ -421,6 +436,9 @@ def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict]) ->
                                   "src": seg_bgm, "src_start": c0, "match": False})
         elif m["mode"] == "file":
             src_rel = f"cover/patches/{m['file']}"
+            if not (song_dir / src_rel).is_file():
+                skipped.append(f"clip missing: {m.get('name') or m['file']} ({m['start']:.1f}-{m['end']:.1f}s)")
+                continue
             files.append(src_rel)
             if m.get("to_ai"):
                 pr = m["rvc"]
@@ -442,7 +460,7 @@ def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict]) ->
             "key_jobs": key_jobs, "seg_jobs": seg_jobs, "cut_jobs": cut_jobs, "rvc_tasks": rvc_tasks,
             "vocal": vocal, "bgm": bgm, "backings": backings, "orig_vocal": orig_vocal, "masks": mix_masks,
             "vol_segments": p.get("vol_segments") or [], "mix": mix, "midi": midi,
-            "files": sorted(set(files)), "need_gpu": need_gpu}
+            "files": sorted(set(files)), "need_gpu": need_gpu, "skipped": skipped}
 
 
 # ------------------------------------------------------------------ storage
@@ -519,7 +537,7 @@ def referenced_files(song_dir: Path) -> set[str]:
     return refs
 
 
-def collect_garbage(song_dir: Path, min_age_s: float = 600) -> int:
+def collect_garbage(song_dir: Path, min_age_s: float = 600, keep_recent_s: float = 600) -> int:
     """Delete cached cover files no version (or the saved form) uses any more. Returns bytes freed."""
     refs = referenced_files(song_dir)
     freed = 0
@@ -531,7 +549,8 @@ def collect_garbage(song_dir: Path, min_age_s: float = 600) -> int:
         for f in d.iterdir():
             rel = f"cover/{sub}/{f.name}"
             try:
-                if rel in refs or now - f.stat().st_mtime < min_age_s:
+                age = min_age_s if sub in ("rvc", "midi", "tmp") else max(min_age_s, keep_recent_s)
+                if rel in refs or now - f.stat().st_mtime < age:
                     continue
                 size = f.stat().st_size if f.is_file() else 0
                 if f.is_dir():

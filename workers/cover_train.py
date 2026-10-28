@@ -28,6 +28,7 @@ import time
 from pathlib import Path
 
 import protocol
+from common import replace_retry
 
 ROOT = Path(os.environ.get("SIGN2MV_ROOT") or Path(__file__).resolve().parent.parent)
 sys.path.insert(0, str(ROOT))
@@ -202,9 +203,9 @@ def main() -> None:
         if target.exists():
             old = voices / f"_{name}.old"
             shutil.rmtree(old, ignore_errors=True)
-            os.replace(target, old)
+            replace_retry(target, old, attempts=60)
             shutil.rmtree(old, ignore_errors=True)
-        os.replace(tmp, target)
+        replace_retry(tmp, target, attempts=60)
         # clean the scratch (SIGN2MV_KEEP_TRAIN_SCRATCH=1 keeps it for diagnosis)
         if not os.environ.get("SIGN2MV_KEEP_TRAIN_SCRATCH"):
             shutil.rmtree(exp_dir, ignore_errors=True)

@@ -106,3 +106,21 @@ def read_json(path: Path, default: Any = None) -> Any:
             return json.load(fh)
     except (OSError, ValueError):
         return default
+
+
+def replace_retry(src, dst, attempts: int = 20, delay: float = 0.5) -> None:
+    """os.replace that waits for Windows file locks (a player, antivirus or indexer holding the target)."""
+    import time
+    for i in range(attempts):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            if i == attempts - 1:
+                raise RuntimeError("file_in_use:" + str(dst))
+            time.sleep(delay)
+
+
+def file_sig(path) -> str:
+    st = os.stat(path)
+    return f"{Path(path).name}|{st.st_size}|{int(st.st_mtime)}"
