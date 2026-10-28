@@ -196,6 +196,10 @@ def test_cover_full_flow(client, root, tmp_path):
     assert len(st["versions"]) == 1
     v1 = st["versions"][0]
     assert v1["number"] == 1 and v1["audio"].endswith("audio.mp3") and v1["label"] == voice
+    st1 = v1["stats"]   # timing shown on the version: start-up vs conversion, mix steps
+    assert st1["rvc_load_s"] > 0 and st1["rvc_convert_s"] > 0 and st1["rvc_device"]
+    assert st1["rvc_load_s"] + st1["rvc_convert_s"] <= st1["rvc_s"] + 1
+    assert "mix_master" in st1["mix_steps"]
     mp3 = sdir / v1["audio"]
     assert abs(probe_duration(mp3) - 20) < 0.5
     rj = json.loads((sdir / "renders" / v1["render_id"] / "render.json").read_text(encoding="utf-8"))
