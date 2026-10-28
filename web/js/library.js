@@ -259,7 +259,8 @@ function storageSection(song) {
       const cats = res.categories || {};
       const max = Math.max(1, ...Object.values(cats));
       const rows = STORAGE_ROWS.filter(([c]) => cats[c] > 0 || c === 'source').map(([c, countKey]) => {
-        const count = countKey ? t(`storage.count.${countKey}`, (res.counts || {})[countKey] || 0) : '';
+        let count = countKey ? t(`storage.count.${countKey}`, (res.counts || {})[countKey] || 0) : '';
+        if (c === 'mv' && (res.counts || {}).quick_mvs) count += ' ' + t('storage.count.quick_mvs', res.counts.quick_mvs);
         return el('div', { class: 'storage-row' },
           el('div', { class: 'storage-name' }, el('b', {}, t(`storage.cat.${c}`)), count ? el('span', { class: 'muted small' }, ' ' + count) : null),
           el('div', { class: 'storage-bar' }, el('span', { style: `width:${Math.max(1, Math.round(cats[c] * 100 / max))}%` })),

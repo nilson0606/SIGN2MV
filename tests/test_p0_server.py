@@ -122,7 +122,7 @@ def test_stored_copies_list_and_delete(client, root):
     assert [u["type"] for u in by["keys/kk_p1"]["used_by"]] == ["cover"]
     assert len(res["layers"]) == 3
     assert client.delete(f"/api/songs/{sid}/stems/%2E%2E").status_code == 404
-    assert client.delete(f"/api/songs/{sid}/source/x").status_code == 404
+    assert client.delete(f"/api/songs/{sid}/source/x").status_code in (404, 405)
     assert client.delete(f"/api/songs/{sid}/stems/zzz").status_code == 404
     out = client.delete(f"/api/songs/{sid}/stems/aaa").json()
     assert set(out["deleted"]) == {"stems/aaa", "stems/bbb", "keys/kk_p1"} and out["bytes"] >= 450

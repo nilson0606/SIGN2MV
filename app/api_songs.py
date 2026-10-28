@@ -287,7 +287,14 @@ def router(ctx: Context) -> APIRouter:
         out["layers"] = [i for i in out["items"] if i["type"] == "layer"]
         return out
 
-    @r.delete("/api/songs/{song_id}/{top}/{name}")
+    @r.delete("/api/songs/{song_id}/stems/{name}")
+    def delete_stem_copy(song_id: str, name: str):
+        return delete_stored_copy(song_id, "stems", name)
+
+    @r.delete("/api/songs/{song_id}/keys/{name}")
+    def delete_key_copy(song_id: str, name: str):
+        return delete_stored_copy(song_id, "keys", name)
+
     def delete_stored_copy(song_id: str, top: str, name: str):
         """Delete one separation layer or key copy and everything computed from it."""
         if top not in ("stems", "keys") or not stems_mod.DIR_NAME.match(name) or name in (".", ".."):

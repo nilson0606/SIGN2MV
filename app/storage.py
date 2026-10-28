@@ -6,7 +6,7 @@ Categories of a song folder (see docs/ARCHITECTURE for the layout):
   cover    cover/versions + cover renders     finished covers
   cover_cache cover/rvc, midi, patches, tmp, preview   voice-conversion cache for quick remix
   sing     sing/ + sing renders + the song's takes in <library>/recordings
-  mv       mv/                     MV projects (frames, previews, rendered videos)
+  mv       mv/ + quickmv/          MV projects (frames, previews, rendered videos) and quick MVs
   other    anything else
 """
 from __future__ import annotations
@@ -54,7 +54,8 @@ def recordings_index(library_root: Path) -> dict[str, list[Path]]:
 
 def song_usage(song_dir: Path, recordings: list[Path] | None = None) -> dict[str, Any]:
     cats = {c: 0 for c in CATEGORIES}
-    counts = {"cover_versions": 0, "sing_takes": len(recordings or []), "mv_projects": 0, "sing_prepared": 0}
+    counts = {"cover_versions": 0, "sing_takes": len(recordings or []), "mv_projects": 0, "sing_prepared": 0,
+              "quick_mvs": 0}
     if not song_dir.is_dir():
         return {"categories": cats, "counts": counts, "total": 0}
     for child in song_dir.iterdir():
@@ -79,6 +80,10 @@ def song_usage(song_dir: Path, recordings: list[Path] | None = None) -> dict[str
             cats["mv"] += _size(child)
             if child.is_dir():
                 counts["mv_projects"] = sum(1 for v in child.iterdir() if (v / "project.json").is_file())
+        elif name == "quickmv":
+            cats["mv"] += _size(child)
+            if child.is_dir():
+                counts["quick_mvs"] = sum(1 for v in child.iterdir() if (v / "video.mp4").is_file())
         elif name == "renders" and child.is_dir():
             for r in child.iterdir():
                 kind = "other"

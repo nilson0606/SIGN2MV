@@ -140,3 +140,62 @@ def test_mv_no_ai_text(client, root, tmp_path):
     core.configure(root / "library", "", "", "zh")
     assert "AI" not in core.sanitize_no_ai("AI 翻唱 by AI")
     assert core.default_badge() == "翻唱" and core.default_badge("en") == "Cover"
+
+
+def test_quick_mv(client, root, tmp_path, monkeypatch):
+    """Quick MV: audio-reactive title card from the song's audio (sing_record's picture)."""
+    fonts = sorted(Path("/usr/share/fonts/opentype/noto").glob("NotoSansCJK-Regular.ttc"))
+    if not fonts:
+        pytest.skip("no CJK font in this environment")
+    monkeypatch.setenv("SIGN2MV_MV_FONT", str(fonts[0]))
+    song = import_file(client, tmp_path, video=False, secs=12)
+    sid = song["song_id"]
+    client.put("/api/settings", json={"cover_singer_name": "Nilson", "language": "zh-TW"})
+
+    info = client.get(f"/api/songs/{sid}/quickmv").json()
+    assert info["font_ok"] and info["items"] == []
+    assert info["sources"][0]["id"] == "original" and info["defaults"]["artist"] == "Nilson"
+    title = info["defaults"]["title"]
+
+    # bad input is refused before a job starts
+    assert client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "", "artist": "x"}).status_code == 400
+    assert client.post(f"/api/songs/{sid}/quickmv", json={"source": "nope", "title": "t", "artist": "x"}).status_code == 400
+    assert client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "a\nb", "artist": "x"}).status_code == 400
+
+    res = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "AI 翻唱 測試", "artist": "Nilson"}).json()
+    done = wait_job(client, res["job"]["id"], 600)
+    assert done["status"] == "succeeded", (done["error_code"], done["error_message"])
+    items = client.get(f"/api/songs/{sid}/quickmv").json()["items"]
+    assert len(items) == 1
+    it = items[0]
+    assert it["title"] == "Nilson 翻唱 測試"           # never shows "AI"
+    assert it["artist_line"] == "翻唱｜Nilson" and it["source"] == "original"
+    sdir = root / "library" / "songs" / sid
+    video = sdir / it["path"]
+    pr = probe(video)
+    v = next(s for s in pr["streams"] if s["codec_type"] == "video")
+    assert (v["width"], v["height"], v["r_frame_rate"]) == (1920, 1080, "30/1")
+    assert any(s["codec_type"] == "audio" for s in pr["streams"])
+    assert abs(float(pr["format"]["duration"]) - 12) < 0.3
+    assert not list((sdir / "quickmv").glob("*.tmp*"))        # scratch removed
+    assert sorted(p.name for p in video.parent.iterdir()) == ["info.json", "video.mp4"]
+
+    # the picture: dark card, teal accent bar, white title pixels, bars at the bottom
+    frame = tmp_path / "f.png"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "5", "-i", str(video), "-frames:v", "1", str(frame)], check=True)
+    img = Image.open(frame).convert("RGB")
+    assert img.getpixel((40, 40))[2] > img.getpixel((40, 40))[0]               # navy background
+    r, g, b = img.getpixel((200, 152))
+    assert g > 150 and b > 150 and r < 160                                      # teal accent bar
+    title_band = img.crop((160, 300, 1760, 400)).convert("L")
+    assert max(title_band.getdata()) > 230                                      # white title text
+
+    dl = client.get(f"/api/songs/{sid}/quickmv/{it['id']}/download")
+    assert dl.status_code == 200 and "MV_" in dl.headers["content-disposition"]
+    usage = client.get(f"/api/songs/{sid}/storage").json()
+    assert usage["counts"]["quick_mvs"] == 1 and usage["categories"]["mv"] >= video.stat().st_size
+
+    resp = client.delete(f"/api/songs/{sid}/quickmv/{it['id']}").json()
+    assert resp.get("ok"), resp
+    assert client.get(f"/api/songs/{sid}/quickmv").json()["items"] == []
+    assert client.delete(f"/api/songs/{sid}/quickmv/qzzzzzzzzzzzz").status_code == 404

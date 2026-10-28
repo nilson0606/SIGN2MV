@@ -187,7 +187,7 @@ def _load_feature_routers() -> list[Callable[[Context], Any]]:
     """Workspace routers (sing & record, MV, cover). Missing ones are skipped."""
     import importlib
     factories = list(_EXTRA_ROUTERS)
-    for name in ("api_sing", "api_mv", "api_cover"):
+    for name in ("api_sing", "api_mv", "api_cover", "api_quickmv"):
         try:
             mod = importlib.import_module(f"app.{name}")
         except ModuleNotFoundError as exc:

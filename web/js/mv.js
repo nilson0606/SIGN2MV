@@ -1,16 +1,46 @@
-// MV workspace: the MV Studio page runs in an iframe (/mv/) and talks to /api/mv.
-import { $, el } from './ui.js';
-import { t, language, onLanguageChange } from './i18n.js';
-import { bus, registerPage, state, goto } from './app-state.js';
+// MV workspace: two kinds of MV.
+//  - Quick MV: an audio-reactive title card made straight from the audio (sign_record's "製作 MV").
+//  - Full MV: the MV Studio page (photos, lyrics, timeline) in an iframe (/mv/) using /api/mv.
+import { api } from './api.js';
+import { $, el, toast, confirmDialog, fmtBytes, fmtDate, fmtTime } from './ui.js';
+import { t, language, onLanguageChange, errorText } from './i18n.js';
+import { bus, registerPage, state, goto, mediaUrl } from './app-state.js';
+import { jobBox } from './jobview.js';
 
 const page = $('#page-mv');
 const frame = el('iframe', { id: 'mv-frame', class: 'workspace-frame', title: 'mv', allow: 'autoplay' });
-page.replaceChildren(frame);
+const tabQuick = el('button', { class: 'cv-chip', onclick: () => setTab('quick') });
+const tabFull = el('button', { class: 'cv-chip', onclick: () => setTab('full') });
+const tabs = el('div', { class: 'mv-tabs' }, tabQuick, tabFull);
+const quickPane = el('div', { class: 'mv-quick' });
+const fullPane = el('div', { class: 'mv-full' }, frame);
+page.replaceChildren(tabs, quickPane, fullPane);
+
 let loaded = false;
 let ready = false;
 let pending = null;
 let busy = false;
+let tab = 'full';
+try { tab = localStorage.getItem('sign2mv.mv.tab') === 'quick' ? 'quick' : 'full'; } catch { /* storage unavailable */ }
 
+function setTab(name) {
+  tab = name === 'quick' ? 'quick' : 'full';
+  try { localStorage.setItem('sign2mv.mv.tab', tab); } catch { /* ignore */ }
+  tabQuick.classList.toggle('active', tab === 'quick');
+  tabFull.classList.toggle('active', tab === 'full');
+  quickPane.classList.toggle('hidden', tab !== 'quick');
+  fullPane.classList.toggle('hidden', tab !== 'full');
+  if (tab === 'full') load();
+  else quick.show();
+}
+function labelTabs() {
+  tabQuick.textContent = t('mv.tab_quick');
+  tabFull.textContent = t('mv.tab_full');
+  tabQuick.title = t('qmv.hint');
+  tabFull.title = t('mv.full_hint');
+}
+
+// ------------------------------------------------------------------ full MV (iframe)
 function load() {
   if (loaded) return;
   loaded = true;
@@ -33,24 +63,171 @@ window.addEventListener('message', (event) => {
 });
 frame.addEventListener('load', () => { ready = false; });
 
-bus.addEventListener('mv-open', (e) => { goto('mv'); openSong(e.detail.songId, e.detail.renderId); });
+// ------------------------------------------------------------------ quick MV
+const quick = (() => {
+  const songSel = el('select', { onchange: () => loadSong(songSel.value) });
+  const srcSel = el('select', {});
+  const title = el('input', { type: 'text', maxlength: 60, style: 'flex:1;min-width:240px' });
+  const artist = el('input', { type: 'text', maxlength: 50, style: 'min-width:180px' });
+  const labelSpan = el('span', { class: 'muted' });
+  const singerHint = el('p', { class: 'muted small hidden' });
+  const fontWarn = el('p', { class: 'small hidden', style: 'color:var(--bad, #f87171)' });
+  const jb = jobBox();
+  const makeBtn = el('button', { class: 'btn primary', onclick: () => make() });
+  const list = el('div', { class: 'list' });
+  const head = el('h2', { style: 'margin:0' });
+  const hint = el('p', { class: 'muted small' });
+  const labels = { song: el('span'), source: el('span'), title: el('span'), artist: el('span'), list: el('h3') };
+  quickPane.append(el('div', { class: 'panel' },
+    head, hint,
+    el('div', { class: 'row' }, el('label', {}, labels.song, ' ', songSel), el('label', {}, labels.source, ' ', srcSel)),
+    el('div', { class: 'row' }, el('label', { style: 'flex:1;display:flex;gap:6px;align-items:center' }, labels.title, title)),
+    el('div', { class: 'row' }, el('label', { style: 'display:flex;gap:6px;align-items:center' }, labels.artist, labelSpan, artist)),
+    singerHint, fontWarn,
+    el('div', { class: 'row' }, makeBtn), jb.el,
+    labels.list, list));
+  let songId = null;
+  let data = null;
+  let wantSource = null;
+
+  function texts() {
+    head.textContent = t('qmv.title');
+    hint.textContent = t('qmv.hint');
+    labels.song.textContent = t('qmv.song');
+    labels.source.textContent = t('qmv.source');
+    labels.title.textContent = t('qmv.mv_title');
+    labels.artist.textContent = t('qmv.artist');
+    labels.list.textContent = t('qmv.list');
+    makeBtn.textContent = t('qmv.make');
+    singerHint.textContent = t('qmv.singer_hint');
+    fontWarn.textContent = t('qmv.font_missing');
+  }
+
+  function fillSongs() {
+    const songs = state.songs.filter((s) => s.source);
+    const keep = songId || state.selectedSongId || '';
+    songSel.replaceChildren(el('option', { value: '' }, t('qmv.pick_song')),
+      ...songs.map((s) => el('option', { value: s.song_id, selected: s.song_id === keep }, s.title)));
+    if (keep && songs.some((s) => s.song_id === keep) && keep !== songId) loadSong(keep);
+  }
+
+  function sourceLabel(s) {
+    if (s.kind === 'original') return t('qmv.src_original');
+    const d = s.duration ? ` · ${fmtTime(s.duration)}` : '';
+    return `${t(`qmv.src_${s.kind}`)}：${s.title}${d}`;
+  }
+
+  async function loadSong(id, source) {
+    songId = id || null;
+    if (source !== undefined) wantSource = source;
+    if (!songId) { data = null; srcSel.replaceChildren(); list.replaceChildren(); return; }
+    songSel.value = songId;
+    try {
+      data = await api.get(`/api/songs/${songId}/quickmv`);
+    } catch (err) { toast(errorText(err), true); return; }
+    const prev = srcSel.value;
+    srcSel.replaceChildren(...data.sources.map((s) => el('option', { value: s.id }, sourceLabel(s))));
+    const pick = [wantSource, prev].find((v) => v && data.sources.some((s) => s.id === v));
+    if (pick) srcSel.value = pick;
+    wantSource = null;
+    if (!title.dataset.song || title.dataset.song !== songId) {
+      title.value = data.defaults.title;
+      title.dataset.song = songId;
+    }
+    if (!artist.value) artist.value = data.defaults.artist || '';
+    labelSpan.textContent = data.defaults.label;
+    singerHint.classList.toggle('hidden', !!data.defaults.artist);
+    fontWarn.classList.toggle('hidden', !!data.font_ok);
+    renderList();
+  }
+
+  function renderList(highlight) {
+    const items = (data && data.items) || [];
+    if (!items.length) { list.replaceChildren(el('div', { class: 'empty' }, t('qmv.none'))); return; }
+    list.replaceChildren(...items.map((it) => {
+      const holder = el('div', {});
+      const play = el('button', { class: 'btn small primary', onclick: () => {
+        if (holder.firstChild) { holder.replaceChildren(); return; }
+        const v = el('video', { src: mediaUrl(songId, it.path), controls: true, playsinline: true, preload: 'metadata',
+          style: 'width:100%;max-width:960px;aspect-ratio:16/9;background:#101d2c;border-radius:10px;margin-top:8px' });
+        holder.replaceChildren(v);
+        v.play().catch(() => {});
+      } }, t('qmv.play'));
+      const meta = [it.artist_line, it.source_title ? `${t('qmv.from')} ${it.source_title}` : '', it.duration ? fmtTime(it.duration) : '',
+        it.bytes ? fmtBytes(it.bytes) : '', fmtDate(it.created_at)].filter(Boolean).join(' · ');
+      const row = el('div', { class: 'item' + (it.id === highlight ? ' cv-new' : ''), style: 'display:block' },
+        el('div', { class: 'row', style: 'align-items:center' },
+          el('div', { class: 'grow', style: 'white-space:normal' }, el('b', {}, it.title || it.id), el('div', { class: 'muted small' }, meta)),
+          play,
+          el('a', { class: 'btn small', href: `/api/songs/${songId}/quickmv/${it.id}/download` }, t('common.download')),
+          el('button', { class: 'btn small danger', onclick: async () => {
+            if (!(await confirmDialog(t('qmv.delete_confirm', it.title || it.id), t('common.delete')))) return;
+            holder.replaceChildren();   // release the video file first (Windows keeps open files locked)
+            try { await api.del(`/api/songs/${songId}/quickmv/${it.id}`); toast(t('qmv.deleted')); } catch (err) { toast(errorText(err), true); }
+            loadSong(songId);
+          } }, t('common.delete'))),
+        holder);
+      if (it.id === highlight) setTimeout(() => { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); play.click(); }, 50);
+      return row;
+    }));
+  }
+
+  async function make() {
+    if (!songId) { toast(t('qmv.pick_song'), true); return; }
+    makeBtn.disabled = true;
+    try {
+      const res = await api.post(`/api/songs/${songId}/quickmv`, { source: srcSel.value, title: title.value, artist: artist.value });
+      const fin = await jb.follow(res.job);
+      if (fin.status === 'succeeded') {
+        toast(t('qmv.done'));
+        await loadSong(songId);
+        renderList(fin.result && fin.result.id);
+      }
+    } catch (err) { toast(errorText(err), true); }
+    makeBtn.disabled = false;
+  }
+
+  texts();
+  return {
+    show() { fillSongs(); },
+    open(id, renderId) { loadSong(id, renderId || 'original'); fillSongs(); },
+    refreshSongs() { fillSongs(); },
+    reload() { if (songId) loadSong(songId); },
+    relabel() { texts(); fillSongs(); if (data) { renderList(); } },
+  };
+})();
+
+// ------------------------------------------------------------------ routing
+bus.addEventListener('mv-open', (e) => {
+  const d = e.detail || {};
+  goto('mv');
+  if (d.mode === 'quick') { setTab('quick'); quick.open(d.songId, d.renderId); }
+  else { setTab('full'); openSong(d.songId, d.renderId); }
+});
 bus.addEventListener('open-workspace', (e) => {
   if (e.detail.page !== 'mv') return;
   goto('mv');
-  openSong(e.detail.songId, '');
+  if (tab === 'quick') quick.open(e.detail.songId, 'original');
+  else openSong(e.detail.songId, '');
 });
-bus.addEventListener('songs', () => { if (ready) send({ type: 'sign2mv:refresh' }); });
-bus.addEventListener('renders-changed', () => { if (ready) send({ type: 'sign2mv:refresh' }); });
+bus.addEventListener('songs', () => { if (ready) send({ type: 'sign2mv:refresh' }); quick.refreshSongs(); });
+bus.addEventListener('renders-changed', () => { if (ready) send({ type: 'sign2mv:refresh' }); quick.reload(); });
 bus.addEventListener('jobs', (e) => {
   busy = (e.detail || []).some((j) => ['mv_render', 'mv_whisper'].includes(j.kind) && ['queued', 'running'].includes(j.status));
 });
-onLanguageChange(() => { if (loaded && !busy) { loaded = false; ready = false; load(); } });
+onLanguageChange(() => {
+  labelTabs();
+  quick.relabel();
+  if (loaded && !busy) { loaded = false; ready = false; if (tab === 'full') load(); }
+});
 
+labelTabs();
 registerPage('mv', {
   onShow() {
-    if (!loaded) {
-      load();
-      if (state.selectedSongId && !pending) pending = { type: 'sign2mv:mv-open', songId: state.selectedSongId, renderId: '' };
+    const first = !loaded;
+    setTab(tab);
+    if (tab === 'full' && first && !pending && state.selectedSongId) {
+      pending = { type: 'sign2mv:mv-open', songId: state.selectedSongId, renderId: '' };
     }
   },
   busy: () => busy,

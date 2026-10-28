@@ -334,6 +334,8 @@ export const messages = {
   "試聽": "Preview",
   "只聽人聲": "Vocals only",
   "製作 MV": "Create music video",
+  "快速 MV": "Quick MV",
+  "完整 MV": "Full MV",
   "下載": "Download",
   "後處理": "Post-production",
   "刪除": "Delete",

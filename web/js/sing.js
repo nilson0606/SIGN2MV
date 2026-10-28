@@ -34,7 +34,7 @@ window.addEventListener('message', (event) => {
   } else if (m.type === 'sign2mv:sing-state') {
     busy = !!m.busy;
   } else if (m.type === 'sign2mv:open-mv' && typeof m.songId === 'string') {
-    bus.dispatchEvent(new CustomEvent('mv-open', { detail: { songId: m.songId, renderId: m.renderId } }));
+    bus.dispatchEvent(new CustomEvent('mv-open', { detail: { songId: m.songId, renderId: m.renderId, mode: m.mode } }));
     goto('mv');
   }
 });

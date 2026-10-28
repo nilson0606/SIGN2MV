@@ -205,3 +205,10 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .lib-fold > summary h4 { margin: 0; }
 .stored.lib-fold { margin-top: 14px; padding-top: 10px; border-top: 1px solid #ffffff10; }
 .stored-row .btn + .btn { margin-left: 6px; }
+
+/* MV page: quick / full tabs */
+.mv-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+.mv-tabs .cv-chip { font-size: 1rem; padding: 6px 18px; }
+.cv-chip.active { color: #0b1118; background: var(--accent); border-color: var(--accent); }
+.mv-quick .panel { display: grid; gap: 10px; }
+.mv-full .workspace-frame { height: calc(100vh - 140px); }

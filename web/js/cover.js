@@ -484,10 +484,7 @@ function showDone(fin) {
         if (a) a.play().catch(() => {});
       } }, t('cover.done_play')),
       el('button', { class: 'btn', onclick: () => item()?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, t('cover.done_show')),
-      el('button', { class: 'btn', onclick: () => {
-        bus.dispatchEvent(new CustomEvent('mv-open', { detail: { songId, renderId: v.render_id } }));
-        goto('mv');
-      } }, t('cover.to_mv'))));
+      ...mvButtons(v, 'btn')));
   doneBox.classList.remove('hidden');
 }
 
@@ -555,6 +552,17 @@ async function remix(v, asNew) {
 }
 
 // how long the last make / remix took and where the voice was converted
+// Quick MV (audio-reactive card) or full MV (MV workspace) with this version as the audio
+function mvButtons(v, cls) {
+  const open = (mode) => () => {
+    bus.dispatchEvent(new CustomEvent('mv-open', { detail: { songId, renderId: v.render_id, mode } }));
+    goto('mv');
+  };
+  return [
+    el('button', { class: `${cls} primary`, title: t('cover.quick_mv_hint'), onclick: open('quick') }, t('cover.quick_mv')),
+    el('button', { class: cls, title: t('cover.full_mv_hint'), onclick: open('full') }, t('cover.full_mv')),
+  ];
+}
 function dur(sec) {
   const s = Math.round(sec);
   return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : `${s} ${t('common.seconds')}`;
@@ -630,10 +638,7 @@ function versionItem(v, hi) {
       el('button', { class: 'btn small', title: t('cover.use_settings_hint'), onclick: () => { writeForm(v.params); changed(); toast(t('cover.settings_loaded')); } }, t('cover.use_settings')),
       el('button', { class: 'btn small', title: t('cover.remix_hint'), onclick: () => remix(v, false) }, t('cover.remix')),
       el('button', { class: 'btn small', onclick: () => remix(v, true) }, t('cover.remix_new')),
-      el('button', { class: 'btn small primary', onclick: () => {
-        bus.dispatchEvent(new CustomEvent('mv-open', { detail: { songId, renderId: v.render_id } }));
-        goto('mv');
-      } }, t('cover.to_mv')),
+      ...mvButtons(v, 'btn small'),
       src ? el('a', { class: 'btn small', href: src, download: `${v.title}.mp3` }, t('common.download')) : null,
       el('button', { class: 'btn small', onclick: async () => {
         if (!tracksBox.classList.contains('hidden')) { tracksBox.classList.add('hidden'); return; }
