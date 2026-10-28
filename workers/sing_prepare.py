@@ -83,7 +83,7 @@ def main() -> None:
             if not (out_dir / "info.json").is_file():
                 report = StageProgress("transposing", device)
                 shift_files([{"src": stems_abs[n], "dst": str(out_dir / f"{n}.wav")} for n in key["stems"]],
-                            semis, out_dir, {"tracks": key["stems"]}, report)
+                            semis, out_dir, {"tracks": key["stems"], "sources": key.get("sources") or {}}, report)
             factor = 2 ** (semis / 12)
             label = f"{'升' if semis > 0 else '降'} {abs(semis)} Key"
             value = {**source, "pitchShift": semis, "baseTitle": source.get("baseTitle") or source["title"],

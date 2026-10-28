@@ -478,6 +478,7 @@ def router(ctx: Context) -> APIRouter:
             payload["key"] = {"semitones": shift, "dir": str(sing_dir(sid) / key_id), "out_dir": str(song_dir / "keys" / kdir_name),
                               "stems": names, "stems_abs": {n: str(song_dir / base_rel[n]) for n in names},
                               "stems_rel": {n: f"keys/{kdir_name}/{n}.wav" for n in names},
+                              "sources": {n: base_rel[n] for n in names},
                               "meta": {"cacheId": key_id}}
         job = ctx.submit(kind="sing_prepare", lane="gpu", script="sing_prepare.py", input=payload,
                          title=f"準備唱錄：{s['title']}", song_id=sid, timeout_s=3600 * max(1, len(layers) + 1),

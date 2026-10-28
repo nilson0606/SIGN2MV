@@ -85,6 +85,15 @@ a { color:var(--accent); }
 </ol>
 <h3>Stems and key</h3>
 <p>Under <i>Stems and key</i> you can prepare and listen to the separated tracks: choose the separator (Demucs, BS-RoFormer, Mel-RoFormer Kim), optionally a second pass on the instrumental and a lead/backing split, and a key. Separation is cached per song: any workspace that needs the same stems reuses them.</p>
+<p><b>Saved stems</b> (below the Prepare button) lists every separation and key copy this song keeps, as a tree: a lead/backing split sits under the separation it was made from. Each row shows its tracks, size, date and which cover versions or sing &amp; record references use it. <b>Delete</b> removes that copy and everything made from it. Nothing breaks: whatever uses it separates again the next time it needs it (that takes a few minutes). Deleting waits while a job for the song is running.</p>
+<h3>Storage</h3>
+<p>The library list shows each song's size, and under it the library total and the free space on the drive. A song's <i>Storage</i> section splits its size into original, stems &amp; key copies, finished AI covers, cover cache, sing &amp; record, MV projects and other, with where to clean up each one:</p>
+<ul>
+<li>Stems &amp; key copies: delete them one by one in <i>Saved stems</i>.</li>
+<li>AI covers and their cache: delete versions on the AI cover page; the cache that only those versions used is cleaned up with them.</li>
+<li>Sing &amp; record: delete takes and prepared references on the Sing &amp; record page.</li>
+<li>MV: delete projects on the MV page.</li>
+</ul>
 <p><b>Rename</b> changes the title. <b>Delete</b> removes the song and everything made from it (stems, recordings, covers, MVs) after a confirmation.</p>
 </section>
 
@@ -190,7 +199,8 @@ a { color:var(--accent); }
 <h2>11. Where things are stored</h2>
 <table>
 <tr><th>Folder (inside SIGN2MV)</th><th>Contents</th></tr>
-<tr><td><code>library\songs\&lt;song&gt;\</code></td><td><code>source</code> (original), <code>stems</code>, <code>keys</code>, <code>sing</code>, <code>recordings</code>, <code>renders</code> (takes and cover versions used as MV audio), <code>cover</code> (cover versions and caches), <code>mv</code> (MV projects)</td></tr>
+<tr><td><code>library\songs\&lt;song&gt;\</code></td><td><code>source</code> (original), <code>stems</code>, <code>keys</code>, <code>sing</code>, <code>renders</code> (takes and cover versions used as MV audio), <code>cover</code> (cover versions and caches), <code>mv</code> (MV projects)</td></tr>
+<tr><td><code>library\recordings\</code></td><td>sing &amp; record takes of all songs (the format sign_record uses)</td></tr>
 <tr><td><code>models\</code></td><td>AI models; <code>models\voices</code> = your RVC voice models</td></tr>
 <tr><td><code>runtime\</code></td><td>Python environments, Applio, ffmpeg, caches, temporary files, training scratch</td></tr>
 <tr><td><code>config\</code>, <code>logs\</code></td><td>settings, logs</td></tr>

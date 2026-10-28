@@ -202,28 +202,122 @@ def router(ctx: Context) -> APIRouter:
         job = ctx.submit(kind="key", lane="cpu", script="key_shift.py",
                          input={"semitones": semis, "out_dir": str(out_dir),
                                 "files": [{"src": str(song_dir / tracks[n]), "dst": str(out_dir / f"{n}.wav")} for n in names],
-                                "info": {"tracks": names}},
+                                "info": {"tracks": names, "sources": {n: tracks[n] for n in names}}},
                          title=f"key {semis:+d}: {song['title']}", song_id=song_id, timeout_s=3600,
                          dedupe="key:" + dir_name)
         return {"ready": False, "tracks": mapped, "job": job}
+
+    def stored_copies(song_id: str, song_dir: Path) -> dict[str, Any]:
+        """Separation layers and key copies of a song, who uses them and how big they are."""
+        from . import cover as cover_mod
+        items = stems_mod.inventory(song_dir)
+        users: dict[str, list[dict]] = {}
+        inferred: dict[str, set[str]] = {}
+
+        def use(ref: str, entry: dict) -> None:
+            lst = users.setdefault(ref, [])
+            if entry not in lst:
+                lst.append(entry)
+
+        for v in cover_mod.list_versions(song_dir):
+            entry = {"type": "cover", "label": v.get("title") or v.get("label") or v.get("id")}
+            for ref in stems_mod.refs_in(v, set()):
+                use(ref, entry)
+            for j in ((v.get("plan") or {}).get("key_jobs") or []):
+                kd, src = j.get("dir"), stems_mod._parent(j.get("src"))
+                if kd and src:
+                    inferred.setdefault(kd, set()).add(src)
+        sing_refs: dict[str, dict] = {}
+        sdir = song_dir / "sing"
+        if sdir.is_dir():
+            for d in sdir.iterdir():
+                ref = stems_mod._read(d / "reference.json") if d.is_dir() else None
+                if ref:
+                    sing_refs[d.name] = ref
+        for ref in sing_refs.values():
+            entry = {"type": "sing", "label": ref.get("title") or ""}
+            mine = stems_mod.refs_in(ref.get("stems") or {}, set())
+            for r_ in mine:
+                use(r_, entry)
+            base = sing_refs.get(ref.get("sourceCacheId") or "")
+            if base and ref.get("pitchShift"):
+                parents = stems_mod.refs_in(base.get("stems") or {}, set())
+                for r_ in mine:
+                    if r_.startswith("keys/"):
+                        inferred.setdefault(r_, set()).update(parents)
+        for it in items:
+            it["used_by"] = users.get(it["dir"], [])
+            if it["type"] == "key" and not it["parents"]:
+                it["parents"] = sorted(inferred.get(it["dir"], set()))
+        return {"items": items, "total_bytes": sum(i["bytes"] for i in items), "busy": ctx.song_busy(song_id)}
+
+    @r.get("/api/songs/{song_id}/storage")
+    def song_storage(song_id: str):
+        """Disk usage of one song by category (source, stems, covers, sing, MV ...)."""
+        from . import storage
+        from .api_sing import video_id_for
+        lib, song, e = song_or_err(song_id)
+        if e:
+            return e
+        recs = storage.recordings_index(lib.root).get(video_id_for(song_id), [])
+        return {**storage.song_usage(lib.song_dir(song_id), recs), "disk": storage.disk(lib.root)}
+
+    @r.get("/api/storage")
+    def library_storage():
+        """Size of every song (for the library list) and free disk space."""
+        from . import storage
+        from .api_sing import video_id_for
+        try:
+            lib = ctx.library()
+            songs = lib.list()
+        except LibraryError as exc:
+            return err(exc.code, exc.status)
+        recs = storage.recordings_index(lib.root)
+        sizes = {}
+        for s in songs:
+            sid = s["song_id"]
+            sizes[sid] = storage.song_usage(lib.song_dir(sid), recs.get(video_id_for(sid), []))["total"]
+        return {"songs": sizes, "total": sum(sizes.values()), "disk": storage.disk(lib.root)}
 
     @r.get("/api/songs/{song_id}/stems")
     def list_stems(song_id: str):
         lib, song, e = song_or_err(song_id)
         if e:
             return e
-        base = lib.song_dir(song_id) / "stems"
-        out = []
-        if base.is_dir():
-            for d in sorted(base.iterdir()):
-                info = d / "info.json"
-                if info.is_file():
-                    try:
-                        import json
-                        out.append(json.loads(info.read_text(encoding="utf-8")))
-                    except (OSError, ValueError):
-                        pass
-        return {"layers": out}
+        song_dir = lib.song_dir(song_id)
+        out = stored_copies(song_id, song_dir)
+        out["layers"] = [i for i in out["items"] if i["type"] == "layer"]
+        return out
+
+    @r.delete("/api/songs/{song_id}/{top}/{name}")
+    def delete_stored_copy(song_id: str, top: str, name: str):
+        """Delete one separation layer or key copy and everything computed from it."""
+        if top not in ("stems", "keys") or not stems_mod.DIR_NAME.match(name) or name in (".", ".."):
+            return err("file_not_found", 404)
+        lib, song, e = song_or_err(song_id)
+        if e:
+            return e
+        if ctx.song_busy(song_id):
+            return err("song_busy", 409)
+        song_dir = lib.song_dir(song_id)
+        target = f"{top}/{name}"
+        items = stored_copies(song_id, song_dir)["items"]
+        if not any(i["dir"] == target for i in items):
+            return err("file_not_found", 404)
+        gone = stems_mod.dependents(items, target)
+        import shutil
+        freed = 0
+        for rel in reversed(gone):
+            d = song_dir / rel
+            size = next((i["bytes"] for i in items if i["dir"] == rel), 0)
+            try:
+                shutil.rmtree(d)
+            except FileNotFoundError:
+                pass
+            except OSError:
+                return err("file_in_use", 409)
+            freed += size
+        return {"deleted": gone, "bytes": freed}
 
     # ---------------- media ----------------
     @r.get("/media/{song_id}/{rel:path}")

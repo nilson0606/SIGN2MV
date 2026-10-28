@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Library: *Saved stems* lists every separation layer and key copy of a song as a
+  tree, with size, date and the cover versions / sing references that use it; each
+  can be deleted (with everything made from it). Users separate again when needed.
+- Library: storage overview per song (original, stems, covers, cover cache, sing &
+  record, MV, other), song sizes in the list, library total and free disk space.
+- Key copies record which stems they were made from.
+
 ## 0.1.0 — first complete version
 
 - One program and one song library for sing & record, AI cover and lyric MV.

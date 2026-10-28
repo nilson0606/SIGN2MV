@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -118,3 +119,94 @@ def key_dir_name(tracks: dict[str, str], names: list[str], semitones: int) -> st
 
 def recipe_id(recipe: dict[str, Any]) -> str:
     return _h("recipe", normalize(recipe))
+
+
+# ------------------------------------------------------------------ stored copies
+# Every separation layer (stems/<key>/) and key-shifted copy (keys/<dir>/) of a song is
+# a cache: deleting one only means the next workspace that needs it computes it again.
+DIR_NAME = re.compile(r"^[A-Za-z0-9_.-]{1,80}$")
+REF_RE = re.compile(r"^(stems|keys)/([^/]+)/")
+
+
+def dir_bytes(path: Path) -> int:
+    total = 0
+    for f in path.rglob("*"):
+        try:
+            if f.is_file():
+                total += f.stat().st_size
+        except OSError:
+            pass
+    return total
+
+
+def _read(path: Path) -> dict | None:
+    try:
+        v = json.loads(path.read_text(encoding="utf-8"))
+        return v if isinstance(v, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def refs_in(value: Any, out: set[str]) -> set[str]:
+    """Collect 'stems/<key>' / 'keys/<dir>' folders mentioned anywhere in a JSON value."""
+    if isinstance(value, str):
+        m = REF_RE.match(value)
+        if m:
+            out.add(f"{m.group(1)}/{m.group(2)}")
+    elif isinstance(value, dict):
+        for v in value.values():
+            refs_in(v, out)
+    elif isinstance(value, list):
+        for v in value:
+            refs_in(v, out)
+    return out
+
+
+def _parent(ref: str | None) -> str | None:
+    m = REF_RE.match(ref or "")
+    return f"{m.group(1)}/{m.group(2)}" if m else None
+
+
+def inventory(song_dir: Path) -> list[dict]:
+    """All stored copies: [{"dir", "type": layer|key|incomplete, "bytes", "parents": [...], ...info}]."""
+    out: list[dict] = []
+    for top in ("stems", "keys"):
+        base = song_dir / top
+        if not base.is_dir():
+            continue
+        for d in sorted(base.iterdir()):
+            if not d.is_dir():
+                continue
+            info = _read(d / "info.json")
+            item: dict[str, Any] = {"dir": f"{top}/{d.name}", "bytes": dir_bytes(d)}
+            if info is None:
+                item.update({"type": "incomplete", "parents": []})
+                try:
+                    item["created_at"] = d.stat().st_mtime
+                except OSError:
+                    pass
+            elif top == "stems":
+                p = _parent(info.get("input"))
+                item.update({"type": "layer", "kind": info.get("kind"), "model": info.get("model"),
+                             "files": info.get("files") or [], "created_at": info.get("created_at"),
+                             "device": info.get("device"), "parents": [p] if p else []})
+            else:
+                src = info.get("sources") or {}
+                item.update({"type": "key", "semitones": info.get("semitones"), "tracks": info.get("tracks") or [],
+                             "files": info.get("files") or [], "created_at": info.get("created_at"),
+                             "parents": sorted({p for p in (_parent(v) for v in src.values()) if p})})
+            out.append(item)
+    return out
+
+
+def dependents(items: list[dict], target: str) -> list[str]:
+    """target plus every stored copy computed from it (directly or further down)."""
+    gone = [target]
+    changed = True
+    while changed:
+        changed = False
+        for it in items:
+            if it["dir"] not in gone and any(p in gone for p in it.get("parents") or []):
+                gone.append(it["dir"])
+                changed = True
+    return gone

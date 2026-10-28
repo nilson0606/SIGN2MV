@@ -1,11 +1,21 @@
 // Library page: song list, import (YouTube / file), source preview, stems and key preview.
 import { api } from './api.js';
 import { t, errorText, onLanguageChange } from './i18n.js';
-import { $, el, toast, confirmDialog, fmtDate, fmtTime } from './ui.js';
+import { $, el, toast, confirmDialog, fmtDate, fmtTime, fmtBytes } from './ui.js';
 import { bus, state, selectSong, songById, mediaUrl, reloadJobs } from './app-state.js';
 import { jobBox } from './jobview.js';
 
 let filter = '';
+let sizes = {};   // song_id -> bytes on disk
+
+async function loadSizes() {
+  try {
+    const res = await api.get('/api/storage');
+    sizes = res.songs || {};
+    $('#library-usage').textContent = t('storage.library', fmtBytes(res.total || 0), fmtBytes((res.disk || {}).free || 0));
+    renderList();
+  } catch { /* sizes are optional */ }
+}
 
 async function loadSongs() {
   try {
@@ -13,11 +23,13 @@ async function loadSongs() {
     bus.dispatchEvent(new CustomEvent('songs', { detail: data.songs || [] }));
     renderList();
     renderDetail();
+    loadSizes();
   } catch (err) {
     $('#song-list').replaceChildren(el('div', { class: 'empty' }, errorText(err)));
   }
 }
 bus.addEventListener('reload-songs', loadSongs);
+bus.addEventListener('job-finished', () => loadSizes());
 bus.addEventListener('settings', (e) => { $('#library-path').textContent = t('lib.location', e.detail.library_dir || ''); });
 bus.addEventListener('song-selected', () => { renderList(); renderDetail(); });
 onLanguageChange(() => { renderList(); renderDetail(); });
@@ -35,7 +47,8 @@ function renderList() {
     class: 'item' + (state.selectedSongId === s.song_id ? ' selected' : ''), style: 'cursor:pointer',
     onclick: () => selectSong(s.song_id),
   }, el('div', { class: 'grow' }, el('b', {}, s.title), el('div', { class: 'muted small' },
-    s.source ? `${fmtTime(s.source.duration)} · ` : '', fmtDate(s.created_at))), sourceBadge(s))));
+    s.source ? `${fmtTime(s.source.duration)} · ` : '', sizes[s.song_id] ? `${fmtBytes(sizes[s.song_id])} · ` : '',
+    fmtDate(s.created_at))), sourceBadge(s))));
 }
 
 $('#song-search').addEventListener('input', (e) => { filter = e.target.value.trim().toLowerCase(); renderList(); });
@@ -81,6 +94,7 @@ function renderDetail() {
     parts.push(sourceSection(song));
     parts.push(stemsSection(song));
   }
+  parts.push(storageSection(song));
   box.replaceChildren(...parts);
 }
 
@@ -203,7 +217,10 @@ function stemsSection(song) {
       showTracks(kr.tracks, `${t('key.label')} ${k > 0 ? '+' : ''}${k}`);
     } catch (err) { toast(errorText(err), true); }
     reloadJobs();
+    stored.load();
   }
+
+  const stored = storedCopies(song);
 
   return el('div', { class: 'section' },
     el('h3', {}, t('sep.title')),
@@ -214,7 +231,161 @@ function stemsSection(song) {
       el('label', { class: 'check' }, lead, t('sep.lead')),
       el('label', {}, t('key.label'), ' ', key),
       el('button', { class: 'btn primary', onclick: prepare }, t('sep.prepare'))),
-    jb.el, tracksBox);
+    jb.el, tracksBox, stored.el);
+}
+
+// ------------------------------------------------------------------ storage overview
+const STORAGE_ROWS = [
+  ['source', null], ['stems', null], ['cover', 'cover_versions'], ['cover_cache', null],
+  ['sing', 'sing_takes'], ['mv', 'mv_projects'], ['other', null],
+];
+
+function storageSection(song) {
+  const body = el('div', {}, el('div', { class: 'muted small' }, t('common.loading')));
+  async function load() {
+    try {
+      const res = await api.get(`/api/songs/${song.song_id}/storage`);
+      const cats = res.categories || {};
+      const max = Math.max(1, ...Object.values(cats));
+      const rows = STORAGE_ROWS.filter(([c]) => cats[c] > 0 || c === 'source').map(([c, countKey]) => {
+        const count = countKey ? t(`storage.count.${countKey}`, (res.counts || {})[countKey] || 0) : '';
+        return el('div', { class: 'storage-row' },
+          el('div', { class: 'storage-name' }, el('b', {}, t(`storage.cat.${c}`)), count ? el('span', { class: 'muted small' }, ' ' + count) : null),
+          el('div', { class: 'storage-bar' }, el('span', { style: `width:${Math.max(1, Math.round(cats[c] * 100 / max))}%` })),
+          el('div', { class: 'storage-size' }, fmtBytes(cats[c] || 0)),
+          el('div', { class: 'muted small storage-hint' }, t(`storage.hint.${c}`)));
+      });
+      body.replaceChildren(
+        el('div', { class: 'muted small' }, t('storage.song_total', fmtBytes(res.total || 0), fmtBytes((res.disk || {}).free || 0))),
+        ...rows);
+    } catch (err) { body.replaceChildren(el('div', { class: 'muted small' }, errorText(err))); }
+  }
+  const sec = el('div', { class: 'section' },
+    el('div', { class: 'row' }, el('h3', { style: 'margin:0;flex:1' }, t('storage.title')),
+      el('button', { class: 'btn small', onclick: () => { load(); loadSizes(); } }, t('common.refresh'))),
+    body);
+  const onJob = () => {
+    if (sec.isConnected) { load(); return; }
+    bus.removeEventListener('job-finished', onJob);
+    bus.removeEventListener('storage-changed', onJob);
+  };
+  bus.addEventListener('job-finished', onJob);
+  bus.addEventListener('storage-changed', onJob);
+  load();
+  return sec;
+}
+
+// ------------------------------------------------------------------ stored copies
+const MODEL_NAME = { demucs: 'Demucs', bs_roformer: 'BS-RoFormer', mel_roformer: 'Mel-RoFormer',
+  karaoke: 'Karaoke', aufr33: 'aufr33', sucial: 'Sucial' };
+
+function trackName(n) {
+  const key = `track.${n}`;
+  const s = t(key);
+  return s === key ? n : s;
+}
+
+function copyLabel(it, byDir) {
+  const model = MODEL_NAME[it.model] || it.model || '';
+  if (it.type === 'incomplete') return t('stored.incomplete');
+  if (it.type === 'key') {
+    const k = Number(it.semitones) || 0;
+    return t('stored.key', `${k > 0 ? '+' : ''}${k}`, (it.tracks || []).map(trackName).join('、'));
+  }
+  if (it.kind === 'lead') {
+    const parent = byDir[(it.parents || [])[0]];
+    return parent && parent.kind === 'lead' ? t('stored.lead2') : t('stored.lead');
+  }
+  return t(`stored.${it.kind}`, model);
+}
+
+function dependentsOf(items, target) {
+  const gone = [target];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const it of items) {
+      if (!gone.includes(it.dir) && (it.parents || []).some((p) => gone.includes(p))) { gone.push(it.dir); changed = true; }
+    }
+  }
+  return gone;
+}
+
+function storedCopies(song) {
+  const box = el('div', { class: 'stored' });
+  let items = [];
+  let loaded = false;
+
+  async function load() {
+    loaded = true;
+    try {
+      const res = await api.get(`/api/songs/${song.song_id}/stems`);
+      items = res.items || [];
+      render(res);
+    } catch (err) { box.replaceChildren(el('div', { class: 'muted small' }, errorText(err))); }
+  }
+
+  function render(res) {
+    if (!items.length) { box.replaceChildren(el('h4', {}, t('stored.title')), el('div', { class: 'muted small' }, t('stored.empty'))); return; }
+    const byDir = Object.fromEntries(items.map((i) => [i.dir, i]));
+    const kids = {};
+    const roots = [];
+    for (const it of items) {
+      const p = (it.parents || []).find((d) => byDir[d]);
+      if (p) (kids[p] = kids[p] || []).push(it); else roots.push(it);
+    }
+    const order = (a, b) => (a.created_at || 0) - (b.created_at || 0);
+    const rows = [];
+    const walk = (it, depth) => {
+      rows.push(row(it, depth, byDir));
+      (kids[it.dir] || []).sort(order).forEach((c) => walk(c, depth + 1));
+    };
+    roots.sort((a, b) => (a.type === 'layer' ? 0 : 1) - (b.type === 'layer' ? 0 : 1) || order(a, b)).forEach((r) => walk(r, 0));
+    box.replaceChildren(
+      el('h4', {}, t('stored.title')),
+      el('div', { class: 'muted small' }, t('stored.total', fmtBytes(res.total_bytes || 0)), res.busy ? ' · ' + t('stored.busy') : ''),
+      ...rows);
+  }
+
+  function row(it, depth, byDir) {
+    const used = (it.used_by || []).map((u) => el('span', { class: 'badge' }, t(`stored.used.${u.type}`, u.label)));
+    const files = (it.type === 'layer' ? (it.files || []).map((f) => trackName(f.replace(/\.wav$/, ''))).join('、') : '');
+    return el('div', { class: 'item stored-row', style: `margin-left:${depth * 22}px` },
+      el('div', { class: 'grow', style: 'white-space:normal' },
+        el('b', {}, copyLabel(it, byDir)),
+        el('div', { class: 'muted small' }, [files, fmtBytes(it.bytes), fmtDate(it.created_at)].filter(Boolean).join(' · ')),
+        used.length ? el('div', { class: 'row', style: 'gap:4px;margin-top:4px' }, ...used) : null),
+      el('button', { class: 'btn small danger', onclick: () => remove(it, byDir) }, t('common.delete')));
+  }
+
+  async function remove(it, byDir) {
+    const gone = dependentsOf(items, it.dir);
+    const bytes = gone.reduce((n, d) => n + ((byDir[d] && byDir[d].bytes) || 0), 0);
+    const users = [];
+    for (const d of gone) for (const u of (byDir[d] && byDir[d].used_by) || []) {
+      const s = t(`stored.used.${u.type}`, u.label);
+      if (!users.includes(s)) users.push(s);
+    }
+    let msg = t('stored.confirm', copyLabel(it, byDir), fmtBytes(bytes));
+    if (gone.length > 1) msg += '\n' + t('stored.confirm_children', gone.length - 1);
+    if (users.length) msg += '\n\n' + t('stored.confirm_used') + '\n' + users.map((u) => '• ' + u).join('\n');
+    if (!(await confirmDialog(msg, t('common.delete')))) return;
+    try {
+      const res = await api.del(`/api/songs/${song.song_id}/${it.dir}`);
+      toast(t('stored.deleted', fmtBytes(res.bytes || 0)));
+    } catch (err) { toast(errorText(err), true); }
+    load();
+    loadSizes();
+    bus.dispatchEvent(new CustomEvent('storage-changed'));
+  }
+
+  const onJob = (e) => {
+    if (!box.isConnected && loaded) { bus.removeEventListener('job-finished', onJob); return; }
+    if (box.isConnected) load();
+  };
+  bus.addEventListener('job-finished', onJob);
+  load();
+  return { el: box, load };
 }
 
 export { loadSongs };
