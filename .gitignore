@@ -1,0 +1,26 @@
+# Installed tools, environments, caches (created by install.bat)
+/runtime/
+/models/
+# User data and settings
+/library/
+/config/settings.json
+/logs/
+/docs_old/
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+# Media never belongs in git
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.mp4
+*.mkv
+*.webm
+*.pth
+*.index
+*.ckpt
+*.th
+*.pt
+*.onnx

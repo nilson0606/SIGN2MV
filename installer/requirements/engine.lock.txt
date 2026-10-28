@@ -1,0 +1,93 @@
+absl-py==2.5.1            # via ml-collections
+anyio==4.15.1             # via httpx2
+audio-separator==0.47.0   # via -r installer/requirements/engine.txt
+audioread==3.1.0          # via librosa
+av==19.0.2                # via faster-whisper
+beartype==0.18.5          # via audio-separator
+brotli==1.2.1             # via yt-dlp
+certifi==2026.10.23       # via requests, yt-dlp
+cffi==2.1.1               # via samplerate, soundcard, soundfile
+charset-normalizer==3.5.2  # via requests
+click==8.5.0              # via huggingface-hub
+cloudpickle==3.1.2        # via joblib, submitit
+colorama==0.4.6           # via tqdm
+ctranslate2==4.8.4        # via faster-whisper
+cython==3.3.0             # via diffq-fixed
+decorator==5.3.1          # via librosa
+demucs==4.0.1             # via -r installer/requirements/engine.txt
+diffq-fixed==0.2.4        # via audio-separator
+dora-search==0.1.13       # via demucs
+einops==0.8.2             # via audio-separator, demucs, rotary-embedding-torch
+faster-whisper==1.2.1     # via -r installer/requirements/engine.txt
+filelock==4.2.4           # via huggingface-hub, torch
+flatbuffers==25.12.19     # via onnxruntime
+fsspec==2026.9.0          # via huggingface-hub, torch
+h11==0.16.0               # via httpcore2
+hf-xet==1.7.0             # via huggingface-hub
+httpcore2==2.16.0         # via httpx2
+httpx2==2.16.0            # via huggingface-hub
+huggingface-hub==2.3.0    # via faster-whisper, tokenizers
+idna==3.20                # via anyio, httpx2, requests
+importlib-resources==7.1.0  # via pretty-midi
+jinja2==3.1.6             # via torch
+joblib==1.6.0             # via librosa, scikit-learn
+julius==0.2.8             # via audio-separator, demucs
+lameenc==1.9.0            # via demucs
+lazy-loader==0.6          # via librosa
+librosa==0.11.0           # via audio-separator, -r installer/requirements/engine.txt
+llvmlite==0.50.0          # via numba
+markupsafe==3.0.4         # via jinja2
+mido==1.3.3               # via pretty-midi
+ml-collections==1.1.0     # via audio-separator
+ml-dtypes==0.6.0          # via onnx-weekly
+mpmath==1.3.0             # via sympy
+msgpack==1.2.4            # via librosa
+mutagen==1.48.1           # via yt-dlp
+narwhals==2.28.0          # via scikit-learn
+networkx==3.7             # via torch
+numba==0.68.1             # via librosa, resampy
+numpy==2.3.5              # via audio-separator, ctranslate2, diffq-fixed, librosa, ml-dtypes, numba, onnx-weekly, onnx2torch-py313, onnxruntime, openunmix, pretty-midi, resampy, samplerate, scikit-learn, scipy, soundcard, soundfile, soxr, torchvision, -r installer/requirements/engine.txt
+omegaconf==2.4.0          # via dora-search
+onnx-weekly==1.24.0.dev20261026  # via audio-separator, onnx2torch-py313
+onnx2torch-py313==1.6.0   # via audio-separator
+onnxruntime==1.31.1       # via audio-separator, faster-whisper
+openunmix==1.3.0          # via demucs
+packaging==26.3           # via audio-separator, huggingface-hub, lazy-loader, mido, onnxruntime, pooch
+pillow==13.0.0            # via torchvision, -r installer/requirements/engine.txt
+platformdirs==4.13.6      # via pooch
+pooch==1.9.0              # via librosa
+pretty-midi==0.2.11.post0  # via -r installer/requirements/engine.txt
+protobuf==7.36.2          # via onnx-weekly, onnxruntime
+pyaudio==0.2.14           # via tinysoundfont
+pycparser==3.12           # via cffi
+pycryptodomex==3.24.1     # via yt-dlp
+pydub==0.25.1             # via audio-separator
+pyyaml==6.0.3             # via audio-separator, ctranslate2, demucs, huggingface-hub, ml-collections, omegaconf
+requests==2.34.2          # via audio-separator, pooch, yt-dlp, -r installer/requirements/engine.txt
+resampy==0.4.3            # via audio-separator
+retrying==1.4.2           # via dora-search
+rotary-embedding-torch==0.6.5  # via audio-separator
+samplerate==0.1.0         # via audio-separator
+scikit-learn==1.9.1       # via librosa
+scipy==1.18.1             # via audio-separator, librosa, scikit-learn, -r installer/requirements/engine.txt
+setuptools==84.2.1        # via torch
+six==1.17.0               # via audio-separator, pretty-midi
+soundcard==0.4.6          # via -r installer/requirements/engine.txt
+soundfile==0.13.1         # via audio-separator, librosa, -r installer/requirements/engine.txt
+soxr==1.1.0               # via librosa
+submitit==1.5.4           # via dora-search
+sympy==1.14.0             # via torch
+threadpoolctl==3.7.0      # via scikit-learn
+tinysoundfont==0.3.7      # via -r installer/requirements/engine.txt
+tokenizers==0.23.3        # via faster-whisper
+torch==2.8.0              # via audio-separator, demucs, diffq-fixed, dora-search, julius, onnx2torch-py313, openunmix, rotary-embedding-torch, torchaudio, torchvision, -r installer/requirements/engine.txt
+torchaudio==2.8.0         # via demucs, openunmix, -r installer/requirements/engine.txt
+torchvision==0.23.0       # via onnx2torch-py313, -r installer/requirements/engine.txt
+tqdm==4.70.1              # via audio-separator, demucs, faster-whisper, huggingface-hub, openunmix
+treetable==0.2.6          # via dora-search
+truststore==0.10.5        # via httpcore2, httpx2
+typing-extensions==4.16.0  # via anyio, httpx2, huggingface-hub, librosa, onnx-weekly, submitit, torch
+urllib3==2.8.0            # via requests, yt-dlp
+websockets==17.3          # via yt-dlp
+yt-dlp==2026.10.26        # via -r installer/requirements/engine.txt
+yt-dlp-ejs==0.8.0         # via yt-dlp

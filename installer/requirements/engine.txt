@@ -1,0 +1,19 @@
+# Engine environment (separation, pitch, Whisper, MV rendering, mixing).
+# PyTorch is installed first from the PyTorch index (CUDA 12.8 or CPU);
+# the torch pins below keep that build from being replaced.
+torch==2.8.0
+torchaudio==2.8.0
+torchvision==0.23.0
+demucs==4.0.1
+audio-separator[cpu]==0.47.0
+soundfile==0.13.1
+librosa==0.11.0
+numpy>=2,<2.4
+scipy>=1.13,<2
+faster-whisper==1.2.1
+yt-dlp[default]>=2026.10.26
+pillow>=11
+pretty_midi==0.2.11.post0
+tinysoundfont>=0.3.6
+requests>=2.32
+SoundCard==0.4.6

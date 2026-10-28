@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "python": "3.12",
+  "uv": {
+    "version": "0.13.6",
+    "url": "https://github.com/astral-sh/uv/releases/download/0.13.6/uv-x86_64-pc-windows-msvc.zip",
+    "sha256": "a2a8820d5eea32f08ef467ef3b7f66883a9b076d5737a2fc2fbb5f458d1bb50f"
+  },
+  "ffmpeg": {
+    "note": "BtbN GPL build (includes librubberband, needed for key shifting). 'latest' moves; the installer verifies the rubberband filter instead of a fixed hash.",
+    "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+  },
+  "deno": {
+    "version": "2.9.8",
+    "url": "https://github.com/denoland/deno/releases/download/v2.9.8/deno-x86_64-pc-windows-msvc.zip",
+    "sha256": "cba84b26e0df5ae7f74fc66b86a95b866872a86292ebd84fa1e959927edd93bf"
+  },
+  "torch": {
+    "engine": {"torch": "2.8.0", "torchaudio": "2.8.0", "torchvision": "0.23.0"},
+    "cuda_index": "https://download.pytorch.org/whl/cu128",
+    "cpu_index": "https://download.pytorch.org/whl/cpu"
+  },
+  "applio": {
+    "version": "3.7.1",
+    "url": "https://github.com/IAHispano/Applio/archive/refs/tags/3.7.1.zip",
+    "license": "MIT"
+  },
+  "models": {
+    "htdemucs": {"file": "torch/hub/checkpoints/955717e8-8726e21a.th", "size": 84141911,
+                 "sha256": "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4"},
+    "bs_roformer": {"file": "separation/model_bs_roformer_ep_317_sdr_12.9755.ckpt", "size": 639331213,
+                    "sha256": "5b84f37e8d444c8cb30c79d77f613a41c05868ff9c9ac6c7049c00aefae115aa"},
+    "mel_roformer_kim": {"file": "separation/vocals_mel_band_roformer.ckpt", "size": 913106900,
+                         "sha256": "87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e",
+                         "url": "https://huggingface.co/KimberleyJSN/melbandroformer/resolve/ac9b0614ab3cd7f77219e18ba494dfd93956c348/MelBandRoformer.ckpt"},
+    "karaoke_aufr33": {"file": "separation/mel_band_roformer_karaoke_aufr33_viperx_sdr_10.1956.ckpt", "size": 913096801,
+                       "sha256": "1de20d459332fe8869aeb01327a31df0032262706e1365114e852dc271779813"},
+    "male_female_aufr33": {"file": "separation/bs_roformer_male_female_by_aufr33_sdr_7.2889.ckpt"},
+    "male_female_sucial": {"file": "separation/model_chorus_bs_roformer_ep_267_sdr_24.1275.ckpt",
+                           "license": "CC BY-NC-SA 4.0 (non-commercial)", "optional": true},
+    "rmvpe": {"file": "rmvpe/rmvpe.pt", "size": 181184272,
+              "sha256": "6d62215f4306e3ca278246188607209f09af3dc77ed4232efdd069798c4ec193",
+              "url": "https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/rmvpe.pt"},
+    "whisper_medium": {"dir": "whisper/medium", "repo": "Systran/faster-whisper-medium"}
+  }
+}

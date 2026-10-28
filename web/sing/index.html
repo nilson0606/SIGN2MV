@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1118">
+  <title>唱錄系統 · 桌機本機實驗室</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="theme.mjs"></script>
+  <script type="module" src="i18n.mjs"></script>
+</head>
+<body>
+<main>
+  <header><a href="./" class="brand"><span class="brand-icon">♪</span> 唱錄系統 <small>LOCAL LAB</small></a><div class="header-controls"><label class="theme-picker language-picker" data-i18n-skip for="language-select">語言 / Language<select id="language-select" data-language-picker><option value="zh-Hant">繁體中文</option><option value="en">English</option></select></label><span class="pill">本機分析 · 錄音留在本機</span><label class="theme-picker" for="theme-select">配色<select id="theme-select"><option value="console">控台</option><option value="current">科技藍</option><option value="warm">暖色調</option></select></label><button id="motion-toggle" class="secondary" type="button" aria-pressed="true" title="開啟或關閉介面裝飾動畫">律動：開啟</button></div></header>
+  <nav class="section-nav" aria-label="頁面區段導覽">
+    <div class="nav-links">
+      <a href="#voice-settings">收音設定</a><a href="#local-section">本機工具</a><a href="#library-panel">歌曲庫</a><a href="#player-section">播放／錄音</a><a href="#prepare-section">歌曲準備／Key</a><a href="#score-section">評分／結算</a><a href="#recording-post">錄音後處理</a>
+      <a href="#voice-section">收音測試</a><a href="#timing-section">延遲校正</a><a href="#recording-section">評分與錄音設定</a><a data-language-manual href="manual.html" target="_blank" rel="noopener">說明 ↗</a>
+    </div>
+    <div class="nav-workflow" aria-label="錄唱下一步">
+      <p id="workflow-message" role="status"><strong>1／8 確認收音</strong><span>先選收音方式與麥克風，再開麥試聲。</span></p>
+      <a id="workflow-go" href="#voice-settings">前往收音設定</a>
+      <button id="workflow-confirm" type="button" class="secondary" hidden>設定已確認</button>
+    </div>
+  </nav>
+  <section class="intro studio-intro">
+    <div class="intro-copy"><p class="eyebrow">LOCAL AUDIO STUDIO / 本機聲音工作室</p><h1>看著唱。<br><span>看見你的聲音。</span></h1><p>從選歌、錄唱到後製，留下屬於你的版本。<br>YouTube、本機 MV 與音檔都能唱，錄音留在你的電腦。</p><div class="studio-tags"><span>選歌</span><i aria-hidden="true">／</i><span>錄唱</span><i aria-hidden="true">／</i><span>後製</span></div></div>
+    <div class="studio-art" aria-hidden="true"><svg viewBox="0 0 384 200" fill="none"><path class="signal-grid" d="M0 50H384M0 100H384M0 150H384M72 0V200M192 0V200M312 0V200"/><ellipse class="signal-orbit" cx="192" cy="100" rx="170" ry="82"/><g class="signal-bars"><rect x="36" y="94.0" width="4" height="12" rx="2"/><rect x="48" y="90.0" width="4" height="20" rx="2"/><rect x="60" y="84.0" width="4" height="32" rx="2"/><rect x="72" y="91.0" width="4" height="18" rx="2"/><rect x="84" y="76.0" width="4" height="48" rx="2"/><rect x="96" y="64.0" width="4" height="72" rx="2"/><rect x="108" y="78.0" width="4" height="44" rx="2"/><rect x="120" y="53.0" width="4" height="94" rx="2"/><rect x="132" y="40.0" width="4" height="120" rx="2"/><rect x="144" y="60.0" width="4" height="80" rx="2"/><rect x="156" y="26.0" width="4" height="148" rx="2"/><rect x="168" y="46.0" width="4" height="108" rx="2"/><rect x="180" y="18.0" width="4" height="164" rx="2"/><rect x="192" y="34.0" width="4" height="132" rx="2"/><rect x="204" y="54.0" width="4" height="92" rx="2"/><rect x="216" y="27.0" width="4" height="146" rx="2"/><rect x="228" y="45.0" width="4" height="110" rx="2"/><rect x="240" y="62.0" width="4" height="76" rx="2"/><rect x="252" y="41.0" width="4" height="118" rx="2"/><rect x="264" y="57.0" width="4" height="86" rx="2"/><rect x="276" y="73.0" width="4" height="54" rx="2"/><rect x="288" y="66.0" width="4" height="68" rx="2"/><rect x="300" y="82.0" width="4" height="36" rx="2"/><rect x="312" y="76.0" width="4" height="48" rx="2"/><rect x="324" y="88.0" width="4" height="24" rx="2"/><rect x="336" y="93.0" width="4" height="14" rx="2"/></g><path class="signal-line" d="M0 100H24L32 96L40 104L48 100H336L344 96L352 104L360 100H384"/></svg></div>
+  </section>
+  <div id="environment" class="notice" role="status"></div>
+  <details id="voice-settings" tabindex="-1" class="card section-fold voice-settings">
+    <summary>收音設定 <span class="fold-caption">收音方式 · 麥克風選擇</span></summary>
+    <div class="fold-body">
+      <label for="capture-mode">收音方式</label><select id="capture-mode"><option value="browser">瀏覽器收音（原有方式）</option><option value="native">本機相容收音（開麥後伴奏變小聲時使用）</option></select><p class="help">本機相容模式由這台電腦的 Python 收音，需要啟動本機工具並允許 Python 麥克風權限。聲音只送回本機瀏覽器；仍依下方錄音選項決定是否保存。切換收音方式後請重新測試延遲。</p>
+      <label for="input-device">收音麥克風</label><select id="input-device"><option value="">系統預設麥克風</option></select><p class="help">第一次允許收音後可選裝置。建議先用有線耳機或 USB 麥克風測試。</p>
+      <details id="recording-diagnostics-panel"><summary>錄音診斷 · 自動保存問題線索</summary>
+        <label class="check-option"><input id="diagnostics-enabled" type="checkbox" checked> 錄音時自動診斷</label>
+        <p class="help">開啟時，錄音前先確認本機工具可保存診斷；停止錄音後確認資料完整寫入。只在整首／分段錄音期間保存對照音訊，練唱與試聽不收集。診斷可能影響音訊時序，不代表斷音已修好。</p>
+        <p id="diagnostics-status" class="status" role="status">診斷待命。</p>
+        <p id="diagnostics-storage" class="help"></p>
+        <div class="button-row"><button id="diagnostics-refresh" type="button" class="secondary">重新整理診斷狀態</button><button id="diagnostics-clear" type="button" class="secondary">清除所有診斷資料</button></div>
+        <p class="help">只存本機，重新整理後仍保留。最多 2 GB；容量不足時停止診斷並提示，演唱錄音繼續。清除診斷不會刪除歌曲、錄音或後處理成品。</p>
+      </details>
+    </div>
+  </details>
+  <details id="local-section" tabindex="-1" class="card local-tools" aria-labelledby="local-heading" open>
+    <summary><h2 id="local-heading">先確認本機工具</h2></summary>
+    <div class="local-summary"><div><p class="eyebrow">只在你的電腦處理音訊</p><p id="local-status" class="help" role="status">尚未檢查。第一次使用請安裝；已安裝則啟動本機工具。</p></div><button id="local-check" type="button">檢查本機工具</button></div>
+    <p id="local-detail" class="help">GitHub Pages 只提供網頁。下載、分離與後續評分在你的電腦執行。</p>
+    <details id="install-guide"><summary>安裝／啟動說明（Windows）</summary>
+      <ol class="install-steps">
+        <li><a href="https://github.com/nilson0606/sign_record/archive/refs/heads/main.zip" target="_blank" rel="noopener noreferrer">下載本機工具包</a>，解壓縮到固定資料夾。第一次需先備妥 <a href="https://www.python.org/downloads/release/python-31210/" target="_blank" rel="noopener noreferrer">Python 3.12</a>、<a href="https://nodejs.org/en/download" target="_blank" rel="noopener noreferrer">Node.js 22 以上</a> 與 <a href="https://ffmpeg.org/download.html" target="_blank" rel="noopener noreferrer">FFmpeg</a>。</li>
+        <li>在該資料夾開啟 PowerShell，第一次執行：<code>powershell -NoProfile -ExecutionPolicy Bypass -File .\setup-local.ps1</code>工具與模型會安裝在本機，不會上傳你的音訊。</li>
+        <li>每次重開機後啟動：<code>powershell -NoProfile -ExecutionPolicy Bypass -File .\start-local.ps1</code>回到此頁點「檢查本機工具」。如果瀏覽器詢問本機網路存取，請允許。</li>
+      </ol>
+      <p class="help">重開機不會移除安裝。只有關閉本機工具、重開機後未啟動，或連線權限被拒絕時，需要重新連線。Windows 重設／重灌後可能需要重建。</p>
+    </details>
+    <section class="library-location" aria-labelledby="library-location-heading">
+      <div class="library-location-heading"><span class="folder-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 7V5h6l3 3h9v12H3V7Z"/><path d="M3 10h18"/></svg></span><div><h3 id="library-location-heading">你的本機歌曲庫</h3><p>設定一次，分析好的歌曲就留在這裡。</p></div><span class="pill">只存在本機</span></div>
+      <label for="library-path">儲存位置</label>
+      <div class="library-path-row"><input id="library-path" type="text" placeholder="選擇資料夾，或貼上完整路徑" autocomplete="off" spellcheck="false"><button id="library-choose" type="button">選擇資料夾</button><button id="library-use-path" type="button" class="secondary">使用此位置</button></div>
+      <div class="library-location-feedback"><p id="library-location-status" class="status" role="status">第一次先選擇歌曲庫位置，這台電腦會記住設定。</p><button id="library-cancel-pick" type="button" class="secondary" hidden>取消資料夾選擇</button></div>
+      <p class="footnote">換資料夾不會刪除原歌曲。歌曲載入中請先「取消／卸載」，再變更位置。</p>
+    </section>
+    <p class="footnote">聲曲分離優先使用 NVIDIA GPU，無法使用時改用 CPU。第一次需下載模型，之後重用；音訊不會上傳到雲端。</p>
+  </details>
+  <div class="layout">
+    <section id="player-section" tabindex="-1" class="card source-card">
+      <div class="section-top"><h2><span class="step">01</span> 歌曲影音</h2><span id="source-description" class="subtle">YouTube 原生播放</span></div>
+      <label for="source-kind">影音來源</label><select id="source-kind"><option value="youtube">YouTube 網址</option><option value="local">本機 MV</option><option value="audio">本機音檔（MP3／WAV）</option></select>
+      <form id="song-form"><label for="url">歌曲影片網址</label><div class="input-row"><input id="url" type="url" placeholder="https://www.youtube.com/watch?v=…" required autocomplete="off"><button type="submit">載入影片</button></div></form>
+      <div id="local-media-controls" hidden>
+        <label for="local-media-file">選擇本機 MV</label><input id="local-media-file" type="file" accept=".mp4,.m4v,.mov,.mkv,.webm"><input id="local-media-id" type="hidden">
+        <p id="local-media-help" class="help">MP4／MOV／MKV／WebM，最多 2 GB、15 分鐘。影片副本保存在歌曲庫的 .local-mv 資料夾，原檔保留，不上傳雲端；必要時自動轉為 MP4。</p>
+        <label for="local-media-saved">已匯入的 MV</label><select id="local-media-saved"><option value="">選擇已匯入的 MV</option></select>
+        <div class="button-row"><button id="local-media-load" type="button">載入 MV</button><button id="local-media-refresh" type="button" class="secondary">重新整理</button><button id="local-media-cancel" type="button" class="secondary" hidden>取消匯入</button></div>
+        <p id="local-media-status" class="status" role="status">選擇檔案後，可用相同流程準備基準、評分、分段、錄音與升降 Key。</p>
+      </div>
+      <p id="player-status" class="status" role="status">貼上網址後，影片會在這裡播放。</p>
+      <div class="video-shell"><div id="video-placeholder"><span>▶</span><p>你的下一首歌</p><small>播放器與麥克風分別啟動</small></div><div id="player"></div><video id="local-video" controls playsinline preload="metadata" crossorigin="anonymous" hidden></video><div id="local-audio-panel" hidden><div class="local-audio-art" aria-hidden="true"><svg viewBox="0 0 384 200" fill="none"><path class="signal-grid" d="M0 50H384M0 100H384M0 150H384M72 0V200M192 0V200M312 0V200"/><ellipse class="signal-orbit" cx="192" cy="100" rx="170" ry="82"/><g class="signal-bars"><rect x="36" y="94.0" width="4" height="12" rx="2"/><rect x="48" y="90.0" width="4" height="20" rx="2"/><rect x="60" y="84.0" width="4" height="32" rx="2"/><rect x="72" y="91.0" width="4" height="18" rx="2"/><rect x="84" y="76.0" width="4" height="48" rx="2"/><rect x="96" y="64.0" width="4" height="72" rx="2"/><rect x="108" y="78.0" width="4" height="44" rx="2"/><rect x="120" y="53.0" width="4" height="94" rx="2"/><rect x="132" y="40.0" width="4" height="120" rx="2"/><rect x="144" y="60.0" width="4" height="80" rx="2"/><rect x="156" y="26.0" width="4" height="148" rx="2"/><rect x="168" y="46.0" width="4" height="108" rx="2"/><rect x="180" y="18.0" width="4" height="164" rx="2"/><rect x="192" y="34.0" width="4" height="132" rx="2"/><rect x="204" y="54.0" width="4" height="92" rx="2"/><rect x="216" y="27.0" width="4" height="146" rx="2"/><rect x="228" y="45.0" width="4" height="110" rx="2"/><rect x="240" y="62.0" width="4" height="76" rx="2"/><rect x="252" y="41.0" width="4" height="118" rx="2"/><rect x="264" y="57.0" width="4" height="86" rx="2"/><rect x="276" y="73.0" width="4" height="54" rx="2"/><rect x="288" y="66.0" width="4" height="68" rx="2"/><rect x="300" y="82.0" width="4" height="36" rx="2"/><rect x="312" y="76.0" width="4" height="48" rx="2"/><rect x="324" y="88.0" width="4" height="24" rx="2"/><rect x="336" y="93.0" width="4" height="14" rx="2"/></g><path class="signal-line" d="M0 100H24L32 96L40 104L48 100H336L344 96L352 104L360 100H384"/></svg></div><p class="eyebrow">LOCAL AUDIO / 本機音檔</p><h3 id="local-audio-title" data-i18n-user></h3><p class="help">預設聲波畫面 · 可整首演唱或分段錄製</p><audio id="local-audio" controls preload="metadata" crossorigin="anonymous" aria-label="本機音檔播放器"></audio></div></div>
+      <div class="clock-row"><span>播放器時間 <b id="player-time">—</b></span><span>補償後位置 <b id="aligned-time">—</b></span></div>
+      <div class="song-key-control">
+        <label for="song-key">歌曲 Key · 每格半音，速度不變</label>
+        <div class="input-row"><select id="song-key"><option value="-12">降 12 Key</option><option value="-11">降 11 Key</option><option value="-10">降 10 Key</option><option value="-9">降 9 Key</option><option value="-8">降 8 Key</option><option value="-7">降 7 Key</option><option value="-6">降 6 Key</option><option value="-5">降 5 Key</option><option value="-4">降 4 Key</option><option value="-3">降 3 Key</option><option value="-2">降 2 Key</option><option value="-1">降 1 Key</option><option value="0" selected>原調（0）</option><option value="1">升 1 Key</option><option value="2">升 2 Key</option><option value="3">升 3 Key</option><option value="4">升 4 Key</option><option value="5">升 5 Key</option><option value="6">升 6 Key</option><option value="7">升 7 Key</option><option value="8">升 8 Key</option><option value="9">升 9 Key</option><option value="10">升 10 Key</option><option value="11">升 11 Key</option><option value="12">升 12 Key</option></select><button id="song-key-apply" type="button" class="secondary" disabled>建立／載入此 Key</button></div>
+        <p id="song-key-status" class="help" role="status">預設原調。準備歌曲前可選 Key；不同 Key 版本會一起保存在歌曲庫，錄音與分段草稿各自保留。</p>
+      </div>
+      <div id="segment-player-tools" hidden>
+        <div id="segment-transport" class="button-row" role="group" aria-label="影片播放與分段"><button id="segment-play" type="button" class="secondary">播放／暫停影片</button><button id="segment-split" type="button">在此分段</button><button id="segment-undo" type="button" class="secondary">復原分界</button></div>
+      </div>
+      <section id="score-section" class="player-session" tabindex="-1" aria-label="演唱控制與分數">
+    <p id="result-title" class="score-title">尚未選定歌曲</p>
+    <div class="whole-guide-control"><label for="sing-guide-mode">演唱時帶唱</label><select id="sing-guide-mode"><option value="original" selected>原唱＋伴樂（預設）</option><option value="backing">只有伴樂／和音</option></select><p class="help">開始前選擇，按「從頭開始唱」套用。只有伴樂需已保存分離音軌；請戴耳機，避免原唱被麥克風收進錄音。</p></div>
+    <details id="recording-balance" class="whole-guide-control"><summary>人聲／伴樂音量平衡 · 與分段錄音共用</summary>
+      <label class="check-option"><input id="recording-manual" type="checkbox">手動設定比例＋自動微調</label>
+      <p id="recording-balance-help" class="help">未勾選：自動平衡歌唱者與配樂／和音。勾選後使用你設定的音量，系統只做小幅修正。</p>
+      <div class="recording-levels"><div><label for="recording-voice-level">歌唱者音量 <output id="recording-voice-value">70%</output></label><input id="recording-voice-level" type="range" min="0" max="200" value="70" disabled></div><div><label for="recording-backing-level">配樂／和音音量 <output id="recording-backing-value">30%</output></label><input id="recording-backing-level" type="range" min="0" max="200" value="30" disabled></div></div>
+      <p id="recording-balance-status" class="help" role="status">自動平衡 · 平滑調整音量，低音量或未偵測到穩定歌聲時不自動增強麥克風。只影響錄音，不影響評分；每輪開始前設定。</p>
+    </details>
+    <div class="button-row score-actions"><button id="sing-start" disabled type="button">從頭開始唱</button><button id="finish-song" disabled type="button" class="secondary">結束並結算</button></div>
+    <p id="recording-status" class="status" role="status">錄音停止後存入本機歌曲庫的「錄音」目錄；不會上傳雲端。</p>
+    <div id="recording-rescue" hidden></div>
+    <section id="recording-review" hidden aria-labelledby="recording-review-heading">
+      <h3 id="recording-review-heading">整首錄音 · 待確認</h3>
+      <p class="help">只顯示目前載入歌曲版本與 Key 的待確認錄音；切回其他歌曲即可查看該曲錄音。錄音已自動保留，重新整理後仍在。先試聽，滿意再加入錄音後處理；不滿意可刪除此版。</p>
+      <label for="recording-review-take">待確認版本</label><select id="recording-review-take"></select>
+      <label for="recording-review-mode">試聽內容</label><select id="recording-review-mode"><option value="mix" selected>人聲＋伴樂／和音</option><option value="voice">純人聲</option></select>
+      <p class="help">純人聲直接播放這一版錄到的人聲原檔；加入伴樂時才套用混音比例與歌聲校正。</p>
+      <div class="button-row"><button id="recording-review-listen" type="button" class="secondary">試聽這一版</button><button id="recording-review-save" type="button">存到錄音後處理</button><button id="recording-review-delete" type="button" class="secondary">刪除此版</button></div>
+      <div class="button-row"><button id="recording-review-delete-song" type="button" class="secondary">刪除這首全部待確認錄音</button></div>
+      <p class="help">依上方選取的歌曲與 Key 清除；分段錄音與已存到錄音後處理的成品保留。</p>
+      <audio id="recording-review-audio" controls hidden aria-label="待確認整首錄音試聽"></audio>
+    </section>
+    <p id="recording-review-status" class="status recording-action-result" role="status" hidden></p>
+    <div class="score-grid"><div class="total"><strong id="total-score">—</strong><span>總分 / 100</span></div><div><strong id="pitch-score">—</strong><span>音準 · 60%</span></div><div><strong id="rhythm-score">—</strong><span>進拍 · 25%</span></div><div><strong id="coverage-score">—</strong><span>完整度 · 15%</span></div></div>
+    <p id="take-difficulty" class="help" aria-live="polite">尚未開始演唱；每輪開始後固定難度。</p>
+    <p id="score-status" class="status" role="status">準備歌曲並開啟麥克風後，按播放就開始評分。</p>
+      </section>
+      <section id="segment-section" class="segment-section" aria-labelledby="segment-heading">
+        <div class="section-top"><h3 id="segment-heading">分段錄音／補唱</h3><span id="segment-mode-label" class="badge">整首評分模式</span></div>
+        <div class="button-row"><button id="segment-open" type="button" class="secondary" disabled>開啟分段模式</button><button id="segment-whole" type="button" class="secondary" hidden>回整首評分</button></div>
+        <p class="help">「從頭開始唱」保留原本錄音與整首評分。分段模式可邊播放邊加分界，不寫入整首分數。</p>
+        <div id="segment-tools" hidden>
+          <p id="segment-song" class="preview-source"></p>
+          <div class="button-row"><button id="segment-merge-all" type="button" class="secondary">合併為一段</button></div>
+          <p class="help">復原保留最近 40 次調整；沒有更早紀錄時，繼續按會從最後一道分界往前移除，直到剩一整段。原始錄音保留；合併不同演唱版本後需重新挑選。</p>
+          <label for="segment-seek">歌曲位置 <output id="segment-position">00:00.000</output></label><input id="segment-seek" type="range" min="0" max="1" step="0.01" value="0">
+          <div id="segment-timeline" class="segment-timeline" aria-label="歌曲段落與可拖曳分界"></div>
+          <label for="segment-part">要錄製或補唱的段落</label><select id="segment-part"></select>
+          <details id="segment-boundary-panel"><summary>調整分界時間／段落名稱</summary>
+          <div class="segment-fields"><label>段落名稱<input id="segment-name" maxlength="80" type="text"></label><label>分界微調<select id="segment-boundary"></select></label></div>
+          <div class="segment-fields"><label>分界時間（mm:ss.sss）<input id="segment-boundary-time" type="text" inputmode="decimal" value="00:00.000"></label><label>調整步距<select id="segment-step"><option value="0.1">0.1 秒</option><option value="1">1 秒</option></select></label></div>
+          <div class="button-row"><button id="segment-earlier" type="button" class="secondary">提前</button><button id="segment-later" type="button" class="secondary">延後</button><button id="segment-boundary-play" type="button" class="secondary">試聽分界 ±3 秒</button><button id="segment-merge" type="button" class="secondary">移除分界</button></div>
+          <p class="help">拖曳時間軸的分界線或輸入精確時間；相鄰兩段會一起更新。更改分界不會裁掉原始錄音。</p>
+          </details>
+          <details id="segment-record-settings"><summary>起唱與尾音設定 · 預設提前 5 秒／尾音 2 秒</summary>
+          <div class="segment-fields"><label>提前播放（秒，0～60）<input id="segment-preroll" type="number" min="0" max="60" step="1" value="5" required></label><label>尾音餘量<select id="segment-tail"><option value="1">1 秒</option><option value="2" selected>2 秒</option><option value="3">3 秒</option></select></label></div>
+          <p class="help">可輸入較長的準備秒數；若段落前不足指定時間，就從歌曲開頭播放。</p>
+          </details>
+          <label for="segment-guide-mode">錄音時帶唱</label><select id="segment-guide-mode"><option value="original" selected>原唱＋伴樂（預設）</option><option value="backing">只有伴樂／和音</option></select>
+          <div class="button-row"><button id="segment-loop" type="button" class="secondary" aria-pressed="false">循環練唱本段</button><button id="segment-record" type="button">錄這一段</button><button id="segment-stop" type="button" class="secondary" disabled>停止／保存本段</button></div>
+        </div>
+        <p id="segment-status" class="status" role="status">載入歌曲後，可開啟分段模式。</p>
+      </section>
+    </section>
+    <aside id="segment-side" class="card segment-section" aria-labelledby="segment-side-heading" hidden>
+          <div class="section-top"><h2 id="segment-side-heading">挑選版本與試合</h2><span class="badge">分段成品</span></div>
+          <p id="segment-selected-summary" class="preview-source" aria-live="polite"></p>
+          <details id="segment-balance-panel"><summary>人聲／伴樂音量平衡 · 與從頭開始唱共用</summary>
+          <label class="check-option"><input id="segment-manual" type="checkbox">手動設定比例＋自動微調</label>
+          <p id="segment-balance-help" class="help"></p>
+          <div class="recording-levels"><div><label for="segment-voice-level">歌唱者音量 <output id="segment-voice-value">70%</output></label><input id="segment-voice-level" type="range" min="0" max="200" value="70" disabled></div><div><label for="segment-backing-level">配樂／和音音量 <output id="segment-backing-value">30%</output></label><input id="segment-backing-level" type="range" min="0" max="200" value="30" disabled></div></div>
+          <p class="help">單段試聽與完整試合都先完成混音，再播放音檔。調整音量後會重新混音，完成後接續目前位置播放。滿意後按「存到錄音後處理」，不必重錄。純人聲原檔試聽不套用音量調整。</p>
+          </details>
+          <details id="segment-versions-panel" open><summary>挑選本段演唱版本</summary>
+          <div class="button-row"><button id="segment-refresh" type="button" class="secondary">重新讀取錄音版本</button><button id="segment-save" type="button" class="secondary">保存草稿</button></div>
+          <label for="segment-take">本段採用的演唱版本</label><select id="segment-take"></select>
+          <p id="segment-take-count" class="help" aria-live="polite">只列出本段錄音，可重錄多次，沒有三次上限。</p>
+          <label for="segment-take-mode-selected">試聽內容</label><select id="segment-take-mode-selected"><option value="mix" selected>人聲＋伴樂／和音</option><option value="voice">純人聲</option></select>
+          <p class="help">純人聲直接播放這一版錄到的人聲原檔；加入伴樂時才套用混音比例與歌聲校正。</p>
+          <div class="button-row"><button id="segment-listen-selected" type="button" class="secondary" disabled>試聽選用版本</button><button id="segment-delete-selected" type="button" class="secondary" disabled>刪除此版錄音</button></div>
+          <p id="segment-take-info" class="help"></p>
+          <audio id="segment-take-audio" controls hidden aria-label="本段錄音試聽"></audio>
+          </details>
+          <p id="segment-coverage" class="help"></p>
+          <details id="segment-output-panel" open><summary>試合完整一版／滿意後保存 · 預設人聲＋伴樂，300 ms</summary>
+          <p class="help">依每個段落目前選用的錄音版本試合；換選版本後，請重新試合。</p>
+          <div class="segment-fields"><label>試合內容<select id="segment-output"><option value="mix" selected>人聲＋伴樂／和音</option><option value="voice">純人聲</option></select></label><label>歌聲校正（ms）<input id="segment-delay" type="number" min="-2000" max="2000" step="10" value="300"></label></div>
+          <details id="segment-original-panel"><summary>原唱加入區間 <span id="segment-original-count">（未設定）</span></summary>
+          <p class="help">用歌曲時間設定多個區間，每段可選一起唱或只用原唱。區間外保留你的錄音，伴奏照常；僅套用「人聲＋伴樂／和音」的完整試合，純人聲仍保留你的收音。</p>
+          <div id="segment-original-ranges" class="original-vocal-ranges"></div>
+          <div class="segment-fields"><label>開始（分:秒）<input id="segment-original-start" type="text" value="00:00.000" placeholder="00:20.000"></label><label>結束（分:秒）<input id="segment-original-end" type="text" value="00:05.000" placeholder="00:30.000"></label></div>
+          <label>區間人聲<select id="segment-original-mode"><option value="duet">原唱＋我的錄音</option><option value="original">只用原唱</option></select></label>
+          <div class="button-row"><button id="segment-original-current" type="button" class="secondary">填入目前段落時間</button><button id="segment-original-add" type="button">新增原唱區間</button></div>
+          <p id="segment-original-help" class="help">設定隨本歌曲草稿保存；調整後請重新試合。</p>
+          </details>
+          <label class="check-option"><input id="segment-allow-gaps" type="checkbox">允許未錄範圍保留靜音</label>
+          <div class="button-row"><button id="segment-compose" type="button">試合完整一版</button><button id="segment-join" type="button" class="secondary">試合並聽本段接合</button></div>
+          <audio id="segment-audio" controls hidden preload="metadata"></audio>
+          <div class="button-row"><button id="segment-export" type="button" class="secondary" disabled>存到錄音後處理</button><button id="segment-download" type="button" class="secondary" disabled>下載試合 WAV</button></div>
+          <p class="help">單段錄音保存在分段區，試合只供暫存試聽，兩者都不加入錄音後處理。滿意後按「存到錄音後處理」，才保存完整成品供後製及 A/B。試合可加伴樂，校正預設 300 ms；原始分段錄音保留。</p>
+          <div class="segment-clear"><button id="segment-delete-song-takes" type="button" class="secondary" disabled>清除此歌曲的所有分段錄音</button><p id="segment-clear-result" class="status recording-action-result" role="status" hidden></p><p class="help">只刪除目前歌曲的各段錄音版本。段落分界、其他歌曲、整首錄音與錄音後處理中的已存成品都保留。</p></div>
+          </details>
+    </aside>
+    <section id="voice-section" tabindex="-1" class="card voice-card">
+      <div class="section-top"><h2><span class="step">03</span> 即時音高與收音</h2><span id="mic-badge" class="badge">麥克風未開啟</span></div>
+      <div class="pitch-value"><span id="note">—</span><div><strong id="frequency">等待收音</strong><small id="cents">單音音高 · 65–1000 Hz</small></div></div>
+      <div class="level-label"><span>收音音量</span><span id="level-text">— dBFS</span></div><meter id="level" min="0" max="1" value="0" aria-label="麥克風音量"></meter>
+      <div class="graph"><div class="graph-heading"><span>你的音高 · 最近 8 秒</span><span class="legend"><i></i> 即時音高</span></div><canvas id="pitch-chart" aria-label="最近八秒的麥克風音高曲線"></canvas><p>亮色線是你的音高；藍線是原唱旋律。允許八度差時，兩線不一定重疊。</p></div>
+      <div class="target-line">原唱音符 <strong id="target-note">—</strong><span id="live-feedback">等待歌曲基準</span></div>
+      <div class="button-row"><button id="mic-start" type="button">開啟麥克風</button><button id="mic-stop" class="secondary" type="button" disabled>停止收音</button></div>
+      <fieldset id="voice-output"><legend>歌聲輸出到喇叭</legend>
+        <label class="check-option"><input id="voice-output-enabled" type="checkbox" disabled>即時播放我的歌聲</label>
+        <label for="voice-output-device">歌聲輸出裝置</label>
+        <div class="input-row"><select id="voice-output-device"><option value="">系統預設喇叭</option></select><button id="voice-output-refresh" type="button" class="secondary">重新整理</button></div>
+        <label for="voice-output-volume">歌聲輸出音量 <output id="voice-output-volume-value">30%</output></label>
+        <input id="voice-output-volume" type="range" min="0" max="100" step="1" value="30">
+        <p id="voice-output-status" class="help" role="status">請先開啟麥克風，再勾選歌聲輸出。</p>
+      </fieldset>
+      <p id="mic-status" class="status" role="status">請先戴耳機，降低伴奏被麥克風收到的機會。</p>
+      <details><summary>收音裝置與狀態</summary><pre id="device">授權後才會顯示裝置資訊。</pre></details>
+    </section>
+    <section id="prepare-section" tabindex="-1" class="card prepare-card">
+      <div class="section-top"><h2>聲曲分離與音高旋律擷取</h2><span class="subtle">本機分析與歌曲庫</span></div>
+      <details id="prepare-settings" class="settings-fold" tabindex="-1"><summary>分離與音高設定 · 遮罩與試聽</summary>
+        <div class="preset-heading"><h3>新歌預設設定</h3><span class="pill">可展開進階設定調整</span></div>
+        <dl class="preparation-preset">
+          <div><dt>分析範圍</dt><dd>完整歌曲，最長 15 分鐘</dd></div>
+          <div><dt>基準音高擷取</dt><dd>RMVPE</dd></div>
+          <div><dt>聲曲分離模型</dt><dd>Demucs／htdemucs</dd></div>
+          <div><dt>處理流程</dt><dd>單次分離</dd></div>
+          <div><dt>分離模式</dt><dd>人聲／伴奏分離</dd></div>
+          <div><dt>分離音軌</dt><dd>保留人聲、伴奏，供本機試聽</dd></div>
+        </dl>
+        <p class="help">未調整時沿用以上預設。按「準備歌曲基準」套用目前選項，變更模型／模式會另存歌曲版本；「重新分離並覆蓋」與「補建試聽音軌」沿用已載入版本。下方會顯示目前試聽來源。</p>
+        <details id="preparation-advanced" class="post-effects">
+          <summary><strong>進階分離設定 · 展開可調整</strong><span id="preparation-summary" class="help"></span></summary>
+          <fieldset id="preparation-fields"><legend>準備歌曲時使用</legend>
+          <div class="field-grid">
+            <label>分析範圍<select id="clip-seconds"><option value="0">完整歌曲（最長 15 分鐘，預設）</option><option value="15">先試前 15 秒</option><option value="30">先試前 30 秒</option><option value="60">先試前 60 秒</option></select></label>
+            <label>基準音高擷取<select id="pitch-method"><option value="rmvpe" selected>RMVPE（預設）</option><option value="yin">YIN（原有方式）</option></select></label>
+            <label>聲曲分離模型<select id="separation-model"><option value="demucs" selected>Demucs／htdemucs（預設）</option><option value="bs-roformer">BS-RoFormer／Viperx 1297</option><option value="mel-roformer">Mel-Band RoFormer／Kim 人聲</option></select></label>
+            <label>處理流程<select id="separation-method"><option value="single" selected>單次分離（預設）</option><option value="residual">伴奏二次分離＋反向相減</option></select></label>
+            <label>分離模式<select id="vocal-mode"><option value="all" selected>人聲／伴奏分離（預設）</option><option value="lead">主唱／和音分離（伴樂保留原唱和音）</option></select></label>
+          </div>
+          <label><input id="keep-preview" type="checkbox" checked> 保留分離音軌（試聽、只有伴樂與錄音合成需要）</label>
+          <p class="help">想在「只有伴樂」時保留原唱的和音，選「主唱／和音分離」並保留音軌，再按「準備歌曲基準」。只有人聲／伴奏的舊歌需要建立這個新版本；已有主唱／和音版本可直接載入。分離模型可能誤判，先試聽主唱與和音確認。</p>
+          <button id="preparation-reset" type="button" class="secondary">還原分離預設</button>
+          </fieldset>
+        </details>
+      <section id="preview-panel" class="settings-subsection" tabindex="-1" aria-labelledby="preview-heading"><h3 id="preview-heading">分離結果試聽</h3><p id="preview-source" class="preview-source" aria-live="polite">尚未載入試聽版本。</p>
+        <p class="help">準備歌曲時會保留試聽音軌。試聽會暫停 YouTube，不參與評分；音檔只在本機。</p>
+        <div class="button-row"><button id="preview-vocals" class="secondary" disabled>試聽人聲</button><button id="preview-accompaniment" class="secondary" disabled>試聽伴奏</button></div>
+        <div class="button-row" id="lead-preview-buttons" hidden><button id="preview-lead" class="secondary" disabled>試聽主唱</button><button id="preview-backing" class="secondary" disabled>試聽和音</button></div>
+        <audio id="stem-audio" controls preload="none" hidden></audio><p id="preview-status" class="status" role="status">請先載入歌曲，才能查看試聽音軌。</p><button id="preview-build" class="secondary" type="button" hidden>補建試聽音軌</button>
+      </section>
+      <section id="mask-panel" class="settings-subsection" tabindex="-1" aria-labelledby="mask-heading"><h3 id="mask-heading">不計分區間遮罩（選用）</h3>
+        <p class="help">載入歌曲基準後，可用播放器定位樂器或誤判段落。遮罩內顯示「休息」，不計音準、進拍或完整度，也不會跳過或靜音影片。預設沒有遮罩。</p>
+        <p id="mask-song" class="help">尚未載入歌曲基準。</p>
+        <div class="mask-times"><div><label for="mask-start">起點（秒或 分:秒）</label><input id="mask-start" type="text" inputmode="decimal" placeholder="例如 0:32.5"><button id="mask-mark-start" type="button" class="secondary" disabled>目前位置設為起點</button></div><div><label for="mask-end">終點（秒或 分:秒）</label><input id="mask-end" type="text" inputmode="decimal" placeholder="例如 0:48"><button id="mask-mark-end" type="button" class="secondary" disabled>目前位置設為終點</button></div></div>
+        <div class="button-row mask-actions"><button id="mask-add" type="button" disabled>新增並保存遮罩</button><button id="mask-clear" type="button" class="secondary" disabled>清除全部遮罩</button></div>
+        <ul id="mask-list" class="mask-list"></ul><p id="mask-status" class="status" role="status">請先載入歌曲基準。</p>
+        <p class="footnote">遮罩自動保存於本機歌曲庫，不需重新分離；同一影片、同一分析範圍的所有模型共用。重疊或相連區間會合併，每輪演唱開始後固定。區間起點包含、終點不包含，以基準音高格判定（通常 0.1 秒）。</p>
+      </section>
+      </details>
+      <div class="button-row prepare-buttons"><button id="prepare-song" type="button">準備歌曲基準</button><button id="rebuild-song" class="secondary" type="button" disabled>重新分離並覆蓋</button><button id="cancel-song" class="secondary" type="button" disabled>取消／卸載</button></div>
+      <div id="prepare-progress-panel" class="prepare-progress-panel" hidden>
+        <ol id="prepare-steps" class="prepare-steps"><li>取得音訊</li><li>聲曲分離</li><li id="residual-step" hidden>伴奏二次分離</li><li id="subtract-step" hidden>反向相減</li><li id="lead-step" hidden>主唱／和音</li><li>建立基準</li><li>可開始唱</li></ol>
+        <div class="progress-heading"><span id="prepare-progress-label" role="status">正在準備…</span><span id="prepare-device">本機處理</span></div>
+        <progress id="prepare-progress" max="100" aria-labelledby="prepare-progress-label"></progress>
+      </div>
+      <p id="prepare-status" class="status" role="status"></p>
+      <details><summary>進階：純瀏覽器音訊存取診斷</summary>
+      <h3>歌曲音訊存取診斷</h3><p class="help">實際測試瀏覽器能否讀取 YouTube 頁面與音訊串流。不使用轉檔網站或代理伺服器。</p>
+      <button id="probe" class="secondary" type="button">測試此網址的音訊存取</button>
+      <ol id="probe-log" class="log" aria-live="polite"><li>尚未測試。可播放影片 ≠ 可讀取影片音訊。</li></ol>
+      <p class="footnote">通過存取測試仍不代表已完成音訊解碼、人聲分離或旋律擷取。</p>
+      </details>
+    </section>
+    <section id="library-section" class="card library-card" aria-label="本機歌曲庫">
+      <details id="library-panel" tabindex="-1"><summary>本機歌單 · 點一首就載入</summary>
+        <button id="library-refresh" class="secondary">重新整理歌曲庫</button><p id="library-status" class="status">啟動本機工具後可查看已保存歌曲。</p>
+        <label for="library-search">搜尋本機歌單</label>
+        <div class="library-search-row">
+          <input id="library-search" type="search" placeholder="輸入歌名或歌手關鍵字" autocomplete="off" aria-controls="library-list" aria-describedby="library-search-status">
+          <button id="library-search-clear" type="button" class="secondary" disabled>清除搜尋</button>
+        </div>
+        <p id="library-search-status" class="status" role="status" hidden></p>
+        <ul id="library-list" class="library-list"></ul>
+        <p class="footnote">刪除會移除這首歌的本機基準與試聽音軌，不影響演唱成績。完整歌曲與不同長度的片段分開保存。</p>
+      </details>
+    </section>
+  <section id="recording-post" class="card" tabindex="-1" aria-labelledby="post-heading">
+    <div class="section-top"><h2 id="post-heading"><span class="step">02</span> 錄音後處理</h2><span class="subtle">調整音量與延時，不必重唱</span></div>
+    <label for="post-recording">選擇已保存的錄音</label><select id="post-recording"><option value="">尚無錄音</option></select>
+    <div id="selected-recording-actions" class="button-row" aria-label="選取錄音的操作">
+      <button id="selected-recording-preview" type="button" class="secondary" disabled>試聽</button>
+      <button id="selected-recording-voice" type="button" class="secondary" disabled aria-describedby="post-preview-help">只聽人聲</button>
+      <button id="selected-recording-mv" type="button" class="secondary" disabled>製作 MV</button>
+      <button id="selected-recording-download" type="button" class="secondary" disabled>下載</button>
+      <button id="selected-recording-edit" type="button" class="secondary" disabled>後處理</button>
+      <button id="selected-recording-delete" type="button" class="secondary" disabled>刪除</button>
+      <button id="post-delete-all" type="button" class="secondary" disabled>清除全部</button>
+      <button id="mv-clear-all" type="button" class="secondary">清除全部 MV</button>
+    </div>
+    <p id="post-clear-result" class="status recording-action-result" role="status" hidden></p>
+    <p id="mv-clear-result" class="status recording-action-result" role="status" hidden></p>
+    <p id="post-preview-help" class="help">「試聽」播放完整成品；「只聽人聲」播放歌唱者音軌，不加入配樂／和音，沿用這筆錄音已保存的音量、延時與柔化設定。更改後製設定後需先重新合成，才能試聽新效果。</p>
+    <audio id="post-audio" controls hidden></audio>
+        <details id="mv-panel" class="post-effects" hidden>
+          <summary><strong>翻唱 MV｜歌名・翻唱者・節奏畫面</strong></summary>
+          <p id="mv-source" class="help">使用選取的已保存錄音製作 MV。</p>
+          <div class="field-grid">
+            <div><label for="mv-title">歌名</label><input id="mv-title" type="text" maxlength="60" placeholder="輸入歌名"></div>
+            <div><label for="mv-artist">翻唱者</label><input id="mv-artist" type="text" maxlength="50" placeholder="輸入翻唱者名稱"></div>
+          </div>
+          <p class="help">使用帶入時的成品音檔，保留已保存的音量、效果與剪輯；若剛調整後製設定，請先重新合成並選取新成品。輸出 1080p、30 fps MP4，頻譜隨音樂跳動；支援 1 秒至 10 分鐘。影片另存歌曲庫的「vedio」資料夾。</p>
+          <div class="button-row"><button id="mv-generate" type="button" disabled>開始製作翻唱 MV</button><button id="mv-cancel" type="button" class="secondary" disabled>取消製作</button></div>
+          <progress id="mv-progress" max="100" value="0" hidden aria-label="翻唱 MV 製作進度"></progress>
+          <p id="mv-status" class="status" role="status">選取已保存錄音後按「製作 MV」。</p>
+          <div id="mv-result" hidden><video id="mv-video" controls playsinline preload="metadata" style="width:100%;aspect-ratio:16/9;background:#101d2c;border-radius:12px"></video><button id="mv-download" type="button" class="secondary">下載翻唱 MV（MP4）</button></div>
+        </details>
+        <details id="mv-library-panel" class="post-effects">
+          <summary><span class="post-effects-heading"><strong>🎬 已保存 MV</strong><span>搜尋 · 播放 · 下載 · 刪除</span></span></summary>
+          <p class="help">列出歌曲庫「vedio」資料夾裡本工具做的 MV，最新的在最上面。可搜尋、播放、下載，或勾選後刪除；刪除 MV 不會刪掉錄音與原始音檔。</p>
+          <p id="mv-library-path" class="help"></p>
+          <div class="mv-library-tools"><input id="mv-library-search" type="search" placeholder="用歌名或翻唱者搜尋" aria-label="搜尋已保存 MV"><button id="mv-library-refresh" type="button" class="secondary">重新整理</button><button id="mv-library-all" type="button" class="secondary" disabled>全選</button><button id="mv-library-delete" type="button" class="secondary" disabled>刪除選取的 MV</button></div>
+          <p id="mv-library-status" class="status" role="status" aria-live="polite">展開後讀取清單。</p>
+          <div id="mv-library-list" class="mv-library-list"></div>
+          <video id="mv-library-video" controls playsinline preload="metadata" hidden style="width:100%;aspect-ratio:16/9;background:#101d2c;border-radius:12px"></video>
+        </details>
+
+    <details id="post-audition-panel" class="post-effects"><summary><span class="post-effects-heading"><strong>片段試聽／A、B 比較</strong><span>同一句循環播放 · 先聽效果再另存</span></span></summary>
+      <div class="audition-transport" role="group" aria-label="切換比較版本"><button id="post-audition-a-play" type="button" aria-pressed="false" disabled>▶ 試聽 A</button><button id="post-audition-b-play" type="button" aria-pressed="false" disabled>▶ 試聽 B</button><button id="post-audition-stop" type="button" class="secondary" disabled>停止比較</button></div>
+      <output id="post-audition-position"></output><p id="post-audition-status" class="status" role="status">選取錄音後即可比較。</p>
+      <section id="post-audition-differences" class="audition-differences" aria-labelledby="post-audition-differences-heading">
+        <div class="difference-heading"><h3 id="post-audition-differences-heading">A／B 設定差異</h3><span id="post-audition-differences-count" role="status">選取錄音後顯示差異。</span></div>
+        <table id="post-audition-differences-table" hidden aria-labelledby="post-audition-differences-heading"><thead><tr><th scope="col">不同的參數</th><th scope="col" class="audition-slot-a">A 設定</th><th scope="col" class="audition-slot-b">B 設定</th></tr></thead><tbody id="post-audition-differences-body"></tbody></table>
+        <p class="help">隨調整即時更新，只列不同項目，包含尚未開啟的效果參數。修改後再按試聽，即可聽到新設定；剪輯與淡入淡出由 A／B 共用。</p>
+      </section>
+      <fieldset id="post-audition-fields" disabled><legend>選同一句 → 調整效果 → 試聽 B → 切換 A／B</legend>
+        <div class="post-eq-grid">
+          <div><label for="post-audition-start">試聽開始（秒）</label><input id="post-audition-start" type="number" min="0" max="3600" step="0.01" value="0"></div>
+          <div><label for="post-audition-end">試聽結束（秒）</label><input id="post-audition-end" type="number" min="0" max="3600" step="0.01" value="10"></div>
+          <div><label for="post-audition-mode">試聽內容</label><select id="post-audition-mode"><option value="mix">人聲＋配樂</option><option value="voice">只聽人聲</option></select></div>
+        </div>
+        <div class="button-row"><button id="post-audition-from-playhead" type="button" class="secondary">從目前播放位置取 10 秒</button></div>
+        <label class="check-option"><input id="post-audition-match" type="checkbox" checked>近似音量匹配（只影響比較）</label>
+        <p class="help">A（藍色）、B（紫色）從相同設定開始，之後各自調整比較；預設編輯 B。點標籤會帶出該組所有數值，切換時自動暫存各自的調整。用上方大按鈕試聽 A／B，播放位置會接續。</p>
+        <div class="audition-settings">
+          <div class="audition-tabs" role="tablist" aria-label="A／B 設定">
+            <button id="post-audition-a-tab" class="audition-slot-a" type="button" role="tab" aria-selected="true" aria-controls="post-audition-a-pane">A 設定</button>
+            <button id="post-audition-b-tab" class="audition-slot-b" type="button" role="tab" aria-selected="false" aria-controls="post-audition-b-pane" tabindex="-1">B 設定</button>
+          </div>
+          <div id="post-audition-a-pane" class="audition-setting-pane audition-slot-a" role="tabpanel" aria-labelledby="post-audition-a-tab"><h3>A 組設定</h3><p id="post-audition-a-info" class="help">尚未選取錄音</p><div class="button-row"><button id="post-audition-a-apply" type="button" class="secondary">前往 A 後製設定</button></div></div>
+          <div id="post-audition-b-pane" class="audition-setting-pane audition-slot-b" role="tabpanel" aria-labelledby="post-audition-b-tab" hidden><h3>B 組設定</h3><p id="post-audition-b-info" class="help">尚未記住設定</p><div class="button-row"><button id="post-audition-b-apply" type="button" class="secondary">前往 B 後製設定</button></div></div>
+        </div>
+        <details class="help"><summary>試聽與另存說明</summary><p>試聽以剪輯前完整錄音時間為準，每段最多 30 秒，暫不套用剪輯與淡入淡出。近似音量匹配會降低較大聲的一組，只影響比較。選中喜歡的 A 或 B，再用下方「重新合成」另存目前這組。剪輯與淡入淡出共用一份設定。切換錄音或重整會清除兩組暫存；首次準備需合成，之後可直接切換。</p></details>
+      </fieldset>
+    </details>
+    <p id="post-status" class="status" role="status">請選擇一筆錄音。</p>
+    <p id="post-info" class="help"></p><p id="recording-storage-status" class="help" role="status">連接本機錄音目錄中…</p>
+    <div id="post-ab-editor" class="audition-slot-b" data-slot="b" aria-labelledby="post-ab-editor-heading">
+      <div class="ab-editor-heading"><div><h3 id="post-ab-editor-heading">正在調整 B 組</h3><p class="help">另存保留 A／B 各自設定。還原只重設目前組：原音、大廳殘響 20%、回聲 10%、音量 100%、校正 300 ms；剪輯保留。</p></div><div class="ab-editor-switch" role="group" aria-label="切換正在編輯的設定"><button id="post-audition-a-edit" class="audition-slot-a" type="button" aria-pressed="false" disabled>A 設定</button><button id="post-audition-b-edit" class="audition-slot-b" type="button" aria-pressed="true" disabled>B 設定</button><button id="post-audition-reset" class="secondary" type="button" disabled title="還原目前組別的系統預設音量、延時與效果；另一組、剪輯與已保存錄音保留">還原 B 預設設定</button></div></div>
+    <div class="recording-levels">
+      <div><label for="post-voice-level">歌唱者音量 <output id="post-voice-value" for="post-voice-level">100%</output></label><input id="post-voice-level" type="range" min="0" max="200" step="5" value="100" disabled aria-describedby="post-volume-help"></div>
+      <div><label for="post-backing-level">配樂／和音音量 <output id="post-backing-value" for="post-backing-level">100%</output></label><input id="post-backing-level" type="range" min="0" max="200" step="5" value="100" disabled aria-describedby="post-volume-help"></div>
+    </div>
+    <p id="post-volume-help" class="help">100% 沿用錄音時的音量平衡；往左降低、往右提高，0% 靜音。配樂與和音一起調整；只錄歌唱者的錄音無配樂可調。按「重新合成」後才會套用，再播放成品試聽；成品會保留目前設定，可繼續後製，每次都從原始歌聲重新計算。</p>
+    <label for="remix-delay">歌聲延時校正（毫秒）</label><input id="remix-delay" type="number" min="-2000" max="2000" step="10" value="0">
+    <p class="help">正值：歌聲晚到，將歌聲提前；負值：歌聲太早，將歌聲延後。填入總校正量，不是累加；配樂與和音不移動。初始值沿用本輪錄音校正值；舊錄音沿用當時保存的時間補償。</p>
+    <label for="post-softening">歌聲柔化</label><select id="post-softening" disabled><option value="off">關閉（預設，保留原音色）</option><option value="light">輕度（柔和一點）</option><option value="medium">中度（明顯溫潤）</option><option value="strong">強烈（厚柔、較暗）</option></select>
+    <p class="help">音色效果：輕度稍微柔和，中度明顯降低尖亮感，強烈做出厚柔、較暗的音色；不是修復原音或消除呼吸聲。只處理歌唱者，配樂與和音不套用。選好後按「重新合成」另存，原錄音及評分不變；強烈會犧牲一些明亮感與咬字清晰度。比較強度時保持相同音量與延時；選取成品可再調整，柔化不會重複疊加。</p>
+    <details id="post-effects-panel" class="post-effects"><summary><span class="post-effects-heading"><strong>人聲進階後製</strong><span>局部音量 · EQ · 動態壓縮 · 殘響</span></span><span class="post-effects-toggle"><span class="when-closed">點此展開</span><span class="when-open">收合設定</span></span></summary>
+      <fieldset id="post-effects-fields" disabled><legend>只處理歌唱者</legend>
+        <p class="help">新版錄製的音檔，A／B 後製起始設定皆為大廳殘響 20%＋回聲 10%；舊錄音沿用原有設定。可先用片段試聽比較，滿意後按「重新合成」另存；每次從原始歌聲重算，效果不會疊加。配樂／和音不套用這些效果。</p>
+        <details id="post-repair-panel" class="post-repair-panel"><summary><strong>人聲清理與音準修正</strong><span id="post-repair-summary">降噪 · 齒音 · 呼吸聲 · 音準（全部關閉）</span></summary>
+          <p class="help">只處理原始歌聲，A／B 各自保存；情緒和空間情境不會更動這些設定。0% 關閉。先用同一小段比較，滿意再重新合成另存；處理時會顯示階段與進度。</p>
+          <div class="post-eq-grid">
+            <div><label for="post-noise">降噪強度 <output id="post-noise-value">0%（關閉）</output></label><input id="post-noise" type="range" min="0" max="100" step="5" value="0"><p class="help">自動從較安靜、無人聲的空檔估計底噪，降低風扇、冷氣等持續雜音。可先試 25～40%；太強可能出現水聲。若全段沒有可用空檔，會略過降噪。</p></div>
+            <div><label for="post-deess">齒音抑制 <output id="post-deess-value">0%（關閉）</output></label><input id="post-deess" type="range" min="0" max="100" step="5" value="0"><p class="help">在高頻齒音突出時動態降低該頻段，保留低頻歌聲。可先試 30%；太強會讓咬字變鈍。</p><label for="post-deess-hz">齒音偵測頻率 <output id="post-deess-hz-value">6000 Hz</output></label><input id="post-deess-hz" type="range" min="3000" max="10000" step="250" value="6000"><p class="help">3～10 kHz；數字降低會處理較低的刺耳音，升高偏向細尖的「ㄙ」聲。強度 0% 時不處理。</p></div>
+            <div><label for="post-breath">呼吸聲降低 <output id="post-breath-value">0%（關閉）</output></label><input id="post-breath" type="range" min="0" max="100" step="5" value="0"><p class="help">自動找演唱附近較短、無音高的換氣聲並降低音量，保留自然氣息。可先試 30%。屬聲學偵測，可能漏判或誤判氣音、子音；必要時用局部音量微調。</p></div>
+          </div>
+          <h3>音準修正 · 保持時間位置</h3><div class="post-eq-grid">
+            <div><label for="post-pitch-correction">修正強度 <output id="post-pitch-correction-value">0%（關閉）</output></label><input id="post-pitch-correction" type="range" min="0" max="100" step="5" value="0"><p class="help">只修正可辨識的有音高歌聲，不移動整首時間或配樂。先試 30～50%；100% 較貼近目標音高，仍受偵測、平滑與修正範圍限制。</p></div>
+            <div><label for="post-pitch-target">修正目標</label><select id="post-pitch-target"><option value="chromatic">最近半音（預設）</option><option value="reference">原唱基準（保留演唱八度）</option></select><p class="help">最近半音修正小幅偏音，不知道歌曲旋律。原唱基準使用這次錄音保存的旋律及時間資料，保留高／低八度；休息、不計分區間和偏離超過 2 個半音的地方不強拉。</p></div>
+            <div><label for="post-pitch-speed">修正速度 <output id="post-pitch-speed-value">120 ms</output></label><input id="post-pitch-speed" type="range" min="20" max="500" step="10" value="120"><p class="help">20～500 ms 是靠近目標音高的速度，不是播放延遲。小值修正更快，大值較緩。第一次可用 120 ms。</p><label for="post-pitch-vibrato">保留顫音</label><select id="post-pitch-vibrato"><option value="on">開啟（預設，保留自然起伏）</option><option value="off">關閉（較貼近目標）</option></select><p class="help">開啟時主要修正平均偏音，保留較快的音高起伏。滑音、氣音與複雜唱法仍需試聽；這是音訊修正，不會改寫原始演唱或評分。</p></div>
+          </div>
+        </details>
+        <div class="post-emotion-card">
+          <label for="post-emotion">人聲情緒 · 選取即套用目前組別</label>
+          <select id="post-emotion" aria-describedby="post-emotion-help post-emotion-status"><option value="custom" disabled>自訂音色</option></select>
+          <p id="post-emotion-status" class="help" role="status"></p>
+          <p id="post-emotion-help" class="help">預設「原音」，不額外調整音色。10 種情緒會帶入 EQ、柔化與壓縮，可再微調；不改變唱法與音高。殘響、回聲、音量、校正、剪輯及另一組設定保留。原音不等於關閉所有後製；想聽乾聲，另將殘響與回聲調為 0%。已有後製的錄音沿用保存的音色。按「試聽 A／B」比較，滿意後「重新合成」另存。</p>
+        </div>
+        <div class="post-scene-card">
+          <label for="post-scene">情境預設 · 選取即套用目前組別</label>
+          <select id="post-scene" aria-describedby="post-scene-help post-scene-status"><option value="" disabled>自訂空間效果</option></select>
+          <p id="post-scene-status" class="help" role="status"></p>
+          <p id="post-scene-help" class="help">一起帶入殘響音量、空間、尾音、預延遲、明亮度、寬度及回聲設定，之後可微調；另一組、EQ、壓縮、柔化、音量、校正與剪輯保留。局部區段的數值保留，空間音色與回聲間隔仍沿用上方。按「試聽 A／B」聽取新效果，按「重新合成」才另存。夢幻回聲以 600 ms 起步，可依歌曲節奏調整。</p>
+        </div>
+        <h3>局部音量</h3><p id="post-regions-help" class="help">以套用延時後、尚未剪輯的完整錄音秒數設定，不是 YouTube 時間。「從目前播放位置」會自動換算已剪輯成品的位置。100% 不變、0% 靜音，區段不可重疊。變更延時後請重新核對位置；殘響會自然延伸到區段外。</p>
+        <div id="post-regions"></div><button id="post-region-add" type="button" class="secondary">新增區段（從目前播放位置）</button>
+        <h3>EQ 音色</h3><div class="post-eq-grid">
+          <div><label for="post-eq-low">低頻 · 厚度 <output id="post-eq-low-value">0 dB</output></label><input id="post-eq-low" type="range" min="-12" max="12" step="1" value="0"></div>
+          <div><label for="post-eq-mid">中頻 · 存在感 <output id="post-eq-mid-value">0 dB</output></label><input id="post-eq-mid" type="range" min="-12" max="12" step="1" value="0"></div>
+          <div><label for="post-eq-high">高頻 · 明亮度 <output id="post-eq-high-value">0 dB</output></label><input id="post-eq-high" type="range" min="-12" max="12" step="1" value="0"></div>
+        </div><p class="help">0 dB 不變；往左減少、往右增加。先從 ±2～3 dB 比較。</p>
+        <div class="post-eq-grid">
+          <div><label for="post-compression">動態壓縮 · 穩定大小聲</label><select id="post-compression"><option value="off">關閉</option><option value="light">輕度 · 保留較多起伏</option><option value="medium">中度 · 更穩定</option></select></div>
+          <div><label for="post-reverb">殘響音量 <output id="post-reverb-value">20%</output></label><input id="post-reverb" type="range" min="0" max="100" step="1" value="20"><p class="help">新後製預設大廳 20%，已有設定則沿用；0% 關閉，最高 100%。可用 20%、40%、60% 比較效果。數字越高，加入的殘響越明顯；原本人聲仍保留。按「重新合成」另存後試聽。</p></div>
+        </div>
+        <div class="post-eq-grid">
+          <div><label for="post-reverb-space">空間類型</label><select id="post-reverb-space" aria-describedby="post-reverb-space-help"><option value="classic">原版（沿用舊殘響）</option><option value="room">房間 · 緊密、較短</option><option value="hall" selected>大廳 · 寬廣、較長</option><option value="plate">板式 · 明亮、密集</option><option value="studio">錄音室 · 貼近、短尾</option><option value="chamber">小室 · 溫暖、厚實</option><option value="church">教堂 · 柔暗、莊嚴長尾</option><option value="arena">體育館 · 開闊、遠距</option><option value="tunnel">隧道 · 規律、連續反射</option><option value="cave">洞穴 · 低沉、不規則反射</option><option value="bathroom">浴室 · 明亮、近牆反射</option><option value="dream">夢幻空間 · 漸起、漂浮長尾</option></select><p id="post-reverb-space-help" class="help">寬廣、柔和，尾音逐漸鋪開，適合抒情歌。</p></div>
+          <div><label for="post-reverb-decay">尾音長度 <output id="post-reverb-decay-value">1.8 秒</output></label><input id="post-reverb-decay" type="range" min="0.2" max="10" step="0.1" value="1.8" aria-describedby="post-reverb-decay-help"><p id="post-reverb-decay-help" class="help">0.2～10 秒，控制殘響尾巴延續的長度。數字越大，唱完後的餘韻越長；越小則收得越快。可用 0.8、2、5 秒比較。想保留完整尾音，剪輯的「保留結束」請留白。</p></div>
+          <div><label for="post-reverb-predelay">預延遲 <output id="post-reverb-predelay-value">25 ms</output></label><input id="post-reverb-predelay" type="range" min="0" max="500" step="1" value="25" aria-describedby="post-reverb-predelay-help"><p id="post-reverb-predelay-help" class="help">0～500 ms，控制人聲發出後，隔多久開始出現殘響。0 ms 立即開始；數字越大，原聲與殘響的間隔越明顯。可用 15、80、200 ms 比較；500 ms 就是半秒。不會移動原本人聲或配樂，也不是歌聲延時校正。</p></div>
+        </div>
+        <div class="post-edit-grid">
+          <div><label for="post-reverb-brightness">殘響明亮度 <output id="post-reverb-brightness-value">0</output></label><input id="post-reverb-brightness" type="range" min="-100" max="100" step="5" value="0"><p class="help">負值讓尾音柔暗、正值讓尾音明亮；0 沿用目前空間音色。只改殘響，不改原本人聲。</p></div>
+          <div><label for="post-reverb-width">殘響立體寬度 <output id="post-reverb-width-value">100%</output></label><input id="post-reverb-width" type="range" min="0" max="100" step="5" value="100"><p class="help">0% 集中在中央，100% 保留完整左右空間感。戴耳機比較較明顯；原本人聲位置不變。</p></div>
+        </div><p class="help">殘響音量大於 0% 時才會聽到這些效果。單換「空間類型」只帶入尾音與預延遲建議值，其餘數值保留；上方「情境預設」才會帶入整組空間與回聲設定。「原版」預設為 0.8 秒／15 ms。每次先改一項，再用片段試聽比較。</p>
+        <h3>回聲 Delay</h3><div class="post-eq-grid">
+          <div><label for="post-echo-amount">回聲音量 <output id="post-echo-amount-value">0%</output></label><input id="post-echo-amount" type="range" min="0" max="100" step="1" value="0"><p class="help">0% 關閉；提高後，能聽到句子或字音重複出現。可從 15% 開始。</p></div>
+          <div><label for="post-echo-time">重複間隔 <output id="post-echo-time-value">300 ms</output></label><input id="post-echo-time" type="range" min="80" max="1000" step="10" value="300"><p class="help">80～1000 ms。小值像緊貼人聲的重影，大值像一句接一句的回應。</p></div>
+          <div><label for="post-echo-repeats">重複次數 <output id="post-echo-repeats-value">3 次</output></label><input id="post-echo-repeats" type="range" min="1" max="8" step="1" value="3"><p class="help">最多 8 次；間隔和次數一起決定回聲延伸多長。</p></div>
+          <div><label for="post-echo-feedback">每次保留音量 <output id="post-echo-feedback-value">40%</output></label><input id="post-echo-feedback" type="range" min="0" max="80" step="5" value="40"><p class="help">後一次是前一次的幾成。40% 會很快變小；80% 衰減較慢；0% 只留下第一次回聲。</p></div>
+          <div><label for="post-echo-pingpong">回聲位置</label><select id="post-echo-pingpong"><option value="off">中央</option><option value="on">左右交替</option></select><p class="help">左右交替讓每次回聲輪流出現在左右兩邊，原本人聲保持原位。</p></div>
+        </div>
+        <h3>局部效果</h3><p class="help">區段內用指定的殘響音量、尾音長度與回聲音量，區段外沿用上方設定。可做主歌淡、副歌濃、最後一句長尾音。秒數以剪輯前完整錄音為準，區段不可重疊；已產生的尾音會自然延伸到區段外，其餘音色與回聲間隔沿用上方設定。</p>
+        <div id="post-effect-regions"></div><button id="post-effect-region-add" type="button" class="secondary">新增效果區段（目前位置）</button>
+        <button id="post-effects-reset" type="button" class="secondary">重設全部人聲效果</button>
+      </fieldset>
+    </details>
+    </div>
+    <details id="post-edit-panel" class="post-effects"><summary><span class="post-effects-heading"><strong>剪輯與淡入淡出</strong><span>A／B 共用 · 保留想要的段落 · 人聲與配樂一起平順收尾</span></span><span class="post-effects-toggle"><span class="when-closed">點此展開</span><span class="when-open">收合設定</span></span></summary>
+      <fieldset id="post-edit-fields" disabled><legend>套用到完整混音成品</legend>
+        <p id="post-edit-info" class="help"></p>
+        <div class="post-edit-grid">
+          <div><label for="post-edit-start">保留開始（秒）</label><input id="post-edit-start" type="number" min="0" max="3600" step="0.01" value="0"><button id="post-edit-start-now" type="button" class="secondary">用目前播放位置</button></div>
+          <div><label for="post-edit-end">保留結束（秒，可留白）</label><input id="post-edit-end" type="number" min="0" max="3600" step="0.01" placeholder="至末尾，含殘響尾音"><button id="post-edit-end-now" type="button" class="secondary">用目前播放位置</button></div>
+          <div><label for="post-edit-fadeIn">開頭淡入（秒）</label><input id="post-edit-fadeIn" type="number" min="0" max="30" step="0.1" value="0"></div>
+          <div><label for="post-edit-fadeOut">結尾淡出（秒）</label><input id="post-edit-fadeOut" type="number" min="0" max="30" step="0.1" value="0"></div>
+        </div>
+        <p class="help">淡入從保留段落的開頭開始，淡出在結尾結束；0 秒關閉，兩者合計不可超過保留長度。指定結束點會一起裁掉其後的殘響。每次從完整來源重算，不累加剪輯；重設後可恢復全段。原始歌聲及評分資料保留，重新評分仍依完整原始演唱。</p>
+        <button id="post-edit-reset" type="button" class="secondary">重設剪輯與淡入淡出</button>
+      </fieldset>
+    </details>
+    <div class="button-row"><button id="post-audition-quick" type="button" class="secondary" disabled>片段試聽目前設定</button><button id="post-remix" type="button" disabled>重新合成（音量／延時／音色／剪輯）</button><button id="post-mp3" type="button" class="secondary" disabled>轉 MP3 並下載</button></div>
+    <p class="help">重新合成會另存一筆，並保存獨立的原始歌聲與後製資料，可再次編輯或轉 MP3；原錄音保留。配樂／和音需歌曲庫中的同版本音軌。舊成品或單獨匯出的 WAV／MP3 若沒有原始歌聲及時間資料，無法直接分軌後製。選「不保存錄音」時不保留後處理資料。</p>
+    <details id="recordings-panel"><summary>整首演唱與已保存成品</summary><p class="help">此清單顯示整首演唱與明確保存的完整成品；分段錄音請在分段區挑選、試聽或刪除。停止錄音後自動保存於歌曲庫下的「錄音」目錄；Chrome 與 Edge 連到同一本機工具即可共用。既有瀏覽器錄音會自動搬存，成功確認後才清除舊副本；未搬存成功仍保留在瀏覽器。直接按 YouTube 播放只評分；要錄音請按「從頭開始唱」。</p><div class="button-row"><button id="recording-refresh" class="secondary" type="button">重新整理／搬存錄音</button><button id="recording-delete-all" class="secondary" type="button">刪除此清單錄音</button></div><audio id="recording-audio" controls hidden></audio><ul id="recording-list" class="library-list"></ul></details>
+  </section>
+    <details id="timing-section" tabindex="-1" class="card timing-card section-fold">
+      <summary><span class="step">04</span> 看節拍，調延遲 <span class="fold-caption">節拍燈 · 時間補償 · 五音測試</span></summary>
+      <div class="fold-body">
+      <div class="timing-grid"><div><label for="bpm">手動節拍速度</label><div class="bpm-row"><input id="bpm" type="number" min="40" max="220" step="1" value="90"><span>BPM</span><button id="beat-toggle" class="secondary" type="button">啟動節拍燈</button></div><div id="beats" class="beats" aria-label="四拍節拍燈"><i></i><i></i><i></i><i></i></div><p id="beat-note" class="help">手動節拍燈；基準建立後，若能辨識節奏，改用自動估計拍點。</p></div>
+      <div><label for="offset">手動時間補償 <output id="offset-value">200 ms</output></label><input id="offset" type="range" min="-500" max="1000" step="10" value="200"><div class="range-label"><span>−500 ms</span><span>+1000 ms</span></div><p class="help">預設＋200 ms：歌手聲音提前 200 ms 比對，例如 10.200 秒的歌聲對照 10.000 秒的歌曲基準。只調整評分時間，不改變播放器或錄音音檔；錄音校正在下方另設。</p></div></div>
+      <details id="calibration-panel"><summary>Do Re Mi Fa Sol 五音延遲測試（選用）</summary>
+        <p class="help">先開啟麥克風。測試會播放五個音，畫面同步提示；完成後可選擇套用建議值。</p>
+        <label for="cal-mode">測試方式</label><select id="cal-mode"><option value="sing">跟著五音唱（包含人的反應時間）</option><option value="loopback">耳機／喇叭靠近麥克風（不用唱）</option></select>
+        <p class="help">跟唱時戴耳機；回收測試則讓麥克風聽到耳機或喇叭的聲音。回收結果是本頁播放到收音的往返延遲，不保證等於 YouTube 的延遲。</p>
+        <label for="cal-octave">測試音域</label><select id="cal-octave"><option value="0">中音 C4–G4</option><option value="-1">低音 C3–G3</option></select>
+        <div id="cal-notes" class="cal-notes"><span>Do</span><span>Re</span><span>Mi</span><span>Fa</span><span>Sol</span></div>
+        <div class="button-row"><button id="cal-start">播放五音並測試</button><button id="cal-stop" class="secondary" disabled>停止測試</button><button id="cal-apply" class="secondary" disabled>套用建議補償</button></div>
+        <p id="cal-status" class="status" role="status">選用測試，不會錄音或保存聲音，也不會自動改動補償。</p>
+      </details>
+      <div class="notice muted">藍牙、有線、USB 與電腦內建麥克風請分別測試。更換裝置後，補償值會回到預設＋200 ms；這是起始設定，並非裝置實測延遲。</div>
+      </div>
+    </details>
+  <section id="recording-section" tabindex="-1" class="card score-card">
+    <div class="section-top"><h2><span class="step">05</span> 評分與錄音設定</h2><span class="subtle">練習評分</span></div>
+    <details id="score-settings" class="settings-fold" tabindex="-1"><summary>評分設定 <span class="fold-caption">難度 · 音域比對 · 錄音重評</span></summary>
+    <label for="score-difficulty">評分難度</label><select id="score-difficulty" aria-describedby="difficulty-help"><option value="standard">標準（原有規則）</option><option value="strict">嚴格（精準練習）</option><option value="relaxed" selected>寬鬆（輕鬆練唱，預設）</option></select>
+    <p id="difficulty-help" class="help"></p>
+    <label for="pitch-mode">音域比對</label><select id="pitch-mode"><option value="octave">允許高／低八度（適合不同音域）</option><option value="strict">嚴格原調（與原唱相同音高）</option></select><p class="help">放寬八度差不會改變 YouTube 伴奏。其他音高偏差仍會扣分；演唱開始後固定本次模式。</p>
+    <label for="score-range">評分範圍</label><select id="score-range"><option value="performed" selected>只比已演唱範圍（開始到停止，預設）</option><option value="full">整首歌曲（依已載入的分析範圍）</option></select>
+    <p class="help">選「已演唱範圍」時，後面尚未唱到的部分不扣分；這段期間的漏唱、跳過仍計入。每輪開始後固定，重唱時可重新選擇。</p>
+    <section id="rescore-settings" class="settings-subsection"><h3>錄音重新評分</h3>
+    <label for="score-recording">選擇已保存的錄音</label><select id="score-recording"><option value="">尚無錄音</option></select>
+    <label for="post-reference-source">重新評分使用的歌曲基準</label><select id="post-reference-source"><option value="original">錄音當時的基準（預設）</option><option value="current">目前已載入的歌曲基準（比較 RMVPE／其他版本）</option></select>
+    <p id="post-reference-info" class="help" role="status"></p>
+    <label for="post-difficulty">重新評分難度</label><select id="post-difficulty" disabled><option value="standard">標準</option><option value="strict">嚴格</option><option value="relaxed" selected>寬鬆（預設）</option></select>
+    <p class="help">選取錄音後預設為寬鬆；可在此調整，按下方「調延時重新評分」。遮罩、八度及評分範圍仍沿用錄音當時設定。</p>
+    <label for="post-delay">歌聲延時校正（毫秒）</label><input id="post-delay" type="number" min="-2000" max="2000" step="10" value="0">
+    <p class="help">正值：歌聲晚到，將歌聲提前；負值：歌聲太早，將歌聲延後。填入總校正量，不是累加；配樂與和音不移動。初始值沿用本輪錄音校正值；舊錄音沿用當時保存的時間補償。</p>
+    <div class="button-row"><button id="post-rescore" type="button" disabled>調延時重新評分</button></div>
+    <p class="help"><button id="post-diagnostic" type="button" class="secondary" disabled>下載這筆評分診斷</button> 包含這筆原始錄音、乾淨歌聲、時間位置與評分基準；只下載到本機，供檢查對齊問題。</p>
+    <p id="post-score" class="score-title" role="status"></p><p id="rescore-status" class="status" role="status">選擇已保存的錄音後，可調整基準與難度重新評分。</p>
+    </section>
+    </details>
+    <details id="recording-settings" class="settings-fold" tabindex="-1"><summary>錄音設定 <span class="fold-caption">錄音內容 · 歌聲延時</span></summary>
+    <label for="recording-mode">演唱錄音儲存</label><select id="recording-mode"><option value="voice">歌唱者</option><option value="mix" selected>歌唱者＋配樂／和音（預設）</option><option value="off">不保存錄音</option></select>
+    <p class="help">新錄音使用同步無損 WAV，保留原始歌聲供後製，檔案會比壓縮錄音大；每輪最多 30 分鐘。</p>
+    <p class="help">按「從頭開始唱」，影片開始播放時同步錄音；停止收音、結束並結算或影片播完時保存。暫停／緩衝時暫停錄音。依已載入版本自動選軌：兩軌版本加入伴奏；四軌版本加入伴奏＋和音，不加入原唱主唱或全部人聲。超過音軌長度後只錄歌唱者。請戴耳機，避免原唱從喇叭漏入麥克風。</p>
+    <label for="recording-delay">錄音歌聲延時校正（毫秒）</label><input id="recording-delay" type="number" min="-2000" max="2000" step="1" value="300">
+    <p class="help">預設＋300 ms：停止錄音後，成品中的歌聲往前移 300 ms，配樂與和音不移動。填入總校正量，不會累加。原始歌聲保留供後處理；即時評分仍使用上方時間補償設定。</p>
+    </details>
+    <p class="footnote">暫停與緩衝不計分。漏唱與跳過的段落會降低分數；「整首歌曲」模式也會計入提前結束的剩餘段落。可在中途按「結束並結算」，或等影片播完自動結算。進拍分數依旋律起音估計，不是專業聲樂評鑑。</p>
+    <details id="history-panel"><summary>分數紀錄 · 勾選清除</summary><label class="check-option"><input id="history-select-all" type="checkbox">全選</label><ul id="score-history" class="score-history"></ul><div class="button-row history-actions"><button id="delete-history-selected" class="secondary" type="button" disabled>清除勾選紀錄</button><button id="clear-history" class="secondary" type="button">全部清除</button></div><p id="history-status" class="help" role="status">只清除分數，不刪除演唱錄音或歌曲。</p></details>
+  </section>
+  </div>
+  <aside class="notice" aria-label="使用限制與免責聲明"><strong>本機測試用途 · 不得商用</strong><p class="help">本工具僅供本機測試與個人非商業練習。請尊重著作權，只處理您有權使用或已取得授權的內容，不得未經授權下載、複製或散布。本工具不提供歌曲內容或使用授權；使用者應自行確認其使用符合相關法規與平台規範。自動分析與評分僅供測試參考，不保證準確性。</p></aside>
+  <footer><span>唱錄系統 / Local-first experiment</span><span>麥克風 → 本機音高分析 → 畫面</span></footer>
+</main>
+<script type="module" src="app.mjs"></script>
+<script type="module" src="navigation.mjs"></script>
+</body>
+</html>

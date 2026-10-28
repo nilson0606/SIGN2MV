@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIGN2MV</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">SIGN<span>2</span>MV</div>
+  <nav class="tabs" id="tabs">
+    <button data-page="home" data-i18n="nav.home">首頁</button>
+    <button data-page="library" data-i18n="nav.library">歌曲庫</button>
+    <button data-page="sing" data-i18n="nav.sing">唱錄</button>
+    <button data-page="mv" data-i18n="nav.mv">MV</button>
+    <button data-page="cover" data-i18n="nav.cover">AI 翻唱</button>
+    <button data-page="jobs" data-i18n="nav.jobs">工作佇列</button>
+    <button data-page="settings" data-i18n="nav.settings">設定</button>
+  </nav>
+  <div class="spacer"></div>
+  <span id="queue-indicator" class="badge"></span>
+  <select id="lang-select" data-i18n-aria="nav.language">
+    <option value="zh-TW">繁體中文</option>
+    <option value="en">English</option>
+  </select>
+  <a class="btn small" id="manual-link" href="/manual/manual.zh-TW.html" target="_blank" data-i18n="nav.manual">操作手冊 ↗</a>
+  <button class="btn small danger" id="shutdown-btn" data-i18n="nav.shutdown">全部關閉</button>
+</header>
+
+<main>
+  <div id="version-banner" class="banner warn hidden"></div>
+
+  <!-- HOME -->
+  <section class="page" id="page-home">
+    <div class="grid">
+      <div class="panel">
+        <h2 data-i18n="home.status">系統狀態</h2>
+        <dl class="kv" id="status-kv"></dl>
+      </div>
+      <div class="panel">
+        <h2 data-i18n="home.start">開始</h2>
+        <p class="muted" data-i18n="home.start_hint">先到「歌曲庫」加入歌曲，再選擇要做的事。</p>
+        <div class="row">
+          <button class="btn primary" data-goto="library" data-i18n="nav.library">歌曲庫</button>
+          <button class="btn" data-goto="sing" data-i18n="nav.sing">唱錄</button>
+          <button class="btn" data-goto="mv" data-i18n="nav.mv">MV</button>
+          <button class="btn" data-goto="cover" data-i18n="nav.cover">AI 翻唱</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIBRARY -->
+  <section class="page" id="page-library">
+    <div class="split">
+      <div class="panel">
+        <h2 data-i18n="lib.title">歌曲庫</h2>
+        <div class="row">
+          <input type="text" id="new-song-title" data-i18n-placeholder="lib.new_placeholder" style="flex:1;min-width:160px">
+          <button class="btn primary" id="new-song-btn" data-i18n="lib.add">新增歌曲</button>
+        </div>
+        <div class="row"><input type="text" id="song-search" data-i18n-placeholder="lib.search" style="flex:1"></div>
+        <p class="muted small" id="library-path"></p>
+        <div class="list" id="song-list"></div>
+      </div>
+      <div class="panel" id="song-detail"></div>
+    </div>
+  </section>
+
+  <!-- SING / MV / COVER (filled by later stages) -->
+  <section class="page" id="page-sing"><div class="panel"><h2 data-i18n="nav.sing">唱錄</h2><p class="muted" data-i18n="common.coming">這一區正在開發中。</p></div></section>
+  <section class="page" id="page-mv"><div class="panel"><h2 data-i18n="nav.mv">MV</h2><p class="muted" data-i18n="common.coming">這一區正在開發中。</p></div></section>
+  <section class="page" id="page-cover"><div class="panel"><h2 data-i18n="nav.cover">AI 翻唱</h2><p class="muted" data-i18n="common.coming">這一區正在開發中。</p></div></section>
+
+  <!-- JOBS -->
+  <section class="page" id="page-jobs">
+    <div class="panel">
+      <h2 data-i18n="jobs.title">工作佇列</h2>
+      <p class="muted small" data-i18n="jobs.hint">顯示卡工作一次只跑一個，其他排隊；不用顯示卡的工作可以同時跑。</p>
+      <div class="row">
+        <span class="muted" data-i18n="jobs.demo">測試工作：</span>
+        <input type="number" id="demo-seconds" value="15" min="1" max="600" style="width:80px">
+        <span class="muted" data-i18n="common.seconds">秒</span>
+        <button class="btn" id="demo-gpu" data-i18n="jobs.demo_gpu">加入（顯示卡佇列）</button>
+        <button class="btn" id="demo-cpu" data-i18n="jobs.demo_cpu">加入（一般佇列）</button>
+      </div>
+      <div class="list" id="job-list" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="page" id="page-settings">
+    <div class="panel">
+      <h2 data-i18n="set.title">設定</h2>
+      <div class="kv">
+        <dt data-i18n="set.library_dir">歌曲庫位置</dt>
+        <dd class="row"><input type="text" id="set-library" style="flex:1;min-width:300px"><button class="btn" id="set-library-save" data-i18n="common.save">儲存</button></dd>
+        <dt data-i18n="set.singer">翻唱者名稱</dt>
+        <dd class="row"><input type="text" id="set-singer" maxlength="80"></dd>
+        <dt data-i18n="set.studio">工作室名稱</dt>
+        <dd class="row"><input type="text" id="set-studio" maxlength="80"><button class="btn" id="set-names-save" data-i18n="common.save">儲存</button></dd>
+      </div>
+      <p class="muted small" data-i18n="set.names_hint">名稱會出現在 MV 的名牌卡上。</p>
+    </div>
+  </section>
+</main>
+
+<dialog id="confirm-dialog">
+  <p id="confirm-text"></p>
+  <div class="row" style="justify-content:flex-end">
+    <button class="btn" id="confirm-no" data-i18n="common.cancel">取消</button>
+    <button class="btn danger" id="confirm-yes" data-i18n="common.ok">確定</button>
+  </div>
+</dialog>
+<div id="toast"></div>
+<script type="module" src="/js/main.js"></script>
+</body>
+</html>
