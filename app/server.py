@@ -182,6 +182,13 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
     def list_jobs():
         return {"jobs": jobs.list()}
 
+    @app.get("/api/jobs/{job_id}/log")
+    def job_log(job_id: str, after: int = 0):
+        data = jobs.log(job_id, max(0, int(after)))
+        if data is None:
+            return err("job_not_found", 404)
+        return data
+
     @app.get("/api/jobs/{job_id}")
     def get_job(job_id: str):
         job = jobs.get(job_id)

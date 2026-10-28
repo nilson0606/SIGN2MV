@@ -147,17 +147,22 @@ def main() -> None:
         real_batch = batch if slices >= batch * 3 else max(1, slices // 3)
         if real_batch != batch:
             protocol.log(f"batch size lowered to {real_batch} ({slices} slices)")
-        state = {"epoch": 0, "loss": None}
+        state = {"epoch": 0, "loss": None, "step": None}
 
         def parse(line: str) -> None:
             m = re.search(r"epoch=(\d+)", line)
             if not m or "batch=" in line:
                 return
             state["epoch"] = int(m.group(1))
+            st = re.search(r"step=(\d+)", line)
+            if st:
+                state["step"] = int(st.group(1))
             lv = re.search(r"lowest_value=([\d.]+)", line)
             if lv:
                 state["loss"] = float(lv.group(1))
-            msg = f"{state['epoch']}/{epochs}" + (f" · loss {state['loss']:.3f}" if state["loss"] is not None else "")
+            # "epoch/total · step N · best L" (the page shows them as the old dashboard's cards)
+            msg = f"{state['epoch']}/{epochs}" + (f" · step {state['step']}" if state["step"] is not None else "") \
+                + (f" · best {state['loss']:.3f}" if state["loss"] is not None else "")
             say(30 + 60 * min(1.0, state["epoch"] / epochs), "train_epochs", msg)
 
         say(30, "train_epochs", f"0/{epochs}")

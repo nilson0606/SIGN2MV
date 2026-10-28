@@ -138,6 +138,8 @@ def run_applio(tasks: list[dict], applio: dict, report: Step) -> dict:
             if line:
                 err_tail.append(line)
                 del err_tail[:-30]
+                sys.stderr.write(line + "\n")   # Applio's own output goes to the job log
+                sys.stderr.flush()
     err_thread = threading.Thread(target=read_err, daemon=True)
     err_thread.start()
     proc.stdin.write(json.dumps({"tasks": tasks}, ensure_ascii=False).encode("utf-8"))

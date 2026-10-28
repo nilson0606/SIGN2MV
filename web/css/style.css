@@ -212,3 +212,46 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .cv-chip.active { color: #0b1118; background: var(--accent); border-color: var(--accent); }
 .mv-quick .panel { display: grid; gap: 10px; }
 .mv-full .workspace-frame { height: calc(100vh - 140px); }
+
+/* job log viewer */
+.joblog-panel { margin-top: 8px; display: grid; gap: 6px; }
+.joblog { max-height: 320px; overflow: auto; margin: 0; padding: 10px 12px; background: #070b10; border: 1px solid var(--line, #22303d);
+  border-radius: 8px; font: 12px/1.5 ui-monospace, Consolas, "Cascadia Mono", monospace; color: #b9c7d6; white-space: pre-wrap; word-break: break-word; }
+.joblog .jl-err { color: #f87171; }
+.joblog .jl-ok { color: #4ade80; }
+.joblog .jl-stage { color: #5eead4; }
+.joblog .jl-warn { color: #fbbf24; }
+
+/* cover: training dashboard and convergence panel (old AI cover layout) */
+.cv-train-dash { margin: 10px 0; display: grid; gap: 10px; }
+.cv-dot { width: 10px; height: 10px; border-radius: 50%; background: #475569; display: inline-block; }
+.cv-dot.running { background: #34d399; animation: cvpulse 1.2s ease-in-out infinite; }
+.cv-dot.queued { background: #fbbf24; }
+.cv-dot.succeeded { background: #34d399; }
+.cv-dot.failed, .cv-dot.timeout, .cv-dot.cancelled { background: #f87171; }
+@keyframes cvpulse { 50% { opacity: .35; } }
+.cv-steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.cv-step { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border: 1px solid var(--line, #22303d); border-radius: 10px; font-size: .82em; color: var(--muted); text-align: center; }
+.cv-step-n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #1e293b; font-weight: 600; }
+.cv-step.done { color: #a7f3d0; border-color: #2c7a52; }
+.cv-step.done .cv-step-n { background: #2c7a52; color: #fff; }
+.cv-step.done .cv-step-n::after { content: '✓'; position: absolute; }
+.cv-step.done .cv-step-n { color: transparent; position: relative; }
+.cv-step.done .cv-step-n::after { color: #fff; }
+.cv-step.active { color: #e2e8f0; border-color: var(--accent); animation: cvpulse 1.6s ease-in-out infinite; }
+.cv-step.active .cv-step-n { background: var(--accent); color: #0b1118; }
+.cv-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.cv-card { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--line, #22303d); border-radius: 10px; background: #0d141c; }
+.cv-card b { font-size: 1.15em; font-variant-numeric: tabular-nums; }
+.cv-loss { margin-top: 14px; padding-top: 12px; border-top: 1px solid #ffffff14; display: grid; gap: 8px; }
+.cv-loss-chart { border: 1px solid var(--line, #22303d); border-radius: 10px; background: #0d141c; overflow: hidden; }
+.cv-loss-chart svg { display: block; width: 100%; height: auto; }
+.cv-loss-empty { padding: 20px; text-align: center; }
+.cv-live { font-size: .75em; padding: 2px 8px; border-radius: 6px; background: #34d39933; color: #6ee7b7; }
+.cv-v-down { color: #7dd3fc; font-weight: 600; }
+.cv-v-up { color: #fcd34d; font-weight: 600; }
+.cv-v-flat { color: #6ee7b7; font-weight: 600; }
+.cv-epochs { display: grid; gap: 4px; }
+.cv-epoch { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--line, #22303d); border-radius: 8px; font-size: .88em; }
+.cv-flash { box-shadow: 0 0 0 3px var(--ok, #34d399); transition: box-shadow .3s; }
+@media (max-width: 700px) { .cv-steps { grid-template-columns: repeat(3, 1fr); } .cv-cards { grid-template-columns: repeat(2, 1fr); } }

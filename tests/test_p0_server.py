@@ -60,6 +60,14 @@ def test_queue_order_cancel_timeout(client):
     assert wait_job(client, b["id"], 10)["status"] == "cancelled"
     t = client.post("/api/jobs", json={"kind": "demo", "lane": "cpu", "seconds": 20, "timeout_s": 1}).json()
     assert wait_job(client, t["id"], 10)["status"] == "timeout"
+
+    # job log (the old "terminal"): start, stage changes, end; fetched incrementally
+    log = client.get(f"/api/jobs/{a['id']}/log").json()
+    assert log["status"] == "succeeded" and log["lines"][0].endswith("▶ " + (a.get("title") or "demo")) or "▶" in log["lines"][0]
+    assert any("▶ [" in l for l in log["lines"]) and "✔ succeeded" in log["lines"][-1]
+    assert client.get(f"/api/jobs/{a['id']}/log?after={log['next']}").json()["lines"] == []
+    assert "timeout" in client.get(f"/api/jobs/{t['id']}/log").json()["lines"][-1]
+    assert client.get("/api/jobs/nope/log").status_code == 404
     f = client.post("/api/jobs", json={"kind": "demo", "lane": "cpu", "seconds": 0.3, "fail": True}).json()
     done = wait_job(client, f["id"], 10)
     assert done["status"] == "failed" and done["error_code"] == "demo_failure"

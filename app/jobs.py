@@ -22,6 +22,7 @@ from typing import Any, Callable
 from .proc import ManagedProcess
 
 LANES = {"gpu": 1, "cpu": 2}
+LOG_LINES = 3000
 FINISHED = ("succeeded", "failed", "cancelled", "timeout")
 MAX_FINISHED_KEPT = 200
 
@@ -55,7 +56,20 @@ class Job:
     started_at: float | None = None
     finished_at: float | None = None
     log_tail: list[str] = field(default_factory=list)
+    # full log for the log viewer (stage changes, worker messages, program output), with a running
+    # count so the page can fetch only new lines
+    log: list[str] = field(default_factory=list)
+    log_total: int = 0
     cancel_requested: bool = False
+
+    def add_log(self, text: str) -> None:
+        for part in str(text).replace("\r\n", "\n").split("\n"):
+            part = part.split("\r")[-1].rstrip()   # progress bars redraw with \r: keep the last state
+            if not part:
+                continue
+            self.log.append(time.strftime("%H:%M:%S ") + part[:500])
+            self.log_total += 1
+        del self.log[:-LOG_LINES]
     process: ManagedProcess | None = None
 
     def public(self, position: int | None) -> dict[str, Any]:
@@ -113,6 +127,17 @@ class JobQueue:
         with self._cv:
             job = self._jobs.get(job_id)
             return job.public(self._position_locked(job)) if job else None
+
+    def log(self, job_id: str, after: int = 0) -> dict[str, Any] | None:
+        """Log lines after the first `after` ones: {"lines", "next", "status"}."""
+        with self._cv:
+            job = self._jobs.get(job_id)
+            if not job:
+                return None
+            first = job.log_total - len(job.log)         # number of the oldest kept line
+            start = max(0, after - first)
+            return {"lines": job.log[start:], "next": job.log_total, "skipped": max(0, first - after),
+                    "status": job.status}
 
     def list(self) -> list[dict[str, Any]]:
         with self._cv:
@@ -186,6 +211,8 @@ class JobQueue:
             job.error_code = code
         if message:
             job.error_message = message
+        took = f" ({job.finished_at - job.started_at:.0f} s)" if job.started_at else ""
+        job.add_log(("✔ " if status == "succeeded" else "■ ") + status + took + (f" — {code}" if code else ""))
         self._cv.notify_all()
 
     def _next_locked(self, lane: str) -> Job | None:
@@ -203,6 +230,7 @@ class JobQueue:
                     return
                 job.status = "running"
                 job.started_at = time.time()
+                job.add_log(f"▶ {job.spec.title}")
             self._changed()
             try:
                 self._run(job)
@@ -247,8 +275,11 @@ class JobQueue:
         def read_stderr() -> None:
             assert proc.popen.stderr is not None
             for raw in proc.popen.stderr:
-                stderr_tail.append(raw.decode("utf-8", "replace").rstrip())
+                line = raw.decode("utf-8", "replace").rstrip()
+                stderr_tail.append(line)
                 del stderr_tail[:-40]
+                with self._cv:
+                    job.add_log(line)
 
         err_thread = threading.Thread(target=read_stderr, daemon=True)
         err_thread.start()
@@ -266,6 +297,7 @@ class JobQueue:
                 with self._cv:
                     job.log_tail.append(line)
                     del job.log_tail[:-40]
+                    job.add_log(line)
                 continue
             if not isinstance(msg, dict):
                 continue
@@ -274,16 +306,21 @@ class JobQueue:
                 if mtype == "progress":
                     pct = msg.get("percent")
                     job.percent = None if pct is None else max(0.0, min(100.0, float(pct)))
-                    job.stage = str(msg.get("stage", job.stage))[:80]
+                    stage = str(msg.get("stage", job.stage))[:80]
+                    if stage and stage != job.stage:
+                        job.add_log(f"▶ [{stage}] {str(msg.get('message', ''))[:200]}".rstrip())
+                    job.stage = stage
                     job.message = str(msg.get("message", ""))[:300]
                 elif mtype == "result":
                     final_result = msg.get("data")
                 elif mtype == "error":
                     reported_error = (str(msg.get("code", "worker_error"))[:60],
                                       str(msg.get("message", ""))[:500])
+                    job.add_log(f"✖ {reported_error[0]}: {reported_error[1]}")
                 elif mtype == "log":
                     job.log_tail.append(str(msg.get("message", ""))[:300])
                     del job.log_tail[:-40]
+                    job.add_log(str(msg.get("message", "")))
             self._changed()
 
         rc = proc.popen.wait()

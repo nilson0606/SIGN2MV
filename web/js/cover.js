@@ -672,46 +672,138 @@ function versionItem(v, hi) {
 
 // ------------------------------------------------------------------ models
 const modelsList = el('div', { class: 'list' });
-const lossBox = el('div', { class: 'cv-loss' });
 const importPath = el('input', { type: 'text', style: 'flex:1;min-width:220px', placeholder: 'D:\\AI_COVER_MV\\models' });
 const upName = el('input', { type: 'text', placeholder: 'My_Voice', style: 'width:140px' });
+const importName = el('input', { type: 'text', style: 'width:150px', 'data-i18n-placeholder': 'cover.import_name' });
 const upPth = el('input', { type: 'file', accept: '.pth' });
 const upIdx = el('input', { type: 'file', accept: '.index' });
 
-function lossChart(data, title) {
-  const ep = data.epoch || [];
-  const series = [['mel', '#3dd9f5'], ['total', '#f5c84c'], ['d_adv', '#c9a7ff']].filter(([k]) => (data[k] || []).some((v) => v != null));
-  if (!ep.length || !series.length) return el('div', { class: 'muted small' }, t('cover.no_loss'));
-  const W = 520; const H = 180; const P = 30;
+// ---------------- convergence (the old "收斂曲線與中間版本" panel)
+// mel loss: thin line per epoch, thick 5-epoch average, kept versions dashed, values on hover
+function lossChart(data) {
+  const ep = data.epoch || []; const mel = data.mel || [];
+  if (!ep.length || !mel.some((v) => v != null)) return el('div', { class: 'muted small cv-loss-empty' }, t('cover.no_loss'));
+  const W = 640; const H = 220; const L = 44; const R = 12; const T = 12; const B = 28;
+  const vals = mel.filter((v) => v != null);
+  let lo = Math.min(...vals); let hi = Math.max(...vals);
+  const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+  const x0 = ep[0]; const x1 = Math.max(ep[ep.length - 1], data.total_epochs || 0, x0 + 1);
+  const X = (e) => L + (e - x0) / (x1 - x0) * (W - L - R);
+  const Y = (v) => T + (hi - v) / (hi - lo) * (H - T - B);
+  const avg = mel.map((_, i) => { const w = mel.slice(Math.max(0, i - 4), i + 1).filter((v) => v != null); return w.length ? w.reduce((a, b) => a + b, 0) / w.length : null; });
+  const path = (arr) => arr.map((v, i) => (v == null ? '' : `${i && arr[i - 1] != null ? 'L' : 'M'}${X(ep[i]).toFixed(1)},${Y(v).toFixed(1)}`)).join('');
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('class', 'cv-chart');
-  const xmin = Math.min(...ep); const xmax = Math.max(...ep, xmin + 1);
-  const add = (tag, attrs, text) => { const n = document.createElementNS(svgNS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); if (text) n.textContent = text; svg.append(n); return n; };
-  add('line', { x1: P, y1: H - P, x2: W - 8, y2: H - P, stroke: '#2c3945' });
-  add('text', { x: P, y: H - 8, fill: '#8a9aa8', 'font-size': 11 }, `${xmin}`);
-  add('text', { x: W - 40, y: H - 8, fill: '#8a9aa8', 'font-size': 11 }, `${xmax} ep`);
-  series.forEach(([k, color], si) => {
-    const vals = data[k].map((v, i) => [ep[i], v]).filter(([, v]) => v != null);
-    const ys = vals.map(([, v]) => v);
-    const ymin = Math.min(...ys); const ymax = Math.max(...ys, ymin + 1e-6);
-    const pts = vals.map(([x, y]) => `${P + (x - xmin) / (xmax - xmin) * (W - P - 10)},${8 + (1 - (y - ymin) / (ymax - ymin)) * (H - P - 16)}`);
-    add('polyline', { points: pts.join(' '), fill: 'none', stroke: color, 'stroke-width': 1.6 });
-    add('text', { x: P + 4 + si * 150, y: 14, fill: color, 'font-size': 11 }, `${t(`cover.loss.${k}`)} ${ys[ys.length - 1].toFixed(2)}`);
-  });
+  const add = (tag, attrs, text) => { const n = document.createElementNS(svgNS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); if (text != null) n.textContent = text; svg.append(n); return n; };
+  for (let k = 0; k <= 4; k++) {
+    const v = lo + (hi - lo) * k / 4; const y = Y(v);
+    add('line', { x1: L, x2: W - R, y1: y, y2: y, stroke: '#2c3945', 'stroke-width': 0.6 });
+    add('text', { x: L - 6, y: y + 3, 'text-anchor': 'end', 'font-size': 10, fill: '#94a3b8' }, v.toFixed(1));
+  }
+  const stepX = Math.max(1, Math.round((x1 - x0) / 6 / 10) * 10 || 10);
+  for (let e = Math.ceil(x0 / stepX) * stepX; e <= x1; e += stepX) add('text', { x: X(e), y: H - 8, 'text-anchor': 'middle', 'font-size': 10, fill: '#94a3b8' }, String(e));
   (data.kept_epochs || []).forEach((e) => {
-    const x = P + (e - xmin) / (xmax - xmin) * (W - P - 10);
-    add('line', { x1: x, y1: 8, x2: x, y2: H - P, stroke: '#4fd18b', 'stroke-dasharray': '3 3' });
+    if (e < x0 || e > x1) return;
+    add('line', { x1: X(e), x2: X(e), y1: T, y2: H - B, stroke: '#a78bfa', 'stroke-dasharray': '3 3', opacity: 0.8 });
+    add('text', { x: X(e), y: T + 9, 'text-anchor': 'middle', 'font-size': 9, fill: '#c4b5fd' }, String(e));
   });
-  return el('div', {}, el('div', { class: 'muted small' }, title), svg);
+  add('path', { d: path(mel), fill: 'none', stroke: '#34d399', 'stroke-width': 1, opacity: 0.35 });
+  add('path', { d: path(avg), fill: 'none', stroke: '#34d399', 'stroke-width': 2.2 });
+  add('text', { x: L, y: H - 8, 'font-size': 10, fill: '#64748b' }, t('cover.loss_axis'));
+  mel.forEach((v, i) => {
+    if (v == null) return;
+    const c = add('circle', { cx: X(ep[i]).toFixed(1), cy: Y(v).toFixed(1), r: 5, fill: 'transparent' });
+    const tt = document.createElementNS(svgNS, 'title');
+    tt.textContent = t('cover.loss_point', ep[i], v.toFixed(2), avg[i].toFixed(2));
+    c.append(tt);
+  });
+  return svg;
 }
 
+// trend of the last 20 epochs (old lossVerdict)
+function lossVerdict(ep, mel) {
+  const pts = ep.map((e, i) => [e, mel[i]]).filter((q) => q[1] != null);
+  if (pts.length < 15) return { text: t('cover.loss_few'), cls: 'muted' };
+  const tail = pts.slice(-20); const n = tail.length;
+  const mx = tail.reduce((a, q) => a + q[0], 0) / n; const my = tail.reduce((a, q) => a + q[1], 0) / n;
+  const slope = tail.reduce((a, q) => a + (q[0] - mx) * (q[1] - my), 0) / Math.max(1e-9, tail.reduce((a, q) => a + (q[0] - mx) ** 2, 0));
+  if (slope < -0.03) return { text: t('cover.loss_down', slope.toFixed(3)), cls: 'cv-v-down' };
+  if (slope > 0.03) return { text: t('cover.loss_up', slope.toFixed(3)), cls: 'cv-v-up' };
+  return { text: t('cover.loss_flat', `${slope >= 0 ? '+' : ''}${slope.toFixed(3)}`), cls: 'cv-v-flat' };
+}
+
+const lossSel = el('select', { onchange: () => loadLoss() });
+const lossBadge = el('span', { class: 'cv-live hidden' });
+const lossChartBox = el('div', { class: 'cv-loss-chart' });
+const lossSummary = el('div', { class: 'small' });
+const epochList = el('div', { class: 'cv-epochs' });
+const lossBox = el('div', { class: 'cv-loss' },
+  el('div', { class: 'row', style: 'align-items:center' }, el('b', { class: 'grow' }, el('span', { 'data-i18n': 'cover.loss_panel' }), ' ', lossBadge),
+    lossSel, el('button', { class: 'btn small', onclick: () => loadLoss(), 'data-i18n': 'common.refresh' })),
+  lossChartBox, lossSummary, epochList, el('p', { class: 'muted small', 'data-i18n': 'cover.loss_note' }));
+let lossWanted = '';
+
+function lossModels() {
+  const names = ((status && status.models) || []).map((m) => m.name);
+  if (trName.dataset.training && !names.includes(trName.dataset.training)) names.unshift(trName.dataset.training);
+  return names;
+}
+function fillLossSelect(preferred) {
+  const names = lossModels();
+  const keep = preferred || lossSel.value || lossWanted;
+  lossSel.replaceChildren(...names.map((n) => el('option', { value: n }, n)));
+  if (keep && names.includes(keep)) lossSel.value = keep;
+}
+
+function useEpoch(name, epoch) {
+  fillModelSelect(modelSel.el, epoch ? `${name}__e${epoch}` : name);
+  modelSel.el.dispatchEvent(new Event('change'));
+  modelSel.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  modelSel.el.classList.add('cv-flash');
+  setTimeout(() => modelSel.el.classList.remove('cv-flash'), 2400);
+  toast(t('cover.using_version', epoch ? `${name} · ${t('cover.epoch_n', epoch)}` : `${name} (${t('cover.final')})`));
+}
+
+function renderEpochs(name) {
+  const m = ((status && status.models) || []).find((x) => x.name === name);
+  if (!m) { epochList.replaceChildren(); return; }
+  const row = (label, size, epoch) => el('div', { class: 'cv-epoch' },
+    el('span', { class: 'grow' }, label, el('span', { class: 'muted' }, ` · ${fmtBytes(size)}`)),
+    el('button', { class: 'btn small primary', onclick: () => useEpoch(name, epoch) }, t('cover.use_this_version')),
+    epoch ? el('button', { class: 'btn small danger', onclick: async () => {
+      if (!(await confirmDialog(t('cover.epoch_delete_confirm', name, epoch), t('common.delete')))) return;
+      try { await api.del(`/api/cover/models/${encodeURIComponent(name)}/epochs/${epoch}`); await loadStatus(); } catch (err) { toast(errorText(err), true); }
+    } }, '🗑') : null);
+  epochList.replaceChildren(row(t('cover.final_version'), m.size, 0),
+    ...[...m.epochs].sort((a, b) => b.epoch - a.epoch).map((e) => row(t('cover.epoch_n', e.epoch), e.size, e.epoch)));
+}
+
+async function loadLoss(preferred) {
+  fillLossSelect(preferred);
+  const name = lossSel.value;
+  if (!name) { lossChartBox.replaceChildren(el('div', { class: 'muted small' }, t('cover.no_models'))); lossSummary.textContent = ''; epochList.replaceChildren(); return; }
+  lossWanted = name;
+  let d = { epoch: [] };
+  try { d = await api.get(`/api/cover/models/${encodeURIComponent(name)}/loss`); } catch { /* keep empty */ }
+  lossChartBox.replaceChildren(lossChart(d));
+  lossBadge.textContent = t('cover.loss_live');
+  lossBadge.classList.toggle('hidden', d.source !== 'live');
+  if (d.epoch && d.epoch.length) {
+    const v = lossVerdict(d.epoch, d.mel || []);
+    const tail = (d.mel || []).filter((x) => x != null).slice(-5);
+    const avg = tail.length ? (tail.reduce((a, b) => a + b, 0) / tail.length).toFixed(2) : '-';
+    lossSummary.replaceChildren(el('span', { class: v.cls }, v.text), '　',
+      t('cover.loss_now', d.epoch[d.epoch.length - 1], d.total_epochs ? ` / ${d.total_epochs}` : '', avg),
+      d.partial ? el('span', { class: 'muted' }, '　' + t('cover.loss_partial')) : '');
+  } else lossSummary.textContent = '';
+  renderEpochs(name);
+}
 async function showLoss(name) {
-  try {
-    const d = await api.get(`/api/cover/models/${encodeURIComponent(name)}/loss`);
-    lossBox.replaceChildren(lossChart(d, t('cover.loss_title', name)));
-  } catch (err) { lossBox.replaceChildren(el('div', { class: 'muted small' }, errorText(err))); }
+  if (folds.train && !folds.train.open) { folds.train.dataset.auto = '1'; folds.train.open = true; }
+  await loadLoss(name);
+  lossBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function renderModels() {
@@ -763,15 +855,18 @@ function foldPanel(key, title, extra, ...children) {
 function sectionModels() {
   return foldPanel('models', t('cover.models'), modelsCount,
     el('p', { class: 'muted small' }, t('cover.models_hint')),
-    modelsList, lossBox,
+    modelsList,
     el('div', { class: 'section' },
       el('div', { class: 'cv-label' }, t('cover.import_folder')),
-      el('div', { class: 'row' }, importPath, el('button', { class: 'btn', onclick: async () => {
+      el('div', { class: 'row' }, importPath, importName, el('button', { class: 'btn', onclick: async () => {
         try {
-          const res = await api.post('/api/cover/models/import', { path: importPath.value });
+          const body = { path: importPath.value };
+          if (importName.value.trim()) body.name = importName.value.trim();
+          const res = await api.post('/api/cover/models/import', body);
           const skipped = res.skipped.map((s) => `${s.source}: ${errorText({ code: s.reason })}`).join('\n');
           toast(t('cover.imported', res.imported.length) + (skipped ? `\n${skipped}` : ''), !res.imported.length, 9000);
           await loadStatus();
+          if (res.imported.length) { importName.value = ''; useEpoch(res.imported[0], 0); }
         } catch (err) { toast(errorText(err), true); }
       } }, t('cover.import'))),
       el('p', { class: 'muted small' }, t('cover.import_hint'))),
@@ -787,13 +882,13 @@ function sectionModels() {
           fd.append('name', upName.value || f.name.replace(/\.pth$/i, ''));
           fd.append('pth', f, f.name);
           if (upIdx.files && upIdx.files[0]) fd.append('index', upIdx.files[0], upIdx.files[0].name);
-          try { const res = await api.upload('/api/cover/models/upload', fd); toast(t('cover.uploaded', res.name)); await loadStatus(); }
+          try { const res = await api.upload('/api/cover/models/upload', fd); toast(t('cover.uploaded', res.name)); await loadStatus(); useEpoch(res.name, 0); }
           catch (err) { toast(errorText(err), true); }
         } }, t('cover.upload')))));
 }
 
 // ------------------------------------------------------------------ training
-const trName = el('input', { type: 'text', placeholder: 'My_Voice_Ver1', style: 'width:180px' });
+const trName = el('input', { type: 'text', value: 'My_Voice_Ver1', placeholder: 'My_Voice_Ver1', style: 'width:180px' });
 const trFiles = el('input', { type: 'file', multiple: true, accept: 'audio/*,video/*' });
 const trFileInfo = el('span', { class: 'muted small' });
 const trPaths = el('textarea', { placeholder: 'D:\\recordings\\my_voice', style: 'min-height:54px' });
@@ -801,8 +896,35 @@ const trEpochs = el('input', { type: 'number', value: 100, min: 1, max: 2000, st
 const trBatch = el('select', {}, ...[4, 8, 16].map((b) => el('option', { value: b, selected: b === 8 }, String(b))));
 const trSave = el('input', { type: 'number', value: 10, min: 1, max: 500, style: 'width:80px' });
 const trRate = el('select', {}, ...[32000, 40000, 48000].map((r) => el('option', { value: r, selected: r === 40000 }, `${r / 1000} kHz`)));
-const trJob = jobBox();
-const trLoss = el('div', { class: 'cv-loss' });
+// the old training dashboard: 6-step pipeline, status light, Epoch / Step / best loss / progress cards
+const TR_STEPS = ['train_import', 'train_slice', 'train_features', 'train_epochs', 'train_index', 'train_install'];
+const trNodes = TR_STEPS.map((st, i) => el('div', { class: 'cv-step' }, el('span', { class: 'cv-step-n' }, String(i + 1)), el('span', { 'data-i18n': `cover.tstep.${i + 1}` })));
+const trDot = el('span', { class: 'cv-dot' });
+const trStateText = el('span', { class: 'small' });
+const trCard = (key) => { const v = el('b', {}, '–'); return { v, el: el('div', { class: 'cv-card' }, el('span', { class: 'muted small', 'data-i18n': key }), v) }; };
+const trCards = { epoch: trCard('cover.tcard.epoch'), step: trCard('cover.tcard.step'), loss: trCard('cover.tcard.loss'), pct: trCard('cover.tcard.pct') };
+const trDash = el('div', { class: 'cv-train-dash hidden' },
+  el('div', { class: 'row', style: 'align-items:center;gap:8px' }, trDot, trStateText),
+  el('div', { class: 'cv-steps' }, ...trNodes),
+  el('div', { class: 'cv-cards' }, ...Object.values(trCards).map((c) => c.el)));
+function trUpdate(job) {
+  trDash.classList.remove('hidden');
+  const idx = job.stage === 'done' || job.status === 'succeeded' ? TR_STEPS.length : TR_STEPS.indexOf(job.stage);
+  trNodes.forEach((n, i) => {
+    n.classList.toggle('done', i < idx || job.status === 'succeeded');
+    n.classList.toggle('active', i === idx && job.status === 'running');
+  });
+  trDot.className = `cv-dot ${job.status}`;
+  trStateText.textContent = job.status === 'running' && job.stage ? `${t('jobs.status.running')} · ${t(`stage.${job.stage}`)}` : t(`jobs.status.${job.status}`);
+  const m = /(\d+)\/(\d+)(?: · step (\d+))?(?: · best ([\d.]+))?/.exec(job.message || '');
+  if (m) {
+    trCards.epoch.v.textContent = `${m[1]} / ${m[2]}`;
+    if (m[3]) trCards.step.v.textContent = m[3];
+    if (m[4]) trCards.loss.v.textContent = Number(m[4]).toFixed(3);
+  }
+  trCards.pct.v.textContent = job.percent != null ? `${Math.round(job.percent)}%` : (job.status === 'succeeded' ? '100%' : '–');
+}
+const trJob = jobBox({ onUpdate: trUpdate });
 const trStart = el('button', { class: 'btn primary', 'data-i18n': 'cover.train_start' });
 const trStop = el('button', { class: 'btn danger hidden', 'data-i18n': 'cover.train_stop' });
 let trToken = '';
@@ -825,19 +947,25 @@ trFiles.addEventListener('change', async () => {
 
 async function followTraining(job, name) {
   trJobId = job.id;
+  trName.dataset.training = name;
+  Object.values(trCards).forEach((c) => { c.v.textContent = '–'; });
   if (folds.train && !folds.train.open) { folds.train.dataset.auto = '1'; folds.train.open = true; }   // show the progress
   trStart.disabled = true;
   trStop.classList.remove('hidden');
-  const timer = setInterval(async () => {
-    try { trLoss.replaceChildren(lossChart(await api.get(`/api/cover/models/${encodeURIComponent(name)}/loss`), t('cover.loss_title', name))); } catch { /* ignore */ }
-  }, 15000);
+  loadLoss(name);
+  const timer = setInterval(() => { if (lossSel.value === name) loadLoss(name); }, 15000);   // live curve while training
   const fin = await trJob.follow(job);
   clearInterval(timer);
   trJobId = null;
   trStart.disabled = false;
   trStop.classList.add('hidden');
-  if (fin.status === 'succeeded') { toast(t('cover.train_done', name)); trToken = ''; trFileInfo.textContent = ''; showLoss(name); }
+  delete trName.dataset.training;
   await loadStatus();
+  if (fin.status === 'succeeded') {
+    toast(t('cover.train_done', name)); trToken = ''; trFileInfo.textContent = '';
+    showLoss(name);
+    useEpoch(name, 0);   // the new model is selected for the next cover
+  }
 }
 
 trStart.addEventListener('click', async () => {
@@ -863,14 +991,31 @@ function sectionTrain() {
     field(t('cover.train_name'), trName, t('cover.train_name_hint')),
     field(t('cover.train_files'), el('span', { class: 'row' }, trFiles, trFileInfo)),
     field(t('cover.train_paths'), trPaths),
-    el('div', { class: 'row' }, el('span', {}, t('cover.train_epochs')), trEpochs, el('span', {}, t('cover.train_batch')), trBatch,
+    el('div', { class: 'row' }, el('button', { class: 'btn small', onclick: async () => {
+      if (!songId) { toast(t('cover.pick_song'), true); return; }
+      try {
+        const r = await api.get(`/api/cover/songs/${songId}/train-source`);
+        const lines = trPaths.value.split('\n').map((x) => x.trim()).filter(Boolean);
+        if (!lines.includes(r.path)) lines.push(r.path);
+        trPaths.value = lines.join('\n');
+        toast(t('cover.train_from_song_done', t(`track.${r.track}`)));
+      } catch (err) { toast(errorText(err), true); }
+    } }, t('cover.train_from_song')), el('span', { class: 'muted small' }, t('cover.train_from_song_hint'))),
+    el('div', { class: 'row' }, el('span', {}, t('cover.train_epochs')), trEpochs,
+      ...[30, 100, 200].map((n) => el('button', { class: 'btn small', onclick: () => { trEpochs.value = n; } }, String(n))),
+      el('span', {}, t('cover.train_batch')), trBatch,
       el('span', {}, t('cover.train_save')), trSave, el('span', {}, t('cover.train_rate')), trRate),
     el('div', { class: 'row', style: 'margin-top:10px' }, trStart, trStop,
       el('button', { class: 'btn small', onclick: async () => {
-        try { const res = await api.post('/api/cover/train/cleanup'); toast(t('cover.cleaned', fmtBytes(res.freed))); }
+        try {
+          const res = await api.post('/api/cover/train/cleanup');
+          const disks = (res.disks || []).map((d) => t('cover.disk_free', d.drive, fmtBytes(d.free))).join('　');
+          toast(t('cover.cleaned', fmtBytes(res.freed)) + (disks ? `\n${disks}` : ''), false, 8000);
+          trJob.el.querySelector('.joblog')?.append(el('div', { class: 'jl-ok' }, `🧹 ${t('cover.cleaned', fmtBytes(res.freed))} ${disks}`));
+        }
         catch (err) { toast(errorText(err), true); }
       } }, t('cover.train_cleanup'))),
-    trJob.el, trLoss);
+    trDash, trJob.el, lossBox);
 }
 
 // ------------------------------------------------------------------ status / page

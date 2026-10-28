@@ -58,6 +58,22 @@ def _ffmpeg() -> str:
     return shutil.which("ffmpeg") or "ffmpeg"
 
 
+def disk_space() -> list[dict]:
+    """Free space of C: and of the drive SIGN2MV is on (old training cleanup showed both)."""
+    out, seen = [], set()
+    for p in ([Path("C:/")] if os.name == "nt" else []) + [Path(__file__).resolve().parent]:
+        try:
+            u = shutil.disk_usage(p)
+        except OSError:
+            continue
+        drive = (p.drive or p.anchor or "/").upper()
+        if drive in seen:
+            continue
+        seen.add(drive)
+        out.append({"drive": drive, "free": u.free, "total": u.total})
+    return out
+
+
 def _sanitize_name(raw: str) -> str:
     name = re.sub(r"[^A-Za-z0-9_.\-]", "_", (raw or "").strip()).strip("_.-")
     name = re.sub(r"_+", "_", name)[:60]
@@ -307,6 +323,14 @@ def router(ctx: Context) -> APIRouter:
     @r.get("/api/cover/models/{name}/loss")
     def model_loss(name: str):
         d = cover.model_dir(voices(), name)
+        live = paths.runtime / "applio-logs" / _sanitize_name(name)
+        ev = latest_event_file(str(live)) if live.is_dir() else None
+        saved_file = d / "epochs" / "loss.json" if d else None
+        if ev and active_job("cover_train") and (not saved_file or not saved_file.is_file()
+                                                or os.path.getmtime(ev) > saved_file.stat().st_mtime):
+            data = loss_by_epoch(ev)   # training now: the live curve (even when retraining an existing name)
+            data.update(source="live", model=name)
+            return data
         if d and (d / "epochs" / "loss.json").is_file():
             data = cover.read_json(d / "epochs" / "loss.json", {}) or {}
             data["source"] = "saved"
@@ -410,7 +434,7 @@ def router(ctx: Context) -> APIRouter:
                     shutil.rmtree(d, ignore_errors=True)
             except OSError:
                 pass
-        return {"freed": freed}
+        return {"freed": freed, "disks": disk_space()}
 
     # ------------------------------------------------------------------ instrument sounds
     @r.post("/api/cover/soundfonts/import")
@@ -450,6 +474,24 @@ def router(ctx: Context) -> APIRouter:
             return err(exc.code)
 
     # ------------------------------------------------------------------ songs
+    @r.get("/api/cover/songs/{song_id}/train-source")
+    def train_source(song_id: str):
+        """The song's separated vocals (lead if split) as training material ("帶入當前分軌人聲")."""
+        try:
+            _lib, song, sdir = song_ctx(song_id)
+        except LibraryError as exc:
+            return err(exc.code, exc.status)
+        saved = cover.read_json(cover.cover_dir(sdir) / "settings.json")
+        p = cover.clean_params(saved) if isinstance(saved, dict) else defaults()
+        try:
+            layers, tracks = cover.stems_mod.plan(sdir, song, cover.recipe_for(p))
+        except cover.stems_mod.RecipeError as exc:
+            return err(exc.code)
+        rel = tracks.get("lead") or tracks.get("vocals")
+        if layers or not rel or not (sdir / rel).is_file():
+            return err("stems_not_ready", 409)
+        return {"path": str((sdir / rel).resolve()), "track": "lead" if tracks.get("lead") else "vocals"}
+
     @r.get("/api/cover/songs/{song_id}")
     def song_state(song_id: str):
         try:

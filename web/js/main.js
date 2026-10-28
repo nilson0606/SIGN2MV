@@ -3,6 +3,7 @@ import { api } from './api.js';
 import { t, setLanguage, language, errorText, onLanguageChange } from './i18n.js';
 import { $, $$, el, toast, confirmDialog, fmtBytes } from './ui.js';
 import { bus, pages, registerPage } from './app-state.js';
+import { logView } from './joblog.js';
 
 const WEB_API_LEVEL = 1;
 let status = null;
@@ -102,21 +103,31 @@ $('#shutdown-btn').addEventListener('click', async () => {
 // ---------------- jobs ----------------
 let jobs = [];
 
+const jobLogs = new Map();   // job id -> open log viewer (kept across list refreshes)
 function jobLine(j) {
   const pct = j.percent;
+  let lv = jobLogs.get(j.id);
+  const logBtn = el('button', { class: 'btn small', onclick: () => {
+    if (!lv) { lv = logView(); jobLogs.set(j.id, lv); lv.follow(j.id); }
+    if (!lv.toggle()) { jobLogs.delete(j.id); }
+    renderJobs();
+  } }, (lv && lv.open ? '▾ ' : '▸ ') + t('joblog.title'));
   const bar = el('div', { class: 'bar' + (j.status === 'running' && (pct === null || pct === undefined) ? ' indet' : '') },
     el('div', { style: `width:${pct || 0}%` }));
   const statusText = j.status === 'queued' ? t('jobs.queued_pos', j.position) : t(`jobs.status.${j.status}`);
   const detail = j.error_code ? errorText({ code: j.error_code }) + (j.error_message ? ` (${j.error_message.slice(0, 160)})` : '') : (j.message || '');
-  return el('div', { class: 'item' },
+  const row = el('div', { class: 'item' },
     el('div', { class: 'grow' },
       el('div', {}, el('span', { class: 'badge gpu' }, j.lane === 'gpu' ? t('jobs.lane_gpu') : t('jobs.lane_cpu')), ' ',
         el('b', {}, j.title || j.kind), ' ', el('span', { class: `badge ${j.status}` }, statusText),
         pct !== null && pct !== undefined && j.status === 'running' ? ` ${pct.toFixed(0)}%` : ''),
       el('div', { class: 'muted small' }, detail),
       j.status === 'running' ? bar : null),
+    logBtn,
     ['queued', 'running'].includes(j.status)
       ? el('button', { class: 'btn small', onclick: () => cancelJob(j) }, t('common.cancel')) : null);
+  if (lv && lv.open) { lv.follow(j.id); return el('div', {}, row, lv.el); }
+  return row;
 }
 
 function renderJobs() {

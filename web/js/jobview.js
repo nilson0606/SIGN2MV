@@ -3,8 +3,9 @@ import { t, errorText } from './i18n.js';
 import { el, toast } from './ui.js';
 import { waitJob } from './app-state.js';
 import { api } from './api.js';
+import { logView, logOpenByDefault } from './joblog.js';
 
-export function jobBox({ cancel = true } = {}) {
+export function jobBox({ cancel = true, onUpdate = null } = {}) {
   const label = el('div', { class: 'small grow' });
   const fill = el('div');
   const bar = el('div', { class: 'bar' }, fill);
@@ -15,10 +16,16 @@ export function jobBox({ cancel = true } = {}) {
     try { await api.post(`/api/jobs/${current}/cancel`, {}); } catch (err) { toast(errorText(err), true); }
     stop.disabled = false;
   } }, t('common.cancel'));
-  const box = el('div', { class: 'jobbox hidden' }, el('div', { class: 'row', style: 'align-items:center' }, label, stop), bar);
+  const log = logView();
+  const logBtn = el('button', { class: 'btn small', onclick: () => { logBtn.textContent = (log.toggle() ? '▾ ' : '▸ ') + t('joblog.title'); } },
+    (logOpenByDefault() ? '▾ ' : '▸ ') + t('joblog.title'));
+  if (logOpenByDefault()) log.toggle(true);
+  const box = el('div', { class: 'jobbox hidden' }, el('div', { class: 'row', style: 'align-items:center' }, label, logBtn, stop), bar, log.el);
   function show(job) {
     box.classList.remove('hidden');
     current = job.id;
+    log.follow(job.id);
+    if (onUpdate) onUpdate(job);
     stop.textContent = t('common.cancel');
     stop.classList.toggle('hidden', !cancel || !['queued', 'running'].includes(job.status));
     const pct = job.percent;
