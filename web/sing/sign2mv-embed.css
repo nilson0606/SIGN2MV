@@ -1,0 +1,23 @@
+/* SIGN2MV: this page runs inside the SIGN2MV window. Songs come from the
+   SIGN2MV library, so YouTube entry, file import, install help and the
+   library-location chooser of the stand-alone version are hidden. */
+html[data-sign2mv] .language-picker,
+html[data-sign2mv] #local-section:not([data-state="warning"]),
+html[data-sign2mv] #install-guide,
+html[data-sign2mv] .library-location,
+html[data-sign2mv] #song-form,
+html[data-sign2mv] label[for="source-kind"],
+html[data-sign2mv] #source-kind,
+html[data-sign2mv] label[for="local-media-file"],
+html[data-sign2mv] #local-media-file,
+html[data-sign2mv] #local-media-cancel,
+html[data-sign2mv] #prepare-section details:has(#probe),
+html[data-sign2mv] label:has(> #clip-seconds),
+html[data-sign2mv] .preparation-preset div:first-child,
+html[data-sign2mv] #mv-panel,
+html[data-sign2mv] #mv-library-panel,
+html[data-sign2mv] #mv-clear-all,
+html[data-sign2mv] #mv-clear-result,
+html[data-sign2mv] a[data-language-manual],
+html[data-sign2mv] a[href="#local-section"] { display: none !important; }
+html[data-sign2mv] body { background: var(--bg, #0b1118); }

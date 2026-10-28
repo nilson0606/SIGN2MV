@@ -1,6 +1,6 @@
 import {userOption} from './i18n.mjs';
 import {selectMediaSource,showMediaSource} from './media-source.mjs';
-export const LOCAL_BASE='http://127.0.0.1:4274';
+export const LOCAL_BASE='/sr';
 export async function mediaRequest(path,init={}){
   const response=await fetch(LOCAL_BASE+'/session',{signal:AbortSignal.timeout(8000),cache:'no-store'});
   if(!response.ok)throw Error('本機工具未連線。');const session=await response.json();
@@ -13,7 +13,7 @@ export function initializeLocalMedia(load){
   const $=id=>document.getElementById(id);let importing=false,cancelled=false,job=null,controller=null,refreshRevision=0;
   const message=text=>{$('local-media-status').textContent=text;};
   function controls(){for(const id of ['source-kind','local-media-file','local-media-saved','local-media-load','local-media-refresh'])$(id).disabled=importing;$('local-media-cancel').hidden=!importing;$('local-media-controls').dataset.importing=String(importing);window.dispatchEvent(new Event('karaoke-media-import-state'));}
-  async function refresh(){const revision=++refreshRevision,kind=$('source-kind').value,value=await mediaRequest('/local-media');if(revision!==refreshRevision||kind!==$('source-kind').value)return;const selected=$('local-media-id').value,rows=value.media.filter(m=>(m.kind==='audio')===(kind==='audio'));$('local-media-saved').replaceChildren(new Option(kind==='audio'?'選擇已匯入的音檔':'選擇已匯入的 MV',''));for(const m of rows)$('local-media-saved').add(userOption(m.title,m.id));if(rows.some(m=>m.id===selected))$('local-media-saved').value=selected;}
+  async function refresh(){const revision=++refreshRevision,kind=$('source-kind').value,value=await mediaRequest('/local-media');if(revision!==refreshRevision||kind!==$('source-kind').value)return;const selected=$('local-media-id').value,rows=document.documentElement.dataset.sign2mv?value.media:value.media.filter(m=>(m.kind==='audio')===(kind==='audio'));$('local-media-saved').replaceChildren(new Option(document.documentElement.dataset.sign2mv?'選擇歌曲':kind==='audio'?'選擇已匯入的音檔':'選擇已匯入的 MV',''));for(const m of rows)$('local-media-saved').add(userOption(m.title,m.id));if(rows.some(m=>m.id===selected))$('local-media-saved').value=selected;}
   $('source-kind').addEventListener('change',()=>{refreshRevision++;showMediaSource();$('local-media-saved').replaceChildren(new Option('正在讀取…',''));if(['local','audio'].includes($('source-kind').value))void refresh().catch(e=>message(e.message));});
   $('local-media-refresh').addEventListener('click',()=>void refresh().catch(e=>message(e.message)));
   $('local-media-load').addEventListener('click',async()=>{const id=$('local-media-saved').value;if(!id)return message('請先選擇已匯入的檔案。');selectMediaSource(id,document,$('source-kind').value==='audio'?'audio':'video');await load();});

@@ -110,4 +110,8 @@ export default {
   "err.rubberband_missing": "ffmpeg lacks rubberband; run install.bat again.",
   "err.file_not_found": "File not found.",
   "err.invalid_tracks": "No tracks to process.",
+  "lib.go_sing": "Sing this song",
+  "lib.go_mv": "Make an MV",
+  "lib.go_cover": "AI cover",
+  "sing.busy": "Sing & record is recording or preparing a song; closing will interrupt it.",
 };

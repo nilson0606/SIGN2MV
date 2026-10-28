@@ -12,7 +12,7 @@ import { createSegmentRecording } from './recording-segment-ui.mjs';
 import { createMaskEditor } from './mask-editor.mjs';
 import { ScoringTake, validateReference, savedResult, pitchDifference, scoringProfile, applyMasks, maskedCells } from './scoring.mjs';
 const $ = id => document.getElementById(id);
-const BASE = 'http://127.0.0.1:4274';
+const BASE = '/sr';
 const HISTORY = 'karaoke.scores.v1';
 export async function seekPlayerToStart(player, cancelled = () => false, timeoutMs = 10000) {
   player.pauseVideo();

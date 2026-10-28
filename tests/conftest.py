@@ -65,7 +65,18 @@ def wait_job(client, job_id: str, timeout: float = 600) -> dict:
 
 
 def make_song_media(path: Path, seconds: int = 20, video: bool = True) -> Path:
-    """A synthetic 'song': a melodic voice-like tone over drums and bass."""
+    """A synthetic 'song' (sung melody + backing). Uses tests/synth_song.py when the engine is available."""
+    if ENGINE_PY and Path(ENGINE_PY).exists():
+        wav = path.with_name(path.stem + "_synth.wav")
+        subprocess.run([ENGINE_PY, str(REPO / "tests" / "synth_song.py"), str(wav), str(seconds)], check=True)
+        args = ["ffmpeg", "-y", "-v", "error", "-i", str(wav)]
+        if video:
+            args += ["-f", "lavfi", "-i", f"testsrc=size=640x360:rate=25:duration={seconds}", "-map", "1:v", "-map", "0:a",
+                     "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest"]
+        else:
+            args += ["-c:a", "pcm_s16le"]
+        subprocess.run(args + [str(path)], check=True)
+        return path
     melody = "+".join(f"0.25*sin(2*PI*{f}*t)*between(mod(t\\,4)\\,{i}\\,{i + 1})"
                       for i, f in enumerate((220, 262, 294, 330)))
     voice = f"aevalsrc='({melody})*(1+0.3*sin(2*PI*5*t))':s=44100:d={seconds}"

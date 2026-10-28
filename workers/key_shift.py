@@ -17,37 +17,47 @@ import protocol
 from common import ffmpeg, run, write_json
 
 
-def main() -> None:
-    data = protocol.read_input()
-    semis = int(data["semitones"])
+def shift_files(files: list[dict], semis: int, out_dir: Path, info: dict, report=lambda pct: None) -> None:
     if not -12 <= semis <= 12 or semis == 0:
-        protocol.fail("invalid_key")
-    out_dir = Path(data["out_dir"])
-    if (out_dir / "info.json").is_file():
-        protocol.result({"out_dir": str(out_dir), "cached": True})
-        return
+        raise ValueError("invalid_key")
     tmp = out_dir.with_name(out_dir.name + ".tmp")
     shutil.rmtree(tmp, ignore_errors=True)
     tmp.mkdir(parents=True)
-    files = data["files"]
     ratio = 2 ** (semis / 12)
     try:
         for i, item in enumerate(files):
             src = Path(item["src"])
-            info = sf.info(str(src))
-            duration = info.frames / info.samplerate
-            protocol.progress(i * 100 / len(files), "key", Path(item["dst"]).name)
+            sinfo = sf.info(str(src))
+            duration = sinfo.frames / sinfo.samplerate
+            report(i * 100 / len(files))
             af = (f"rubberband=tempo=1:pitch={ratio:.12f}:channels=together:pitchq=quality,"
                   f"apad,atrim=duration={duration:.9f}")
-            run([ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", src, "-af", af, "-ar", str(info.samplerate),
+            run([ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", src, "-af", af, "-ar", str(sinfo.samplerate),
                  "-c:a", "pcm_f32le", tmp / Path(item["dst"]).name], timeout=1800)
-        write_json(tmp / "info.json", {"schema_version": 1, "semitones": semis, **(data.get("info") or {}),
+        write_json(tmp / "info.json", {"schema_version": 1, "semitones": semis, **(info or {}),
                                        "files": [Path(f["dst"]).name for f in files], "created_at": time.time()})
         if out_dir.exists():
             shutil.rmtree(out_dir, ignore_errors=True)
         os.replace(tmp, out_dir)
-    except Exception as exc:  # noqa: BLE001
+        report(100)
+    except Exception:
         shutil.rmtree(tmp, ignore_errors=True)
+        raise
+
+
+def main() -> None:
+    data = protocol.read_input()
+    semis = int(data["semitones"])
+    out_dir = Path(data["out_dir"])
+    if (out_dir / "info.json").is_file():
+        protocol.result({"out_dir": str(out_dir), "cached": True})
+        return
+    try:
+        shift_files(data["files"], semis, out_dir, data.get("info") or {},
+                    lambda pct: protocol.progress(pct, "key", ""))
+    except ValueError as exc:
+        protocol.fail(str(exc))
+    except Exception as exc:  # noqa: BLE001
         msg = str(exc)
         protocol.fail("rubberband_missing" if "rubberband" in msg.lower() and "no such filter" in msg.lower()
                       else "key_shift_failed", msg[-800:])

@@ -1,5 +1,5 @@
 import {localizedConfirm} from './i18n.mjs';
-const base='http://127.0.0.1:4274',key='karaoke.recording-diagnostics.v1';
+const base='/sr',key='karaoke.recording-diagnostics.v1';
 let enabled=true,busy=0,tokenPromise;
 try{enabled=localStorage.getItem(key)!=='off';}catch{}
 const $=id=>document.getElementById(id);

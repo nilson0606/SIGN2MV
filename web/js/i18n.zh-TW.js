@@ -110,4 +110,8 @@ export default {
   "err.rubberband_missing": "ffmpeg 缺少 rubberband，請重新執行 install.bat。",
   "err.file_not_found": "找不到檔案。",
   "err.invalid_tracks": "沒有可以處理的音軌。",
+  "lib.go_sing": "唱錄這首",
+  "lib.go_mv": "製作 MV",
+  "lib.go_cover": "AI 翻唱",
+  "sing.busy": "唱錄頁正在錄音或準備歌曲；關閉會中斷。",
 };

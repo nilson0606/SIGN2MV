@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#0b1118">
   <title>唱錄系統 · 桌機本機實驗室</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="sign2mv-embed.css">
+  <script>document.documentElement.dataset.sign2mv='1';try{const l=new URLSearchParams(location.search).get('lang');if(l)localStorage.setItem('karaoke.language.v1',l==='en'?'en':'zh-Hant');}catch{}</script>
   <script type="module" src="theme.mjs"></script>
   <script type="module" src="i18n.mjs"></script>
 </head>
@@ -67,7 +69,7 @@
   <div class="layout">
     <section id="player-section" tabindex="-1" class="card source-card">
       <div class="section-top"><h2><span class="step">01</span> 歌曲影音</h2><span id="source-description" class="subtle">YouTube 原生播放</span></div>
-      <label for="source-kind">影音來源</label><select id="source-kind"><option value="youtube">YouTube 網址</option><option value="local">本機 MV</option><option value="audio">本機音檔（MP3／WAV）</option></select>
+      <label for="source-kind">影音來源</label><select id="source-kind"><option value="youtube">YouTube 網址</option><option value="local" selected>本機 MV</option><option value="audio">本機音檔（MP3／WAV）</option></select>
       <form id="song-form"><label for="url">歌曲影片網址</label><div class="input-row"><input id="url" type="url" placeholder="https://www.youtube.com/watch?v=…" required autocomplete="off"><button type="submit">載入影片</button></div></form>
       <div id="local-media-controls" hidden>
         <label for="local-media-file">選擇本機 MV</label><input id="local-media-file" type="file" accept=".mp4,.m4v,.mov,.mkv,.webm"><input id="local-media-id" type="hidden">
@@ -482,5 +484,6 @@
 </main>
 <script type="module" src="app.mjs"></script>
 <script type="module" src="navigation.mjs"></script>
+<script type="module" src="sign2mv-embed.mjs"></script>
 </body>
 </html>

@@ -145,3 +145,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   .grid { grid-template-columns: 1fr; }
   header.top { flex-wrap: wrap; }
 }
+/* workspaces hosted in an iframe (sing & record) */
+.workspace-frame { width: 100%; height: calc(100vh - 92px); border: 1px solid var(--line, #22303d); border-radius: 10px; background: #0b1118; display: block; }
+.workspace-actions { margin: 8px 0 4px; }
+#confirm-text { white-space: pre-line; }

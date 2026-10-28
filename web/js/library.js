@@ -69,6 +69,13 @@ function renderDetail() {
     el('button', { class: 'btn small danger', onclick: () => remove(song) }, t('common.delete')));
 
   const parts = [header];
+  if (song.source) {
+    const go = (page) => () => bus.dispatchEvent(new CustomEvent('open-workspace', { detail: { page, songId: song.song_id } }));
+    parts.push(el('div', { class: 'row workspace-actions' },
+      el('button', { class: 'btn primary', onclick: go('sing') }, t('lib.go_sing')),
+      el('button', { class: 'btn', onclick: go('mv') }, t('lib.go_mv')),
+      el('button', { class: 'btn', onclick: go('cover') }, t('lib.go_cover'))));
+  }
   parts.push(importSection(song));
   if (song.source) {
     parts.push(sourceSection(song));

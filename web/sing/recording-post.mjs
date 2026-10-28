@@ -11,7 +11,7 @@ import { scoringProfile } from './scoring.mjs';
 import { recordingVolume } from './recording-mix.mjs';
 import {repairSettings} from './recording-repair.mjs';
 import { rescoreRecording, remixRecording, wavBlob, delaySeconds, referenceForRescore, recordingDelaySuffix, recordingEdit } from './recording-process.mjs';
-const $=id=>document.getElementById(id), BASE='http://127.0.0.1:4274';
+const $=id=>document.getElementById(id), BASE='/sr';
 async function localRequest(path,body) {
   let response;
   try {
@@ -212,7 +212,7 @@ export function createRecordingPost({store,stop,pause,download,onDelete,referenc
   $('selected-recording-mv').addEventListener('click',()=>run(async row=>{
     clearAudio();
     const blob=await store.blob(row);
-    if(mv.open({title:row.title,blob,label:`${row.title} · 已保存後處理成品 · ${new Date(row.created).toLocaleString()}`}))status('已帶入選取的成品製作 MV；使用已保存的音量、效果與剪輯，尚未重新合成的調整不會套用。');
+    if(await mv.open({videoId:row.videoId,recordingId:row.id,title:row.title,blob,label:`${row.title} · 已保存後處理成品 · ${new Date(row.created).toLocaleString()}`}))status('已把選取的成品交給「MV」工作區；使用已保存的音量、效果與剪輯，尚未重新合成的調整不會套用。');
   }));
   $('selected-recording-edit').addEventListener('click',()=>{
     if(busy||!selected)return;

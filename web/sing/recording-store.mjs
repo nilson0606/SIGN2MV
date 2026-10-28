@@ -70,7 +70,7 @@ export class RecordingStore {
   open(){return this.browser.open();}
   serial(work){this.listRequest=null;const result=this.pending.then(work);this.pending=result.catch(()=>{});return result;}
   async request(route,{method='GET',body,root}={}){
-    const base='http://127.0.0.1:4274';
+    const base='/sr';
     if(!this.session||Date.now()-this.session.time>5000){const r=await fetch(base+'/session',{signal:AbortSignal.timeout(5000)});if(!r.ok)throw new Error('本機工具無法連接。');this.session={...await r.json(),time:Date.now()};}
     if(!this.session.features?.includes('recording-library'))throw new Error('請更新並重新啟動本機工具，才能搬存錄音。');
     const url=base+route+(root?'?root='+encodeURIComponent(root):'');

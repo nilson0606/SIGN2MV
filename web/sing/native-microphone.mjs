@@ -1,4 +1,4 @@
-const base='http://127.0.0.1:4274';
+const base='/sr';
 async function session(signal){
  const r=await fetch(base+'/session',{cache:'no-store',signal});if(!r.ok)throw Error('無法連線本機工具。');
  const s=await r.json();if(!s.features?.includes('native-microphone'))throw Error('請先更新並重新啟動本機工具，才能使用本機相容收音。');return s;

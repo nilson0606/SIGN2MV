@@ -2,7 +2,7 @@ import {originalText,userOption} from './i18n.mjs';
 import {nativeInputDevices,openNativeMicrophone} from './native-microphone.mjs';
 import {isLocalMediaId,selectedMediaId,selectMediaSource} from './media-source.mjs';
 import {localVideoPlayer} from './local-video-player.mjs';
-import {initializeLocalMedia,mediaRequest,LOCAL_BASE} from './local-media-client.mjs';
+import {initializeLocalMedia,mediaRequest} from './local-media-client.mjs';
 import { youtubeId, noteOf, detectPitch, playerResponse, alignedTime } from './audio.mjs';
 import { createCalibration } from './calibration.mjs';
 import { createKaraokeSession } from './session.mjs';
@@ -19,7 +19,7 @@ function playbackTraceStatus(text) {
 }
 async function connectPlaybackTrace() {
   try {
-    const session=await(await fetch('http://127.0.0.1:4274/session',{cache:'no-store',signal:AbortSignal.timeout(5000)})).json();
+    const session=await(await fetch('/sr/session',{cache:'no-store',signal:AbortSignal.timeout(5000)})).json();
     if(session.playbackTraceActive)playbackTraceEnabled=true;
     if(playbackTraceEnabled){playbackTraceStatus('播放追蹤連線中…（只記錄狀態，不錄音）');tracePlayback('trace-connected');}
   } catch { if(playbackTraceEnabled)playbackTraceStatus('播放追蹤未連線：尚未收到紀錄，請確認本機工具與本機網路權限。'); }
@@ -38,7 +38,7 @@ function tracePlayback(stage, extra={}) {
   // Browser-specific device IDs are unnecessary; keep only the visible input label and processing flags.
   if(snapshot.capture){delete snapshot.capture.deviceId;delete snapshot.capture.groupId;}
   playbackTraceQueue=playbackTraceQueue.catch(()=>{}).then(async()=>{
-    const base='http://127.0.0.1:4274',session=await(await fetch(base+'/session',{signal:AbortSignal.timeout(5000)})).json();
+    const base='/sr',session=await(await fetch(base+'/session',{signal:AbortSignal.timeout(5000)})).json();
     if(!session.features?.includes('playback-trace'))throw new Error('本機工具尚未支援追蹤');
     const response=await fetch(base+'/playback-trace',{method:'POST',headers:{'Content-Type':'application/json','X-Karaoke-Token':session.token},body:JSON.stringify(snapshot),signal:AbortSignal.timeout(5000)});
     if(!response.ok)throw new Error(`本機回應 ${response.status}`);
@@ -246,7 +246,7 @@ async function loadVideo(e) {
       await new Promise((resolve,reject)=>{
         const cleanup=()=>{clearTimeout(timer);video.removeEventListener('loadedmetadata',ready);video.removeEventListener('error',fail);};
         const ready=()=>{cleanup();resolve();},fail=()=>{cleanup();reject(Error('本機媒體載入失敗，請重新載入。'));};
-        const timer=setTimeout(fail,20000);video.addEventListener('loadedmetadata',ready);video.addEventListener('error',fail);video.src=LOCAL_BASE+media.playbackPath;video.load();
+        const timer=setTimeout(fail,20000);video.addEventListener('loadedmetadata',ready);video.addEventListener('error',fail);video.src=media.playbackPath;video.load();
       });
       $('video-placeholder').style.display='none';status(`已載入${audioOnly?'本機音檔':'本機 MV'}：${media.title}。請按播放，或準備歌曲基準。`);return true;
     }
@@ -486,7 +486,7 @@ $('local-check').addEventListener('click', async () => {
   $('local-status').textContent = '正在檢查這台電腦的本機工具…';
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 10000);
   try {
-    const response = await fetch('http://127.0.0.1:4274/health', { signal: controller.signal, cache: 'no-store', credentials: 'omit' });
+    const response = await fetch('/sr/health', { signal: controller.signal, cache: 'no-store', credentials: 'omit' });
     if (!response.ok) throw new Error('本機工具回應失敗。');
     const result = await response.json();
     if (result.app !== 'karaoke-local-helper' || result.version !== 1 || typeof result.checks !== 'object' || !result.checks) throw new Error('本機工具版本不相容，請重新下載工具包。');

@@ -3,12 +3,11 @@ from __future__ import annotations
 
 import os
 import re
-import shutil
 import uuid
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import FileResponse
 
 from . import stems as stems_mod

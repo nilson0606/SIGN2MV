@@ -78,7 +78,9 @@ async function loadStatus(first = false) {
 
 // ---------------- shutdown ----------------
 $('#shutdown-btn').addEventListener('click', async () => {
-  if (!(await confirmDialog(t('shutdown.confirm'), t('nav.shutdown')))) return;
+  const busyPages = [...pages.values()].filter((p) => p.busy && p.busy());
+  const message = busyPages.length ? `${busyPages.map((p) => p.busyText()).join('\n')}\n\n${t('shutdown.confirm')}` : t('shutdown.confirm');
+  if (!(await confirmDialog(message, t('nav.shutdown')))) return;
   let force = false;
   try {
     await api.post('/api/system/shutdown', { force: false });

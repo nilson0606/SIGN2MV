@@ -53,7 +53,10 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
         # Any request that changes something must carry our custom header.
         # A web page from another site cannot add it without a CORS preflight,
         # which this server never approves.
-        if request.method not in ("GET", "HEAD") and request.headers.get(CONTROL_HEADER) != "1":
+        # /sr/* (sing & record) uses its own custom token headers, which need
+        # the same preflight, so the same protection applies there.
+        sr = request.url.path.startswith("/sr/")
+        if request.method not in ("GET", "HEAD") and not sr and request.headers.get(CONTROL_HEADER) != "1":
             return err("missing_control_header", 403)
         response = await call_next(request)
         if not request.url.path.startswith("/media/"):
