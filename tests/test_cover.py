@@ -26,7 +26,7 @@ def test_params_and_plan(tmp_path):
     from app import cover
     p = cover.clean_params({})
     assert p["rvc"]["envelope"] == 0.0 and p["vocal_mode"] == "lead_keep_backing" and p["backing_on"] is True
-    assert p["mix"] == {"vocal_vol": 0.95, "bgm_vol": 0.85, "inst_vol": 0.0, "instrument": "steel_guitar",
+    assert p["mix"] == {"vocal_vol": 0.95, "bgm_vol": 0.85, "inst_vol": 0.0, "instrument": "none",
                         "octave_shift": 99, "reverb_wet": 0.1}
     with pytest.raises(cover.CoverError):
         cover.validate(p)                                      # no model

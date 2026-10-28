@@ -43,7 +43,7 @@ PATCH_FILE = re.compile(r"^up_[a-f0-9]{12}\.wav$")
 
 RVC_DEFAULTS = {"protect": 0.33, "index_rate": 0.75, "f0": "rmvpe", "envelope": 0.0, "autotune": False,
                 "autotune_strength": 1.0, "clean": False, "clean_strength": 0.5}
-MIX_DEFAULTS = {"vocal_vol": 0.95, "bgm_vol": 0.85, "inst_vol": 0.0, "instrument": "steel_guitar",
+MIX_DEFAULTS = {"vocal_vol": 0.95, "bgm_vol": 0.85, "inst_vol": 0.0, "instrument": "none",
                 "octave_shift": 99, "reverb_wet": 0.10}
 DEFAULTS: dict[str, Any] = {
     "model": "", "pitch": 0, "key": 0, "rvc": dict(RVC_DEFAULTS),
@@ -102,7 +102,7 @@ def clean_mix(p: Any) -> dict:
     return {"vocal_vol": _num(p.get("vocal_vol", 0.95), 0.95, 0, 2, 2),
             "bgm_vol": _num(p.get("bgm_vol", 0.85), 0.85, 0, 2, 2),
             "inst_vol": _num(p.get("inst_vol", 0.0), 0.0, 0, 2, 2),
-            "instrument": p.get("instrument") if p.get("instrument") in INSTRUMENTS else "steel_guitar",
+            "instrument": p.get("instrument") if p.get("instrument") in INSTRUMENTS else "none",
             "octave_shift": oc if oc in OCTAVES else 99,
             "reverb_wet": _num(p.get("reverb_wet", 0.10), 0.10, 0, 0.6, 2)}
 

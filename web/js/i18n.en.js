@@ -214,7 +214,7 @@ export default {
   "cover.vseg_reset": "↺ Clear all",
   "cover.no_vsegs": "No volume sections.",
   "cover.run": "🎤 Make cover (new version)",
-  "cover.run_hint": "Separation and conversions are cached: the same settings are not computed again. Changing the model, pitch, key or separation needs this button; volumes, instrument and sections can use Remix on a version.",
+  "cover.run_hint": "Separation and conversions are cached: the same settings are not computed again. Changing the model, pitch, key or separation needs this button; volumes and sections can use Remix on a version.",
   "cover.done": "Cover finished",
   "cover.busy": "A cover or a training is running; closing will stop it.",
   "cover.versions": "Versions",

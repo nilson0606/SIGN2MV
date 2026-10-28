@@ -133,9 +133,10 @@ const male = sideControls('male');
 const female = sideControls('female');
 const mix = {
   vocal_vol: slider('mix.vocal_vol', 0, 200, 1, 100), bgm_vol: slider('mix.bgm_vol', 0, 200, 1, 100),
-  instrument: select('mix.instrument', [], () => updateVis()), inst_vol: slider('mix.inst_vol', 0, 200, 1, 100),
-  octave_shift: select('mix.octave_shift', [[99, ''], [0, ''], [1, ''], [-1, '']]), reverb_wet: slider('mix.reverb_wet', 0, 60, 1, 100),
 };
+// The melody instrument track of the old program is not offered (its sound was not good enough);
+// the mixer still supports it, the page always sends "no instrument".
+const NO_INSTRUMENT = { instrument: 'none', inst_vol: 0 };
 
 const runJob = jobBox();
 const doneBox = el('div', { class: 'cv-done hidden' });
@@ -179,8 +180,6 @@ function sectionMix() {
   return el('div', { class: 'panel' },
     el('h3', {}, t('cover.mix')),
     field(t('cover.vocal_vol'), mix.vocal_vol), field(t('cover.bgm_vol'), mix.bgm_vol),
-    field(t('cover.instrument'), mix.instrument), field(t('cover.inst_vol'), mix.inst_vol, t('cover.inst_hint')),
-    field(t('cover.octave'), mix.octave_shift), field(t('cover.reverb'), mix.reverb_wet),
     details(t('cover.masks'), el('p', { class: 'muted small' }, t('cover.masks_hint')), maskEditor(), maskList),
     details(t('cover.vsegs'), el('p', { class: 'muted small' }, t('cover.vsegs_hint')), vsegEditor(), vsegList),
     el('div', { class: 'row', style: 'margin-top:12px' }, runBtn),
@@ -354,6 +353,7 @@ function readForm() {
   } else p.mf = null;
   p.masks = masks.map((m) => ({ ...m }));
   p.vol_segments = vsegs.map((s) => ({ ...s }));
+  p.mix = { ...p.mix, ...NO_INSTRUMENT };
   return p;
 }
 function writeForm(p) {
@@ -399,8 +399,6 @@ function updateVis() {
   page.querySelectorAll('.cv-sides').forEach((n) => n.classList.toggle('hidden', !mf));
   modelSel.el.disabled = mf;
   pitchCtl.el.querySelectorAll('input').forEach((i) => { i.disabled = mf; });
-  const ins = (status && status.instruments) || {};
-  [...mix.instrument.el.options].forEach((o) => { o.disabled = !ins[o.value]; });
   const seps = (status && status.separators) || {};
   [sepSel.el, mr.sep_model.el].forEach((s) => [...s.options].forEach((o) => { o.disabled = seps[o.value] === false; }));
   [...mfSep.el.options].forEach((o) => { o.disabled = seps[o.value] === false; });
@@ -414,13 +412,9 @@ function translateOptions() {
   [refineSel.el, mr.bgm_refine.el].forEach((s) => lab(s, 'cover.refine.'));
   lab(rvc.f0.el, 'cover.f0.');
   lab(mfSep.el, 'cover.mfsep.');
-  lab(mix.octave_shift.el, 'cover.octave.');
   lab(mMode.el, 'cover.mask.');
   lab(mf_.target.el, 'cover.mask_target.');
   lab(vTrack.el, 'cover.vseg.');
-  const ins = (status && status.instruments) || {};
-  mix.instrument.el.replaceChildren(...['none', 'steel_guitar', 'yangqin', 'guzheng', 'dizi', 'duet'].map((v) =>
-    el('option', { value: v }, t(`cover.inst.${v}`) + (ins[v] === false ? ` (${t('cover.not_installed')})` : ''))));
 }
 
 // ------------------------------------------------------------------ song
@@ -843,22 +837,6 @@ function sectionTrain() {
     trJob.el, trLoss);
 }
 
-// ------------------------------------------------------------------ instruments
-const sfPath = el('input', { type: 'text', style: 'flex:1;min-width:220px', placeholder: 'D:\\AI_COVER_MV\\workspace\\soundfonts' });
-const sfInfo = el('div', { class: 'muted small' });
-function renderInstruments() {
-  const ins = (status && status.instruments) || {};
-  sfInfo.textContent = ['steel_guitar', 'yangqin', 'guzheng', 'dizi'].map((k) => `${t(`cover.inst.${k}`)} ${ins[k] ? '✅' : '—'}`).join(' · ');
-}
-function sectionInstruments() {
-  return foldPanel('instruments', t('cover.instruments'), null, sfInfo,
-    el('p', { class: 'muted small' }, t('cover.instruments_hint')),
-    el('div', { class: 'row' }, sfPath, el('button', { class: 'btn', onclick: async () => {
-      try { const res = await api.post('/api/cover/soundfonts/import', { path: sfPath.value }); toast(t('cover.sf_imported', res.imported.join(', '))); await loadStatus(); }
-      catch (err) { toast(errorText(err), true); }
-    } }, t('cover.import'))));
-}
-
 // ------------------------------------------------------------------ status / page
 const banner = el('div', { class: 'banner warn hidden' });
 async function loadStatus() {
@@ -871,7 +849,6 @@ async function loadStatus() {
   // no song yet: show the defaults so every number box has a value
   writeForm(keep || status.defaults);
   renderModels();
-  renderInstruments();
   updateVis();
   if (status.training && !trJobId) followTraining(status.training, (status.training.title || '').replace(/^train: /, ''));
 }
@@ -882,7 +859,7 @@ function build() {
       el('div', { class: 'cv-col' }, sectionSong(), sectionVoice(), sectionMix()),
       el('div', { class: 'cv-col' },
         el('div', { class: 'panel' }, el('h3', {}, t('cover.versions')), el('p', { class: 'muted small' }, t('cover.versions_hint')), versionsBox),
-        sectionModels(), sectionTrain(), sectionInstruments())));
+        sectionModels(), sectionTrain())));
 }
 
 let built = false;
@@ -896,7 +873,7 @@ function rebuild() {
   translateOptions();
   applyTranslations(page);
   fillSongs();
-  renderMasks(); renderVsegs(); renderVersions(); renderModels(); renderInstruments(); updateMaskVis();
+  renderMasks(); renderVsegs(); renderVersions(); renderModels(); updateMaskVis();
 }
 
 bus.addEventListener('songs', () => { if (built) fillSongs(); });

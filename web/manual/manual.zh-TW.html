@@ -104,7 +104,7 @@ a { color:var(--accent); }
 
 <section id="cover">
 <h2>6. AI 翻唱</h2>
-<p>打開 <b>AI 翻唱</b>（或在歌曲庫的歌曲上按 <b>AI 翻唱</b>），在上方選歌。左邊是設定，右邊是版本、音色模型、訓練與樂器音色。</p>
+<p>打開 <b>AI 翻唱</b>（或在歌曲庫的歌曲上按 <b>AI 翻唱</b>），在上方選歌。左邊是設定，右邊是版本、音色模型與訓練。</p>
 <h3>製作翻唱</h3>
 <ol>
 <li><b>音色模型</b>：選一個模型（有保留訓練中間版本的，也可以選某一輪）。新的歌會預設上次用過的模型。清單是空的話，先匯入或訓練模型（第 7 章）。</li>
@@ -112,7 +112,7 @@ a { color:var(--accent); }
 <li><b>整首升降 Key</b>：−8 到 +8。伴奏和原唱和聲用 Rubber Band 升降（速度不變），人聲轉換時一起加上同樣的變調。「▶ 試聽升降後」播放升降後的原曲。</li>
 <li>可選 <b>RVC 微調</b>：子音／呼吸保護（0.33）、特徵檢索比例（0.75）、音量包絡（0＝跟著原唱的大小聲）、音高偵測（rmvpe）、音高自動修正、降噪。</li>
 <li>可選 <b>分離與和聲</b>：分離模型；人聲處理＝拆出主唱轉換、保留原唱和聲（預設），或整條人聲一起轉，或三人以上和聲時拆兩次；伴奏單次或二次分離；原唱和聲要不要混進成品。</li>
-<li><b>混音</b>：轉換後人聲音量（95%）、伴奏（85%）、可選旋律樂器（鋼弦吉他、揚琴、古箏、笛子、古箏＋笛子）與樂器音量（0%＝不加）、八度、空間混響。</li>
+<li><b>混音</b>：轉換後人聲音量（95%）與伴奏音量（85%）。</li>
 <li>按 <b>🎤 製作翻唱（新版本）</b>。進度顯示在按鈕下方和工作佇列。</li>
 </ol>
 <p>分離與轉換結果都會沿用。同樣設定再做一次不會重算；只改混音很快。</p>
@@ -139,8 +139,6 @@ a { color:var(--accent); }
 <p>只調整某兩個時間點之間的轉換後人聲、伴奏或原唱和聲音量（0–200%，邊界 80 毫秒平滑）。</p>
 <h3>男女對唱</h3>
 <p>勾選「啟用男女對唱」：人聲會拆成男聲和女聲（aufr33 模型；有安裝的話也可用 Sucial）。每一邊有自己的模型、變調、音量與微調，也可以保留原唱。之後只改兩邊音量時用快速混音即可。</p>
-<h3>樂器音色</h3>
-<p>鋼弦吉他、揚琴用 GeneralUser GS 音色庫（已安裝）。古箏、笛子需要它們的音色資料夾：在「樂器音色」輸入舊程式的資料夾（例如 <code>D:\AI_COVER_MV\workspace\soundfonts</code>），按 <b>匯入（複製）</b>。</p>
 </section>
 
 <section id="models">
@@ -193,7 +191,7 @@ a { color:var(--accent); }
 <table>
 <tr><th>資料夾（在 SIGN2MV 裡）</th><th>內容</th></tr>
 <tr><td><code>library\songs\&lt;歌曲&gt;\</code></td><td><code>source</code>（原曲）、<code>stems</code>、<code>keys</code>、<code>sing</code>、<code>recordings</code>、<code>renders</code>（當 MV 音檔用的錄音與翻唱版本）、<code>cover</code>（翻唱版本與快取）、<code>mv</code>（MV 專案）</td></tr>
-<tr><td><code>models\</code></td><td>AI 模型；<code>models\voices</code>＝你的 RVC 音色模型；<code>models\soundfonts</code>＝樂器音色</td></tr>
+<tr><td><code>models\</code></td><td>AI 模型；<code>models\voices</code>＝你的 RVC 音色模型</td></tr>
 <tr><td><code>runtime\</code></td><td>Python 環境、Applio、ffmpeg、快取、暫存檔、訓練暫存</td></tr>
 <tr><td><code>config\</code>、<code>logs\</code></td><td>設定、記錄檔</td></tr>
 </table>
@@ -209,7 +207,6 @@ a { color:var(--accent); }
 <tr><td>音色轉換元件未安裝</td><td>安裝的 Applio 部分沒有完成，再執行一次 <code>install.bat</code>。</td></tr>
 <tr><td>升降 Key 失敗</td><td>ffmpeg 沒有 Rubber Band，再執行一次 <code>install.bat</code>。</td></tr>
 <tr><td>工作很慢</td><td>到 <b>工作佇列</b> 看看是不是有別的顯示卡工作（例如訓練）在跑。</td></tr>
-<tr><td>古箏／笛子顯示「未安裝」</td><td>匯入它們的音色資料夾（第 6 章「樂器音色」）。</td></tr>
 <tr><td>音色的 index 好像沒有作用</td><td>SIGN2MV 資料夾的路徑請用英文（例如 <code>D:\AI_SIGN2MV</code>）：index 元件無法開啟含中文字的路徑。</td></tr>
 </table>
 <p>伺服器的詳細記錄在 <code>logs\server.log</code>。</p>

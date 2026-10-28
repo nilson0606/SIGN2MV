@@ -104,7 +104,7 @@ a { color:var(--accent); }
 
 <section id="cover">
 <h2>6. AI cover</h2>
-<p>Open <b>AI cover</b> (or press <b>AI cover</b> on a song in the library) and pick the song at the top. The left side is the form; the right side holds the versions, voice models, training and instrument sounds.</p>
+<p>Open <b>AI cover</b> (or press <b>AI cover</b> on a song in the library) and pick the song at the top. The left side is the form; the right side holds the versions, voice models and training.</p>
 <h3>Make a cover</h3>
 <ol>
 <li><b>Voice model</b>: choose a model (and, if it has them, one of its kept training epochs). The last model you used is selected for new songs. If the list is empty, import or train a model first (chapter 7).</li>
@@ -112,7 +112,7 @@ a { color:var(--accent); }
 <li><b>Key (whole song)</b>: −8 to +8. The accompaniment and original backing vocals are shifted with Rubber Band (tempo unchanged) and the voice conversion gets the same shift. <i>▶ Preview this key</i> plays the original in that key.</li>
 <li>Optional <b>Conversion fine-tuning</b>: consonant/breath protect (0.33), index rate (0.75), volume envelope (0 = follow the original singer's loudness), pitch detection (rmvpe), auto-tune, noise clean-up.</li>
 <li>Optional <b>Separation and backing vocals</b>: separator; vocals = convert the lead and keep the original backing vocals (default), convert all vocals, or split twice for songs with three or more voices; accompaniment single or second pass; whether the original backing vocals are mixed into the cover.</li>
-<li><b>Mix</b>: converted vocal volume (95%), accompaniment (85%), optional melody instrument (steel guitar, yangqin, guzheng, dizi, guzheng + dizi) with its volume (0% = no instrument), octave and room.</li>
+<li><b>Mix</b>: converted vocal volume (95%) and accompaniment (85%).</li>
 <li>Press <b>🎤 Make cover (new version)</b>. The progress appears under the button and in the job queue.</li>
 </ol>
 <p>Separation and conversions are cached. Running again with the same settings reuses them; changing only the mix is fast.</p>
@@ -139,8 +139,6 @@ a { color:var(--accent); }
 <p>Change the volume of the converted vocal, the accompaniment or the original backing vocals between two times (0–200%, 80 ms crossfades).</p>
 <h3>Male / female duet</h3>
 <p>Turn on <i>Use male / female duet</i>: the vocals are split into a male and a female line (aufr33 model, or Sucial if installed). Each side has its own model, pitch, volume and fine-tuning, or keeps the original singer. Changing only the two volumes later is a quick remix.</p>
-<h3>Instrument sounds</h3>
-<p>Steel guitar and yangqin use the GeneralUser GS sound font (installed). Guzheng and dizi need their sample folders: under <i>Instrument sounds</i> enter the old program's folder (for example <code>D:\AI_COVER_MV\workspace\soundfonts</code>) and press <b>Import (copy)</b>.</p>
 </section>
 
 <section id="models">
@@ -193,7 +191,7 @@ a { color:var(--accent); }
 <table>
 <tr><th>Folder (inside SIGN2MV)</th><th>Contents</th></tr>
 <tr><td><code>library\songs\&lt;song&gt;\</code></td><td><code>source</code> (original), <code>stems</code>, <code>keys</code>, <code>sing</code>, <code>recordings</code>, <code>renders</code> (takes and cover versions used as MV audio), <code>cover</code> (cover versions and caches), <code>mv</code> (MV projects)</td></tr>
-<tr><td><code>models\</code></td><td>AI models; <code>models\voices</code> = your RVC voice models; <code>models\soundfonts</code> = instrument sounds</td></tr>
+<tr><td><code>models\</code></td><td>AI models; <code>models\voices</code> = your RVC voice models</td></tr>
 <tr><td><code>runtime\</code></td><td>Python environments, Applio, ffmpeg, caches, temporary files, training scratch</td></tr>
 <tr><td><code>config\</code>, <code>logs\</code></td><td>settings, logs</td></tr>
 </table>
@@ -209,7 +207,6 @@ a { color:var(--accent); }
 <tr><td>Voice conversion is not installed</td><td>The Applio part of the installation is incomplete: run <code>install.bat</code> again.</td></tr>
 <tr><td>Key change fails</td><td>ffmpeg without Rubber Band: run <code>install.bat</code> again.</td></tr>
 <tr><td>A job is slow</td><td>Check whether another GPU job (for example a training) is running in <b>Jobs</b>.</td></tr>
-<tr><td>Guzheng / dizi are “not installed”</td><td>Import their sample folders (chapter 6, Instrument sounds).</td></tr>
 <tr><td>The voice index seems ignored</td><td>Keep the SIGN2MV folder path in English letters (for example <code>D:\AI_SIGN2MV</code>): the index library cannot open paths with Chinese characters.</td></tr>
 </table>
 <p>Server details are in <code>logs\server.log</code>.</p>

@@ -214,7 +214,7 @@ export default {
   "cover.vseg_reset": "↺ 全部清除",
   "cover.no_vsegs": "沒有分段音量。",
   "cover.run": "🎤 製作翻唱（新版本）",
-  "cover.run_hint": "分離與轉換都會沿用：同樣設定不會重算。改模型、變調、Key、分離要按這顆；音量、樂器、分段處理可以在版本上按「快速混音」。",
+  "cover.run_hint": "分離與轉換都會沿用：同樣設定不會重算。改模型、變調、Key、分離要按這顆；音量、分段處理可以在版本上按「快速混音」。",
   "cover.done": "翻唱完成",
   "cover.busy": "翻唱或訓練正在進行，關閉會中斷它。",
   "cover.versions": "版本",
