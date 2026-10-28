@@ -58,8 +58,8 @@ def test_sing_prepare_key_and_recordings(client, root, tmp_path):
     info = client.get(f"/sr/local-media/{vid}", headers=h).json()
     assert info["playbackPath"] == f"/media/{sid}/source/video.mp4"
 
-    # clips are not supported; whole song only
-    assert client.post("/sr/jobs", headers=h, json={"videoId": vid, "seconds": 15}).status_code == 400
+    # invalid analysis ranges are refused (0 = whole song, or try the first 15/30/60 s)
+    assert client.post("/sr/jobs", headers=h, json={"videoId": vid, "seconds": 20}).status_code == 400
 
     created = client.post("/sr/jobs", headers=h, json={"videoId": vid, "seconds": 0, "preview": True}).json()
     state, seen = wait_prepare(client, h, created["id"])
@@ -108,6 +108,16 @@ def test_sing_prepare_key_and_recordings(client, root, tmp_path):
     keys = [i for i in inv if i["type"] == "key"]
     assert len(keys) == 2 and all(len(k["parents"]) == 1 and k["used_by"] for k in keys)
 
+    # "try the first 15 s": a clip is separated and analysed on its own, apart from the whole-song stems
+    clip = client.post("/sr/jobs", headers=h, json={"videoId": vid, "seconds": 15}).json()
+    cstate, _ = wait_prepare(client, h, clip["id"])
+    assert cstate["stage"] == "ready", cstate
+    cref = client.get(f"/sr/jobs/{clip['id']}/reference", headers=h).json()
+    assert cref["cacheId"] == f"{vid}_15_v1" and cref["rangeSeconds"] == 15 and cref["duration"] <= 15.2
+    layers = [i for i in client.get(f"/api/songs/{sid}/stems").json()["items"] if i["type"] == "layer"]
+    assert any(l["input"] == "sing/clips/clip_15s.wav" for l in layers)
+    assert any(l["input"] == "source/audio.wav" for l in layers)        # the whole-song stems are untouched
+
     # recordings archive: bundle import, metadata update, audio, mp3, delete
     rec_id = str(uuid.uuid4())
     mix = wav_bytes()
@@ -129,16 +139,35 @@ def test_sing_prepare_key_and_recordings(client, root, tmp_path):
     assert len(client.get("/sr/recordings", headers=h).json()["records"]) == 1
 
     # hand a finished take to the MV workspace
-    render = client.post(f"/sr/renders?videoId={vid}&title=take1", headers=h, content=mix).json()
+    render = client.post(f"/sr/renders?videoId={vid}&title=take1&recordingId={rec_id}", headers=h, content=mix).json()
     assert render["song_id"] == sid and render["kind"] == "sing"
     assert (root / "library" / "songs" / sid / render["path"]).is_file()
+    again = client.post(f"/sr/renders?videoId={vid}&title=take1&recordingId={rec_id}", headers=h, content=mix).json()
+    assert again["id"] == render["id"] and again["reused"]                 # same take sent twice: one copy
+    changed = client.post(f"/sr/renders?videoId={vid}&title=take1&recordingId={rec_id}", headers=h,
+                          content=mix[:-2] + b"\x01\x02").json()
+    assert changed["id"] != render["id"]                                   # re-processed take: a new copy
 
     assert client.delete(f"/sr/recordings/{rec_id}", headers=h).json() == {"deleted": True}
     assert client.get("/sr/recordings", headers=h).json()["records"] == []
     assert client.post(f"/sr/recordings/{rec_id}", headers=h, content=bundle).status_code == 400  # deleted stays deleted
 
-    assert client.delete(f"/sr/library/{kref['cacheId']}", headers=h).json() == {"deleted": True}
-    assert len(client.get("/sr/library", headers=h).json()["songs"]) == 1
+    # deleting the key version frees its key copies (nothing else uses them); the original stays
+    gone = client.delete(f"/sr/library/{kref['cacheId']}", headers=h).json()
+    assert gone["deleted"] and gone["freedBytes"] > 0
+    assert not [i for i in client.get(f"/api/songs/{sid}/stems").json()["items"] if i["type"] == "key"]
+    assert sorted(x["id"] for x in client.get("/sr/library", headers=h).json()["songs"]) == sorted([cache_id, cref["cacheId"]])
+
+    # "keep separated tracks" off: only the reference is kept, the stems this job made are removed
+    nk = client.post("/sr/jobs", headers=h, json={"videoId": vid, "seconds": 30, "preview": False}).json()
+    nstate, _ = wait_prepare(client, h, nk["id"])
+    assert nstate["stage"] == "ready", nstate
+    nref = client.get(f"/sr/library/{vid}_30_v1/reference", headers=h).json()
+    assert nref["hasPreview"] is False
+    assert not any(i.get("input") == "sing/clips/clip_30s.wav"
+                   for i in client.get(f"/api/songs/{sid}/stems").json()["items"])
+    again = client.post("/sr/jobs", headers=h, json={"videoId": vid, "seconds": 30, "preview": False}).json()
+    assert again.get("cached")                                             # reused without the tracks
 
 
 def test_sing_diagnostics_roundtrip(client):

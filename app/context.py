@@ -18,6 +18,9 @@ class Context:
     def __init__(self, paths: Paths, jobs: JobQueue):
         self.paths = paths
         self.jobs = jobs
+        # workspaces register callables returning what they are busy with outside the job queue
+        # (e.g. sing & record's native microphone); shutdown asks before stopping those
+        self.busy_hooks: list = []
         self._lock = threading.Lock()
         # song_id -> set of job ids that touch the song (prevents deleting a busy song)
         self._song_jobs: dict[str, set[str]] = {}

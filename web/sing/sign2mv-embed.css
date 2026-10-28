@@ -12,12 +12,9 @@ html[data-sign2mv] label[for="local-media-file"],
 html[data-sign2mv] #local-media-file,
 html[data-sign2mv] #local-media-cancel,
 html[data-sign2mv] #prepare-section details:has(#probe),
-html[data-sign2mv] label:has(> #clip-seconds),
-html[data-sign2mv] .preparation-preset div:first-child,
 html[data-sign2mv] #mv-panel,
 html[data-sign2mv] #mv-library-panel,
 html[data-sign2mv] #mv-clear-all,
 html[data-sign2mv] #mv-clear-result,
-html[data-sign2mv] a[data-language-manual],
 html[data-sign2mv] a[href="#local-section"] { display: none !important; }
 html[data-sign2mv] body { background: var(--bg, #0b1118); }

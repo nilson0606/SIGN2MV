@@ -309,7 +309,8 @@ function copyLabel(it, byDir) {
     const parent = byDir[(it.parents || [])[0]];
     return parent && parent.kind === 'lead' ? t('stored.lead2') : t('stored.lead');
   }
-  return t(`stored.${it.kind}`, model);
+  const clip = /^sing\/clips\/clip_(\d+)s\.wav$/.exec(it.input || '');
+  return t(`stored.${it.kind}`, model) + (clip ? t('stored.clip', clip[1]) : '');
 }
 
 function dependentsOf(items, target) {

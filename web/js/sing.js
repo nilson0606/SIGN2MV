@@ -16,7 +16,9 @@ function langParam() { return language() === 'en' ? 'en' : 'zh-Hant'; }
 function load() {
   if (loaded) return;
   loaded = true;
-  frame.src = `/sing/index.html?lang=${langParam()}`;
+  // ?tracePlayback=1 on the SIGN2MV page is passed on (sign_record's playback trace)
+  const trace = new URLSearchParams(location.search).get('tracePlayback') === '1' ? '&tracePlayback=1' : '';
+  frame.src = `/sing/index.html?lang=${langParam()}${trace}`;
 }
 function send(message) { frame.contentWindow?.postMessage(message, location.origin); }
 function openSong(songId) {

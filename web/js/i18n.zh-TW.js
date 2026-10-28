@@ -437,4 +437,7 @@ export default {
   "err.quickmv_length": "音檔長度需在 1 秒到 20 分鐘之間。",
   "err.quickmv_audio_failed": "無法讀取這個音檔。",
   "storage.count.quick_mvs": "{0} 支快速 MV",
+  "stored.clip": "（唱錄試做：前 {0} 秒）",
+  "shutdown.busy_microphone": "唱錄正在使用原生收音。",
+  "shutdown.busy_masks": "唱錄正在儲存評分遮罩。",
 };

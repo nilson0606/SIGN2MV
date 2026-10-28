@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -257,8 +258,9 @@ def sniff_format(head: bytes) -> str | None:
     return None
 
 
-def export_mp3(source: Path, work_dir: Path) -> bytes:
-    """Convert a recording (WebM/WAV/M4A) to 192 kbps MP3 with ffmpeg."""
+def export_mp3(source: Path, work_dir: Path, cancel=None) -> bytes:
+    """Convert a recording (WebM/WAV/M4A) to 192 kbps MP3 with ffmpeg.
+    `cancel` (threading.Event): set when the page went away; ffmpeg is stopped (sign_record did the same)."""
     with open(source, "rb") as fh:
         fmt = sniff_format(fh.read(16))
     if not fmt:
@@ -268,15 +270,22 @@ def export_mp3(source: Path, work_dir: Path) -> bytes:
     try:
         out = d / "output.mp3"
         try:
-            res = subprocess.run([shutil.which("ffmpeg") or "ffmpeg", "-v", "error", "-nostdin", "-protocol_whitelist",
-                                  "file,pipe", "-f", fmt, "-i", str(source), "-map", "0:a:0", "-vn", "-threads", "2",
-                                  "-c:a", "libmp3lame", "-b:a", "192k", str(out)],
-                                 capture_output=True, timeout=120, creationflags=NO_WINDOW)
-        except subprocess.TimeoutExpired:
-            raise ArchiveError("MP3 轉檔逾時，請重試。")
+            proc = subprocess.Popen([shutil.which("ffmpeg") or "ffmpeg", "-v", "error", "-nostdin", "-protocol_whitelist",
+                                     "file,pipe", "-f", fmt, "-i", str(source), "-map", "0:a:0", "-vn", "-threads", "2",
+                                     "-c:a", "libmp3lame", "-b:a", "192k", str(out)],
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
         except OSError:
             raise ArchiveError("無法啟動 FFmpeg，請檢查安裝。")
-        if res.returncode != 0:
+        deadline = time.monotonic() + 120
+        while proc.poll() is None:
+            if (cancel is not None and cancel.is_set()) or time.monotonic() > deadline:
+                proc.kill()
+                proc.wait()
+                if cancel is not None and cancel.is_set():
+                    raise ArchiveError("已取消 MP3 轉檔。")
+                raise ArchiveError("MP3 轉檔逾時，請重試。")
+            time.sleep(0.1)
+        if proc.returncode != 0:
             raise ArchiveError("MP3 轉檔失敗，錄音可能不完整。")
         data = out.read_bytes()
         if not data:

@@ -46,7 +46,19 @@ def main() -> None:
     song_dir = Path(data["song_dir"])
     device = pick_device(data.get("device", "auto"))
     try:
+        clip = data.get("clip")
+        if clip and not Path(clip["dst"]).is_file():
+            # "try the first N seconds": the separation and the reference use only this clip
+            from common import ffmpeg, run
+            dst = Path(clip["dst"])
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            tmp = dst.with_name(dst.stem + f".part{os.getpid()}.wav")
+            run([ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", clip["src"], "-t", str(int(clip["seconds"])),
+                 "-vn", "-c:a", "pcm_f32le", tmp], timeout=600)
+            os.replace(tmp, dst)
+        made: list[Path] = []
         for layer in data.get("layers") or []:
+            made.append(song_dir / "stems" / layer["key"])
             stage = STAGE.get(layer["kind"], "separating")
             report = StageProgress(stage, device)
             used = separate.run_layer(layer, song_dir, device, _Adapter(report))
@@ -78,6 +90,7 @@ def main() -> None:
             from key_shift import shift_items
             source = read_json(ref_file)
             semis = int(key["semitones"])
+            made += [Path(it["out_dir"]) for it in key["items"] if not (Path(it["out_dir"]) / "info.json").is_file()]
             shift_items(key["items"], semis, StageProgress("transposing", device))
             factor = 2 ** (semis / 12)
             label = f"{'升' if semis > 0 else '降'} {abs(semis)} Key"
@@ -94,6 +107,15 @@ def main() -> None:
             if kdir.exists():
                 shutil.rmtree(kdir, ignore_errors=True)
             os.replace(tmp, kdir)
+        if data.get("drop_new"):
+            # "keep separated tracks" was off (sign_record: only the reference is kept, temporary audio
+            # is removed): drop what this job had to make; stems that existed before are left alone.
+            for d in made:
+                shutil.rmtree(d, ignore_errors=True)
+            if clip:
+                Path(clip["dst"]).unlink(missing_ok=True)
+            if made:
+                protocol.log(f"separated tracks not kept: removed {len(made)} folder(s)")
     except FileNotFoundError as exc:
         protocol.fail("model_missing", str(exc))
     except ValueError as exc:

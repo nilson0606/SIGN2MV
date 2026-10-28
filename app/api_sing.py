@@ -105,30 +105,27 @@ def _atomic_write(path: Path, data: bytes) -> None:
 
 # ===================================================================== masks
 def normalize_masks(masks: Any, duration: float) -> list[dict[str, float]]:
-    """Port of scoring.mjs normalizeMasks: sort, clamp, merge overlapping/adjacent, max 100."""
-    if not isinstance(masks, list):
-        raise ValueError("遮罩需為區間清單。")
+    """Port of scoring.mjs normalizeMasks: validate (0 <= start < end <= duration, max 100),
+    sort and merge overlapping/adjacent ranges."""
+    if not isinstance(masks, list) or len(masks) > 100 or not (duration == duration) or duration <= 0:
+        raise ValueError("遮罩資料無效，最多 100 段。")
     rows = []
     for m in masks:
-        if not isinstance(m, dict):
-            raise ValueError("遮罩格式錯誤。")
         try:
             start, end = float(m.get("start")), float(m.get("end"))
-        except (TypeError, ValueError):
-            raise ValueError("遮罩時間無效。")
-        if not (start == start and end == end) or start < 0 or end <= start:
-            raise ValueError("遮罩起點需小於終點。")
-        rows.append((round(start, 3), round(min(end, duration), 3)))
-    rows = sorted(r for r in rows if r[0] < r[1])
+        except (AttributeError, TypeError, ValueError):
+            raise ValueError("遮罩需符合 0 ≤ 起點 < 終點 ≤ 歌曲基準長度。")
+        if not (start == start and end == end) or start < 0 or end <= start or end > duration:
+            raise ValueError("遮罩需符合 0 ≤ 起點 < 終點 ≤ 歌曲基準長度。")
+        rows.append((start, min(duration, end)))
+    rows.sort()
     merged: list[list[float]] = []
-    for s, e in rows:
-        if merged and s <= merged[-1][1]:
+    for s_, e in rows:
+        if merged and s_ <= merged[-1][1]:
             merged[-1][1] = max(merged[-1][1], e)
         else:
-            merged.append([s, e])
-    if len(merged) > 100:
-        raise ValueError("遮罩最多 100 段。")
-    return [{"start": s, "end": e} for s, e in merged]
+            merged.append([s_, e])
+    return [{"start": s_, "end": e} for s_, e in merged]
 
 
 # ===================================================================== router
@@ -171,9 +168,40 @@ def router(ctx: Context) -> APIRouter:
         return value
 
     # ------------------------------------------------------------ session / health
+    def trace_file() -> Path:
+        return ctx.paths.runtime / "playback-trace.enabled"
+
+    def trace_active() -> bool:
+        # like sign_record: a flag file (runtime/playback-trace.enabled) or ?tracePlayback=1 on the page
+        return trace_file().is_file() or bool(os.environ.get("SIGN2MV_PLAYBACK_TRACE"))
+
     @r.get("/sr/session")
     def session():
-        return {"token": TOKEN, "playbackTraceActive": False, "features": FEATURES}
+        return {"token": TOKEN, "playbackTraceActive": trace_active(), "features": FEATURES}
+
+    health_cache: dict[str, Any] = {"t": 0.0, "value": None}
+
+    def run_checks() -> dict[str, bool]:
+        """What sign_record's helper checked, for SIGN2MV's own environments (cached 10 min)."""
+        import subprocess
+        from .childenv import child_env
+        env = child_env(ctx.paths)
+        exe = lambda name: shutil.which(name, path=env.get("PATH")) is not None  # noqa: E731
+        py = ctx.python("engine")
+        checks = {"python": Path(py).is_file(), "node": True, "ffmpeg": exe("ffmpeg"), "ffprobe": exe("ffprobe")}
+        mods = {"ytDlp": "yt_dlp", "demucs": "demucs", "torch": "torch", "torchaudio": "torchaudio",
+                "soundfile": "soundfile"}
+        code = ("import importlib.util,json;print(json.dumps({k: importlib.util.find_spec(m) is not None "
+                "for k, m in %r.items()}))" % mods)
+        try:
+            res = subprocess.run([py, "-c", code], capture_output=True, text=True, timeout=60, env=env,
+                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            found = json.loads(res.stdout.strip().splitlines()[-1]) if res.returncode == 0 else {}
+        except (OSError, ValueError, IndexError, subprocess.TimeoutExpired):
+            found = {}
+        for k in mods:
+            checks[k] = bool(found.get(k))
+        return checks
 
     @r.get("/sr/health")
     def health():
@@ -182,9 +210,11 @@ def router(ctx: Context) -> APIRouter:
             report = json.loads(ctx.paths.install_report.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             pass
-        checks = {k: True for k in ("python", "node", "ffmpeg", "ffprobe", "ytDlp", "demucs", "torch", "torchaudio", "soundfile")}
-        return {"app": "karaoke-local-helper", "version": 1, "features": FEATURES, "ready": True, "checks": checks,
-                "audioUpload": False, "sign2mv": True, "install": report.get("completed", False)}
+        if health_cache["value"] is None or time.time() - health_cache["t"] > 600 or not all(health_cache["value"].values()):
+            health_cache.update(t=time.time(), value=run_checks())
+        checks = dict(health_cache["value"])
+        return {"app": "karaoke-local-helper", "version": 1, "features": FEATURES, "ready": all(checks.values()),
+                "checks": checks, "audioUpload": False, "sign2mv": True, "install": report.get("completed", False)}
 
     @r.get("/sr/busy")
     def busy():
@@ -194,10 +224,30 @@ def router(ctx: Context) -> APIRouter:
         return {"preparing": active, "mv": False, "localMedia": False, "microphone": mic, "library": bool(editing_masks),
                 "busy": active or mic or bool(editing_masks)}
 
+    def busy_reasons() -> list[str]:
+        out = []
+        if native_state["active"] is not None:
+            out.append("microphone")
+        if editing_masks:
+            out.append("masks")
+        return out
+    ctx.busy_hooks.append(busy_reasons)
+
     @r.post("/sr/playback-trace")
     async def playback_trace(request: Request):
         if not auth(request):
             return json_err(403, "Session token required")
+        if not trace_active():
+            return {"saved": False}
+        try:
+            data = await read_json_body(request, limit=262144)
+        except ValueError:
+            return json_err(400, "Invalid trace")
+        log_dir = ctx.paths.logs
+        log_dir.mkdir(parents=True, exist_ok=True)
+        with open(log_dir / "playback-trace.log", "a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"t": time.time(), **(data if isinstance(data, dict) else {"data": data})},
+                                ensure_ascii=False) + "\n")
         return {"saved": True}
 
     # ------------------------------------------------------------ local media (songs)
@@ -348,11 +398,33 @@ def router(ctx: Context) -> APIRouter:
         if not found:
             return json_err(400, "無效的本機歌曲。")
         d, p, s = found
+        if str(mask_file(s["song_id"], p["videoId"], p["seconds"])) in editing_masks:
+            return json_err(409, "遮罩保存中，請稍後刪除。")
+        for info in prep_jobs.values():   # a key version is being built from this one (sign_record: 409)
+            j = ctx.jobs.get(info.get("queue_id") or "")
+            if j and j["status"] in ("queued", "running") and info.get("cacheId") != cache_id \
+                    and info["cacheId"].startswith(cache_id + "_key_"):
+                return json_err(409, "此音軌正在建立另一個基準，請完成或取消後再刪除。")
+        try:
+            ref = json.loads((d / "reference.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            ref = {}
         for info in prep_jobs.values():
             if info.get("cacheId") == cache_id and info.get("queue_id"):
                 ctx.jobs.cancel(info["queue_id"])
         _rmtree(d)
-        return {"deleted": True}
+        # sign_record deleted the preview tracks with the reference. Here they are the song's shared
+        # stems: free the ones nothing else (AI cover versions, other prepared songs) uses any more.
+        freed = 0
+        if not ctx.song_busy(s["song_id"]):
+            from .api_songs import stored_copies_of
+            song_dir = ctx.library().song_dir(s["song_id"])
+            mine = stems_mod.refs_in(ref.get("stems") or {}, set())
+            for it in stored_copies_of(ctx, s["song_id"], song_dir)["items"]:
+                if it["dir"] in mine and not it["used_by"]:
+                    _rmtree(song_dir / it["dir"])
+                    freed += it["bytes"]
+        return {"deleted": True, "freedBytes": freed}
 
     # ------------------------------------------------------------ prepare jobs
     def summary(job_id: str) -> dict[str, Any] | None:
@@ -419,8 +491,6 @@ def router(ctx: Context) -> APIRouter:
         shift = data.get("pitchShift", 0) or 0
         if not isinstance(seconds, int) or seconds not in (0, 15, 30, 60) or not isinstance(shift, int) or not -12 <= shift <= 12:
             return json_err(400, "影片網址或片段長度無效。")
-        if seconds != 0:
-            return json_err(400, "SIGN2MV 只支援完整歌曲，請把「分析範圍」設為完整歌曲。")
         p = {"videoId": vid, "seconds": seconds, "vocalMode": data.get("vocalMode") or "all",
              "separationModel": data.get("separationModel") or "demucs", "pitchMethod": data.get("pitchMethod") or "yin",
              "separationMethod": data.get("separationMethod") or "single", "pitchShift": shift}
@@ -440,13 +510,26 @@ def router(ctx: Context) -> APIRouter:
         key_id = cache_key(vid, seconds, p["vocalMode"], p["separationModel"], p["pitchMethod"], p["separationMethod"], shift)
         force = bool(data.get("force"))
         job_id = uuid.uuid4().hex
-        if not force and load_reference(key_id) and load_reference(key_id)["hasPreview"]:
+        preview = data.get("preview", True) is not False
+        cached_ref = load_reference(key_id)
+        if not force and cached_ref and (not preview or cached_ref["hasPreview"]):
             prep_jobs[job_id] = {"cacheId": key_id, "p": p, "cached": True, "updated": time.time()}
             return JSONResponse(summary(job_id), status_code=202)
         lib = ctx.library()
         song_dir = lib.song_dir(sid)
         song = lib.get(sid)
         recipe = recipe_for(p)
+        clip = None
+        if seconds:
+            # "Try the first 15/30/60 s": separate and analyse only a clip (fast), kept apart from the
+            # whole-song stems every workspace shares; it shows as its own copy in "Saved stems".
+            src = song.get("source") or {}
+            if not src.get("audio"):
+                return json_err(400, "這首歌沒有音訊，請到「歌曲庫」重新匯入。")
+            clip_rel = f"sing/clips/clip_{seconds}s.wav"
+            clip = {"src": str(song_dir / src["audio"]), "dst": str(song_dir / clip_rel), "seconds": seconds}
+            song = {**song, "source": {"audio": clip_rel,
+                                       "source_hash": f"{src.get('source_hash') or src['audio']}#clip{seconds}"}}
         if force:
             if ctx.song_busy(sid):
                 return json_err(409, "這首歌有其他工作正在進行，請稍後。")
@@ -466,7 +549,9 @@ def router(ctx: Context) -> APIRouter:
                 "separationModel": p["separationModel"], "pitchMethod": p["pitchMethod"],
                 "separationMethod": p["separationMethod"], "rangeSeconds": seconds, "cacheId": base_key, "pitchShift": 0}
         payload: dict[str, Any] = {
-            "song_dir": str(song_dir), "layers": layers,
+            "song_dir": str(song_dir), "layers": layers, "clip": clip,
+            # "keep separated tracks" off: drop the stems this job had to make once the reference is saved
+            "drop_new": not preview,
             "base": {"dir": str(sing_dir(sid) / base_key), "stems_rel": base_rel,
                      "pitch_input": str(song_dir / pitch_rel), "beat_input": str(song_dir / base_rel["accompaniment"]),
                      "meta": meta},
@@ -570,10 +655,23 @@ def router(ctx: Context) -> APIRouter:
             tmp = await body_to_file(request, MAX_AUDIO)
             if not mp3_lock.acquire(blocking=False):
                 return json_err(409, "另一筆錄音正在轉檔，請稍後再試。")
+            cancel = threading.Event()
+
+            async def watch() -> None:   # the page went away: stop ffmpeg (sign_record did the same)
+                import asyncio
+                while not cancel.is_set():
+                    if await request.is_disconnected():
+                        cancel.set()
+                        return
+                    await asyncio.sleep(0.5)
+            import asyncio
+            watcher = asyncio.ensure_future(watch())
             try:
-                data = await run_in_threadpool(export_mp3, tmp, ctx.paths.tmp / "exports")
+                data = await run_in_threadpool(export_mp3, tmp, ctx.paths.tmp / "exports", cancel)
             finally:
                 mp3_lock.release()
+                if not watcher.done():
+                    watcher.cancel()
         except ArchiveError as exc:
             return json_err(400, str(exc))
         finally:
@@ -659,7 +757,8 @@ def router(ctx: Context) -> APIRouter:
         if not auth(request):
             return json_err(403, "Session token required")
         data = await read_json_body(request)
-        return native.monitor(data)
+        # monitor() waits up to 5 s for the audio device; keep the event loop (and the PCM stream) running
+        return await run_in_threadpool(native.monitor, data)
 
     # ------------------------------------------------------------ diagnostics
     from .sing_diagnostics import DiagnosticsStore
@@ -710,8 +809,24 @@ def router(ctx: Context) -> APIRouter:
         try:
             if not tmp.stat().st_size:
                 return json_err(400, "音檔為空。")
+            rec_id = request.query_params.get("recordingId", "")[:64]
+            digest = hashlib.sha1(tmp.read_bytes()).hexdigest()
+            if rec_id:   # the same saved take sent again (quick MV, then full MV): reuse its render
+                from .renders import list_renders
+                song_dir = ctx.library().song_dir(s["song_id"])
+                for rd in list_renders(ctx, s["song_id"]):
+                    if rd.get("kind") != "sing" or rd.get("recording_id") != rec_id:
+                        continue
+                    old = rd.get("sha1")
+                    if not old:
+                        try:
+                            old = hashlib.sha1((song_dir / rd["path"]).read_bytes()).hexdigest()
+                        except OSError:
+                            continue
+                    if old == digest:
+                        return {**rd, "reused": True}
             return save_render_file(ctx, s["song_id"], tmp, title=title or s["title"], kind="sing",
-                                    extra={"recording_id": request.query_params.get("recordingId", "")[:64]})
+                                    extra={"recording_id": rec_id, "sha1": digest})
         except ValueError:
             return json_err(400, "不支援的音檔格式。")
         finally:

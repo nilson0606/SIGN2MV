@@ -1,15 +1,26 @@
 // A small inline progress display for one job.
 import { t, errorText } from './i18n.js';
-import { el } from './ui.js';
+import { el, toast } from './ui.js';
 import { waitJob } from './app-state.js';
+import { api } from './api.js';
 
-export function jobBox() {
-  const label = el('div', { class: 'small' });
+export function jobBox({ cancel = true } = {}) {
+  const label = el('div', { class: 'small grow' });
   const fill = el('div');
   const bar = el('div', { class: 'bar' }, fill);
-  const box = el('div', { class: 'jobbox hidden' }, label, bar);
+  let current = null;
+  const stop = el('button', { class: 'btn small hidden', onclick: async () => {
+    if (!current) return;
+    stop.disabled = true;
+    try { await api.post(`/api/jobs/${current}/cancel`, {}); } catch (err) { toast(errorText(err), true); }
+    stop.disabled = false;
+  } }, t('common.cancel'));
+  const box = el('div', { class: 'jobbox hidden' }, el('div', { class: 'row', style: 'align-items:center' }, label, stop), bar);
   function show(job) {
     box.classList.remove('hidden');
+    current = job.id;
+    stop.textContent = t('common.cancel');
+    stop.classList.toggle('hidden', !cancel || !['queued', 'running'].includes(job.status));
     const pct = job.percent;
     let text;
     if (job.status === 'queued') text = t('jobs.queued_pos', job.position || 1);

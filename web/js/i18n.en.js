@@ -437,4 +437,7 @@ export default {
   "err.quickmv_length": "The audio must be 1 second to 20 minutes long.",
   "err.quickmv_audio_failed": "The audio could not be read.",
   "storage.count.quick_mvs": "{0} quick MVs",
+  "stored.clip": " — first {0} s trial (sing & record)",
+  "shutdown.busy_microphone": "Sing & record is using the native microphone.",
+  "shutdown.busy_masks": "Sing & record is saving scoring masks.",
 };

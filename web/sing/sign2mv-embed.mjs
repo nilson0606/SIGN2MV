@@ -8,8 +8,6 @@ const post=message=>parentWindow?.postMessage(message,location.origin);
 const kind=$('source-kind');
 kind.querySelector('option[value="youtube"]')?.remove();
 kind.value='local';
-$('clip-seconds').value='0';
-for(const o of [...$('clip-seconds').options])if(o.value!=='0')o.remove();
 $('local-media-help').textContent='從 SIGN2MV 歌曲庫選歌；要新增歌曲請到「歌曲庫」頁匯入 YouTube 或本機檔案。';
 document.querySelector('label[for="local-media-saved"]').textContent='歌曲（SIGN2MV 歌曲庫）';
 $('local-media-load').textContent='載入歌曲';

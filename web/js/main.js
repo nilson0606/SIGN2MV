@@ -87,7 +87,8 @@ $('#shutdown-btn').addEventListener('click', async () => {
   } catch (err) {
     if (err.code === 'jobs_running') {
       const n = (err.data && err.data.jobs || []).length;
-      if (!(await confirmDialog(t('shutdown.jobs_running', n), t('shutdown.force')))) return;
+      const extra = ((err.data && err.data.busy) || []).map((b) => t(`shutdown.busy_${b}`)).join('\n');
+      if (!(await confirmDialog(t('shutdown.jobs_running', n) + (extra ? `\n${extra}` : ''), t('shutdown.force')))) return;
       force = true;
       try { await api.post('/api/system/shutdown', { force: true }); } catch (e2) { toast(errorText(e2), true); return; }
     } else if (err.code !== 'server_unreachable') {

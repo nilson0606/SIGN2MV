@@ -199,7 +199,7 @@ def inventory(song_dir: Path) -> list[dict]:
                     pass
             elif top == "stems":
                 p = _parent(info.get("input"))
-                item.update({"type": "layer", "kind": info.get("kind"), "model": info.get("model"),
+                item.update({"type": "layer", "kind": info.get("kind"), "model": info.get("model"), "input": info.get("input"),
                              "files": info.get("files") or [], "created_at": info.get("created_at"),
                              "device": info.get("device"), "parents": [p] if p else []})
             else:

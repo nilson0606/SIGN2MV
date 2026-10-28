@@ -93,8 +93,14 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
     async def shutdown(request: Request):
         body = await body_json(request)
         active = jobs.active()
-        if active and not body.get("force"):
-            return err("jobs_running", 409, jobs=active)
+        other: list[str] = []
+        for hook in getattr(ctx, "busy_hooks", []):
+            try:
+                other += list(hook() or [])
+            except Exception:  # noqa: BLE001
+                pass
+        if (active or other) and not body.get("force"):
+            return err("jobs_running", 409, jobs=active, busy=other)
         state["shutting_down"] = True
 
         def later() -> None:

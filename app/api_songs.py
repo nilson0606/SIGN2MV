@@ -43,6 +43,51 @@ def delete_song_recordings(library_root: Path, song_id: str) -> int:
     return n
 
 
+def stored_copies_of(ctx: Context, song_id: str, song_dir: Path) -> dict[str, Any]:
+    """Separation layers and key copies of a song, who uses them and how big they are."""
+    from . import cover as cover_mod
+    items = stems_mod.inventory(song_dir)
+    users: dict[str, list[dict]] = {}
+    inferred: dict[str, set[str]] = {}
+
+    def use(ref: str, entry: dict) -> None:
+        lst = users.setdefault(ref, [])
+        if entry not in lst:
+            lst.append(entry)
+
+    for v in cover_mod.list_versions(song_dir):
+        entry = {"type": "cover", "label": v.get("title") or v.get("label") or v.get("id")}
+        for ref in stems_mod.refs_in(v, set()):
+            use(ref, entry)
+        for j in ((v.get("plan") or {}).get("key_jobs") or []):
+            kd, src = j.get("dir"), stems_mod._parent(j.get("src"))
+            if kd and src:
+                inferred.setdefault(kd, set()).add(src)
+    sing_refs: dict[str, dict] = {}
+    sdir = song_dir / "sing"
+    if sdir.is_dir():
+        for d in sdir.iterdir():
+            ref = stems_mod._read(d / "reference.json") if d.is_dir() else None
+            if ref:
+                sing_refs[d.name] = ref
+    for ref in sing_refs.values():
+        entry = {"type": "sing", "label": ref.get("title") or ""}
+        mine = stems_mod.refs_in(ref.get("stems") or {}, set())
+        for r_ in mine:
+            use(r_, entry)
+        base = sing_refs.get(ref.get("sourceCacheId") or "")
+        if base and ref.get("pitchShift"):
+            parents = stems_mod.refs_in(base.get("stems") or {}, set())
+            for r_ in mine:
+                if r_.startswith("keys/"):
+                    inferred.setdefault(r_, set()).update(parents)
+    for it in items:
+        it["used_by"] = users.get(it["dir"], [])
+        if it["type"] == "key" and not it["parents"]:
+            it["parents"] = sorted(inferred.get(it["dir"], set()))
+    return {"items": items, "total_bytes": sum(i["bytes"] for i in items), "busy": ctx.song_busy(song_id)}
+
+
 def router(ctx: Context) -> APIRouter:
     r = APIRouter()
 
@@ -206,48 +251,7 @@ def router(ctx: Context) -> APIRouter:
         return {"ready": False, "tracks": mapped, "job": job}
 
     def stored_copies(song_id: str, song_dir: Path) -> dict[str, Any]:
-        """Separation layers and key copies of a song, who uses them and how big they are."""
-        from . import cover as cover_mod
-        items = stems_mod.inventory(song_dir)
-        users: dict[str, list[dict]] = {}
-        inferred: dict[str, set[str]] = {}
-
-        def use(ref: str, entry: dict) -> None:
-            lst = users.setdefault(ref, [])
-            if entry not in lst:
-                lst.append(entry)
-
-        for v in cover_mod.list_versions(song_dir):
-            entry = {"type": "cover", "label": v.get("title") or v.get("label") or v.get("id")}
-            for ref in stems_mod.refs_in(v, set()):
-                use(ref, entry)
-            for j in ((v.get("plan") or {}).get("key_jobs") or []):
-                kd, src = j.get("dir"), stems_mod._parent(j.get("src"))
-                if kd and src:
-                    inferred.setdefault(kd, set()).add(src)
-        sing_refs: dict[str, dict] = {}
-        sdir = song_dir / "sing"
-        if sdir.is_dir():
-            for d in sdir.iterdir():
-                ref = stems_mod._read(d / "reference.json") if d.is_dir() else None
-                if ref:
-                    sing_refs[d.name] = ref
-        for ref in sing_refs.values():
-            entry = {"type": "sing", "label": ref.get("title") or ""}
-            mine = stems_mod.refs_in(ref.get("stems") or {}, set())
-            for r_ in mine:
-                use(r_, entry)
-            base = sing_refs.get(ref.get("sourceCacheId") or "")
-            if base and ref.get("pitchShift"):
-                parents = stems_mod.refs_in(base.get("stems") or {}, set())
-                for r_ in mine:
-                    if r_.startswith("keys/"):
-                        inferred.setdefault(r_, set()).update(parents)
-        for it in items:
-            it["used_by"] = users.get(it["dir"], [])
-            if it["type"] == "key" and not it["parents"]:
-                it["parents"] = sorted(inferred.get(it["dir"], set()))
-        return {"items": items, "total_bytes": sum(i["bytes"] for i in items), "busy": ctx.song_busy(song_id)}
+        return stored_copies_of(ctx, song_id, song_dir)
 
     @r.get("/api/songs/{song_id}/storage")
     def song_storage(song_id: str):
