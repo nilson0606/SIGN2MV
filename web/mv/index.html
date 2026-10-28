@@ -1070,6 +1070,7 @@
           <div class="panel-title">📝 Step 3｜一鍵貼上整首歌詞 / 字幕區</div>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
             <button class="btn btn-sm" onclick="document.getElementById('inpPasteLyrics').value=''; setInlineStatus('step3StatusBox', 'ok', '🧹 已清空歌詞輸入框，請貼入新歌詞或直接點下方 Whisper 按鈕。');" title="清空下方文字框以便重新貼上歌詞">🧹 清空</button>
+            <button class="btn btn-sm" onclick="pasteLyricsFromClipboard()" title="把剪貼簿裡的歌詞貼進下方文字框（取代原本的內容）">📋 貼上剪貼簿</button>
             <button class="btn btn-sm" onclick="exportLyricsToBox('plain'); setInlineStatus('step3StatusBox', 'ok', '📋 已載入目前時間軸的純歌詞。');" title="將目前時間軸的純歌詞載入下方文字框">📋 純歌詞</button>
             <button class="btn btn-sm" onclick="exportLyricsToBox('scene_tag'); setInlineStatus('step3StatusBox', 'ok', '🖼️ 已載入含 [Scene XX] 照片編號的歌詞。');" title="匯出 [Scene 01] 歌詞 對照格式">🖼️ 含照片編號</button>
             <button class="btn btn-sm" onclick="exportLyricsToBox('lrc'); setInlineStatus('step3StatusBox', 'ok', '⏱️ 已載入含 [MM:SS.xx] 時間碼的 LRC 歌詞。');" title="將目前時間軸匯出為 [MM:SS.xx] LRC 格式">⏱️ 含時間碼</button>
@@ -3511,6 +3512,20 @@
     }
 
     // [SIGN2MV] old 「📂 開啟 MV 所在資料夾」: show the finished MV in Windows Explorer
+    // [SIGN2MV] old 「📋 貼上剪貼簿」 next to the lyrics box
+    async function pasteLyricsFromClipboard() {
+      const box = document.getElementById('inpPasteLyrics');
+      try {
+        const text = await navigator.clipboard.readText();
+        if (!text.trim()) { showToast('剪貼簿是空的', true); return; }
+        box.value = text.replace(/\r\n?/g, '\n');
+        setInlineStatus('step3StatusBox', 'ok', '📋 已貼上剪貼簿的歌詞。');
+      } catch (err) {
+        box.focus();
+        showToast('瀏覽器不允許讀剪貼簿，請在框內按 Ctrl+V 貼上', true);
+      }
+    }
+
     async function openMvFolder() {
       if (!currentProject || !currentProject.output_mv) return;
       try {

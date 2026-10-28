@@ -565,7 +565,12 @@
   "📂 已在檔案總管開啟": "📂 Opened in File Explorer",
   "只有在 Windows 上才能開啟資料夾": "Opening folders only works on Windows",
   "❌ 找不到 MV 檔案": "❌ MV file not found",
-  "讀不到這個音檔，請選擇 WAV／MP3／M4A／FLAC 音檔": "Can't read this audio file. Please choose a WAV, MP3, M4A or FLAC file."
+  "讀不到這個音檔，請選擇 WAV／MP3／M4A／FLAC 音檔": "Can't read this audio file. Please choose a WAV, MP3, M4A or FLAC file.",
+  "📋 貼上剪貼簿": "📋 Paste clipboard",
+  "把剪貼簿裡的歌詞貼進下方文字框（取代原本的內容）": "Paste the lyrics from the clipboard into the box below (replaces what is there)",
+  "剪貼簿是空的": "The clipboard is empty",
+  "📋 已貼上剪貼簿的歌詞。": "📋 Pasted the lyrics from the clipboard.",
+  "瀏覽器不允許讀剪貼簿，請在框內按 Ctrl+V 貼上": "The browser did not allow reading the clipboard. Press Ctrl+V in the box instead."
  },
  "patterns": [
   {
