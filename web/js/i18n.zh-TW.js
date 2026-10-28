@@ -603,4 +603,7 @@ export default {
   "cover.garbage.patches": "分段處理片段",
   "cover.garbage.tmp": "暫存檔",
   "cover.garbage.preview": "升降 Key 試聽檔",
+  "cover.all_versions": "📚 所有歌的翻唱成品",
+  "cover.all_info": "共 {0} 個版本 · {1}",
+  "cover.open_song": "開啟這首",
 };

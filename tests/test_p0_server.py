@@ -199,6 +199,9 @@ def test_cover_versions_mvs_batch_delete_open_folder(client, root):
     (m / "project.json").write_text(json.dumps({"audio_file": "renders/r000000000001/audio.mp3", "output_mv": "P_MV.mp4", "title": "P"}))
     (m / "output" / "P_MV.mp4").write_bytes(b"v")
     vs = {v["id"]: v for v in client.get(f"/api/cover/songs/{sid}").json()["versions"]}
+    allv = client.get("/api/cover/versions").json()
+    assert sorted(x["id"] for x in allv["items"]) == ["v0000000001", "v0000000002"] and allv["bytes"] == 1006
+    assert all(x["song_id"] == sid and x["song_title"] == "V" for x in allv["items"])
     one = vs["v0000000001"]
     assert one["format"] == "MP3" and one["bytes"] == 503
     assert sorted(x["kind"] for x in one["mvs"]) == ["full", "quick"] and vs["v0000000002"]["mvs"] == []

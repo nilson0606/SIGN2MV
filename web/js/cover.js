@@ -840,11 +840,50 @@ function updateBatch() {
   vDelSel.disabled = !n;
   vBatch.classList.toggle('hidden', all.length < 2);
 }
+// every song's versions in one list (old 成品庫 table): search, play, size, open that song
+const allSearch = el('input', { type: 'search', style: 'min-width:220px', oninput: () => renderAll() });
+const allList = el('div', { class: 'list' });
+const allInfo = el('div', { class: 'muted small' });
+let allData = null;
+const allBox = el('details', { class: 'cv-details cv-all' },
+  el('summary', { 'data-i18n': 'cover.all_versions' }),
+  el('div', { class: 'cv-body' }, el('div', { class: 'row', style: 'align-items:center' }, allSearch, allInfo), allList));
+allBox.addEventListener('toggle', () => { if (allBox.open) loadAll(); });
+async function loadAll() {
+  try { allData = await api.get('/api/cover/versions'); } catch (err) { toast(errorText(err), true); return; }
+  renderAll();
+}
+function renderAll() {
+  allSearch.placeholder = t('qmv.search');
+  if (!allData) return;
+  const q = allSearch.value.trim().toLowerCase();
+  const items = allData.items.filter((v) => !q || [v.song_title, v.title, v.label].some((x) => (x || '').toLowerCase().includes(q)));
+  allInfo.textContent = t('cover.all_info', allData.items.length, fmtBytes(allData.bytes || 0));
+  if (!items.length) { allList.replaceChildren(el('div', { class: 'empty' }, t(q ? 'qmv.no_match' : 'cover.no_versions'))); return; }
+  allList.replaceChildren(...items.map((v) => {
+    const holder = el('div');
+    const meta = [v.label, v.format, v.bytes ? fmtBytes(v.bytes) : '', v.duration ? fmtTime(v.duration) : '', fmtDate(v.updated_at || v.created_at)]
+      .filter(Boolean).join(' · ');
+    return el('div', { class: 'item', style: 'display:block' },
+      el('div', { class: 'row', style: 'align-items:center' },
+        el('div', { class: 'grow', style: 'white-space:normal' }, el('b', {}, v.song_title), ' — ', v.title || v.label,
+          el('div', { class: 'muted small' }, meta)),
+        v.audio ? el('button', { class: 'btn small primary', onclick: () => {
+          if (holder.firstChild) { holder.replaceChildren(); return; }
+          const a = el('audio', { src: mediaUrl(v.song_id, v.audio), controls: true, preload: 'none', style: 'width:100%' });
+          holder.replaceChildren(a);
+          a.play().catch(() => {});
+        } }, '▶') : null,
+        el('button', { class: 'btn small', onclick: () => { openSong(v.song_id); window.scrollTo({ top: 0, behavior: 'smooth' }); } }, t('cover.open_song'))),
+      holder);
+  }));
+}
 function renderVersions(highlight) {
   const vs = (songState && songState.versions) || [];
   if (!songId) { versionsBox.replaceChildren(el('div', { class: 'empty' }, t('cover.pick_song'))); updateBatch(); return; }
   if (!vs.length) { versionsBox.replaceChildren(el('div', { class: 'empty' }, t('cover.no_versions'))); updateBatch(); return; }
   versionsBox.replaceChildren(...vs.map((v) => versionItem(v, v.id === highlight)));
+  if (allBox.open) loadAll();
   vSelAll.checked = false;
   updateBatch();
 }
@@ -1311,7 +1350,7 @@ function build() {
       el('div', { class: 'cv-col' }, sectionSong(), sectionVoice(), sectionMix()),
       el('div', { class: 'cv-col' },
         el('div', { class: 'panel' }, el('div', { class: 'row', style: 'align-items:center' }, el('h3', { class: 'grow' }, t('cover.versions')), cleanBtn),
-          el('p', { class: 'muted small' }, t('cover.versions_hint')), specCanvas, vBatch, versionsBox),
+          el('p', { class: 'muted small' }, t('cover.versions_hint')), specCanvas, vBatch, versionsBox, allBox),
         sectionModels(), sectionTrain())));
 }
 

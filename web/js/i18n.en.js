@@ -603,4 +603,7 @@ export default {
   "cover.garbage.patches": "Section pieces",
   "cover.garbage.tmp": "Temporary files",
   "cover.garbage.preview": "Key previews",
+  "cover.all_versions": "📚 Every song's cover versions",
+  "cover.all_info": "{0} versions · {1}",
+  "cover.open_song": "Open this song",
 };

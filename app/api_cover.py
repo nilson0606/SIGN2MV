@@ -576,6 +576,23 @@ def router(ctx: Context) -> APIRouter:
                 "duration": (song.get("source") or {}).get("duration"), "settings": settings,
                 "versions": [version_out(song_id, sdir, v) for v in cover.list_versions(sdir)], "job": job}
 
+    @r.get("/api/cover/versions")
+    def all_versions():
+        """Every song's cover versions in one list (old 成品庫 table), newest first."""
+        lib = ctx.library()
+        out = []
+        for song in lib.list():
+            sid = song["song_id"]
+            sdir = lib.song_dir(sid)
+            if not (cover.cover_dir(sdir) / "versions").is_dir():
+                continue
+            for v in cover.list_versions(sdir):
+                item = version_out(sid, sdir, v)
+                item.pop("stats", None)
+                out.append({**item, "song_id": sid, "song_title": song["title"]})
+        out.sort(key=lambda x: x.get("updated_at") or x.get("created_at") or 0, reverse=True)
+        return {"items": out, "bytes": sum(int(x.get("bytes") or 0) for x in out)}
+
     @r.put("/api/cover/songs/{song_id}/settings")
     async def save_settings(song_id: str, request: Request):
         try:
