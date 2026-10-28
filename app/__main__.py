@@ -41,6 +41,9 @@ def main() -> int:
     paths = get_paths()
     # The server's own temp files and caches also stay inside the app folder.
     os.environ.update({k: v for k, v in cache_vars(paths).items()})
+    # ffmpeg/ffprobe are also used by the server itself (MP3 export, MV probes).
+    tool_dirs = [str(paths.ffmpeg_bin), str(paths.deno_dir)]
+    os.environ["PATH"] = os.pathsep.join(tool_dirs + [os.environ.get("PATH", "")])
     ensure_dirs(paths)
     paths.logs.mkdir(parents=True, exist_ok=True)
 

@@ -85,15 +85,15 @@ def fetch_rmvpe() -> None:
 
 def fetch_whisper() -> None:
     from faster_whisper.utils import download_model
-    info = M["whisper_medium"]
-    out = MODELS / info["dir"]
-    say("Whisper medium (faster-whisper)...")
-    download_model("medium", output_dir=str(out))
-    needed = ["model.bin", "config.json", "tokenizer.json"]
-    missing = [n for n in needed if not (out / n).is_file()]
-    if missing:
-        raise InstallError(f"whisper: missing files {missing}")
-    say("  OK whisper medium")
+    for key, size in (("whisper_medium", "medium"), ("whisper_small", "small")):
+        out = MODELS / M[key]["dir"]
+        say(f"Whisper {size} (faster-whisper)...")
+        download_model(size, output_dir=str(out))
+        needed = ["model.bin", "config.json", "tokenizer.json"]
+        missing = [n for n in needed if not (out / n).is_file()]
+        if missing:
+            raise InstallError(f"whisper {size}: missing files {missing}")
+        say(f"  OK whisper {size}")
 
 
 def main() -> int:

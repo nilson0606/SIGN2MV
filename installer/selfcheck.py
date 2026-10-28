@@ -62,6 +62,7 @@ def main() -> None:
         "separation/mel_band_roformer_karaoke_aufr33_viperx_sdr_10.1956.ckpt",
         "rmvpe/rmvpe.pt",
         "whisper/medium/model.bin",
+        "whisper/small/model.bin",
     ))
     print(json.dumps(out))
 

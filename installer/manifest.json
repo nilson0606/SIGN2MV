@@ -41,6 +41,8 @@
     "rmvpe": {"file": "rmvpe/rmvpe.pt", "size": 181184272,
               "sha256": "6d62215f4306e3ca278246188607209f09af3dc77ed4232efdd069798c4ec193",
               "url": "https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/rmvpe.pt"},
-    "whisper_medium": {"dir": "whisper/medium", "repo": "Systran/faster-whisper-medium"}
+    "whisper_medium": {"dir": "whisper/medium", "repo": "Systran/faster-whisper-medium"},
+    "whisper_small": {"dir": "whisper/small", "repo": "Systran/faster-whisper-small",
+                      "note": "CPU fallback (same as the old MV Studio)"}
   }
 }
