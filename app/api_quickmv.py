@@ -26,7 +26,9 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse
 
+from . import quick_lyrics
 from . import renders as renders_mod
+from . import stems as stems_mod
 from . import settings as settings_mod
 from .context import Context
 from .library import LibraryError
@@ -190,6 +192,11 @@ def router(ctx: Context) -> APIRouter:
         src = next((s for s in sources(song, song_id) if s["id"] == body.get("source")), None)
         if not src:
             return err("quickmv_source")
+        lyrics: list[dict] = []
+        if body.get("lyrics") and body.get("style") == "studio":
+            lyrics = quick_lyrics.clean_lines(body.get("lyrics"), float(src.get("duration") or 0) or None)
+            if lyrics is None:
+                return err("quickmv_lyrics")
         style = body.get("style", "card")
         resolution = body.get("resolution", "1080p")
         if style not in ("card", "studio") or resolution not in ("1080p", "720p"):
@@ -214,10 +221,108 @@ def router(ctx: Context) -> APIRouter:
                          input={"audio": str(sdir / src["path"]), "out_dir": str(quick_dir(sdir) / qid), "font": font,
                                 "bold_font": pick_bold_font(), "style": style, "resolution": resolution,
                                 "title": title, "artist_line": LABEL[lang] + artist, "heading": HEADING,
-                                "footer": FOOTER.format(res=resolution), "info": info, **extra},
+                                "footer": FOOTER.format(res=resolution), "info": info, "lyrics": lyrics, **extra},
                          title=f"quick MV: {song['title']}", song_id=song_id, timeout_s=3600,
-                         dedupe=f"quickmv:{src['id']}:{title}:{artist}:{style}:{resolution}:{json.dumps(extra, sort_keys=True)}")
+                         dedupe=f"quickmv:{src['id']}:{title}:{artist}:{style}:{resolution}:{json.dumps([extra, lyrics], sort_keys=True)}")
         return {"job": job, "id": qid}
+
+    # ---------------- lyric subtitles for the studio look (old dynamic lyric MV + per-line timing panel)
+    def lyrics_file(sdir: Path, source: str) -> Path | None:
+        if source != "original" and not renders_mod.RENDER_ID.match(source or ""):
+            return None
+        return quick_dir(sdir) / "lyrics" / f"{source}.json"
+
+    def whisper_file(sdir: Path) -> Path:
+        return quick_dir(sdir) / "lyrics" / "whisper.json"
+
+    @r.get("/api/songs/{song_id}/quickmv/lyrics")
+    def get_lyrics(song_id: str, source: str = ""):
+        try:
+            _song, sdir = song_ctx(song_id)
+        except LibraryError as exc:
+            return err(exc.code, exc.status)
+        f = lyrics_file(sdir, source)
+        if f is None:
+            return err("quickmv_source")
+        data: dict = {}
+        if f.is_file():
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                data = {}
+        return {"text": data.get("text") or "", "lines": data.get("lines") or [],
+                "whisper_ready": whisper_file(sdir).is_file()}
+
+    @r.put("/api/songs/{song_id}/quickmv/lyrics")
+    async def put_lyrics(song_id: str, request: Request):
+        body = await body_json(request)
+        try:
+            _song, sdir = song_ctx(song_id)
+        except LibraryError as exc:
+            return err(exc.code, exc.status)
+        f = lyrics_file(sdir, str(body.get("source") or ""))
+        lines = quick_lyrics.clean_lines(body.get("lines") or [])
+        if f is None:
+            return err("quickmv_source")
+        if lines is None:
+            return err("quickmv_lyrics")
+        text = str(body.get("text") or "")[:20000]
+        f.parent.mkdir(parents=True, exist_ok=True)
+        tmp = f.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"text": text, "lines": lines}, ensure_ascii=False, indent=1), encoding="utf-8")
+        os.replace(tmp, f)
+        return {"ok": True, "lines": lines}
+
+    @r.post("/api/songs/{song_id}/quickmv/lyrics/align")
+    async def align_lyrics(song_id: str, request: Request):
+        """Lyrics -> timed lines. LRC timestamps are used as they are; plain lines are matched to the
+        song's Whisper result (run once per song on the original's separated vocals: a cover or a take
+        keeps the song's timing). Returns {"job"} while Whisper has to run; post again when it is done.
+        "even": true spreads the lines evenly instead (old fallback)."""
+        body = await body_json(request)
+        try:
+            song, sdir = song_ctx(song_id)
+        except LibraryError as exc:
+            return err(exc.code, exc.status)
+        text = str(body.get("text") or "")[:20000]
+        total = float((song.get("source") or {}).get("duration") or 240.0)
+        lrc = quick_lyrics.lrc_lines(text, total)
+        if lrc:
+            return {"lines": lrc[:quick_lyrics.MAX_LINES], "mode": "lrc"}
+        plain = quick_lyrics.plain_lines(text)[:quick_lyrics.MAX_LINES]
+        if not plain:
+            return err("quickmv_lyrics_empty")
+        if body.get("even") is True:
+            return {"lines": quick_lyrics.spread(plain, total), "mode": "even"}
+        wf = whisper_file(sdir)
+        if wf.is_file() and body.get("refresh") is not True:
+            try:
+                data = json.loads(wf.read_text(encoding="utf-8"))
+                segs = data.get("segments", []) if isinstance(data, dict) else data
+            except (OSError, ValueError):
+                segs = []
+            lines = quick_lyrics.align(plain, segs)
+            if len(lines) >= 2:
+                return {"lines": lines, "mode": "whisper", "matched": len(lines), "total": len(plain)}
+            return {"lines": quick_lyrics.spread(plain, total), "mode": "even", "whisper_empty": True}
+        src = song.get("source") or {}
+        if not src.get("audio"):
+            return err("song_has_no_audio")
+        # use a separation the song already has (any model), else Demucs like the MV workspace
+        layers, tracks = stems_mod.plan(sdir, song, {"model": "demucs"})
+        for m in stems_mod.SEPARATORS:
+            ly, tr = stems_mod.plan(sdir, song, {"model": m})
+            if not ly:
+                layers, tracks = ly, tr
+                break
+        payload = {"song_dir": str(sdir), "layers": layers, "convert": None, "voice": str(sdir / tracks["voice"]),
+                   "vocals": str(sdir / tracks["vocals"]), "used": "vocals", "audio_file": str(sdir / src["audio"]),
+                   "w_json": str(wf), "prompt": str(song.get("title") or "")[:220], "lead_requested": False}
+        wf.parent.mkdir(parents=True, exist_ok=True)
+        job = ctx.submit(kind="quickmv_whisper", lane="gpu", script="mv_whisper.py", input=payload,
+                         title=f"lyrics timing: {song['title']}", song_id=song_id, timeout_s=3600,
+                         dedupe="quickmv_whisper")
+        return {"job": job}
 
     @r.delete("/api/songs/{song_id}/quickmv/{qid}")
     def delete_quick(song_id: str, qid: str):

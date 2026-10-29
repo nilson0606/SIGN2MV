@@ -278,3 +278,51 @@ def test_quick_mv(client, root, tmp_path, monkeypatch):
     c720 = next(i for i in client.get(f"/api/songs/{sid}/quickmv").json()["items"] if i["title"] == "card720")
     v = next(s for s in probe(sdir / c720["path"])["streams"] if s["codec_type"] == "video")
     assert (v["width"], v["height"], v["r_frame_rate"]) == (1280, 720, "30/1") and c720["style"] == "card"
+
+
+def test_quick_mv_lyrics(client, root, tmp_path, monkeypatch, fake_whisper):
+    """Studio look with lyric subtitles: LRC, Whisper timing (once per song), save/load, burnt into the video."""
+    fonts = sorted(Path("/usr/share/fonts/opentype/noto").glob("NotoSansCJK-Regular.ttc"))
+    if not fonts:
+        pytest.skip("no CJK font in this environment")
+    monkeypatch.setenv("SIGN2MV_MV_FONT", str(fonts[0]))
+    song = import_file(client, tmp_path, video=False, secs=12)
+    sid = song["song_id"]
+    client.put("/api/settings", json={"cover_singer_name": "Nilson", "language": "zh-TW"})
+    base = f"/api/songs/{sid}/quickmv/lyrics"
+
+    lrc = client.post(f"{base}/align", json={"text": "[00:01.00]第一句\n[00:04.50]第二句\n[00:07.00]第三句"}).json()
+    assert lrc["mode"] == "lrc" and [x["start"] for x in lrc["lines"]] == [1.0, 4.5, 7.0]
+    assert lrc["lines"][0]["end"] == 4.5 and 7.3 <= lrc["lines"][2]["end"] <= 12.1     # last line: 6 s or the song end
+    assert client.post(f"{base}/align", json={"text": "  "}).status_code == 400
+    even = client.post(f"{base}/align", json={"text": "一\n二", "even": True}).json()
+    assert even["mode"] == "even" and len(even["lines"]) == 2
+
+    # plain lines: Whisper runs once on the song's separated vocals, then the lines are matched
+    first = client.post(f"{base}/align", json={"text": "一二三\n四五六"}).json()
+    assert "job" in first
+    assert wait_job(client, first["job"]["id"], 900)["status"] == "succeeded"
+    timed = client.post(f"{base}/align", json={"text": "一二三\n四五六"}).json()
+    assert timed["mode"] in ("whisper", "even") and len(timed["lines"]) == 2
+    assert (root / "library" / "songs" / sid / "quickmv" / "lyrics" / "whisper.json").is_file()
+
+    # save / load per audio; bad lines refused
+    assert client.put(base, json={"source": "original", "text": "x", "lines": [{"start": 2, "end": 1, "text": "x"}]}).json()["lines"] == []
+    assert client.put(base, json={"source": "../x", "lines": []}).status_code == 400
+    saved = client.put(base, json={"source": "original", "text": "第一句", "lines": [{"start": 1, "end": 6, "text": "第一句測試"}]}).json()
+    assert saved["lines"] == [{"start": 1.0, "end": 6.0, "text": "第一句測試"}]
+    got = client.get(base, params={"source": "original"}).json()
+    assert got["text"] == "第一句" and got["lines"] == saved["lines"] and got["whisper_ready"]
+
+    j = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "字幕", "artist": "Nilson",
+                                                       "style": "studio", "lyrics": saved["lines"]}).json()
+    done = wait_job(client, j["job"]["id"], 600)
+    assert done["status"] == "succeeded", (done["error_code"], done["error_message"])
+    it = client.get(f"/api/songs/{sid}/quickmv").json()["items"][0]
+    assert it["lyric_lines"] == 1
+    video = root / "library" / "songs" / sid / it["path"]
+    frame = tmp_path / "lyr.png"
+    for at, expect in ((3, True), (8, False)):
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(at), "-i", str(video), "-frames:v", "1", str(frame)], check=True)
+        band = Image.open(frame).convert("L").crop((500, 700, 1420, 775))
+        assert (max(band.getdata()) > 240) == expect, at                # white lyric only while the line is on

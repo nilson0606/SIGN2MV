@@ -4,6 +4,9 @@
 
 Parity with the three old programs (every small tuning, preview and check they had):
 
+- Quick MV studio look: optional lyric subtitles (old AI cover lyric MV): LRC times, Whisper timing once per
+  song (covers and takes reuse it), even spread, per-line timing panel (play, ±0.5 s, start = player time,
+  edit, delete, add), saved per audio.
 - Look switcher in the top bar: console / classic (old AI cover green) / day (light), remembered.
 - Cover voice pitch back to the old −12..+12 (re-converted sections keep −24..+24).
 - Sing & record: first 15 / 30 / 60 s trial (separated on its own), keep-separated-tracks

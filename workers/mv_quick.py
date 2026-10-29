@@ -115,14 +115,47 @@ def studio_background(path: Path, font: str, bold: str, title: str, subtitle: st
     img.save(path)
 
 
-def build_studio_filter(resolution: str) -> str:
-    """Input 0: the background picture (looped), input 1: the audio."""
+def font_family(path: str) -> str:
+    try:
+        from PIL import ImageFont
+        return ImageFont.truetype(path, 20).getname()[0] or "Microsoft YaHei"
+    except Exception:  # noqa: BLE001
+        return "Microsoft YaHei"
+
+
+def lyrics_ass(lines: list, family: str, resolution: str) -> str:
+    """Old parse_lyrics_to_ass look: white, dark outline, bottom centre, 310 px from the bottom."""
+    scale = 720.0 / 1080.0 if resolution == "720p" else 1.0
+    rx, ry = (1280, 720) if resolution == "720p" else (1920, 1080)
+
+    def ts(sec: float) -> str:
+        return f"{int(sec // 3600)}:{int(sec % 3600 // 60):02d}:{sec % 60:05.2f}"
+
+    head = ["[Script Info]", "ScriptType: v4.00+", f"PlayResX: {rx}", f"PlayResY: {ry}", "WrapStyle: 2", "",
+            "[V4+ Styles]",
+            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, "
+            "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, "
+            "MarginR, MarginV, Encoding",
+            f"Style: MV_Lyric,{family.replace(',', ' ')},{int(46 * scale)},&H00FFFFFF,&H000000FF,&H000F172A,"
+            f"&H80000000,-1,0,0,0,100,100,1,0,1,{round(3.5 * scale, 1)},{round(1.5 * scale, 1)},2,80,80,"
+            f"{int(310 * scale)},1",
+            "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"]
+    body = [f"Dialogue: 0,{ts(float(x['start']))},{ts(float(x['end']))},MV_Lyric,,0,0,0,,"
+            + str(x["text"]).replace("{", "").replace("}", "").replace("\\", "").replace("\n", " ")
+            for x in lines]
+    return "\n".join(head + body) + "\n"
+
+
+def build_studio_filter(resolution: str, subtitles: bool = False) -> str:
+    """Input 0: the background picture (looped), input 1: the audio. Subtitles: lyrics.ass + font.ttc
+    in the working folder (relative names, nothing user-typed in the filter)."""
     scale = 720.0 / 1080.0 if resolution == "720p" else 1.0
     wave_w, wave_h, wave_x, wave_y = int(1680 * scale), int(160 * scale), int(120 * scale), int(880 * scale)
     return ("[1:a]aformat=channel_layouts=mono,"
             "showfreqs=s=210x80:rate=60:mode=bar:ascale=cbrt:fscale=log:win_size=2048:colors=0x34d399,"
             f"format=rgba,colorkey=black:0.05:0.0,scale={wave_w}:{wave_h}:flags=neighbor[waves];"
-            f"[0:v][waves]overlay=x={wave_x}:y={wave_y}:shortest=1,format=yuv420p[v]")
+            f"[0:v][waves]overlay=x={wave_x}:y={wave_y}:shortest=1,"
+            + ("subtitles=filename=lyrics.ass:fontsdir=.," if subtitles else "") + "format=yuv420p[v]")
 
 
 ENCODERS = {
@@ -193,7 +226,11 @@ def main() -> None:
             studio_background(tmp / "background.png", str(tmp / "font.ttc"), str(bold if bold.is_file() else tmp / "font.ttc"),
                               data["title"], data.get("subtitle") or "", data.get("badge") or "",
                               data.get("credits") or "", resolution)
-            graph = build_studio_filter(resolution)
+            lines = [x for x in (data.get("lyrics") or []) if isinstance(x, dict) and x.get("text")]
+            if lines:
+                (tmp / "lyrics.ass").write_text(lyrics_ass(lines, font_family(str(tmp / "font.ttc")), resolution),
+                                                encoding="utf-8")
+            graph = build_studio_filter(resolution, bool(lines))
             inputs = ["-loop", "1", "-framerate", "60", "-i", "background.png", "-i", "source.wav"]
             audio_map, fps = "1:a:0", "60"
         else:
@@ -218,12 +255,13 @@ def main() -> None:
         protocol.progress(98, "save", "")
         final = tmp / "video.mp4"
         os.replace(tmp / "result.mp4", final)
-        for name in ("source.wav", "font.ttc", "title.txt", "artist.txt", "heading.txt", "footer.txt", "background.png"):
+        for name in ("source.wav", "font.ttc", "title.txt", "artist.txt", "heading.txt", "footer.txt", "background.png", "lyrics.ass"):
             (tmp / name).unlink(missing_ok=True)
         info = {"schema_version": 1, **(data.get("info") or {}), "title": data["title"], "artist_line": data["artist_line"],
                 "style": style, "resolution": resolution, "fps": int(fps),
                 **({"subtitle": data.get("subtitle") or "", "badge": data.get("badge") or "",
-                    "credits": data.get("credits") or ""} if style == "studio" else {}),
+                    "credits": data.get("credits") or "", "lyric_lines": len(data.get("lyrics") or [])}
+                   if style == "studio" else {}),
                 "duration": round(seconds, 2), "bytes": final.stat().st_size, "encoder": used,
                 "render_s": round(time.time() - started, 1), "created_at": time.time()}
         write_json(tmp / "info.json", info)

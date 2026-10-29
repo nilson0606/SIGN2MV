@@ -6,6 +6,7 @@ import { $, el, toast, confirmDialog, fmtBytes, fmtDate, fmtTime } from './ui.js
 import { t, language, onLanguageChange, errorText } from './i18n.js';
 import { bus, registerPage, state, goto, mediaUrl } from './app-state.js';
 import { jobBox } from './jobview.js';
+import { lyricsEditor } from './qmv-lyrics.js';
 
 const page = $('#page-mv');
 const frame = el('iframe', { id: 'mv-frame', class: 'workspace-frame', title: 'mv', allow: 'autoplay; fullscreen', allowfullscreen: true });
@@ -81,13 +82,16 @@ const quick = (() => {
   const studioLabels = { subtitle: el('span'), badge: el('span'), credits: el('span'), style: el('span'), res: el('span') };
   const studioNote = el('p', { class: 'muted small' });
   const studioReset = el('button', { class: 'btn small', onclick: () => fillStudio(true, true) });
+  const lyr = lyricsEditor();   // lyric subtitles of the studio look (old dynamic lyric MV)
+  onLanguageChange(() => lyr.texts());
   const studioBox = el('div', { class: 'hidden' },
     el('div', { class: 'row' }, el('label', { style: 'flex:1;display:flex;gap:6px;align-items:center' }, studioLabels.subtitle, studioIn.subtitle)),
     el('div', { class: 'row' }, el('label', { style: 'display:flex;gap:6px;align-items:center' }, studioLabels.badge, studioIn.badge), studioReset),
     el('div', { class: 'row' }, el('label', { style: 'flex:1;display:flex;gap:6px;align-items:center' }, studioLabels.credits, studioIn.credits)),
-    studioNote);
+    studioNote, lyr.el);
   function fillStudio(_sourceChanged, force) {
     const src = data && data.sources.find((x) => x.id === srcSel.value);
+    if (src && songId) lyr.load(songId, src.id, mediaUrl(songId, src.path));
     const d = (src && src.studio) || {};
     for (const [k, inp] of Object.entries(studioIn)) {
       if (force || !inp.dataset.edited) { inp.value = d[k] || ''; delete inp.dataset.edited; }   // keep what the user typed
@@ -298,7 +302,11 @@ const quick = (() => {
     makeBtn.disabled = true;
     try {
       const body = { source: srcSel.value, title: title.value, artist: artist.value, style: styleSel.value, resolution: resSel.value };
-      if (styleSel.value === 'studio') Object.entries(studioIn).forEach(([k, i]) => { body[k] = i.value; });
+      if (styleSel.value === 'studio') {
+        Object.entries(studioIn).forEach(([k, i]) => { body[k] = i.value; });
+        await lyr.save();
+        body.lyrics = lyr.lines();
+      }
       const res = await api.post(`/api/songs/${songId}/quickmv`, body);
       const fin = await jb.follow(res.job);
       if (fin.status === 'succeeded') {
