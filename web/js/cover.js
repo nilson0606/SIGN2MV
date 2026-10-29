@@ -873,9 +873,43 @@ const allSearch = el('input', { type: 'search', style: 'min-width:220px', oninpu
 const allList = el('div', { class: 'list' });
 const allInfo = el('div', { class: 'muted small' });
 let allData = null;
+// select / select all / delete selected across songs (like the versions of one song)
+const allSelAll = el('input', { type: 'checkbox', onchange: () => { allList.querySelectorAll('input.cv-allpick').forEach((c) => { c.checked = allSelAll.checked; }); allUpdate(); } });
+const allSelCount = el('span', { class: 'muted small' });
+const allDelBtn = el('button', { class: 'btn small danger', onclick: () => allDelete() });
+const allBatch = el('div', { class: 'row', style: 'align-items:center;gap:8px;margin:6px 0' },
+  el('label', { class: 'check small' }, allSelAll, el('span', { 'data-i18n': 'qmv.select_all' })), allSelCount, allDelBtn);
+function allUpdate() {
+  const all = [...allList.querySelectorAll('input.cv-allpick')];
+  const n = all.filter((c) => c.checked).length;
+  allSelAll.checked = n > 0 && n === all.length;
+  allSelAll.indeterminate = n > 0 && n < all.length;
+  allSelCount.textContent = n ? t('cover.selected_n', n) : '';
+  allDelBtn.textContent = t('qmv.delete_selected');
+  allDelBtn.disabled = !n;
+  allBatch.classList.toggle('hidden', !all.length);
+}
+async function allDelete() {
+  const picked = [...allList.querySelectorAll('input.cv-allpick:checked')].map((c) => allData.items.find((v) => v.song_id === c.dataset.song && v.id === c.dataset.vid)).filter(Boolean);
+  if (!picked.length) return;
+  const used = picked.flatMap((v) => (v.mv_projects || []).map((m) => ({ ...m, title: `${v.song_title}：${m.title}` })));
+  if (!(await confirmDialog(t('cover.delete_n_confirm', picked.length) + mvUseWarning(used), t('common.delete')))) return;
+  document.querySelectorAll('.cv-all audio, .cv-versions audio').forEach((a) => { a.pause(); a.removeAttribute('src'); a.load(); });   // release files
+  const bySong = new Map();
+  picked.forEach((v) => { if (!bySong.has(v.song_id)) bySong.set(v.song_id, []); bySong.get(v.song_id).push(v.id); });
+  let deleted = 0, freed = 0, busy = 0;
+  for (const [sid, ids] of bySong) {
+    try { const r = await api.post(`/api/cover/songs/${sid}/versions/delete`, { ids }); deleted += r.deleted || 0; freed += r.freed || 0; }
+    catch (err) { if (err && err.code === 'cover_busy') busy += ids.length; else toast(errorText(err), true); }
+  }
+  toast(t('cover.deleted_n', deleted, fmtBytes(freed)) + (busy ? ' ' + t('cover.all_busy_skipped', busy) : ''));
+  if (songId) { try { songState = await api.get(`/api/cover/songs/${songId}`); } catch { /* ignore */ } renderVersions(); }
+  await loadAll();
+  bus.dispatchEvent(new Event('renders-changed'));
+}
 const allBox = el('details', { class: 'cv-details cv-all' },
   el('summary', { 'data-i18n': 'cover.all_versions' }),
-  el('div', { class: 'cv-body' }, el('div', { class: 'row', style: 'align-items:center' }, allSearch, allInfo), allList));
+  el('div', { class: 'cv-body' }, el('div', { class: 'row', style: 'align-items:center' }, allSearch, allInfo), allBatch, allList));
 allBox.addEventListener('toggle', () => { if (allBox.open) loadAll(); });
 async function loadAll() {
   try { allData = await api.get('/api/cover/versions'); } catch (err) { toast(errorText(err), true); return; }
@@ -887,13 +921,14 @@ function renderAll() {
   const q = allSearch.value.trim().toLowerCase();
   const items = allData.items.filter((v) => !q || [v.song_title, v.title, v.label].some((x) => (x || '').toLowerCase().includes(q)));
   allInfo.textContent = t('cover.all_info', allData.items.length, fmtBytes(allData.bytes || 0));
-  if (!items.length) { allList.replaceChildren(el('div', { class: 'empty' }, t(q ? 'qmv.no_match' : 'cover.no_versions'))); return; }
+  if (!items.length) { allList.replaceChildren(el('div', { class: 'empty' }, t(q ? 'qmv.no_match' : 'cover.no_versions'))); allUpdate(); return; }
   allList.replaceChildren(...items.map((v) => {
     const holder = el('div');
     const meta = [v.label, v.format, v.bytes ? fmtBytes(v.bytes) : '', v.duration ? fmtTime(v.duration) : '', fmtDate(v.updated_at || v.created_at)]
       .filter(Boolean).join(' · ');
     return el('div', { class: 'item', style: 'display:block' },
       el('div', { class: 'row', style: 'align-items:center' },
+        el('input', { type: 'checkbox', class: 'cv-allpick', 'data-song': v.song_id, 'data-vid': v.id, onchange: () => allUpdate() }),
         el('div', { class: 'grow', style: 'white-space:normal' }, el('b', {}, v.song_title), ' — ', v.title || v.label,
           el('div', { class: 'muted small' }, meta)),
         v.audio ? el('button', { class: 'btn small primary', onclick: () => {
@@ -905,6 +940,8 @@ function renderAll() {
         el('button', { class: 'btn small', onclick: () => { openSong(v.song_id); window.scrollTo({ top: 0, behavior: 'smooth' }); } }, t('cover.open_song'))),
       holder);
   }));
+  allSelAll.checked = false;
+  allUpdate();
 }
 function renderVersions(highlight) {
   const vs = (songState && songState.versions) || [];

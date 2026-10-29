@@ -636,4 +636,5 @@ export default {
   "err.quickmv_lyrics": "The lyric lines could not be read (each needs a start before its end and some text).",
   "err.quickmv_lyrics_empty": "Paste the lyrics first.",
   "cover.remix_to": "apply to",
+  "cover.all_busy_skipped": "{0} were skipped: their song is being processed; try again when it finishes.",
 };

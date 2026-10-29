@@ -636,4 +636,5 @@ export default {
   "err.quickmv_lyrics": "歌詞時間軸有問題（每句要有文字，起點要在終點之前）。",
   "err.quickmv_lyrics_empty": "請先貼上歌詞。",
   "cover.remix_to": "套用到",
+  "cover.all_busy_skipped": "有 {0} 個略過：那首歌正在處理中，完成後再刪。",
 };

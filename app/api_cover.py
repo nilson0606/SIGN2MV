@@ -251,6 +251,15 @@ def router(ctx: Context) -> APIRouter:
                     found.append({"slug": f"{sdir.name}_{d.name}", "title": proj.get("title") or d.name})
         return found
 
+    def render_bytes(song_id: str, rid: str | None) -> int:
+        if not rid:
+            return 0
+        d = renders_dir(ctx, song_id) / rid
+        try:
+            return sum(f.stat().st_size for f in d.iterdir() if f.is_file()) if d.is_dir() else 0
+        except OSError:
+            return 0
+
     def mvs_from(sdir: Path, audio_rel: str | None, rid: str) -> list[dict]:
         """Finished MVs that use this version as their audio (old 「🎬 立即觀看」 banner)."""
         found = []
@@ -730,11 +739,12 @@ def router(ctx: Context) -> APIRouter:
             return fail(exc)
         if ctx.pending_job(song_id, "cover"):
             return err("cover_busy", 409)
+        audio_bytes = render_bytes(song_id, v.get("render_id"))   # the version's own audio counts too
         if v.get("render_id"):
             delete_render(ctx, song_id, v["render_id"])
         shutil.rmtree(cover.cover_dir(sdir) / "versions" / vid, ignore_errors=True)
         freed = cover.collect_garbage(sdir, min_age_s=0)
-        return {"freed": freed}
+        return {"freed": freed + audio_bytes}
 
     @r.post("/api/cover/songs/{song_id}/versions/delete")
     async def delete_versions(song_id: str, request: Request):
@@ -749,17 +759,18 @@ def router(ctx: Context) -> APIRouter:
             return fail(exc)
         if ctx.pending_job(song_id, "cover"):
             return err("cover_busy", 409)
-        deleted = 0
+        deleted, audio_bytes = 0, 0
         for vid in ids:
             try:
                 v = cover.load_version(sdir, str(vid))
             except CoverError:
                 continue
+            audio_bytes += render_bytes(song_id, v.get("render_id"))
             if v.get("render_id"):
                 delete_render(ctx, song_id, v["render_id"])
             shutil.rmtree(cover.cover_dir(sdir) / "versions" / str(vid), ignore_errors=True)
             deleted += 1
-        return {"deleted": deleted, "freed": cover.collect_garbage(sdir, min_age_s=0)}
+        return {"deleted": deleted, "freed": cover.collect_garbage(sdir, min_age_s=0) + audio_bytes}
 
     @r.get("/api/cover/songs/{song_id}/cleanup")
     def cleanup_list(song_id: str):

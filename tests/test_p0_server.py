@@ -211,6 +211,7 @@ def test_cover_versions_mvs_batch_delete_open_folder(client, root):
     assert r.json().get("error") == "open_folder_windows_only" or r.json().get("ok")
     res = client.post(f"/api/cover/songs/{sid}/versions/delete", json={"ids": ["v0000000001", "v0000000002", "vnope"]}).json()
     assert res["deleted"] == 2 and client.get(f"/api/cover/songs/{sid}").json()["versions"] == []
+    assert res["freed"] >= 2 * 503                          # the versions' own audio counts in what was freed
     assert not (sd / "renders" / "r000000000001").exists()
     assert client.post(f"/api/cover/songs/{sid}/versions/delete", json={"ids": []}).status_code == 400
     # 🧹 clean-up: list first (nothing deleted), then delete; files a version still uses stay
