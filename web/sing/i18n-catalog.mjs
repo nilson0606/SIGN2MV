@@ -3067,6 +3067,13 @@ export const templates = [
     ]
   ],
   [
+    "本段收音中斷：{0} 請再按「錄這一段」重錄。",
+    "Segment input interrupted: {0} Click “Record this segment” to record it again.",
+    [
+      0
+    ]
+  ],
+  [
     "無法完成本段錄音：{0}",
     "Cannot complete segment recording: {0}",
     [

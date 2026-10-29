@@ -239,7 +239,7 @@ export function createSingerRecorder(options) {
       }
       await render(savedId).catch(error=>status('無法讀取錄音清單：'+error.message));
       if(completionStatus)status(completionStatus);
-      if(a.meta.segmentTake)window.dispatchEvent(new CustomEvent('segment-capture-stopped',{detail:{captureId:a.meta.segmentTake.captureId}}));
+      if(a.meta.segmentTake)window.dispatchEvent(new CustomEvent('segment-capture-stopped',{detail:{captureId:a.meta.segmentTake.captureId,error:a.error?.message||''}})); // [SIGN2MV] pass the capture error on to the segment panel
       return savedId ? a.meta : null;
     })();
     return stopping;

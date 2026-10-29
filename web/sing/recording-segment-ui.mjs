@@ -274,7 +274,7 @@ export function createSegmentRecording(options) {
     capture=null;c.armed=false;work=true;stopMonitor(c);options.player()?.pauseVideo?.();
     const stopped=options.recording.stop(error); // Drain PCM before microphone/context is released.
     ending=(async()=>{
-      try{const row=await stopped;if(row?.segmentTake?.captureId===c.captureId&&draft?.key===c.key){rows=[row,...rows.filter(r=>r.id!==row.id)];const p=draft.parts.find(p=>p.id===c.partId);if(p)p.takeId=row.id;persist();invalidate();status(row.diagnostics?.status==='incomplete'?`本段錄音已保留，但診斷未完整保存：${row.diagnostics.error}。`:'本段已保存，可按「試聽本段錄音」立即聽這一版，也可切換演唱版本；原先錄音保留。'+(row.diagnostics?.status==='saved'?' 診斷已確認保存。':''));}else status(error?'本段收音中斷，請查看錄音狀態中的保留片段。':'沒有完成新的錄音；既有版本保留。');}
+      try{const row=await stopped;if(row?.segmentTake?.captureId===c.captureId&&draft?.key===c.key){rows=[row,...rows.filter(r=>r.id!==row.id)];const p=draft.parts.find(p=>p.id===c.partId);if(p)p.takeId=row.id;persist();invalidate();status(row.diagnostics?.status==='incomplete'?`本段錄音已保留，但診斷未完整保存：${row.diagnostics.error}。`:'本段已保存，可按「試聽本段錄音」立即聽這一版，也可切換演唱版本；原先錄音保留。'+(row.diagnostics?.status==='saved'?' 診斷已確認保存。':''));}else status(error?(error.message?`本段收音中斷：${error.message} 請再按「錄這一段」重錄。`:'本段收音中斷，請查看錄音狀態中的保留片段。'):'沒有完成新的錄音；既有版本保留。');} // [SIGN2MV] say why the take was not kept
       catch(e){status('錄音已停止；草稿／保存狀態請確認：'+e.message);}
       finally{if(c.monitor)await c.monitor.close().catch(()=>{});if(c.wasMuted)c.player.mute?.();else c.player.unMute?.();work=false;render();options.changed();}
     })();return ending;
@@ -398,7 +398,7 @@ export function createSegmentRecording(options) {
   };
   document.addEventListener('play',e=>{if(e.target instanceof HTMLMediaElement&&e.target!==$('take-audio')){clearTakePreview();render();}},true);
   window.addEventListener('storage',e=>{if(key&&e.key===storageKey()&&e.newValue!==savedText){conflict=true;render();status('另一分頁已變更草稿，請重新整理後再編輯；現有錄音保留。');}});
-  window.addEventListener('segment-capture-stopped',e=>{if(capture?.captureId===e.detail?.captureId)stop().catch(error=>status(error.message));});
+  window.addEventListener('segment-capture-stopped',e=>{if(capture?.captureId===e.detail?.captureId)stop(e.detail.error?Error(e.detail.error):null).catch(error=>status(error.message));}); // [SIGN2MV] keep the capture error
   const timer=setInterval(()=>{
     if(!enabled||!draft)return;const t=currentTime(),player=options.player();if(document.activeElement!==$('seek'))$('seek').value=t;$('position').textContent=fmt(t);
     if(capture?.armed&&player?.getPlayerState?.()===1){
