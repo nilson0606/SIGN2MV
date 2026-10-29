@@ -270,6 +270,7 @@ function sectionMix() {
     runSummary,
     el('div', { class: 'row', style: 'margin-top:12px;align-items:center' }, runBtn, freshCtl),
     el('p', { class: 'muted small' }, t('cover.run_hint')),
+    formRemixRow,
     runJob.el, doneBox);
 }
 
@@ -742,6 +743,33 @@ async function runCover() {
   } catch (err) { toast(errorText(err), true); }
 }
 
+// quick remix right under the mix controls (old page had it there too): apply the form's mix,
+// sections and volume sections to the chosen version without converting again
+let remixTargetId = null;   // the version whose settings were loaded last, else the newest
+const remixTarget = el('select', { style: 'max-width:260px', onchange: () => { remixTargetId = remixTarget.value; } });
+const formRemixBtn = el('button', { class: 'btn', onclick: () => formRemix(false) });
+const formRemixNewBtn = el('button', { class: 'btn small', onclick: () => formRemix(true) });
+const formRemixLabel = el('span', { class: 'muted small' });
+const formRemixRow = el('div', { class: 'row hidden', style: 'margin-top:8px;align-items:center;gap:8px' },
+  formRemixBtn, formRemixLabel, remixTarget, formRemixNewBtn);
+function fillRemixTarget() {
+  const vs = (songState && songState.versions) || [];
+  formRemixRow.classList.toggle('hidden', !vs.length);
+  if (!vs.length) { remixTarget.replaceChildren(); return; }
+  if (!vs.some((v) => v.id === remixTargetId)) remixTargetId = vs[0].id;
+  remixTarget.replaceChildren(...vs.map((v) => el('option', { value: v.id, selected: v.id === remixTargetId }, v.title)));
+  formRemixBtn.textContent = t('cover.remix');
+  formRemixBtn.title = t('cover.remix_hint');
+  formRemixLabel.textContent = t('cover.remix_to');
+  formRemixNewBtn.textContent = t('cover.remix_new');
+}
+function formRemix(asNew) {
+  const v = ((songState && songState.versions) || []).find((x) => x.id === remixTarget.value);
+  if (!v) return;
+  versionsBox.querySelector(`[data-vid="${v.id}"]`)?.scrollIntoView({ block: 'nearest' });
+  remix(v, asNew);
+}
+
 async function remix(v, asNew) {
   const p = readForm();
   const body = { mix: p.mix, masks: p.masks, vol_segments: p.vol_segments, backing_on: p.backing_on, save_as_new: asNew };
@@ -880,9 +908,10 @@ function renderAll() {
 }
 function renderVersions(highlight) {
   const vs = (songState && songState.versions) || [];
-  if (!songId) { versionsBox.replaceChildren(el('div', { class: 'empty' }, t('cover.pick_song'))); updateBatch(); return; }
-  if (!vs.length) { versionsBox.replaceChildren(el('div', { class: 'empty' }, t('cover.no_versions'))); updateBatch(); return; }
+  if (!songId) { versionsBox.replaceChildren(el('div', { class: 'empty' }, t('cover.pick_song'))); fillRemixTarget(); updateBatch(); return; }
+  if (!vs.length) { versionsBox.replaceChildren(el('div', { class: 'empty' }, t('cover.no_versions'))); fillRemixTarget(); updateBatch(); return; }
   versionsBox.replaceChildren(...vs.map((v) => versionItem(v, v.id === highlight)));
+  fillRemixTarget();
   if (allBox.open) loadAll();
   vSelAll.checked = false;
   updateBatch();
@@ -944,7 +973,7 @@ function versionItem(v, hi) {
     player ? el('div', {}, player, el('div', { class: 'muted small cv-now' })) : el('div', { class: 'muted' }, t('cover.audio_missing')),
     mvRow, mvBox,
     el('div', { class: 'row' },
-      el('button', { class: 'btn small', title: t('cover.use_settings_hint'), onclick: () => { writeForm(v.params); changed(); toast(t('cover.settings_loaded')); } }, t('cover.use_settings')),
+      el('button', { class: 'btn small', title: t('cover.use_settings_hint'), onclick: () => { writeForm(v.params); changed(); remixTargetId = v.id; fillRemixTarget(); toast(t('cover.settings_loaded')); } }, t('cover.use_settings')),
       el('button', { class: 'btn small', title: t('cover.remix_hint'), onclick: () => remix(v, false) }, t('cover.remix')),
       el('button', { class: 'btn small', onclick: () => remix(v, true) }, t('cover.remix_new')),
       ...mvButtons(v, 'btn small'),

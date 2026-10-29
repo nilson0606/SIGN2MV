@@ -214,7 +214,7 @@ export default {
   "cover.vseg_reset": "↺ Clear all",
   "cover.no_vsegs": "No volume sections.",
   "cover.run": "🎤 Make cover (new version)",
-  "cover.run_hint": "Separation and conversions are cached: the same settings are not computed again. Changing the model, pitch, key or separation needs this button; volumes and sections can use Remix on a version.",
+  "cover.run_hint": "Separation and conversions are cached: the same settings are not computed again. Changing the model, pitch, key or separation needs this button; for volumes and sections press Remix below (or on a version): no new conversion.",
   "cover.done": "Cover finished",
   "cover.busy": "A cover or a training is running; closing will stop it.",
   "cover.versions": "Versions",
@@ -635,4 +635,5 @@ export default {
   "qmvl.from_original": "Started from the original's lyrics (same timing).",
   "err.quickmv_lyrics": "The lyric lines could not be read (each needs a start before its end and some text).",
   "err.quickmv_lyrics_empty": "Paste the lyrics first.",
+  "cover.remix_to": "apply to",
 };
