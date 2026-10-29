@@ -1009,19 +1009,19 @@ function lossChart(data) {
   const add = (tag, attrs, text) => { const n = document.createElementNS(svgNS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); if (text != null) n.textContent = text; svg.append(n); return n; };
   for (let k = 0; k <= 4; k++) {
     const v = lo + (hi - lo) * k / 4; const y = Y(v);
-    add('line', { x1: L, x2: W - R, y1: y, y2: y, stroke: '#2c3945', 'stroke-width': 0.6 });
-    add('text', { x: L - 6, y: y + 3, 'text-anchor': 'end', 'font-size': 10, fill: '#94a3b8' }, v.toFixed(1));
+    add('line', { x1: L, x2: W - R, y1: y, y2: y, style: 'stroke: var(--line)', 'stroke-width': 0.6 });
+    add('text', { x: L - 6, y: y + 3, 'text-anchor': 'end', 'font-size': 10, style: 'fill: var(--muted)' }, v.toFixed(1));
   }
   const stepX = Math.max(1, Math.round((x1 - x0) / 6 / 10) * 10 || 10);
-  for (let e = Math.ceil(x0 / stepX) * stepX; e <= x1; e += stepX) add('text', { x: X(e), y: H - 8, 'text-anchor': 'middle', 'font-size': 10, fill: '#94a3b8' }, String(e));
+  for (let e = Math.ceil(x0 / stepX) * stepX; e <= x1; e += stepX) add('text', { x: X(e), y: H - 8, 'text-anchor': 'middle', 'font-size': 10, style: 'fill: var(--muted)' }, String(e));
   (data.kept_epochs || []).forEach((e) => {
     if (e < x0 || e > x1) return;
     add('line', { x1: X(e), x2: X(e), y1: T, y2: H - B, stroke: '#a78bfa', 'stroke-dasharray': '3 3', opacity: 0.8 });
-    add('text', { x: X(e), y: T + 9, 'text-anchor': 'middle', 'font-size': 9, fill: '#c4b5fd' }, String(e));
+    add('text', { x: X(e), y: T + 9, 'text-anchor': 'middle', 'font-size': 9, fill: '#8b5cf6' }, String(e));
   });
-  add('path', { d: path(mel), fill: 'none', stroke: '#34d399', 'stroke-width': 1, opacity: 0.35 });
-  add('path', { d: path(avg), fill: 'none', stroke: '#34d399', 'stroke-width': 2.2 });
-  add('text', { x: L, y: H - 8, 'font-size': 10, fill: '#64748b' }, t('cover.loss_axis'));
+  add('path', { d: path(mel), fill: 'none', style: 'stroke: var(--hl-ok)', 'stroke-width': 1, opacity: 0.35 });
+  add('path', { d: path(avg), fill: 'none', style: 'stroke: var(--hl-ok)', 'stroke-width': 2.2 });
+  add('text', { x: L, y: H - 8, 'font-size': 10, style: 'fill: var(--muted)' }, t('cover.loss_axis'));
   mel.forEach((v, i) => {
     if (v == null) return;
     const c = add('circle', { cx: X(ep[i]).toFixed(1), cy: Y(v).toFixed(1), r: 5, fill: 'transparent' });

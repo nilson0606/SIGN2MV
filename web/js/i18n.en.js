@@ -606,4 +606,9 @@ export default {
   "cover.all_versions": "📚 Every song's cover versions",
   "cover.all_info": "{0} versions · {1}",
   "cover.open_song": "Open this song",
+  "theme.button": "🎛️ Look: {0}",
+  "theme.studio": "Console",
+  "theme.classic": "Classic",
+  "theme.day": "Day",
+  "theme.hint": "Change the look: console → classic → day (colours only; everything works the same)",
 };

@@ -4,6 +4,8 @@
 
 Parity with the three old programs (every small tuning, preview and check they had):
 
+- Look switcher in the top bar: console / classic (old AI cover green) / day (light), remembered.
+- Cover voice pitch back to the old −12..+12 (re-converted sections keep −24..+24).
 - Sing & record: first 15 / 30 / 60 s trial (separated on its own), keep-separated-tracks
   option, deleting a prepared song frees its unused stems, real environment check, playback
   trace, mask rules exactly as sign_record, MP3 export stops when the page leaves, one render

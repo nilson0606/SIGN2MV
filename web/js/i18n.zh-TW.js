@@ -606,4 +606,9 @@ export default {
   "cover.all_versions": "📚 所有歌的翻唱成品",
   "cover.all_info": "共 {0} 個版本 · {1}",
   "cover.open_song": "開啟這首",
+  "theme.button": "🎛️ 外觀：{0}",
+  "theme.studio": "控台",
+  "theme.classic": "經典",
+  "theme.day": "白天",
+  "theme.hint": "切換介面外觀：控台 → 經典 → 白天（只改顏色與造型，功能不變）",
 };

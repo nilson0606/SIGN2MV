@@ -28,7 +28,22 @@ function updateManualLink() {
   $('#manual-link').href = `/manual/manual.${language()}.html`;
   $('#lang-select').value = language();
 }
-onLanguageChange(() => { updateManualLink(); renderStatus(); renderJobs(); });
+// look: console -> classic -> day (old AI cover 「外觀」 button; colours only, nothing else changes)
+const THEMES = ['studio', 'classic', 'day'];
+function currentTheme() { const th = document.documentElement.dataset.theme; return THEMES.includes(th) ? th : 'studio'; }
+function updateThemeButton() {
+  const b = $('#theme-btn');
+  b.textContent = t('theme.button', t(`theme.${currentTheme()}`));
+  b.title = t('theme.hint');
+}
+$('#theme-btn').addEventListener('click', () => {
+  const next = THEMES[(THEMES.indexOf(currentTheme()) + 1) % THEMES.length];
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('sign2mv.theme', next); } catch { /* ignore */ }
+  updateThemeButton();
+});
+updateThemeButton();
+onLanguageChange(() => { updateManualLink(); renderStatus(); renderJobs(); updateThemeButton(); });
 $('#lang-select').addEventListener('change', async (e) => {
   setLanguage(e.target.value);
   try { await api.put('/api/settings', { language: e.target.value }); } catch (err) { toast(errorText(err), true); }

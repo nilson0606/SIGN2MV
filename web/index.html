@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SIGN2MV</title>
 <link rel="stylesheet" href="/css/style.css">
+<script>
+  // look chosen with the 外觀 button (before the page paints, so it does not flash)
+  try { var th = localStorage.getItem('sign2mv.theme'); document.documentElement.dataset.theme = (th === 'classic' || th === 'day') ? th : 'studio'; }
+  catch (e) { document.documentElement.dataset.theme = 'studio'; }
+</script>
 </head>
 <body>
 <header class="top">
@@ -24,6 +29,7 @@
     <option value="zh-TW">繁體中文</option>
     <option value="en">English</option>
   </select>
+  <button class="btn small" id="theme-btn" type="button"></button>
   <a class="btn small" id="manual-link" href="/manual/manual.zh-TW.html" target="_blank" data-i18n="nav.manual">操作手冊 ↗</a>
   <button class="btn small danger" id="shutdown-btn" data-i18n="nav.shutdown">全部關閉</button>
 </header>
