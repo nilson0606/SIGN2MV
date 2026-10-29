@@ -65,5 +65,5 @@ export function fmtBytes(n) {
 
 export function fmtDate(ts) {
   if (!ts) return '';
-  return new Date(ts * 1000).toLocaleString();
+  return new Date(ts * 1000).toLocaleString(document.documentElement.lang === 'en' ? 'en-US' : 'zh-TW');
 }

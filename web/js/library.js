@@ -1,6 +1,6 @@
 // Library page: song list, import (YouTube / file), source preview, stems and key preview.
 import { api } from './api.js';
-import { t, errorText, onLanguageChange } from './i18n.js';
+import { t, errorText, onLanguageChange, setText } from './i18n.js';
 import { $, el, toast, confirmDialog, fmtDate, fmtTime, fmtBytes } from './ui.js';
 import { bus, state, selectSong, songById, mediaUrl, reloadJobs } from './app-state.js';
 import { jobBox } from './jobview.js';
@@ -25,7 +25,7 @@ async function loadSizes() {
   try {
     const res = await api.get('/api/storage');
     sizes = res.songs || {};
-    $('#library-usage').textContent = t('storage.library', fmtBytes(res.total || 0), fmtBytes((res.disk || {}).free || 0));
+    setText($('#library-usage'), 'storage.library', fmtBytes(res.total || 0), fmtBytes((res.disk || {}).free || 0));
     renderList();
   } catch { /* sizes are optional */ }
 }
@@ -43,7 +43,7 @@ async function loadSongs() {
 }
 bus.addEventListener('reload-songs', loadSongs);
 bus.addEventListener('job-finished', () => loadSizes());
-bus.addEventListener('settings', (e) => { $('#library-path').textContent = t('lib.location', e.detail.library_dir || ''); });
+bus.addEventListener('settings', (e) => { setText($('#library-path'), 'lib.location', e.detail.library_dir || ''); });
 bus.addEventListener('song-selected', () => { renderList(); renderDetail(); });
 onLanguageChange(() => { renderList(); renderDetail(); });
 

@@ -3693,6 +3693,13 @@
           const mvVideo = document.getElementById('mvVideoPlayer');
           mvVideo.src = `/api/mv/media?path=${encodeURIComponent(data.output_mv)}&t=${Date.now()}`;
           switchPreviewMode('video');
+          // [SIGN2MV] the line under the player still said 「尚未渲染成品 MP4」 until the project was opened again
+          try {
+            const pr = await (await fetch(`/api/mv/project/${currentSlug}`)).json();
+            const p = pr && pr.mv_probe;
+            if (p && p.exists) document.getElementById('mvFileStatus').innerHTML =
+              `<span style="color:#86efac;">✔ 已有成品 MV (${p.size_mb} MB, ${p.width}x${p.height} @ ${p.r_frame_rate}fps)</span>`;
+          } catch (e) {}
         } else if (data.status === 'cancelled') {
           stopProgressPolling('⏹️ 已取消 MV 合成', '');
           showToast('⏹️ 已取消 MV 合成', true);

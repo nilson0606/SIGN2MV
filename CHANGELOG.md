@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- English UI: switching the language while the app is open now also switches the sing & record page
+  (it waited for a reload that was skipped whenever a take was pending), the library location and
+  storage line, the job log buttons and the dates. Server and worker messages of the sing & record and
+  MV parts (errors, queue and progress lines, job logs) are shown in English; the MV transition names
+  and the lyrics placeholder too.
+- Segment recording: when the audio capture breaks off (the old timeline check stops the take so it
+  cannot drift), the segment panel says why and asks to record the part again; it said "no new recording".
+- Full MV: after a render the line under the player shows the finished MV (size, resolution, fps); it
+  kept saying "no MP4 rendered yet" until the project was opened again.
 - Cover: separation runs in its own process that ends before the voice conversion, so Applio gets all
   the graphics memory back. Measured on an RTX 4060 Laptop (8 GB): conversion after a separation took
   82.6 s instead of 19.2 s (the card fell back to system memory). The old AI cover program also

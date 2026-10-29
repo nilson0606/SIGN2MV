@@ -209,8 +209,8 @@
   "圓形收合": "Circle close",
   "在下方插入一列": "Insert a row below",
   "在此直接輸入或修改這張照片的歌詞...": "Type or edit this photo's lyric here...",
-  "在此貼上整首歌詞（一行一句）...\n例如：\n是幸福是不幸 環境來造成\n恩恩怨怨分未清 何必抱不平": "Paste the full lyrics here (one line per lyric)...\ne.g.:\n是幸福是不幸 環境來造成\n恩恩怨怨分未清 何必抱不平",
-  "在此貼上整首歌詞（一行一句）... 例如： 是幸福是不幸 環境來造成 恩恩怨怨分未清 何必抱不平": "Paste the full lyrics here (one line per lyric)... e.g.: 是幸福是不幸 環境來造成 恩恩怨怨分未清 何必抱不平",
+  "在此貼上整首歌詞（一行一句）...\n例如：\n是幸福是不幸 環境來造成\n恩恩怨怨分未清 何必抱不平": "Paste the full lyrics here (one line per lyric)...\ne.g.:\nFirst line of the song\nSecond line of the song",
+  "在此貼上整首歌詞（一行一句）... 例如： 是幸福是不幸 環境來造成 恩恩怨怨分未清 何必抱不平": "Paste the full lyrics here (one line per lyric)... e.g.: First line of the song Second line of the song",
   "在畫廊最後方新增一個空白照片槽位": "Add an empty photo slot at the end of the gallery",
   "在這張前面插入一個空白照片格（後面的照片往後讓一號，每句歌詞還是配原本的照片）": "Insert an empty photo slot before this one (later photos shift down one number; each lyric keeps its original photo)",
   "多張分鏡圖": "multiple scene photos",
@@ -1528,6 +1528,86 @@
   {
    "zh": "💡 提醒：因右側字幕框尚未貼入自訂歌詞，系統已自動用 Whisper 聽音辨識出的詞句填滿左側 {0} 張照片的時間與字幕！",
    "en": "💡 Note: no lyrics were pasted in the box on the right, so the {0} photos on the left got their timing and captions from what Whisper heard."
+  },
+  {
+   "zh": "{0}. 交叉淡化",
+   "en": "{0}. Crossfade"
+  },
+  {
+   "zh": "{0}. 黑場",
+   "en": "{0}. Fade through black"
+  },
+  {
+   "zh": "{0}. 白光閃",
+   "en": "{0}. White flash"
+  },
+  {
+   "zh": "{0}. 向左推",
+   "en": "{0}. Push left"
+  },
+  {
+   "zh": "{0}. 向右推",
+   "en": "{0}. Push right"
+  },
+  {
+   "zh": "{0}. 向上推",
+   "en": "{0}. Push up"
+  },
+  {
+   "zh": "{0}. 向下推",
+   "en": "{0}. Push down"
+  },
+  {
+   "zh": "{0}. 由左往右擦除",
+   "en": "{0}. Wipe left to right"
+  },
+  {
+   "zh": "{0}. 由右往左擦除",
+   "en": "{0}. Wipe right to left"
+  },
+  {
+   "zh": "{0}. 由上往下擦除",
+   "en": "{0}. Wipe top to bottom"
+  },
+  {
+   "zh": "{0}. 圓形展開",
+   "en": "{0}. Circle open"
+  },
+  {
+   "zh": "{0}. 圓形收合",
+   "en": "{0}. Circle close"
+  },
+  {
+   "zh": "{0}. 推近溶解",
+   "en": "{0}. Zoom-in dissolve"
+  },
+  {
+   "zh": "{0}. 拉遠溶解",
+   "en": "{0}. Zoom-out dissolve"
+  },
+  {
+   "zh": "{0}. 橫百葉窗",
+   "en": "{0}. Horizontal blinds"
+  },
+  {
+   "zh": "{0}. 直百葉窗",
+   "en": "{0}. Vertical blinds"
+  },
+  {
+   "zh": "{0}. 斜角擦除",
+   "en": "{0}. Diagonal wipe"
+  },
+  {
+   "zh": "{0}. 時鐘掃描",
+   "en": "{0}. Clock sweep"
+  },
+  {
+   "zh": "{0}. 中間開門",
+   "en": "{0}. Doors open"
+  },
+  {
+   "zh": "{0}. 模糊溶解",
+   "en": "{0}. Blur dissolve"
   }
  ]
 }

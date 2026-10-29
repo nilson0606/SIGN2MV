@@ -3,6 +3,7 @@
 import { t } from './i18n.js';
 import { el, toast } from './ui.js';
 import { api } from './api.js';
+import { srvText } from './srvtext.js';
 
 function lineClass(text) {
   if (/✖|Traceback|\b(error|failed|exception)\b|錯誤|失敗|⚠/i.test(text)) return 'jl-err';
@@ -15,12 +16,12 @@ function lineClass(text) {
 export function logView() {
   const pre = el('pre', { class: 'joblog' });
   const auto = el('input', { type: 'checkbox', checked: true });
-  const autoLabel = el('label', { class: 'check small' }, auto, el('span', {}, t('joblog.autoscroll')));
-  const copy = el('button', { class: 'btn small', onclick: async () => {
+  const autoLabel = el('label', { class: 'check small' }, auto, el('span', { 'data-i18n': 'joblog.autoscroll' }, t('joblog.autoscroll')));
+  const copy = el('button', { class: 'btn small', 'data-i18n': 'joblog.copy', onclick: async () => {
     try { await navigator.clipboard.writeText(pre.textContent); toast(t('joblog.copied')); }
     catch { toast(t('joblog.copy_failed'), true); }
   } }, t('joblog.copy'));
-  const clear = el('button', { class: 'btn small', onclick: () => { pre.replaceChildren(); } }, t('joblog.clear'));
+  const clear = el('button', { class: 'btn small', 'data-i18n': 'joblog.clear', onclick: () => { pre.replaceChildren(); } }, t('joblog.clear'));
   const panel = el('div', { class: 'joblog-panel hidden' }, el('div', { class: 'row', style: 'gap:8px;align-items:center' }, autoLabel, copy, clear), pre);
   let jobId = null;
   let next = 0;
@@ -30,7 +31,7 @@ export function logView() {
   function append(lines) {
     if (!lines.length) return;
     const frag = document.createDocumentFragment();
-    for (const line of lines) frag.append(el('div', { class: lineClass(line) }, line));
+    for (const line of lines) frag.append(el('div', { class: lineClass(line) }, srvText(line)));
     pre.append(frag);
     while (pre.childElementCount > 3000) pre.firstElementChild.remove();
     if (auto.checked) pre.scrollTop = pre.scrollHeight;

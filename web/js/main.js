@@ -4,6 +4,7 @@ import { t, setLanguage, language, errorText, onLanguageChange } from './i18n.js
 import { $, $$, el, toast, confirmDialog, fmtBytes } from './ui.js';
 import { bus, pages, registerPage } from './app-state.js';
 import { logView } from './joblog.js';
+import { srvText, onServerTextReady } from './srvtext.js';
 
 let bannerDismissed = '';   // version banner closed for this mismatch
 
@@ -45,6 +46,7 @@ $('#theme-btn').addEventListener('click', () => {
 });
 updateThemeButton();
 onLanguageChange(() => { updateManualLink(); renderStatus(); renderJobs(); updateThemeButton(); });
+onServerTextReady(() => renderJobs());
 $('#lang-select').addEventListener('change', async (e) => {
   setLanguage(e.target.value);
   try { await api.put('/api/settings', { language: e.target.value }); } catch (err) { toast(errorText(err), true); }
@@ -135,7 +137,7 @@ function jobLine(j) {
   const bar = el('div', { class: 'bar' + (j.status === 'running' && (pct === null || pct === undefined) ? ' indet' : '') },
     el('div', { style: `width:${pct || 0}%` }));
   const statusText = j.status === 'queued' ? t('jobs.queued_pos', j.position) : t(`jobs.status.${j.status}`);
-  const detail = j.error_code ? errorText({ code: j.error_code }) + (j.error_message ? ` (${j.error_message.slice(0, 160)})` : '') : (j.message || '');
+  const detail = j.error_code ? errorText({ code: j.error_code }) + (j.error_message ? ` (${srvText(j.error_message.slice(0, 160))})` : '') : srvText(j.message || '');
   const row = el('div', { class: 'item' },
     el('div', { class: 'grow' },
       el('div', {}, el('span', { class: 'badge gpu' }, t(`jobs.lane_${j.lane}`)), ' ',

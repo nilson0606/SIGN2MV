@@ -1516,6 +1516,7 @@ export const messages = {
 };
 
 export const templates = [
+  ["{0} · {1} · {2} · {3} · {4} 秒{5}{6}", "{0} · {1} · {2} · {3} · {4} seconds{5}{6}", [1, 2, 3, 5, 6]],
   ["使用 {0} 在本機分離{1}…", "Separating {1} locally on {0}…", [1]],
   ["建立 {0} 音高與節拍基準…", "Building the {0} pitch and beat reference…", []],
   ["準備唱錄：{0}", "Preparing for sing & record: {0}", []],

@@ -1,5 +1,6 @@
 // SIGN2MV glue for the sing & record page (runs inside the SIGN2MV window).
 import {selectMediaSource} from './media-source.mjs';
+import {setLanguage} from './i18n.mjs';
 const $=id=>document.getElementById(id);
 const parentWindow=window.parent!==window?window.parent:null;
 const post=message=>parentWindow?.postMessage(message,location.origin);
@@ -39,10 +40,8 @@ window.addEventListener('message',event=>{
   const m=event.data||{};
   if(m.type==='sign2mv:select-song'&&typeof m.songId==='string')void selectSong(m.songId);
   if(m.type==='sign2mv:refresh-songs')kind.dispatchEvent(new Event('change'));
-  if(m.type==='sign2mv:lang'){
-    try{localStorage.setItem('karaoke.language.v1',m.lang==='en'?'en':'zh-Hant');}catch{}
-    if(!busyPhase())location.reload();
-  }
+  // switch in place: a reload was skipped while a take was pending (almost always), so the page stayed in the old language
+  if(m.type==='sign2mv:lang')setLanguage(m.lang==='en'?'en':'zh-Hant');
 });
 // Report the loaded song and busy state so the shell can warn before leaving.
 new MutationObserver(()=>post({type:'sign2mv:sing-state',busy:busyPhase()})).observe($('player-section'),{attributes:true,attributeFilter:['data-workflow']});

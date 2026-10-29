@@ -4,9 +4,10 @@ import { el, toast } from './ui.js';
 import { waitJob } from './app-state.js';
 import { api } from './api.js';
 import { logView, logOpenByDefault } from './joblog.js';
+import { srvText } from './srvtext.js';
 
 // workers that report their own words as the stage (MV Whisper) show them as they are
-function stageText(stage) { const k = `stage.${stage}`; const v = t(k); return v === k ? stage : v; }
+function stageText(stage) { const k = `stage.${stage}`; const v = t(k); return v === k ? srvText(stage) : v; }
 
 export function jobBox({ cancel = true, onUpdate = null } = {}) {
   const label = el('div', { class: 'small grow' });
@@ -20,8 +21,9 @@ export function jobBox({ cancel = true, onUpdate = null } = {}) {
     stop.disabled = false;
   } }, t('common.cancel'));
   const log = logView();
-  const logBtn = el('button', { class: 'btn small', onclick: () => { logBtn.textContent = (log.toggle() ? '▾ ' : '▸ ') + t('joblog.title'); } },
-    (logOpenByDefault() ? '▾ ' : '▸ ') + t('joblog.title'));
+  const logArrow = el('span', {}, logOpenByDefault() ? '▾ ' : '▸ ');
+  const logBtn = el('button', { class: 'btn small', onclick: () => { logArrow.textContent = log.toggle() ? '▾ ' : '▸ '; } },
+    logArrow, el('span', { 'data-i18n': 'joblog.title' }, t('joblog.title')));
   if (logOpenByDefault()) log.toggle(true);
   const box = el('div', { class: 'jobbox hidden' }, el('div', { class: 'row', style: 'align-items:center' }, label, logBtn, stop), bar, log.el);
   function show(job) {
@@ -36,10 +38,10 @@ export function jobBox({ cancel = true, onUpdate = null } = {}) {
     if (job.status === 'queued') text = t('jobs.queued_pos', job.position || 1);
     else if (job.status === 'running') {
       const took = job.started_at ? Math.max(0, Math.round(Date.now() / 1000 - job.started_at)) : null;   // old progress showed the seconds
-      text = `${t('jobs.status.running')}${job.stage ? ' · ' + stageText(job.stage) : ''}${pct != null ? ` ${pct.toFixed(0)}%` : ''}${job.message ? ' · ' + job.message : ''}${took != null ? ` （${took >= 60 ? `${Math.floor(took / 60)}:${String(took % 60).padStart(2, '0')}` : t('jobs.seconds', took)}）` : ''}`;
+      text = `${t('jobs.status.running')}${job.stage ? ' · ' + stageText(job.stage) : ''}${pct != null ? ` ${pct.toFixed(0)}%` : ''}${job.message ? ' · ' + srvText(job.message) : ''}${took != null ? ` （${took >= 60 ? `${Math.floor(took / 60)}:${String(took % 60).padStart(2, '0')}` : t('jobs.seconds', took)}）` : ''}`;
     }
     else if (job.status === 'succeeded') text = t('jobs.status.succeeded');
-    else text = `${t(`jobs.status.${job.status}`)}: ${errorText({ code: job.error_code })}${job.error_message ? ' — ' + job.error_message.slice(-300) : ''}`;
+    else text = `${t(`jobs.status.${job.status}`)}: ${errorText({ code: job.error_code })}${job.error_message ? ' — ' + srvText(job.error_message.slice(-300)) : ''}`;
     label.textContent = text;
     bar.classList.toggle('indet', job.status === 'running' && pct == null);
     fill.style.width = `${job.status === 'succeeded' ? 100 : (pct || 0)}%`;

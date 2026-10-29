@@ -159,7 +159,7 @@ def router(ctx: Context) -> APIRouter:
                 data = json.load(f)
             return (data.get("segments", data) if isinstance(data, dict) else data), "cache"
         payload = whisper_payload(proj, lead_only)
-        jid = start_job("mv_whisper", "mv_whisper.py", payload, f"Whisper：{proj.get('title') or proj['name']}",
+        jid = start_job("mv_whisper", "mv_whisper.py", payload, f"Whisper: {proj.get('title') or proj['name']}",
                         proj["song_id"], 3600)
         job = await wait_job(jid)
         if job["status"] == "cancelled":
@@ -901,7 +901,7 @@ def router(ctx: Context) -> APIRouter:
             return jerr(500, f"MV 合成失敗：找不到指定的音源檔案：{proj.get('audio_file', '')}")
         payload = {"slug": proj["slug"], "library_root": str(cfg["library_dir"]),
                    "brand": {"singer": core.BRAND["singer"], "studio": core.BRAND["studio"], "lang": core.BRAND["lang"]}}
-        jid = start_job("mv_render", "mv_render.py", payload, f"MV：{proj.get('title') or proj['name']}",
+        jid = start_job("mv_render", "mv_render.py", payload, f"MV: {proj.get('title') or proj['name']}",
                         proj["song_id"], 4 * 3600)
         job = await wait_job(jid)
         if job["status"] == "cancelled":
