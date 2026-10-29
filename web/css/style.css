@@ -342,8 +342,8 @@ canvas.spectrum { display: block; width: 100%; margin: 6px 0 10px; background: v
 .panel { transition: transform .22s ease, box-shadow .22s ease; }
 .panel:focus-within {
   transform: translateY(-4px);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent),
-              0 30px 50px -12px rgba(0,0,0,.75), 0 0 28px color-mix(in srgb, var(--accent) 10%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 0 0 1px var(--gold-edge),
+              0 30px 50px -12px rgba(0,0,0,.75), 0 0 28px color-mix(in srgb, var(--gold-edge-hi) 25%, transparent);
 }
 .item, .cv-version { transition: transform .18s ease, box-shadow .18s ease; }
 .item:hover, .cv-version:hover {
@@ -354,10 +354,18 @@ canvas.spectrum { display: block; width: 100%; margin: 6px 0 10px; background: v
 html[data-theme="day"] .btn:not(:disabled):hover, html[data-theme="day"] nav.tabs button:hover, html[data-theme="day"] .cv-chip:hover {
   box-shadow: 0 4px 0 #cbd5e1, 0 10px 18px rgba(15,23,42,.15), 0 0 12px color-mix(in srgb, var(--accent) 18%, transparent);
 }
-html[data-theme="day"] .panel:focus-within, html[data-theme="day"] .item:hover, html[data-theme="day"] .cv-version:hover {
+html[data-theme="day"] .item:hover, html[data-theme="day"] .cv-version:hover {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent), 0 18px 32px -10px rgba(15,23,42,.25);
 }
+html[data-theme="day"] .panel:focus-within { box-shadow: 0 0 0 1px var(--gold-edge), 0 18px 32px -10px rgba(15,23,42,.25); }
 @media (prefers-reduced-motion: reduce) {
   .btn, nav.tabs button, .cv-chip, .panel, .item, .cv-version { transition: none; }
   .btn:not(:disabled):hover, nav.tabs button:hover, .cv-chip:hover, .panel:focus-within, .item:hover, .cv-version:hover { transform: none; }
 }
+
+/* ---------- gold edge on the big blocks (all three workspaces share it) ---------- */
+:root, html[data-theme="studio"] { --gold-edge: rgba(245, 200, 76, .42); --gold-edge-hi: rgba(245, 200, 76, .85); }
+html[data-theme="classic"] { --gold-edge: rgba(251, 191, 36, .40); --gold-edge-hi: rgba(251, 191, 36, .85); }
+html[data-theme="day"] { --gold-edge: rgba(180, 132, 20, .55); --gold-edge-hi: rgba(161, 98, 7, .95); }
+.panel { border-color: var(--gold-edge); box-shadow: var(--shadow), inset 0 0 0 1px rgba(245, 200, 76, .06); }
+.panel:focus-within { border-color: var(--gold-edge-hi); }

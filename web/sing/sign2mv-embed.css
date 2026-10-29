@@ -38,3 +38,7 @@ html[data-sign2mv] button:active:not(:disabled) { transform: translateY(2px); bo
   html[data-sign2mv] .card, html[data-sign2mv] button { transition: none; }
   html[data-sign2mv] .card:focus-within, html[data-sign2mv] button:hover:not(:disabled) { transform: none; }
 }
+/* gold edge on the big blocks, same as the rest of SIGN2MV */
+html[data-sign2mv] .card { border-color: rgba(245, 200, 76, .42) !important; }
+html[data-sign2mv] .card:focus-within { border-color: rgba(245, 200, 76, .85) !important;
+  box-shadow: 0 0 0 1px rgba(245, 200, 76, .42), 0 30px 50px -12px #000d, 0 0 28px rgba(245, 200, 76, .18), inset 0 1px #ffffff12; }
