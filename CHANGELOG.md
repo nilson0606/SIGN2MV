@@ -22,7 +22,7 @@ Parity with the three old programs (every small tuning, preview and check they h
 - Cover versions: select all / delete selected, format and size, show in Explorer, watch the
   quick or full MV made from a version, now-playing text, busy note, tab title on finish,
   live spectrum bars, every song's versions in one list, 🧹 clean up unused files (listed
-  first), optional quick MV right after a cover, a warning naming the MV projects that use a
+  first), a warning naming the MV projects that use a
   version before it is deleted.
 - Quick MV: every song's list with search, select, delete; the old AI cover look ("studio":
   subtitle, badge, credits line, 60 fps) as a second style; 720p for both styles; open folder.

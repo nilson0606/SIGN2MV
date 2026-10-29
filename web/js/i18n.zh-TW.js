@@ -606,8 +606,4 @@ export default {
   "cover.all_versions": "📚 所有歌的翻唱成品",
   "cover.all_info": "共 {0} 個版本 · {1}",
   "cover.open_song": "開啟這首",
-  "cover.auto_mv": "做完自動出快速 MV（畫面樣式與畫質沿用 MV 頁上次的選擇）",
-  "cover.auto_mv_started": "正在自動做快速 MV…",
-  "cover.auto_mv_no_singer": "沒有自動做快速 MV：請先到「設定」填「翻唱者名稱」（MV 上會顯示）。",
-  "cover.auto_mv_done": "快速 MV 完成：版本上會出現觀看按鈕。",
 };

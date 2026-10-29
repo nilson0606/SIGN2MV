@@ -110,7 +110,7 @@ def clean_mix(p: Any) -> dict:
 
 def clean_side(p: Any, model: str, pitch: int, rvc: dict) -> dict:
     p = p if isinstance(p, dict) else {}
-    out = {"model": clean_model_name(p.get("model")) or model, "pitch": _int(p.get("pitch", pitch), pitch, -24, 24),
+    out = {"model": clean_model_name(p.get("model")) or model, "pitch": _int(p.get("pitch", pitch), pitch, -12, 12),
            "keep": bool(p.get("keep")), "vol": _num(p.get("vol", 1.0), 1.0, 0, 2, 2)}
     out.update(clean_rvc(p.get("rvc") if isinstance(p.get("rvc"), dict) else p, rvc))
     return out
@@ -181,7 +181,7 @@ def clean_vol_segments(segs: Any) -> list[dict]:
 def clean_params(p: Any) -> dict:
     p = p if isinstance(p, dict) else {}
     model = clean_model_name(p.get("model"))
-    pitch = _int(p.get("pitch", 0), 0, -24, 24)
+    pitch = _int(p.get("pitch", 0), 0, -12, 12)   # old range; re-converted sections keep ±24
     rvc = clean_rvc(p.get("rvc"))
     out = {"model": model, "pitch": pitch, "key": _int(p.get("key", 0), 0, KEY_MIN, KEY_MAX), "rvc": rvc,
            "sep_model": p.get("sep_model") if p.get("sep_model") in SEPARATORS else "demucs",

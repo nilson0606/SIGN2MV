@@ -36,9 +36,11 @@ def test_params_and_plan(tmp_path):
                                       {"start": 6, "end": 7, "mode": "original"}],
                             "vol_segments": [{"track": "backing", "start": 1, "end": 3, "gain": 1.5},
                                              {"track": "vocal", "start": 1, "end": 3, "gain": 1.0}]})
-    assert (p["pitch"], p["key"], p["rvc"]["protect"], p["rvc"]["f0"]) == (24, -8, 0.5, "rmvpe")
+    assert (p["pitch"], p["key"], p["rvc"]["protect"], p["rvc"]["f0"]) == (12, -8, 0.5, "rmvpe")   # old ±12
     assert [m["mode"] for m in p["masks"]] == ["rvc", "original"]
-    assert p["masks"][0]["rvc"]["model"] == "Voice_A" and p["masks"][0]["rvc"]["pitch"] == 24
+    assert p["masks"][0]["rvc"]["model"] == "Voice_A" and p["masks"][0]["rvc"]["pitch"] == 12
+    sec = cover.clean_params({"model": "A", "masks": [{"start": 1, "end": 2, "mode": "rvc", "rvc": {"pitch": -20}}]})
+    assert sec["masks"][0]["rvc"]["pitch"] == -20                 # re-converted sections keep ±24 (as the old page)
     assert p["vol_segments"] == [{"track": "backing", "start": 1.0, "end": 3.0, "gain": 1.5}]
     assert cover.clean_model_name("bad name") == "" and cover.clean_model_name("Ok_1__e20") == "Ok_1__e20"
 

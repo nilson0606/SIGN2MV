@@ -98,7 +98,7 @@ const keyAudio = audioEl('');
 const keyBtn = el('button', { class: 'btn small', onclick: () => keyPreview(), 'data-i18n': 'cover.key_preview' });
 
 const modelSel = select('model', [], () => updateSummary());
-const pitchCtl = slider('pitch', -24, 24, 1);
+const pitchCtl = slider('pitch', -12, 12, 1);
 pitchCtl.el.addEventListener('input', () => updateSummary());
 pitchCtl.el.addEventListener('change', () => updateSummary());
 const pitchPresets = el('div', { class: 'row', style: 'gap:6px' },
@@ -123,7 +123,7 @@ function sideControls(side) {
   const p = `mf.${side}`;
   const c = {
     keep: check(`${p}.keep`, 'cover.mf_keep', () => updateVis()), model: select(`${p}.model`, []),
-    pitch: slider(`${p}.pitch`, -24, 24, 1), vol: slider(`${p}.vol`, 0, 200, 1, 100),
+    pitch: slider(`${p}.pitch`, -12, 12, 1), vol: slider(`${p}.vol`, 0, 200, 1, 100),
     protect: slider(`${p}.protect`, 0, 0.5, 0.01), index_rate: slider(`${p}.index_rate`, 0, 1, 0.01),
     envelope: slider(`${p}.envelope`, 0, 1, 0.01), f0: select(`${p}.f0`, [['rmvpe', 'rmvpe'], ['fcpe', 'fcpe'], ['crepe', 'crepe']]),
     autotune: check(`${p}.autotune`, 'cover.autotune', () => updateVis()), autotune_strength: slider(`${p}.autotune_strength`, 0, 1, 0.01),
@@ -233,30 +233,6 @@ let vsegsDetails = null;
 const runSummary = el('div', { class: 'cv-summary' });
 const freshBox = el('input', { type: 'checkbox', onchange: () => updateSummary() });
 const freshCtl = el('label', { class: 'check small', title: '' }, freshBox, el('span', { 'data-i18n': 'cover.fresh_sep' }));
-// old 一鍵全自動 made the MV right after the MP3: optional here, remembered (look and size as on the MV page)
-const autoMvBox = el('input', { type: 'checkbox', onchange: () => { try { localStorage.setItem('sign2mv.cover.automv', autoMvBox.checked ? '1' : '0'); } catch { /* ignore */ } } });
-try { autoMvBox.checked = localStorage.getItem('sign2mv.cover.automv') === '1'; } catch { /* ignore */ }
-const autoMvCtl = el('label', { class: 'check small' }, autoMvBox, el('span', { 'data-i18n': 'cover.auto_mv' }));
-async function autoQuickMv(renderId) {
-  const sid = songId;
-  try {
-    const info = await api.get(`/api/songs/${sid}/quickmv`);
-    const src = info.sources.find((x) => x.id === renderId);
-    if (!src) return;
-    const pref = (k, d) => { try { return localStorage.getItem(`sign2mv.qmv.${k}`) || d; } catch { return d; } };
-    const style = pref('style', 'card');
-    if (!info.defaults.artist) { toast(t('cover.auto_mv_no_singer'), true); return; }   // the card needs a singer name
-    const body = { source: renderId, title: info.defaults.title, artist: info.defaults.artist,
-      style, resolution: pref('res', '1080p'), ...(style === 'studio' ? src.studio : {}) };
-    const job = await api.post(`/api/songs/${sid}/quickmv`, body);
-    toast(t('cover.auto_mv_started'));
-    const fin = await runJob.follow(job.job);
-    if (fin.status === 'succeeded') {
-      toast(t('cover.auto_mv_done'));
-      if (songId === sid) { songState = await api.get(`/api/cover/songs/${sid}`); renderVersions(); }
-    }
-  } catch (err) { toast(errorText(err), true); }
-}
 function sg(n) { return `${n > 0 ? '+' : ''}${n}`; }
 function updateSummary() {
   if (!runSummary.isConnected && !songId) return;
@@ -292,7 +268,7 @@ function sectionMix() {
     masksDetails = details(t('cover.masks'), el('p', { class: 'muted small' }, t('cover.masks_hint')), maskEditor(), maskList),
     vsegsDetails = details(t('cover.vsegs'), el('p', { class: 'muted small' }, t('cover.vsegs_hint')), vsegEditor(), vsegList),
     runSummary,
-    el('div', { class: 'row', style: 'margin-top:12px;align-items:center' }, runBtn, freshCtl, autoMvCtl),
+    el('div', { class: 'row', style: 'margin-top:12px;align-items:center' }, runBtn, freshCtl),
     el('p', { class: 'muted small' }, t('cover.run_hint')),
     runJob.el, doneBox);
 }
@@ -737,7 +713,6 @@ async function follow(job, remixCard = null, asNew = false) {
     } else {
       renderVersions(fin.result && fin.result.version_id);
       if (remixCard) showRemixDone(fin, asNew); else showDone(fin);
-      if (!remixCard && fin.status === 'succeeded' && autoMvBox.checked && fin.result && fin.result.render_id) autoQuickMv(fin.result.render_id);
     }
   }
   bus.dispatchEvent(new Event('renders-changed'));

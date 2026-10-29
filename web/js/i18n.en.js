@@ -606,8 +606,4 @@ export default {
   "cover.all_versions": "📚 Every song's cover versions",
   "cover.all_info": "{0} versions · {1}",
   "cover.open_song": "Open this song",
-  "cover.auto_mv": "Make a quick MV when done (look and size as last chosen on the MV page)",
-  "cover.auto_mv_started": "Making the quick MV…",
-  "cover.auto_mv_no_singer": "No quick MV made: enter Settings → Cover singer name first (it is shown on the MV).",
-  "cover.auto_mv_done": "Quick MV ready: the watch button is on the version.",
 };
