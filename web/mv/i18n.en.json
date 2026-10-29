@@ -571,7 +571,14 @@
   "剪貼簿是空的": "The clipboard is empty",
   "📋 已貼上剪貼簿的歌詞。": "📋 Pasted the lyrics from the clipboard.",
   "瀏覽器不允許讀剪貼簿，請在框內按 Ctrl+V 貼上": "The browser did not allow reading the clipboard. Press Ctrl+V in the box instead.",
-  "還沒有 MV 專案：按「＋ 新建歌曲 MV 專案」開始。": "No MV project yet: press \"＋ New song MV project\" to start."
+  "還沒有 MV 專案：按「＋ 新建歌曲 MV 專案」開始。": "No MV project yet: press \"＋ New song MV project\" to start.",
+  "請貼入歌詞": "Paste the lyrics",
+  "請貼入歌詞或執行 Whisper": "Paste the lyrics or run Whisper",
+  "⚠️ 提醒：您尚未在上方「Step 1」選擇母帶音檔！系統已先幫左側照片自動分配預設連續時間軸（您可先微調秒數）；": "⚠️ Note: no master audio is chosen in Step 1 above yet. The photos on the left got a default back-to-back timeline (you can adjust the seconds);",
+  "若要使用 Whisper 語音辨識對齊，請先在 Step 1 下拉選單挑選音檔後再按一次！": "to align with Whisper speech recognition, pick the audio in the Step 1 list first and press the button again.",
+  "若台語/國語同音字有誤差，您可直接在卡片上改字，或貼上正確歌詞後點「✏️ 僅替換歌詞文字（保留時間）」。": "If a word was heard as a wrong homophone (Taiwanese / Mandarin), fix it on the card, or paste the correct lyrics and click “✏️ Replace lyric text only (keep timing)”.",
+  "分鏡畫面預覽": "Scene preview",
+  "翻唱": "Cover"
  },
  "patterns": [
   {
@@ -1517,6 +1524,10 @@
   {
    "zh": "❌ 開啟資料夾失敗：{0}",
    "en": "❌ Could not open the folder: {0}"
+  },
+  {
+   "zh": "💡 提醒：因右側字幕框尚未貼入自訂歌詞，系統已自動用 Whisper 聽音辨識出的詞句填滿左側 {0} 張照片的時間與字幕！",
+   "en": "💡 Note: no lyrics were pasted in the box on the right, so the {0} photos on the left got their timing and captions from what Whisper heard."
   }
  ]
 }
