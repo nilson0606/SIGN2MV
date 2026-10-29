@@ -24,3 +24,17 @@ html[data-sign2mv] body { background: var(--bg, #0b1118); }
 .sign2mv-note[data-kind="wait"] { background: #3a2f12; border: 1px solid #f2b84b; color: #fcd34d; }
 .sign2mv-note[data-kind="bad"] { background: #3a1414; border: 1px solid #ff6b6b; color: #fca5a5; }
 .sign2mv-echo { margin-top: 6px; }
+/* floating feel like the rest of SIGN2MV (old AI cover 懸浮感): the card being worked in lifts,
+   buttons rise on hover and sink when pressed */
+html[data-sign2mv] .card { transition: transform .22s ease, box-shadow .22s ease, border-color .2s; }
+html[data-sign2mv] .card:focus-within {
+  transform: translateY(-4px);
+  box-shadow: 0 0 0 1px var(--accent-glow), 0 30px 50px -12px #000d, 0 0 28px var(--accent-glow), inset 0 1px #ffffff12;
+}
+html[data-sign2mv] button { transition: transform .12s ease, box-shadow .12s ease, filter .2s; }
+html[data-sign2mv] button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 0 #0008, 0 10px 18px #0007, 0 0 12px var(--accent-glow); }
+html[data-sign2mv] button:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 2px 5px #0009; }
+@media (prefers-reduced-motion: reduce) {
+  html[data-sign2mv] .card, html[data-sign2mv] button { transition: none; }
+  html[data-sign2mv] .card:focus-within, html[data-sign2mv] button:hover:not(:disabled) { transform: none; }
+}
