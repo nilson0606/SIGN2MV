@@ -15,7 +15,8 @@ function showPage(name) {
   if (!$(`#page-${name}`)) name = 'home';
   $$('section.page').forEach((s) => s.classList.toggle('active', s.id === `page-${name}`));
   $$('#tabs button').forEach((b) => b.classList.toggle('active', b.dataset.page === name));
-  try { localStorage.setItem('sign2mv.page', name); } catch { /* storage may be unavailable */ }
+  // per tab: a new start (start.bat opens a new tab) begins on the home page; reloading a tab keeps its page
+  try { sessionStorage.setItem('sign2mv.page', name); } catch { /* storage may be unavailable */ }
   const page = pages.get(name);
   if (page && page.onShow) page.onShow();
 }
@@ -232,7 +233,7 @@ registerPage('home', { onShow: () => loadStatus() });
   await Promise.all([loadJobs(), loadSettings()]);
   bus.dispatchEvent(new Event('reload-songs'));
   let last = 'home';
-  try { last = localStorage.getItem('sign2mv.page') || 'home'; } catch { /* ignore */ }
+  try { last = sessionStorage.getItem('sign2mv.page') || 'home'; } catch { /* ignore */ }
   // Later stages add their own pages; give their modules a chance to load first.
   await Promise.allSettled([import('./workspaces.js')]);
   showPage(last);
