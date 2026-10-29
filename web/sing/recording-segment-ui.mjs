@@ -77,7 +77,9 @@ export function createSegmentRecording(options) {
       if(cancelled())return;
       if(mode==='mix'){
         if(!row.post.segments?.length)throw Error('此錄音缺少歌曲時間資訊，請改選「純人聲」。');
-        const requiredEnd=Math.max(...row.post.segments.map(s=>s.songTime+s.duration));
+        // [SIGN2MV] a take of the last part records a little past the end of the song (stop latency): the stems
+        // only have to cover the song, the mix already stops each track at its end
+        const requiredEnd=Math.min(Math.max(...row.post.segments.map(s=>s.songTime+s.duration)),ref.duration||Infinity);
         for(const stem of ['accompaniment',...(ref.vocalMode==='lead'?['backing']:[])]){
           const bytes=await options.loadStem(ref,stem);if(cancelled())return;
           const buffer=await decoder.decodeAudioData(bytes);if(cancelled())return;

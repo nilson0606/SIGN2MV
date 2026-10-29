@@ -18,3 +18,9 @@ html[data-sign2mv] #mv-clear-all,
 html[data-sign2mv] #mv-clear-result,
 html[data-sign2mv] a[href="#local-section"] { display: none !important; }
 html[data-sign2mv] body { background: var(--bg, #0b1118); }
+/* microphone permission notice and repeated segment messages (SIGN2MV) */
+.sign2mv-note { position: sticky; top: 0; z-index: 50; margin: 0 0 8px; padding: 10px 14px; border-radius: 8px;
+  font-weight: 600; line-height: 1.5; }
+.sign2mv-note[data-kind="wait"] { background: #3a2f12; border: 1px solid #f2b84b; color: #fcd34d; }
+.sign2mv-note[data-kind="bad"] { background: #3a1414; border: 1px solid #ff6b6b; color: #fca5a5; }
+.sign2mv-echo { margin-top: 6px; }

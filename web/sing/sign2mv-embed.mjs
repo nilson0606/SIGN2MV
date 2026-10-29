@@ -51,3 +51,40 @@ window.addEventListener('load',()=>{
   kind.dispatchEvent(new Event('change'));
   post({type:'sign2mv:sing-ready'});
 });
+
+// ---- microphone permission: the browser's question can hide behind other windows and recording
+// waits for it (playback starts only once the microphone is open). Say so plainly.
+const micNote=document.createElement('div');
+micNote.id='sign2mv-mic-note';micNote.className='sign2mv-note';micNote.hidden=true;micNote.setAttribute('role','alert');
+document.body.prepend(micNote);
+function showMicNote(text,kind){micNote.textContent=text;micNote.dataset.kind=kind;micNote.hidden=!text;}
+if(navigator.mediaDevices?.getUserMedia){
+  const original=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  navigator.mediaDevices.getUserMedia=function(constraints){
+    const asking=setTimeout(()=>showMicNote('🎤 瀏覽器正在詢問「是否允許使用麥克風」：請找到那個視窗（通常在網址列下方，可能被其他視窗擋住）按「允許」。按下之前，錄音和播放都會等著。','wait'),2500);
+    return original(constraints).then(stream=>{clearTimeout(asking);showMicNote('','');return stream;},error=>{
+      clearTimeout(asking);
+      if(error?.name==='NotAllowedError')showMicNote('🎤 麥克風被瀏覽器封鎖了：點網址列最左邊的圖示（網站設定），把「麥克風」改成「允許」，再按 F5 重新整理。','bad');
+      else showMicNote('','');
+      throw error;
+    });
+  };
+}
+
+// ---- segment panel: messages go to the status line under the record buttons, which is far from
+// the version panel on a narrow window. Repeat the answer under the button that was pressed.
+const segStatus=$('segment-status');
+let echoTarget=null,echoUntil=0;
+const echo=document.createElement('p');echo.className='status sign2mv-echo';echo.setAttribute('role','status');echo.hidden=true;
+document.addEventListener('click',event=>{
+  const b=event.target.closest?.('#segment-side button, #segment-section button');
+  if(!b||!segStatus)return;
+  const row=b.closest('.button-row')||b;
+  // only where the status line is out of the way (the version and trial panels)
+  if(b.closest('#segment-side')){echoTarget=row;echoUntil=Date.now()+60000;row.after(echo);echo.hidden=true;}
+  else{echoTarget=null;echo.hidden=true;}
+},true);
+if(segStatus)new MutationObserver(()=>{
+  if(!echoTarget||Date.now()>echoUntil)return;
+  echo.textContent=segStatus.textContent;echo.hidden=!segStatus.textContent;
+}).observe(segStatus,{childList:true,characterData:true,subtree:true});

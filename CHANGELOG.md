@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Cover: separation runs in its own process that ends before the voice conversion, so Applio gets all
+  the graphics memory back. Measured on an RTX 4060 Laptop (8 GB): conversion after a separation took
+  82.6 s instead of 19.2 s (the card fell back to system memory). The old AI cover program also
+  separated in its own script.
+- Sing & record: a clear notice while the browser asks for microphone permission (recording and
+  playback wait for it) and when the microphone is blocked; messages of the version / trial panel
+  of segment recording also appear under the button that was pressed.
+- Sing & record: listening to a take of the last part failed with "backing too short" when the
+  recording ran a fraction of a second past the end of the song; only the song has to be covered.
+- New start (start.bat) opens on Home; the MV page no longer opens the new-project dialog by itself.
+
 Parity with the three old programs (every small tuning, preview and check they had):
 
 - Quick MV studio look: optional lyric subtitles (old AI cover lyric MV): LRC times, Whisper timing once per

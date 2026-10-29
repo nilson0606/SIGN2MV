@@ -60,7 +60,8 @@ export function createRecordingReview({store,pause,loadStem,onChanged,isRecordin
       if(mode==='mix')for(const stem of ['accompaniment',...(ref.vocalMode==='lead'?['backing']:[])]){
         const bytes=await loadStem(ref,stem);if(cancelled())return;
         const buffer=await context.decodeAudioData(bytes);if(cancelled())return;
-        if(buffer.duration<Math.max(...row.post.segments.map(s=>s.songTime+s.duration))-.15)throw Error('伴樂長度不足，請補建完整音軌。');
+        // [SIGN2MV] only the song has to be covered: a take may run a little past its end (stop latency)
+        if(buffer.duration<Math.min(Math.max(...row.post.segments.map(s=>s.songTime+s.duration)),ref.duration||Infinity)-.15)throw Error('伴樂長度不足，請補建完整音軌。');
         tracks.push(buffer);
       }
       const audio=await remixRecording(raw,tracks,{...row,mode},delay);if(cancelled())return;

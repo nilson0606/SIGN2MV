@@ -227,19 +227,90 @@ def write_render(song_dir: Path, render: dict, mp3: Path, extra: dict) -> dict:
 MIX_STEPS = {"mix_read": 90, "mix_sections": 91, "mix_balance": 92, "mix_instrument": 93, "mix_master": 95}
 
 
+def separate_all(data: dict, layers: list[dict], seg: list[dict]) -> list[str]:
+    """Steps 1 and 2 of a cover (run in the child). Returns the section files that failed."""
+    import separate as sep
+    song_dir = Path(data["song_dir"])
+    dev = pick_device(data.get("device", "auto"))
+    for i, layer in enumerate(layers):
+        lo = 35 * i / max(1, len(layers))
+        hi = 35 * (i + 1) / max(1, len(layers))
+        stage = "separate" if layer["kind"] == "mix" else layer["kind"]
+        try:
+            sep.run_layer(layer, song_dir, dev, sep.Progress(lo, hi, stage, dev))
+        except FileNotFoundError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            shutil.rmtree(song_dir / "stems" / (layer["key"] + ".tmp"), ignore_errors=True)
+            protocol.fail("separation_failed", str(exc)[-1500:])
+    failed: list[str] = []
+    for i, j in enumerate(seg):
+        try:
+            separate_segment(j, song_dir, dev, Step(40 + 5 * i / len(seg), 40 + 5 * (i + 1) / len(seg),
+                                                   "section_separate"))
+        except Exception as exc:  # noqa: BLE001  (the old program kept the converted vocal there)
+            protocol.log(f"section {j['start']:.1f}s could not be separated again, kept as it was: {str(exc)[-300:]}")
+            failed += [j["vocal"], j["bgm"]]
+    return failed
+
+
+def separate_child() -> None:
+    """cover_run.py --separate: input {"data", "layers", "seg"}; result {"failed": [...]}."""
+    msg = protocol.read_input()
+    try:
+        failed = separate_all(msg["data"], msg.get("layers") or [], msg.get("seg") or [])
+    except FileNotFoundError as exc:
+        text = str(exc)
+        protocol.fail("model_missing" if text.startswith("model_missing") else "file_not_found", text[-500:])
+    protocol.result({"failed": failed})
+
+
+def separate_in_child(data: dict, layers: list[dict], seg: list[dict]) -> set[str]:
+    """Run separate_all in a new Python process and pass its progress and log lines through."""
+    proc = subprocess.Popen([sys.executable, "-u", str(Path(__file__).resolve()), "--separate"],
+                            cwd=str(Path(__file__).resolve().parent), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, creationflags=NO_WINDOW)
+
+    def read_err() -> None:
+        for raw in proc.stderr:
+            line = raw.decode("utf-8", "replace").rstrip()
+            if line:
+                sys.stderr.write(line + "\n")   # goes to the job log
+                sys.stderr.flush()
+    err_thread = threading.Thread(target=read_err, daemon=True)
+    err_thread.start()
+    proc.stdin.write(json.dumps({"data": data, "layers": layers, "seg": seg}, ensure_ascii=False).encode("utf-8"))
+    proc.stdin.close()
+    error, result = None, None
+    for raw in proc.stdout:
+        try:
+            msg = json.loads(raw.decode("utf-8", "replace"))
+        except ValueError:
+            continue
+        kind = msg.get("type")
+        if kind == "progress":
+            protocol.progress(msg.get("percent"), msg.get("stage") or "", msg.get("message") or "")
+        elif kind == "log":
+            protocol.log(msg.get("message", ""))
+        elif kind == "error":
+            error = (msg.get("code") or "separation_failed", msg.get("message") or "")
+        elif kind == "result":
+            result = msg.get("data") or {}
+    rc = proc.wait()
+    err_thread.join(timeout=5)
+    if error:
+        protocol.fail(error[0], error[1])
+    if rc != 0 or result is None:
+        protocol.fail("separation_failed", f"separation process ended with code {rc}")
+    return set(result.get("failed") or [])
+
+
 def main() -> None:
     data = protocol.read_input()
-    protocol.progress(0, "prepare", "")   # loading torch below takes a while on Windows
+    protocol.progress(0, "prepare", "")
     song_dir = Path(data["song_dir"])
     plan = data["plan"]
-    # PyTorch is only loaded when something has to be separated: loading it takes a while on
-    # Windows and most covers reuse the library's stems.
-    dev_cache: dict[str, str] = {}
-
-    def device() -> str:
-        if "d" not in dev_cache:
-            dev_cache["d"] = pick_device(data.get("device", "auto"))
-        return dev_cache["d"]
+    # This process never loads PyTorch: separation runs in a child process (separate_in_child).
     A = lambda rel: song_dir / rel  # noqa: E731
     try:
         stats: dict = {"started_at": time.time()}
@@ -250,33 +321,18 @@ def main() -> None:
             stats[name] = round(now - mark["t"], 1)
             mark["t"] = now
 
-        # 1. stems
-        import separate as sep
-        layers = plan.get("layers") or []
-        for i, layer in enumerate(layers):
-            lo = 35 * i / max(1, len(layers))
-            hi = 35 * (i + 1) / max(1, len(layers))
-            stage = "separate" if layer["kind"] == "mix" else layer["kind"]
-            try:
-                sep.run_layer(layer, song_dir, device(), sep.Progress(lo, hi, stage, device()))
-            except FileNotFoundError:
-                raise
-            except Exception as exc:  # noqa: BLE001
-                shutil.rmtree(song_dir / "stems" / (layer["key"] + ".tmp"), ignore_errors=True)
-                protocol.fail("separation_failed", str(exc)[-1500:])
-        lap("separate_s")
-        # 2. sections with their own separation, and plain cuts for re-converted sections
+        # 1. stems and 2. sections with their own separation: in a child process that exits before
+        # Applio starts, so the voice conversion gets all the graphics memory back (an 8 GB laptop
+        # card fell back to system memory and converted 4x slower when both ran in this process;
+        # the old AI cover program also separated in its own script)
         for msg in plan.get("skipped") or []:
             protocol.log("section skipped: " + msg)
         failed: set[str] = set()
+        layers = plan.get("layers") or []
         seg = [j for j in plan.get("seg_jobs") or [] if not (A(j["vocal"]).is_file() and A(j["bgm"]).is_file())]
-        for i, j in enumerate(seg):
-            try:
-                separate_segment(j, song_dir, device(), Step(40 + 5 * i / len(seg), 40 + 5 * (i + 1) / len(seg),
-                                                           "section_separate"))
-            except Exception as exc:  # noqa: BLE001  (the old program kept the converted vocal there)
-                protocol.log(f"section {j['start']:.1f}s could not be separated again, kept as it was: {str(exc)[-300:]}")
-                failed |= {j["vocal"], j["bgm"]}
+        if layers or seg:
+            failed |= separate_in_child(data, layers, seg)
+        lap("separate_s")
         # 3. key
         kjobs = [j for j in plan.get("key_jobs") or [] if not A(j["dst"]).is_file()]
         for i, j in enumerate(kjobs):
@@ -406,4 +462,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if "--separate" in sys.argv[1:]:
+        separate_child()
+    else:
+        main()

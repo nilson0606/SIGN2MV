@@ -2,6 +2,8 @@
 // Templates: [source, English, UI-fragment slots, generated-segment-name slots].
 // Other slots preserve user data. Unknown messages are displayed unchanged.
 export const messages = {
+  "🎤 瀏覽器正在詢問「是否允許使用麥克風」：請找到那個視窗（通常在網址列下方，可能被其他視窗擋住）按「允許」。按下之前，錄音和播放都會等著。": "🎤 The browser is asking whether to allow the microphone: find that prompt (usually below the address bar, maybe behind another window) and press Allow. Recording and playback wait until you do.",
+  "🎤 麥克風被瀏覽器封鎖了：點網址列最左邊的圖示（網站設定），把「麥克風」改成「允許」，再按 F5 重新整理。": "🎤 The browser blocked the microphone: click the icon at the left of the address bar (site settings), set Microphone to Allow, then press F5.",
   "請先選擇要錄製的段落。": "Choose a segment to record first.",
   "律動：開啟": "Motion: on",
   "律動：關閉": "Motion: off",
