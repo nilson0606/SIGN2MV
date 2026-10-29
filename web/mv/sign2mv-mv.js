@@ -88,7 +88,7 @@ function sign2mvTakePendingAudio(songId) {
   return '';
 }
 
-async function sign2mvOpenForSong(songId, renderId) {
+async function sign2mvOpenForSong(songId, renderId, explicit) {
   await initStudio();
   const audio = renderId ? availableAudios.find(a => a.render_id === renderId) : null;
   const projects = allProjects.filter(p => p.song_id === songId).sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
@@ -101,20 +101,21 @@ async function sign2mvOpenForSong(songId, renderId) {
     return;
   }
   sign2mvPending = { songId, audio: audio ? audio.path : '' };
-  openNewProjectModal();
+  // only a 完整 MV button asks for a new project; just opening the page does not pop up a dialog
+  if (explicit) openNewProjectModal();
 }
 
 window.addEventListener('message', (event) => {
   if (event.origin !== location.origin || event.source !== window.parent) return;
   const m = event.data || {};
   if (m.type === 'sign2mv:mv-open' && typeof m.songId === 'string') {
-    sign2mvOpenForSong(m.songId, m.renderId || '').catch(e => showToast(`❌ ${e.message}`, true));
+    sign2mvOpenForSong(m.songId, m.renderId || '', m.explicit !== false).catch(e => showToast(`❌ ${e.message}`, true));
   } else if (m.type === 'sign2mv:refresh') {
     initStudio();
   }
 });
 
 window.sign2mvReady = function () {
-  if (!allProjects.length && !sign2mvPending && MV_SONGS.length) openNewProjectModal();
+  // no project yet: the project bar says how to start (no dialog popping up on its own)
   if (window.parent !== window) window.parent.postMessage({ type: 'sign2mv:mv-ready' }, location.origin);
 };

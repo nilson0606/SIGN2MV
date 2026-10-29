@@ -1455,6 +1455,12 @@
     function renderProjectTabs() {
       const wrap = document.getElementById('projectTabs');
       wrap.innerHTML = '';
+      if (!allProjects.length) {   // [SIGN2MV] empty state instead of a dialog popping up on its own
+        const hint = document.createElement('div');
+        hint.style.cssText = 'color:var(--text-muted); font-size:13px; padding:6px 4px;';
+        hint.textContent = '還沒有 MV 專案：按「＋ 新建歌曲 MV 專案」開始。';
+        wrap.appendChild(hint);
+      }
       allProjects.forEach(p => {
         const tab = document.createElement('div');
         tab.className = 'proj-tab' + (p.slug === currentSlug ? ' active' : '');

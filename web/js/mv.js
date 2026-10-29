@@ -50,7 +50,7 @@ function load() {
 function send(message) { frame.contentWindow?.postMessage(message, location.origin); }
 function openSong(songId, renderId) {
   load();
-  const msg = { type: 'sign2mv:mv-open', songId, renderId: renderId || '' };
+  const msg = { type: 'sign2mv:mv-open', songId, renderId: renderId || '', explicit: true };   // a 完整 MV button
   if (ready) send(msg); else pending = msg;
 }
 
@@ -360,7 +360,7 @@ registerPage('mv', {
     const first = !loaded;
     setTab(tab);
     if (tab === 'full' && first && !pending && state.selectedSongId) {
-      pending = { type: 'sign2mv:mv-open', songId: state.selectedSongId, renderId: '' };
+      pending = { type: 'sign2mv:mv-open', songId: state.selectedSongId, renderId: '', explicit: false };   // just opening the page
     }
   },
   busy: () => busy,
