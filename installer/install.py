@@ -224,19 +224,22 @@ def step_ffmpeg(state: dict) -> None:
     check_nvenc(exe)
 
 
-def check_nvenc(exe: Path) -> bool:
-    """Encode two seconds of a test picture with NVENC. A failure is only reported (MVs then use the CPU),
-    with ffmpeg's own reason, e.g. 'minimum required Nvidia driver for nvenc is 610.00'."""
-    if detect_gpu()[0] != "cuda":
-        return False
-    res = run([exe, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=size=1920x1080:rate=60",
-               "-t", "2", "-c:v", "h264_nvenc", "-f", "null", "-"], check=False, capture=True)
-    if res.returncode == 0:
-        log("  NVENC (graphics card video encoding): OK")
-        return True
-    reason = " | ".join(l.strip() for l in ((res.stderr or "") + (res.stdout or "")).splitlines() if l.strip())[-400:]
-    log(f"  WARNING: NVENC does not work with this ffmpeg; MVs will be encoded on the CPU (slower). {reason}")
-    return False
+def check_nvenc(exe: Path) -> str:
+    """Encode two seconds of a test picture with each graphics card encoder (NVIDIA, AMD, Intel) and report
+    which one works; MVs use the first working one, else the CPU. A failure is only reported, with ffmpeg's
+    own reason (e.g. 'minimum required Nvidia driver for nvenc is 610.00')."""
+    names = {"h264_nvenc": "NVIDIA (NVENC)", "h264_amf": "AMD (AMF)", "h264_qsv": "Intel (Quick Sync)"}
+    for enc, label in names.items():
+        res = run([exe, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=size=1920x1080:rate=60",
+                   "-t", "2", "-c:v", enc, *(["-pix_fmt", "nv12"] if enc == "h264_qsv" else []), "-f", "null", "-"],
+                  check=False, capture=True)
+        if res.returncode == 0:
+            log(f"  video encoding on the graphics card: {label} OK")
+            return enc
+        reason = " | ".join(l.strip() for l in ((res.stderr or "") + (res.stdout or "")).splitlines() if l.strip())[-300:]
+        log(f"  {label}: not available ({reason})")
+    log("  WARNING: no graphics card video encoder works with this ffmpeg; MVs will be encoded on the CPU (slower).")
+    return ""
 
 
 def step_deno(state: dict) -> None:

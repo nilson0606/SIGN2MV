@@ -158,10 +158,14 @@ def build_studio_filter(resolution: str, subtitles: bool = False) -> str:
             + ("subtitles=filename=lyrics.ass:fontsdir=.," if subtitles else "") + "format=yuv420p[v]")
 
 
+# Tried in this order (NVIDIA, AMD, Intel graphics card, then the CPU); one that cannot start fails at once.
 ENCODERS = {
-    "h264_nvenc": ["-c:v", "h264_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", "22", "-b:v", "0"],
-    "libx264": ["-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-threads", "4"],
+    "h264_nvenc": ["-c:v", "h264_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", "22", "-b:v", "0", "-pix_fmt", "yuv420p"],
+    "h264_amf": ["-c:v", "h264_amf", "-quality", "balanced", "-rc", "vbr_peak", "-b:v", "6M", "-maxrate", "9M", "-pix_fmt", "yuv420p"],
+    "h264_qsv": ["-c:v", "h264_qsv", "-preset", "medium", "-b:v", "6M", "-pix_fmt", "nv12"],
+    "libx264": ["-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-threads", "4", "-pix_fmt", "yuv420p"],
 }
+GPU_LABELS = {"h264_nvenc": "NVIDIA", "h264_amf": "AMD", "h264_qsv": "Intel"}
 
 
 def run_ffmpeg(args: list, cwd: Path, seconds: float, lo: float, hi: float) -> tuple[int, str]:
@@ -237,9 +241,9 @@ def main() -> None:
             graph = build_card_filter(data["title"], data["artist_line"], resolution)
             inputs = ["-i", "source.wav"]
             audio_map, fps = "0:a:0", "30"
-        order = ["h264_nvenc", "libx264"] if not os.environ.get("SIGN2MV_FORCE_CPU") else ["libx264"]
+        order = list(ENCODERS) if not os.environ.get("SIGN2MV_FORCE_CPU") else ["libx264"]
         used, rc, err = "", 1, ""
-        nvenc_error = ""
+        gpu_errors: list[str] = []
         for enc in order:
             args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", *inputs,
                     "-filter_complex", graph, "-map", "[v]", "-map", audio_map, "-t", f"{seconds:.3f}",
@@ -250,12 +254,14 @@ def main() -> None:
                 used = enc
                 break
             reason = " ".join(dict.fromkeys(l.split("] ", 1)[-1].strip() for l in err.splitlines()
-                                            if any(k in l.lower() for k in ("nvenc", "cuda", "driver", "no capable", "cannot load"))))
+                                            if any(k in l.lower() for k in ("nvenc", "cuda", "amf", "qsv", "mfx", "vpl", "driver", "no capable", "cannot load", "no device", "not supported"))))
             protocol.log(f"{enc} failed, trying the next encoder: {(reason or err[-300:])[:400]}")
-            if enc == "h264_nvenc":
-                nvenc_error = (reason or err.strip()[-300:])[:300]
+            if enc in GPU_LABELS:
+                gpu_errors.append(f"{GPU_LABELS[enc]}: {(reason or err.strip()[-200:])[:200]}")
                 # [SIGN2MV] say it on the job line too (it fell back to the CPU without a word)
-                protocol.progress(2, "encode", "顯示卡編碼失敗，改用 CPU 編碼，會比較慢")
+                nxt = order[order.index(enc) + 1] if order.index(enc) + 1 < len(order) else ""
+                protocol.progress(2, "encode", f"{GPU_LABELS[enc]} 顯示卡編碼失敗，改用 "
+                                  + (f"{GPU_LABELS[nxt]} 顯示卡" if nxt in GPU_LABELS else "CPU 編碼，會比較慢"))
             (tmp / "result.mp4").unlink(missing_ok=True)
         if not used:
             protocol.fail("quickmv_failed", err)
@@ -269,7 +275,7 @@ def main() -> None:
                 **({"subtitle": data.get("subtitle") or "", "badge": data.get("badge") or "",
                     "credits": data.get("credits") or "", "lyric_lines": len(data.get("lyrics") or [])}
                    if style == "studio" else {}),
-                "duration": round(seconds, 2), "bytes": final.stat().st_size, "encoder": used, **({"nvenc_error": nvenc_error} if nvenc_error and used != "h264_nvenc" else {}),
+                "duration": round(seconds, 2), "bytes": final.stat().st_size, "encoder": used, **({"gpu_error": " | ".join(gpu_errors)} if gpu_errors and used == "libx264" else {}),
                 "render_s": round(time.time() - started, 1), "created_at": time.time()}
         write_json(tmp / "info.json", info)
         if out_dir.exists():

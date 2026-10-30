@@ -1367,33 +1367,36 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
         kara_args = ["-f", "concat", "-safe", "0", "-i", kara_concat]
     vfc = build_video_filter(spec_ranges, spectrum_color_hex(proj), karaoke=kara_on)
 
-    def _encode_cmd(video_codec_args: List[str]) -> List[str]:
+    def _encode_cmd(video_codec_args: List[str], pix_fmt: str) -> List[str]:
         vf_args = ["-filter_complex", vfc, "-map", "[vout]", "-map", "1:a"] if vfc else []
-        return [FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", concat_file, "-i", audio_file, *kara_args, *vf_args,
-                *video_codec_args, "-r", "60", "-pix_fmt", "yuv420p",
+        return [FFMPEG, "-hide_banner", "-y", "-f", "concat", "-safe", "0", "-i", concat_file, "-i", audio_file, *kara_args, *vf_args,
+                *video_codec_args, "-r", "60", "-pix_fmt", pix_fmt,
                 "-c:a", "aac", "-b:a", "320k", "-shortest", tmp_out]
 
-    attempts = [
-        ("h264_nvenc", ["-c:v", "h264_nvenc", "-preset", "p5", "-b:v", "8M"]),
-        ("libx264", ["-c:v", "libx264", "-preset", "veryfast", "-b:v", "8M"]),
-    ]
+    # [SIGN2MV] graphics card encoders in turn (NVIDIA, AMD, Intel), then the CPU; each one that cannot
+    # start fails within a second. SIGN2MV_FORCE_CPU skips the cards.
+    attempts = [a for a in RENDER_ENCODERS if a[0] == "libx264" or not os.environ.get("SIGN2MV_FORCE_CPU")]
     encoder_used = ""
     last_err = ""
+    failures: List[str] = []
     global ACTIVE_RENDER_PROC
-    for enc_name, enc_args in attempts:
+    for n_try, (enc_name, enc_args, pix_fmt) in enumerate(attempts):
         _check_cancel()
-        if enc_name == "libx264":
-            # [SIGN2MV] show ffmpeg's reason (e.g. "minimum required Nvidia driver for nvenc is 610.00"),
-            # not the last line ("Conversion failed!"), and keep the whole message next to the project
-            reason = nvenc_reason(last_err)
+        if n_try:
+            # show ffmpeg's reason (e.g. "minimum required Nvidia driver for nvenc is 610.00"), not the last
+            # line ("Conversion failed!"), and keep every message next to the MV
+            prev = attempts[n_try - 1][0]
+            failures.append(f"===== {prev} =====\n{last_err}\n")
             try:
-                with open(os.path.join(os.path.dirname(output_mv), "nvenc_error.log"), "w", encoding="utf-8") as fh:
-                    fh.write(last_err)
+                with open(os.path.join(os.path.dirname(output_mv), "encoder_errors.log"), "w", encoding="utf-8") as fh:
+                    fh.write("\n".join(failures))
             except OSError:
                 pass
-            update_progress(True, "render", 72, "🎬 [階段 3/4] 顯示卡編碼失敗，改用 CPU（libx264）編碼，會比較慢...", reason)
+            update_progress(True, "render", 72,
+                            f"🎬 [階段 3/4] {ENCODER_LABELS[prev]} 編碼失敗，改用 {ENCODER_LABELS[enc_name]} 編碼"
+                            + ("，會比較慢..." if enc_name == "libx264" else "..."), encoder_reason(last_err))
         try:
-            proc = subprocess.Popen(_encode_cmd(enc_args), stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=NO_WINDOW)
+            proc = subprocess.Popen(_encode_cmd(enc_args, pix_fmt), stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=NO_WINDOW)
             ACTIVE_RENDER_PROC = proc
             _, err_b = proc.communicate()
         finally:
@@ -1404,7 +1407,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
             break
         last_err = (err_b or b"").decode("utf-8", errors="replace").strip()
     if not encoder_used:
-        raise RuntimeError(f"ffmpeg 編碼失敗（NVENC 與 libx264 都失敗）：{last_err[-300:]}")
+        raise RuntimeError(f"ffmpeg 編碼失敗（顯示卡與 CPU 編碼都失敗）：{last_err[-300:]}")
     _install_rendered_mv(tmp_out, output_mv)
 
     update_progress(
@@ -1680,10 +1683,23 @@ def restore_instrumentals(new_tl: List[Dict[str, Any]], old_tl: List[Dict[str, A
 MAX_SCENES = 99
 
 
-def nvenc_reason(stderr: str) -> str:
-    """The lines of an ffmpeg error that say why NVENC failed (driver / API version, no device...)."""
-    lines = [l.strip() for l in (stderr or "").splitlines() if l.strip()]
-    keys = ("nvenc", "cuda", "driver", "openencodesession", "no capable devices", "cannot load")
+# [SIGN2MV] video encoders, tried in this order: (name, options, pixel format)
+RENDER_ENCODERS = [
+    ("h264_nvenc", ["-c:v", "h264_nvenc", "-preset", "p5", "-b:v", "8M"], "yuv420p"),
+    ("h264_amf", ["-c:v", "h264_amf", "-quality", "quality", "-rc", "vbr_peak", "-b:v", "8M", "-maxrate", "12M"], "yuv420p"),
+    ("h264_qsv", ["-c:v", "h264_qsv", "-preset", "medium", "-b:v", "8M"], "nv12"),
+    ("libx264", ["-c:v", "libx264", "-preset", "veryfast", "-b:v", "8M"], "yuv420p"),
+]
+ENCODER_LABELS = {"h264_nvenc": "NVIDIA 顯示卡（NVENC）", "h264_amf": "AMD 顯示卡（AMF）",
+                  "h264_qsv": "Intel 顯示卡（Quick Sync）", "libx264": "CPU（libx264）"}
+
+
+def encoder_reason(stderr: str) -> str:
+    """The lines of an ffmpeg error that say why a graphics card encoder failed (driver / API version, no device...)."""
+    banner = ("configuration:", "built with", "ffmpeg version", "lib")   # version banner lists every library
+    lines = [l.strip() for l in (stderr or "").splitlines() if l.strip() and not l.strip().startswith(banner)]
+    keys = ("nvenc", "cuda", "amf", "qsv", "mfx", "vpl", "driver", "openencodesession", "no capable devices",
+            "cannot load", "no device", "device creation", "not supported")
     hit = [l.split("] ", 1)[-1] for l in lines if any(k in l.lower() for k in keys)]
     return (" ".join(dict.fromkeys(hit)) or " ".join(lines[-3:]))[:300]
 

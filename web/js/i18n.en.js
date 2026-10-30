@@ -637,7 +637,9 @@ export default {
   "err.quickmv_lyrics_empty": "Paste the lyrics first.",
   "cover.remix_to": "apply to",
   "cover.all_busy_skipped": "{0} were skipped: their song is being processed; try again when it finishes.",
-  "qmv.enc_gpu": "Encoded on the graphics card (NVENC)",
   "qmv.enc_cpu": "Encoded on the CPU",
   "qmv.enc_cpu_fallback": "⚠ Graphics card encoding failed, encoded on the CPU (point here for the reason)",
+  "qmv.enc_nvenc": "Encoded on the NVIDIA graphics card (NVENC)",
+  "qmv.enc_amf": "Encoded on the AMD graphics card (AMF)",
+  "qmv.enc_qsv": "Encoded on the Intel graphics (Quick Sync)",
 };

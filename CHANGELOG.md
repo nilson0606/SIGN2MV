@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- MV encoding (full and quick) tries the graphics card encoders in turn, NVIDIA (NVENC), AMD (AMF), Intel
+  (Quick Sync), then the CPU, so PCs without an NVIDIA card also encode on their graphics card. Every
+  failure's reason is shown and kept (encoder_errors.log next to the MV, the quick MV list); the installer
+  reports which one works. Windows only for now (no macOS build).
 - ffmpeg: the installer now takes the BtbN build of the 8.1 release (NVENC API 13.0, NVIDIA driver 570+)
   instead of the master build. Master needed NVENC API 13.1 (driver 610+, newer than the current 592), so
   the graphics card never encoded: every full MV and quick MV fell back to the CPU. The installer now tries

@@ -586,7 +586,11 @@
   "在這張前面插入照片：可一次選多張，選幾張就插幾張（依檔名順序）；也可以把照片直接拖到這個按鈕上。這張和後面的卡片連同歌詞往後讓位": "Insert photos in front of this card: choose several at once, one card per photo (in file-name order); you can also drag photos onto this button. This card and the ones after it move back together with their lyrics",
   "請選照片": "Choose photos",
   "專案資料不正確": "Invalid project data",
-  "顯示卡編碼失敗，改用 CPU 編碼，會比較慢": "Graphics card encoding failed, encoding on the CPU (slower)"
+  "顯示卡編碼失敗，改用 CPU 編碼，會比較慢": "Graphics card encoding failed, encoding on the CPU (slower)",
+  "NVIDIA 顯示卡（NVENC）": "NVIDIA graphics card (NVENC)",
+  "AMD 顯示卡（AMF）": "AMD graphics card (AMF)",
+  "Intel 顯示卡（Quick Sync）": "Intel graphics (Quick Sync)",
+  "CPU（libx264）": "CPU (libx264)"
  },
  "patterns": [
   {
@@ -1644,6 +1648,26 @@
   {
    "zh": "讀不到這張圖片：{0}（{1}）",
    "en": "Cannot read this image: {0} ({1})"
+  },
+  {
+   "zh": "🎬 [階段 3/4] {0} 編碼失敗，改用 {1} 編碼，會比較慢...",
+   "en": "🎬 [Stage 3/4] {0} encoding failed, encoding on {1} instead (slower)..."
+  },
+  {
+   "zh": "🎬 [階段 3/4] {0} 編碼失敗，改用 {1} 編碼...",
+   "en": "🎬 [Stage 3/4] {0} encoding failed, encoding on {1} instead..."
+  },
+  {
+   "zh": "ffmpeg 編碼失敗（顯示卡與 CPU 編碼都失敗）：{0}",
+   "en": "ffmpeg encoding failed (graphics card and CPU both failed): {0}"
+  },
+  {
+   "zh": "{0} 顯示卡編碼失敗，改用 {1} 顯示卡",
+   "en": "{0} graphics card encoding failed, trying the {1} graphics card"
+  },
+  {
+   "zh": "{0} 顯示卡編碼失敗，改用 CPU 編碼，會比較慢",
+   "en": "{0} graphics card encoding failed, encoding on the CPU (slower)"
   }
  ]
 }

@@ -41,6 +41,15 @@ function labelTabs() {
   tabFull.title = t('mv.full_hint');
 }
 
+// [SIGN2MV] which encoder made a quick MV; a CPU fallback says so and why (point at it)
+function encoderLine(it) {
+  if (!it.encoder) return null;
+  const gpu = { h264_nvenc: 'qmv.enc_nvenc', h264_amf: 'qmv.enc_amf', h264_qsv: 'qmv.enc_qsv' }[it.encoder];
+  const why = it.gpu_error || it.nvenc_error || '';
+  return el('div', { class: 'small', style: gpu ? 'color:var(--hl-ok)' : (why ? 'color:var(--hl-bad)' : ''), title: why },
+    gpu ? t(gpu) : (why ? t('qmv.enc_cpu_fallback') : t('qmv.enc_cpu')));
+}
+
 // ------------------------------------------------------------------ full MV (iframe)
 function load() {
   if (loaded) return;
@@ -280,8 +289,7 @@ const quick = (() => {
           el('input', { type: 'checkbox', class: 'qmv-pick', 'data-song': sid, 'data-id': it.id }),
           el('div', { class: 'grow', style: 'white-space:normal' }, el('b', {}, it.title || it.id), el('div', { class: 'muted small' }, meta),
             // [SIGN2MV] which encoder made it; a CPU fallback says so (it used to happen without a word)
-            it.encoder ? el('div', { class: 'small', style: it.encoder === 'h264_nvenc' ? 'color:var(--hl-ok)' : (it.nvenc_error ? 'color:var(--hl-bad)' : ''),
-              title: it.nvenc_error || '' }, it.encoder === 'h264_nvenc' ? t('qmv.enc_gpu') : (it.nvenc_error ? t('qmv.enc_cpu_fallback') : t('qmv.enc_cpu'))) : null),
+            encoderLine(it)),
           play,
           el('a', { class: 'btn small', href: `/api/songs/${sid}/quickmv/${it.id}/download` }, t('common.download')),
           el('button', { class: 'btn small', title: t('common.open_folder'), onclick: async () => {
