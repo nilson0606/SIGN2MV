@@ -80,8 +80,9 @@ def test_mv_project_whisper_render(client, root, tmp_path, fake_whisper):
     assert [s["text"] for s in lyric] == ["一二三四", "五六七八", "九十一二"]
     assert abs(tl[-1]["end"] - 20) < 0.3 and tl[0]["start"] == 0
     calls = [json.loads(x) for x in fake_whisper.read_text().splitlines()]
-    assert len(calls) == 1 and calls[0]["audio"].endswith("vocals.wav")   # transcribed the separated vocals
+    assert len(calls) == 1 and calls[0]["audio"] == "samples" and abs(calls[0]["seconds"] - 20) < 0.5
     w = json.loads((pdir / "whisper.json").read_text(encoding="utf-8"))
+    assert w["transcribed_from"] in ("vocals", "lead")   # transcribed the separated vocals
     assert w["pipeline"] == "vocals_v1" and w["refine"]["vad_refined"] and w["segments"]
     # the vocals came from the song's stem cache (shared with sing & record / cover)
     assert any((root / "library" / "songs" / sid / "stems").glob("*/vocals.wav"))

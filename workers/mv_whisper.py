@@ -103,8 +103,26 @@ TRANSCRIBE = {"beam_size": 5, "word_timestamps": True, "vad_filter": True,
               "vad_parameters": {"min_silence_duration_ms": 350}, "condition_on_previous_text": False}
 
 
+def load_audio_16k(path: str):
+    """The audio as 16 kHz mono float32, decoded by our FFmpeg.
+
+    faster-whisper's own decoder calls av.open(..., metadata_errors=...), which PyAV 14+ no longer
+    accepts (installed: faster-whisper 1.2.1 with PyAV 19): every file failed with
+    "open() got an unexpected keyword argument 'metadata_errors'". Whisper takes the samples instead."""
+    import numpy as np
+    proc = subprocess.run([ffmpeg(), "-nostdin", "-v", "error", "-i", path, "-vn", "-ac", "1", "-ar", "16000",
+                           "-f", "f32le", "-"], capture_output=True, stdin=subprocess.DEVNULL,
+                          creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg could not read the audio: {proc.stderr.decode('utf-8', 'replace')[-300:]}")
+    audio = np.frombuffer(proc.stdout, dtype=np.float32)
+    if audio.size < 1600:
+        raise RuntimeError("the audio is empty")
+    return audio
+
+
 def transcribe(model, path: str, device: str, lo: int):
-    segments_gen, info = model.transcribe(path, **TRANSCRIBE)
+    segments_gen, info = model.transcribe(load_audio_16k(path), **TRANSCRIBE)
     dur = max(1.0, float(getattr(info, "duration", 0.0) or 240.0))
     out = []
     for s in segments_gen:

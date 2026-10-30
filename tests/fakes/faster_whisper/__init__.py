@@ -9,7 +9,7 @@ import json
 import os
 from types import SimpleNamespace
 
-import soundfile as sf
+import numpy as np
 
 __version__ = "fake"
 CHARS = "一二三四五六七八九十"
@@ -22,12 +22,18 @@ class WhisperModel:
         self.path, self.device = path, device
 
     def transcribe(self, audio, **kw):
-        info = sf.info(audio)
-        dur = info.frames / info.samplerate
+        # Like the installed faster-whisper 1.2.1 + PyAV 19: its own file decoder fails
+        # (av.open(..., metadata_errors=...) no longer exists), so SIGN2MV passes 16 kHz samples.
+        if not isinstance(audio, np.ndarray):
+            raise TypeError("open() got an unexpected keyword argument 'metadata_errors'")
+        if audio.dtype != np.float32 or audio.ndim != 1:
+            raise ValueError("expected 16 kHz mono float32 samples")
+        dur = audio.size / 16000
         log = os.environ.get("FAKE_WHISPER_LOG")
         if log:
             with open(log, "a", encoding="utf-8") as fh:
-                fh.write(json.dumps({"audio": audio, "device": self.device, "model": self.path, "kw": sorted(kw)}) + "\n")
+                fh.write(json.dumps({"audio": "samples", "seconds": round(dur, 2), "device": self.device,
+                                     "model": self.path, "kw": sorted(kw)}) + "\n")
 
         def gen():
             n = int(dur)

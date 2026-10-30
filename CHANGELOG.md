@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Whisper (full MV timing and quick MV lyrics) failed on every song with "open() got an unexpected keyword
+  argument 'metadata_errors'": the installed faster-whisper 1.2.1 decodes files with an option PyAV 19
+  removed. The audio is now decoded by SIGN2MV's FFmpeg and handed to Whisper as samples. The test double
+  for faster-whisper refuses file paths the same way, so the tests would catch this again.
 - English UI: switching the language while the app is open now also switches the sing & record page
   (it waited for a reload that was skipped whenever a take was pending), the library location and
   storage line, the job log buttons and the dates. Server and worker messages of the sing & record and
