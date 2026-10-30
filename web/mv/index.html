@@ -1681,7 +1681,7 @@
         tl.forEach((seg, idx) => {
           const isSel = (idx === primaryIdx && !role) ? 'selected' : '';
           const shortTxt = (seg.text || '').slice(0, 18);
-          selectOptionsHtml += `<option value="${idx}" ${isSel}>[第${idx + 1}段 ${secToMmss(seg.start)}] ${shortTxt}</option>`;
+          selectOptionsHtml += `<option value="${idx}" ${isSel}>[Scene ${String(seg.scene).padStart(2, '0')} ${secToMmss(seg.start)}] ${shortTxt}</option>`;   // [SIGN2MV] the card's Scene number, not the line number
         });
 
         const imgUrl = sc.exists

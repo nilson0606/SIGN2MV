@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Full MV: the lyric list on each card names a line by its Scene number (「[Scene 22 02:09.14] …」) instead of
+  its line number (「[第22段 …]」), which stopped matching the cards once photos were inserted.
 - Full MV: 「＋ 插入照片」 on each card inserts as many cards as photos chosen (or dropped on the button) in
   front of it, in file-name order; the cards behind move back with their lyrics. 「＋ 前面插一張」 is now
   「＋ 空白」 (one empty card).
