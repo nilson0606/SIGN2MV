@@ -580,7 +580,12 @@
   "分鏡畫面預覽": "Scene preview",
   "翻唱": "Cover",
   "拖到別張卡片＝把這張照片移到那個位置（中間的照片往旁邊讓一格，歌詞不動）；點一下＝換照片": "Drag onto another card = move this photo to that position (the photos in between shift by one; lyrics stay); click = replace the photo",
-  "這一格沒有照片可以移動": "This slot has no photo to move"
+  "這一格沒有照片可以移動": "This slot has no photo to move",
+  "＋ 空白": "＋ Blank",
+  "＋ 插入照片": "＋ Insert photos",
+  "在這張前面插入照片：可一次選多張，選幾張就插幾張（依檔名順序）；也可以把照片直接拖到這個按鈕上。這張和後面的卡片連同歌詞往後讓位": "Insert photos in front of this card: choose several at once, one card per photo (in file-name order); you can also drag photos onto this button. This card and the ones after it move back together with their lyrics",
+  "請選照片": "Choose photos",
+  "專案資料不正確": "Invalid project data"
  },
  "patterns": [
   {
@@ -1618,6 +1623,26 @@
   {
    "zh": "❌ 移動失敗：{0}",
    "en": "❌ Move failed: {0}"
+  },
+  {
+   "zh": "⏳ 正在第 {0} 格前面插入 {1} 張照片（自動轉 1920x1080）...",
+   "en": "⏳ Inserting {1} photos in front of slot {0} (converted to 1920x1080)..."
+  },
+  {
+   "zh": "➕ 已在第 {0} 格前面插入 {1} 張照片（Scene {2} ~ {3}），後面的卡片連同歌詞往後讓位；再用卡片下拉選單指定每張配哪一句。",
+   "en": "➕ Inserted {1} photos in front of slot {0} (Scene {2} ~ {3}); the cards after them moved back with their lyrics. Use each card's list to choose its lyric line."
+  },
+  {
+   "zh": "✔ 已插入 {0} 張照片",
+   "en": "✔ Inserted {0} photos"
+  },
+  {
+   "zh": "照片最多 {0} 張：目前 {1} 張，最多還能插 {2} 張",
+   "en": "Up to {0} photos: {1} now, {2} more can be inserted"
+  },
+  {
+   "zh": "讀不到這張圖片：{0}（{1}）",
+   "en": "Cannot read this image: {0} ({1})"
   }
  ]
 }

@@ -391,6 +391,7 @@
       flex-direction: column;
     }
     .scene-card-img-wrap img[draggable="true"] { cursor: grab; }
+    .scene-insert-photos.drop-here { outline: 2px solid var(--gold); background: rgba(245, 200, 76, .18); }
     body.scene-dragging .scene-card:not(.inst-card) { outline: 1px dashed rgba(245, 200, 76, .55); outline-offset: 2px; }
     body.scene-dragging .scene-card.dragover { outline: 2px solid var(--gold); }
     .scene-card:hover, .scene-card.dragover {
@@ -1310,6 +1311,7 @@
   <!-- Hidden file inputs for audio, single scene & batch scene upload -->
   <input type="file" id="hiddenAudioUpload" accept=".wav,.mp3,.m4a,.flac,audio/*" style="display:none;" onchange="onAudioFileSelected(event)" />
   <input type="file" id="hiddenSceneUpload" accept="image/*" style="display:none;" onchange="onSceneFileSelected(event)" />
+  <input type="file" id="hiddenInsertPhotos" accept="image/*" multiple style="display:none;" onchange="onInsertPhotosSelected(event)" />
   <input type="file" id="hiddenInstUpload" accept="image/*" style="display:none;" onchange="onInstFileSelected(event)" />
   <input type="file" id="hiddenBatchSceneUpload" accept="image/*" multiple style="display:none;" onchange="onBatchSceneFilesSelected(event)" />
   <input type="file" id="hiddenProjectJsonImport" accept=".json,application/json" style="display:none;" onchange="onProjectJsonFileSelected(event)" />
@@ -1712,7 +1714,10 @@
                 <button type="button" class="scene-time-btn scene-move-left" ${sc.scene_id <= 1 ? 'disabled style="opacity:0.3;"' : ''} title="跟前一張對調（歌詞不動：這一格的歌詞改顯示換過來的照片）" onclick="swapScenes(${sc.scene_id}, ${sc.scene_id - 1})">◀</button>
                 <button type="button" class="scene-time-btn scene-move-right" ${sc.scene_id >= currentScenesList.length ? 'disabled style="opacity:0.3;"' : ''} title="跟後一張對調（歌詞不動）" onclick="swapScenes(${sc.scene_id}, ${sc.scene_id + 1})">▶</button>
               </span>
-              <button type="button" class="scene-time-btn scene-insert-before" title="在這張前面插入一個空白照片格（後面的照片往後讓一號，每句歌詞還是配原本的照片）" onclick="insertSceneBefore(${sc.scene_id})">＋ 前面插一張</button>
+              <span style="display:flex; gap:3px;">
+                <button type="button" class="scene-time-btn scene-insert-before" title="在這張前面插入一個空白照片格（後面的照片往後讓一號，每句歌詞還是配原本的照片）" onclick="insertSceneBefore(${sc.scene_id})">＋ 空白</button>
+                <button type="button" class="scene-time-btn scene-insert-photos" title="在這張前面插入照片：可一次選多張，選幾張就插幾張（依檔名順序）；也可以把照片直接拖到這個按鈕上。這張和後面的卡片連同歌詞往後讓位" onclick="pickInsertPhotos(${sc.scene_id})" ondragover="event.preventDefault(); event.stopPropagation(); this.classList.add('drop-here')" ondragleave="this.classList.remove('drop-here')" ondrop="dropInsertPhotos(event, ${sc.scene_id}, this)">＋ 插入照片</button>
+              </span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--text-muted); margin-bottom:4px;">
               <span>🎯 配對歌詞＆時間：</span>
@@ -4032,6 +4037,50 @@
         showToast(`✔ 已在 Scene ${String(sid).padStart(2, '0')} 插入空白照片格`);
       } catch (e) { showToast(`❌ 插入失敗：${e.message}`, true); }
     }
+    // [SIGN2MV] insert N photo cards in front of a card in one go (one per chosen photo)
+    let pendingInsertBefore = 0;
+    function pickInsertPhotos(sceneId) {
+      if (!currentSlug) { showToast('請先建立或選擇專案！', true); return; }
+      pendingInsertBefore = parseInt(sceneId);
+      const inp = document.getElementById('hiddenInsertPhotos');
+      inp.value = '';
+      inp.click();
+    }
+    function onInsertPhotosSelected(e) {
+      const files = e.target.files;
+      if (files && files.length && pendingInsertBefore) insertPhotosBefore(pendingInsertBefore, files);
+    }
+    function dropInsertPhotos(e, sceneId, btn) {
+      e.preventDefault(); e.stopPropagation();
+      btn.classList.remove('drop-here');
+      document.querySelectorAll('.scene-card.dragover').forEach(c => c.classList.remove('dragover'));
+      const files = [...(e.dataTransfer.files || [])].filter(f => /^image\//.test(f.type) || /\.(png|jpe?g|webp)$/i.test(f.name));
+      if (files.length) insertPhotosBefore(parseInt(sceneId), files);
+    }
+    async function insertPhotosBefore(sid, fileList) {
+      const files = Array.from(fileList);
+      const n = files.length;
+      syncProjectFields();
+      const fd = new FormData();
+      fd.append('slug', currentSlug);
+      fd.append('before', sid);
+      fd.append('project', JSON.stringify(currentProject));
+      files.forEach(f => fd.append('files', f));
+      setInlineStatus('step2StatusBox', 'work', `⏳ 正在第 ${sid} 格前面插入 <strong>${n} 張照片</strong>（自動轉 1920x1080）...`);
+      try {
+        const res = await fetch('/api/mv/scenes/insert_photos', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'ok') throw new Error(data.detail || `HTTP ${res.status}`);
+        applySceneShiftResult(data, k => k >= sid ? k + n : k);
+        lastCascadeSceneIds = Array.from({ length: n }, (_, i) => sid + i);
+        renderSceneGallery();
+        const card = document.getElementById(`scene_card_${sid}`);
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        setInlineStatus('step2StatusBox', 'ok', `➕ 已在第 ${sid} 格前面插入 ${n} 張照片（Scene ${String(sid).padStart(2, '0')} ~ ${String(sid + n - 1).padStart(2, '0')}），後面的卡片連同歌詞往後讓位；再用卡片下拉選單指定每張配哪一句。`);
+        showToast(`✔ 已插入 ${n} 張照片`);
+      } catch (e) { showToast(`❌ 插入失敗：${e.message}`, true); setInlineStatus('step2StatusBox', 'err', `❌ 插入失敗：${e.message}`); }
+    }
+
     // [SIGN2MV] drag a card's photo onto another card (old MV studio only had ◀ ▶)
     function sceneDragStart(e, sid) {
       e.dataTransfer.setData('application/x-sign2mv-scene', String(sid));

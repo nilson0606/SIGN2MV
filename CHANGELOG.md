@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Full MV: 「＋ 插入照片」 on each card inserts as many cards as photos chosen (or dropped on the button) in
+  front of it, in file-name order; the cards behind move back with their lyrics. 「＋ 前面插一張」 is now
+  「＋ 空白」 (one empty card).
 - Full MV: up to 99 photo cards (was 36, the old MV studio's number), so long lyrics can get more
   "insert before" slots; drag a photo onto another card to move it there (the photos in between shift
   by one, lyrics and timing stay with their positions), besides ◀ / ▶.

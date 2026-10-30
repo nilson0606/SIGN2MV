@@ -372,3 +372,39 @@ def test_mv_scene_move_and_99_slots(client, root, tmp_path):
         n += 1
     assert n == 99
     assert (sdir / "scene_99.png").is_file() and (sdir / "scene_96.png").is_file()   # the four photos moved to the end
+
+
+def test_mv_insert_photos_before(client, root, tmp_path):
+    """「＋ 插入照片」: N chosen photos become N new cards in front of a card; the cards after them move
+    back N places with their lyrics."""
+    song = import_file(client, tmp_path, secs=6)
+    sid = song["song_id"]
+    slug = client.post("/api/mv/project/create", json={"song_id": sid, "slug": "ins", "scene_count": 3}).json()["project"]["slug"]
+    sdir = root / "library" / "songs" / sid / "mv" / "ins" / "scenes"
+    files = [("files", (f"p{i}.png", png(c), "image/png")) for i, c in enumerate(["red", "green", "blue"], 1)]
+    client.post("/api/mv/upload_scenes_batch", data={"slug": slug, "start_scene": "1", "fill_empty": "1"}, files=files)
+    proj = client.get(f"/api/mv/project/{slug}").json()["project"]
+    proj["timeline"] = [{"scene": n, "start": n - 1.0, "end": float(n), "text": f"第{n}句", "type": "lyric"} for n in range(1, 4)]
+    proj["title"] = "改過還沒存的標題"   # the page's unsaved edits are kept
+    new = [("files", (f"new{i}.jpg", png(c), "image/png")) for i, c in ((2, "yellow"), (1, "white"))]   # name order: new1, new2
+    res = client.post("/api/mv/scenes/insert_photos", data={"slug": slug, "before": "2", "project": json.dumps(proj)}, files=new).json()
+    assert res["status"] == "ok" and (res["first"], res["last"]) == (2, 3)
+
+    def color(n):
+        return Image.open(sdir / f"scene_{n:02d}.png").convert("RGB").getpixel((960, 540))
+    assert [color(n) for n in range(1, 6)] == [(255, 0, 0), (255, 255, 255), (255, 255, 0), (0, 128, 0), (0, 0, 255)]
+    p = res["project"]
+    assert [(s["scene"], s["text"]) for s in p["timeline"]] == [(1, "第1句"), (4, "第2句"), (5, "第3句")]
+    assert p["scene_count"] == 5 and p["title"] == "改過還沒存的標題"
+    # after the last card (outro at the end): before = count + 1
+    res = client.post("/api/mv/scenes/insert_photos", data={"slug": slug, "before": "6"},
+                      files=[("files", ("x.png", png("black"), "image/png"))]).json()
+    assert res["status"] == "ok" and color(6) == (0, 0, 0)
+    # a file that is not a picture: nothing moves
+    bad = client.post("/api/mv/scenes/insert_photos", data={"slug": slug, "before": "1"},
+                      files=[("files", ("a.png", png("red"), "image/png")), ("files", ("b.png", b"not a picture", "image/png"))])
+    assert bad.status_code == 400 and color(1) == (255, 0, 0) and not (sdir / "scene_07.png").exists()
+    # the limit is checked before anything moves
+    many = [("files", (f"m{i}.png", png("red"), "image/png")) for i in range(94)]
+    r = client.post("/api/mv/scenes/insert_photos", data={"slug": slug, "before": "1"}, files=many)
+    assert r.status_code == 409 and color(1) == (255, 0, 0)

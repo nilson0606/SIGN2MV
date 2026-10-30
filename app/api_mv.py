@@ -1356,6 +1356,64 @@ def router(ctx: Context) -> APIRouter:
         saved = save_project_dict(proj)
         return {"status": "ok", "new_scene_id": before, "renamed": moved, "project": saved, "all_scenes": _scene_payload(saved)}
 
+    @r.post("/api/mv/scenes/insert_photos")
+    async def api_insert_scene_photos(slug: str = Form(...), before: int = Form(...), project: str = Form(""),
+                                      files: List[UploadFile] = File(...)):
+        """Insert N photo cards in front of card `before`, filled with the chosen photos (in file-name order).
+        The cards from `before` on move back N places together with their lyrics (like N x 「＋ 前面插一張」)."""
+        configure()
+        try:
+            body = {"project": json.loads(project)} if project else {}
+            proj = client_project(body, slug)
+        except ProjectNotFound as exc:
+            return jerr(404, str(exc))
+        except ValueError:
+            return jerr(400, "專案資料不正確")
+        illust_dir = proj["illust_dir"]
+        tl = proj.get("timeline") or []
+        total_count = max(int(proj.get("scene_count", 12) or 12), count_existing_scene_images(illust_dir),
+                          max([int(s.get("scene", 1)) for s in tl] + [0]))
+        n = len(files)
+        if not n:
+            return jerr(400, "請選照片")
+        if not 1 <= int(before) <= total_count + 1:
+            return jerr(400, "位置不正確")
+        if total_count + n > MAX_SCENES:
+            return jerr(409, f"照片最多 {MAX_SCENES} 張：目前 {total_count} 張，最多還能插 {MAX_SCENES - total_count} 張")
+        before = int(before)
+
+        def _nat_key(uf: UploadFile):
+            parts = re.split(r"(\d+)", os.path.basename(uf.filename or ""))
+            return [int(p) if p.isdigit() else p.lower() for p in parts]
+
+        # convert every photo first: nothing moves if one of them cannot be read
+        tmp_dir = Path(illust_dir) / "__insert_tmp"
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            ready = []
+            for i, uf in enumerate(sorted(files, key=_nat_key)):
+                out = tmp_dir / f"{i:03d}.png"
+                try:
+                    await asyncio.to_thread(to_scene_png, await uf.read(), out)
+                except Exception as e:  # noqa: BLE001
+                    return jerr(400, f"讀不到這張圖片：{uf.filename}（{e}）")
+                ready.append((out, uf.filename))
+            moved = renumber_scene_files(illust_dir, {k: k + n for k in range(before, total_count + 1)})
+            for i, (out, _name) in enumerate(ready):
+                os.replace(out, Path(illust_dir) / f"scene_{before + i:02d}.png")
+        finally:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        for seg in tl:
+            sc = int(seg.get("scene", 1))
+            if sc >= before:
+                seg["scene"] = sc + n
+        proj["scene_count"] = total_count + n
+        proj["timeline"] = tl
+        saved = save_project_dict(proj)
+        return {"status": "ok", "count": n, "first": before, "last": before + n - 1, "renamed": moved,
+                "project": saved, "all_scenes": _scene_payload(saved)}
+
     # ------------------------------------------------------------------ media
     @r.get("/api/mv/media")
     def serve_media_file(request: Request, path: str, download: bool = False, filename: Optional[str] = None):
