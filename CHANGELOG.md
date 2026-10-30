@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Sing & record: the song menu lists every Key version that already has a singing reference
+  (「童話 · 降 4 Key」). Loading a song or Key version with a reference loads it right away (with the
+  settings it was built with, nothing is rebuilt); without one, the song loads, the Key is selected and a
+  note asks to press 「準備歌曲基準」.
 - MV encoding (full and quick) tries the graphics card encoders in turn, NVIDIA (NVENC), AMD (AMF), Intel
   (Quick Sync), then the CPU, so PCs without an NVIDIA card also encode on their graphics card. Every
   failure's reason is shown and kept (encoder_errors.log next to the MV, the quick MV list); the installer

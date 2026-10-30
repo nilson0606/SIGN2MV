@@ -1,6 +1,7 @@
 // SIGN2MV glue for the sing & record page (runs inside the SIGN2MV window).
 import {selectMediaSource} from './media-source.mjs';
-import {setLanguage} from './i18n.mjs';
+import {setLanguage,translateMessage,userOption} from './i18n.mjs';
+import {keyLabel} from './song-key.mjs';
 const $=id=>document.getElementById(id);
 const parentWindow=window.parent!==window?window.parent:null;
 const post=message=>parentWindow?.postMessage(message,location.origin);
@@ -32,6 +33,61 @@ async function selectSong(songId){
   $('local-media-load').click();
   $('player-section').scrollIntoView({block:'start'});
 }
+// ---- [SIGN2MV] Key versions in the song menu: 「童話 · 降 4 Key」 for every Key that already has a
+// reference. Loading a song (any Key) that has a reference loads it right away, through the page's own
+// 「歌曲庫」 list button (it restores the exact separation settings, so nothing is rebuilt); without one,
+// the song is loaded, the Key menu is set and a note asks to prepare it.
+let refs=[],keyRevision=0,passThrough=false;
+async function library(){
+  try{const r=await fetch('/sr/library',{headers:{'X-Karaoke-Token':await token()},cache:'no-store'});return r.ok?((await r.json()).songs||[]):[];}catch{return [];}
+}
+function bestRef(vid,key){const c=refs.filter(r=>r.videoId===vid&&(r.pitchShift||0)===key);return c.find(r=>!r.seconds)||c[0]||null;}
+async function addKeyOptions(){
+  const sel=$('local-media-saved'),revision=++keyRevision;
+  if([...sel.options].some(o=>o.value.includes('#key')))return;
+  const rows=await library();if(revision!==keyRevision)return;refs=rows;
+  const keep=sel.value;
+  for(const o of [...sel.options]){
+    if(!o.value||o.value.includes('#key'))continue;
+    const keys=[...new Set(refs.filter(r=>r.videoId===o.value&&r.pitchShift).map(r=>r.pitchShift))].sort((a,b)=>a-b);
+    let after=o;
+    for(const k of keys){const n=userOption(`${o.textContent} · ${translateMessage(keyLabel(k))}`,`${o.value}#key${k}`);after.after(n);after=n;}
+  }
+  if(keep)sel.value=keep;
+}
+new MutationObserver(()=>{const sel=$('local-media-saved');if(sel.options.length>1&&![...sel.options].some(o=>o.value.includes('#key')))void addKeyOptions();})
+  .observe($('local-media-saved'),{childList:true});
+async function libraryButton(cacheId){
+  const find=()=>document.querySelector(`#library-list button.song-choice[data-song-id="${CSS.escape(cacheId)}"]`);
+  if(!find())$('library-refresh').click();
+  for(let i=0;i<60&&!find();i++)await new Promise(r=>setTimeout(r,100));
+  return find();
+}
+function keyNote(key){
+  return key?`這首歌的「${keyLabel(key)}」還沒有歌唱基準：已幫你選好 Key，請按「準備歌曲基準」建立（會分離人聲並分析音高，需要幾分鐘）。`
+    :'這首歌還沒有歌唱基準：請按「準備歌曲基準」建立（會分離人聲並分析音高，需要幾分鐘）。';
+}
+$('local-media-load').addEventListener('click',async e=>{
+  if(passThrough)return;
+  const value=$('local-media-saved').value;if(!value)return;
+  e.stopImmediatePropagation();
+  const [vid,keyPart]=value.split('#key'),key=keyPart?Number(keyPart):0;
+  refs=await library();
+  const ref=bestRef(vid,key);
+  if(ref){
+    const btn=await libraryButton(ref.id);
+    if(btn){$('local-media-status').textContent=`已有歌唱基準（${keyLabel(key)}），正在載入…`;btn.click();return;}
+  }
+  // no reference (or the list did not show it): load the song itself, then point at 「準備歌曲基準」
+  const sel=$('local-media-saved');sel.value=vid;
+  passThrough=true;try{$('local-media-load').click();}finally{passThrough=false;}
+  sel.value=value;
+  $('song-key').value=String(key);$('song-key').dispatchEvent(new Event('change'));
+  for(let i=0;i<100&&!$('player-status').textContent.includes('已載入');i++)await new Promise(r=>setTimeout(r,100));
+  $('prepare-status').textContent=keyNote(key);
+},true);
+window.addEventListener('karaoke-language-change',()=>{keyRevision++;for(const o of [...$('local-media-saved').options])if(o.value.includes('#key'))o.remove();void addKeyOptions();});
+
 function busyPhase(){
   try{const w=JSON.parse($('player-section').dataset.workflow||'{}');return !!(w.hasTake||w.busy||['singing','preparing','finishing','restarting'].includes(w.phase));}catch{return false;}
 }
