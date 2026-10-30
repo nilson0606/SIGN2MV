@@ -1,7 +1,8 @@
 import {localizedConfirm} from './i18n.mjs';
 const base='/sr',key='karaoke.recording-diagnostics.v1';
-let enabled=true,busy=0,tokenPromise;
-try{enabled=localStorage.getItem(key)!=='off';}catch{}
+// [SIGN2MV] recording diagnostics removed (Nilson 2026-10-31): never collected, the panel is hidden.
+// It was on by default and its own note says it may affect audio timing.
+let enabled=false,busy=0,tokenPromise;
 const $=id=>document.getElementById(id);
 const status=text=>{if($('diagnostics-status'))$('diagnostics-status').textContent=text;};
 function controls(){if($('diagnostics-enabled'))$('diagnostics-enabled').disabled=busy>0;if($('diagnostics-clear'))$('diagnostics-clear').disabled=busy>0;}
@@ -16,7 +17,8 @@ export async function refreshDiagnostics(){
   catch(e){if($('diagnostics-storage'))$('diagnostics-storage').textContent='診斷未連線：'+e.message;}
 }
 export function initRecordingDiagnostics(){
-  const toggle=$('diagnostics-enabled');if(!toggle)return;toggle.checked=enabled;
+  const toggle=$('diagnostics-enabled');if(!toggle)return;toggle.checked=false;toggle.disabled=true;
+  if(true)return;   // [SIGN2MV] removed
   toggle.addEventListener('change',()=>{enabled=toggle.checked;try{localStorage.setItem(key,enabled?'on':'off');}catch{}status(enabled?'待命：只在演唱錄音時收集。':'診斷已關閉，已保存資料仍保留。');});
   $('diagnostics-refresh').addEventListener('click',refreshDiagnostics);
   $('diagnostics-clear').addEventListener('click',async()=>{

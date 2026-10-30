@@ -337,6 +337,22 @@ def step_selfcheck(state: dict) -> None:
     save_state(state)
 
 
+def step_bytecode(state: dict) -> None:
+    """Compile every environment's Python files once (torch, transformers, Applio...), so the first job
+    does not spend a minute or more compiling them. Some test files in packages do not compile; that is fine."""
+    targets = []
+    for name in ("engine", "applio"):
+        py = PATHS.env_python(name)
+        if py.exists():
+            targets.append((py, [str(PATHS.envs / name)]))
+    if PATHS.applio.is_dir() and PATHS.env_python("applio").exists():
+        targets.append((PATHS.env_python("applio"), [str(PATHS.applio / "rvc"), str(PATHS.applio / "core.py")]))
+    targets.append((Path(sys.executable), [str(ROOT / "app"), str(ROOT / "workers")]))
+    for py, paths in targets:
+        log(f"Compiling Python files once (faster starts): {', '.join(Path(p).name for p in paths)}")
+        run([py, "-m", "compileall", "-q", "-j", "0", *paths], check=False, capture=True)
+
+
 STEPS = [
     ("ffmpeg", step_ffmpeg, lambda: step_key(MANIFEST["ffmpeg"]["url"], 1)),
     ("deno", step_deno, lambda: step_key(MANIFEST["deno"])),
@@ -344,6 +360,8 @@ STEPS = [
         (ROOT / "installer" / "requirements" / "engine.lock.txt").read_text(encoding="utf-8"))),
     ("engine_models", step_engine_models, lambda: step_key(MANIFEST["models"], 2)),
     ("applio", step_applio, lambda: step_key(MANIFEST["applio"], 1)),
+    ("bytecode", step_bytecode, lambda: step_key(MANIFEST["torch"], MANIFEST["applio"],
+        (ROOT / "installer" / "requirements" / "engine.lock.txt").read_text(encoding="utf-8"), 1)),
     ("selfcheck", step_selfcheck, lambda: step_key(time.strftime("%Y%m%d%H%M%S"))),
 ]
 

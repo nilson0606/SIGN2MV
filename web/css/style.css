@@ -107,9 +107,13 @@ section.page.active { display: block; }
 .grid .panel + .panel { margin-top: 0; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .row + .row { margin-top: 8px; }
-.kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; }
-.kv dt { color: var(--muted); }
-.kv dd { margin: 0; }
+.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; }
+.kv dt { color: var(--muted); grid-column: 1; }
+/* every value stays in the right column (a note under a value was pushed into the label column,
+   widening it and pushing the inputs past the panel's edge) */
+.kv dd { margin: 0; grid-column: 2; min-width: 0; }
+.kv dd.row { flex-wrap: wrap; }
+@media (max-width: 640px) { .kv { grid-template-columns: minmax(0, 1fr); } .kv dt, .kv dd { grid-column: 1; } }
 
 /* ---------- controls ---------- */
 .btn {

@@ -4,6 +4,7 @@
 import { api } from './api.js';
 import { t, errorText, onLanguageChange, applyTranslations } from './i18n.js';
 import { $, el, toast, confirmDialog, fmtDate, fmtTime, fmtBytes } from './ui.js';
+import { logView } from './joblog.js';
 import { bus, registerPage, state, goto, mediaUrl, songById, reloadJobs } from './app-state.js';
 import { jobBox } from './jobview.js';
 import { spectrum } from './spectrum.js';
@@ -651,11 +652,23 @@ async function keyListen(shifted) {
 
 // ------------------------------------------------------------------ jobs
 // a clear "finished" box under the button: what was made, play it, go to the version or the MV
-function showDone(fin) {
+// [SIGN2MV] the job's log stays reachable on the finished box (it went away with the progress box)
+function doneLog(jobId) {
+  if (!jobId) return [null, null];
+  const lv = logView();
+  lv.follow(jobId);
+  const arrow = el('span', {}, '▸ ');
+  const btn = el('button', { class: 'btn small', onclick: () => { arrow.textContent = lv.toggle() ? '▾ ' : '▸ '; } },
+    arrow, el('span', { 'data-i18n': 'joblog.title' }, t('joblog.title')));
+  return [btn, lv.el];   // the panel starts closed
+}
+
+function showDone(fin, jobId) {
   const vid = fin.result && fin.result.version_id;
   const v = ((songState && songState.versions) || []).find((x) => x.id === vid);
   if (fin.status !== 'succeeded' || !v) { doneBox.classList.add('hidden'); return; }
   runJob.hide();
+  const [logBtn, logPanel] = doneLog(jobId || fin.id);
   const item = () => versionsBox.querySelector(`[data-vid="${vid}"]`);
   doneBox.replaceChildren(
     el('div', { class: 'cv-done-title' }, `✅ ${t('cover.done_title', v.title)}${v.duration ? ` · ${fmtTime(v.duration)}` : ''}`),
@@ -670,22 +683,23 @@ function showDone(fin) {
         if (a) a.play().catch(() => {});
       } }, t('cover.done_play')),
       el('button', { class: 'btn', onclick: () => item()?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, t('cover.done_show')),
-      ...mvButtons(v, 'btn')));
+      ...mvButtons(v, 'btn'), logBtn), logPanel);
   doneBox.classList.remove('hidden');
 }
 
 // a quick remix shows its progress and its result inside the version card that was remixed
-function showRemixDone(fin, asNew) {
+function showRemixDone(fin, asNew, jobId) {
   const vid = fin.result && fin.result.version_id;
   const card = vid && versionsBox.querySelector(`[data-vid="${vid}"]`);
   const v = ((songState && songState.versions) || []).find((x) => x.id === vid);
   if (!card || !v) return;
+  const [logBtn, logPanel] = doneLog(jobId || fin.id);
   card.querySelector('.cv-vjob').replaceChildren(el('div', { class: 'cv-done' },
     el('div', { class: 'cv-done-title' }, `✅ ${asNew ? t('cover.remix_done_new', v.title) : t('cover.remix_done')}`),
     el('div', { class: 'row' }, el('button', { class: 'btn primary', onclick: () => {
       const a = card.querySelector('audio');
       if (a) a.play().catch(() => {});
-    } }, t('cover.done_play')))));
+    } }, t('cover.done_play')), logBtn), logPanel));
   card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
@@ -713,7 +727,7 @@ async function follow(job, remixCard = null, asNew = false) {
       remixCard.querySelectorAll('button').forEach((b) => { b.disabled = false; });   // keep the error visible
     } else {
       renderVersions(fin.result && fin.result.version_id);
-      if (remixCard) showRemixDone(fin, asNew); else showDone(fin);
+      if (remixCard) showRemixDone(fin, asNew, job.id); else showDone(fin, job.id);
     }
   }
   bus.dispatchEvent(new Event('renders-changed'));

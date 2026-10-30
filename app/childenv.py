@@ -39,7 +39,9 @@ def cache_vars(paths: Paths) -> dict[str, str]:
         "TMP": str(paths.tmp),
         "PYTHONUTF8": "1",
         "PYTHONIOENCODING": "utf-8",
-        "PYTHONDONTWRITEBYTECODE": "1",
+        # No PYTHONDONTWRITEBYTECODE: without saved bytecode every job recompiled torch, transformers,
+        # librosa... from source (Applio took 90-100 s to start instead of ~6 s; the old programs kept it).
+        "PYTHONDONTWRITEBYTECODE": "",
     }
 
 

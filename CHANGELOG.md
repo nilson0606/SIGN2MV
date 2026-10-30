@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Cover speed: Python no longer recompiles torch, transformers, librosa… on every job. Child processes ran with
+  PYTHONDONTWRITEBYTECODE=1 and the installer never compiled the environments, so Applio took 89–100 s to
+  start (5.8 s when the files happened to be in memory) and covers were slow off and on; the old programs keep
+  the compiled files. The setting is gone and the installer compiles every environment once (new step).
+- Cover: the finished box keeps a Log button with the whole run (it disappeared with the progress box).
+- Sing & record: the segment mode button is bright pink-orange; 「歌聲輸出到喇叭」 (live voice to the speakers)
+  and recording diagnostics are removed (diagnostics was on by default and could affect recording timing).
+- Settings: the library note no longer widens the label column and pushes the inputs past the panel.
 - Sing & record: the song menu lists every Key version that already has a singing reference
   (「童話 · 降 4 Key」). Loading a song or Key version with a reference loads it right away (with the
   settings it was built with, nothing is rebuilt); without one, the song loads, the Key is selected and a

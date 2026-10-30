@@ -42,3 +42,18 @@ html[data-sign2mv] button:active:not(:disabled) { transform: translateY(2px); bo
 html[data-sign2mv] .card { border-color: rgba(245, 200, 76, .42) !important; }
 html[data-sign2mv] .card:focus-within { border-color: rgba(245, 200, 76, .85) !important;
   box-shadow: 0 0 0 1px rgba(245, 200, 76, .42), 0 30px 50px -12px #000d, 0 0 28px rgba(245, 200, 76, .18), inset 0 1px #ffffff12; }
+/* [SIGN2MV] removed on Nilson's request (2026-10-31): voice to the speakers (poor result) and recording
+   diagnostics (off in recording-diagnostics.mjs too) */
+html[data-sign2mv] #voice-output,
+html[data-sign2mv] #recording-diagnostics-panel { display: none !important; }
+/* [SIGN2MV] segment mode stands out: a bright colour of its own, unlike the grey buttons around it */
+html[data-sign2mv] #segment-open:not(:disabled),
+html[data-sign2mv] #segment-whole:not([hidden]) {
+  background: linear-gradient(135deg, #ff4fa3 0%, #ff7a45 100%) !important;
+  border: 1px solid #ffb38a !important; color: #fff !important; font-weight: 800; letter-spacing: .04em;
+  text-shadow: 0 1px 2px #0006;
+  box-shadow: 0 0 0 1px #ff4fa366, 0 6px 18px -4px #ff4fa3aa, 0 0 22px #ff7a4566, inset 0 1px #ffffff55 !important;
+}
+html[data-sign2mv] #segment-open:not(:disabled):hover,
+html[data-sign2mv] #segment-whole:not([hidden]):hover { filter: brightness(1.12) saturate(1.1); }
+html[data-sign2mv] #segment-open:disabled { opacity: .55; }
