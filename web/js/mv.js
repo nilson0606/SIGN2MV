@@ -278,7 +278,10 @@ const quick = (() => {
       const row = el('div', { class: 'item' + (it.id === highlight ? ' cv-new' : ''), style: 'display:block' },
         el('div', { class: 'row', style: 'align-items:center' },
           el('input', { type: 'checkbox', class: 'qmv-pick', 'data-song': sid, 'data-id': it.id }),
-          el('div', { class: 'grow', style: 'white-space:normal' }, el('b', {}, it.title || it.id), el('div', { class: 'muted small' }, meta)),
+          el('div', { class: 'grow', style: 'white-space:normal' }, el('b', {}, it.title || it.id), el('div', { class: 'muted small' }, meta),
+            // [SIGN2MV] which encoder made it; a CPU fallback says so (it used to happen without a word)
+            it.encoder ? el('div', { class: 'small', style: it.encoder === 'h264_nvenc' ? 'color:var(--hl-ok)' : (it.nvenc_error ? 'color:var(--hl-bad)' : ''),
+              title: it.nvenc_error || '' }, it.encoder === 'h264_nvenc' ? t('qmv.enc_gpu') : (it.nvenc_error ? t('qmv.enc_cpu_fallback') : t('qmv.enc_cpu'))) : null),
           play,
           el('a', { class: 'btn small', href: `/api/songs/${sid}/quickmv/${it.id}/download` }, t('common.download')),
           el('button', { class: 'btn small', title: t('common.open_folder'), onclick: async () => {

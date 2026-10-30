@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- ffmpeg: the installer now takes the BtbN build of the 8.1 release (NVENC API 13.0, NVIDIA driver 570+)
+  instead of the master build. Master needed NVENC API 13.1 (driver 610+, newer than the current 592), so
+  the graphics card never encoded: every full MV and quick MV fell back to the CPU. The installer now tries
+  NVENC once and writes the result to the install log. When NVENC fails, the full MV shows ffmpeg's reason
+  (and keeps it in nvenc_error.log next to the MV); the quick MV says so on its job line and in the list.
 - Full MV: the lyric list on each card names a line by its Scene number (「[Scene 22 02:09.14] …」) instead of
   its line number (「[第22段 …]」), which stopped matching the cards once photos were inserted.
 - Full MV: 「＋ 插入照片」 on each card inserts as many cards as photos chosen (or dropped on the button) in

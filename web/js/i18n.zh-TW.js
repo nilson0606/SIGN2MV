@@ -637,4 +637,7 @@ export default {
   "err.quickmv_lyrics_empty": "請先貼上歌詞。",
   "cover.remix_to": "套用到",
   "cover.all_busy_skipped": "有 {0} 個略過：那首歌正在處理中，完成後再刪。",
+  "qmv.enc_gpu": "顯示卡編碼（NVENC）",
+  "qmv.enc_cpu": "CPU 編碼",
+  "qmv.enc_cpu_fallback": "⚠ 顯示卡編碼失敗，改用 CPU 編碼（滑鼠移到這裡看原因）",
 };

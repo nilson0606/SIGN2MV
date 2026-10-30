@@ -221,6 +221,22 @@ def step_ffmpeg(state: dict) -> None:
     if "rubberband" not in res.stdout:
         raise InstallError("this ffmpeg build has no 'rubberband' filter (needed for key shifting)")
     archive.unlink(missing_ok=True)
+    check_nvenc(exe)
+
+
+def check_nvenc(exe: Path) -> bool:
+    """Encode two seconds of a test picture with NVENC. A failure is only reported (MVs then use the CPU),
+    with ffmpeg's own reason, e.g. 'minimum required Nvidia driver for nvenc is 610.00'."""
+    if detect_gpu()[0] != "cuda":
+        return False
+    res = run([exe, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=size=1920x1080:rate=60",
+               "-t", "2", "-c:v", "h264_nvenc", "-f", "null", "-"], check=False, capture=True)
+    if res.returncode == 0:
+        log("  NVENC (graphics card video encoding): OK")
+        return True
+    reason = " | ".join(l.strip() for l in ((res.stderr or "") + (res.stdout or "")).splitlines() if l.strip())[-400:]
+    log(f"  WARNING: NVENC does not work with this ffmpeg; MVs will be encoded on the CPU (slower). {reason}")
+    return False
 
 
 def step_deno(state: dict) -> None:

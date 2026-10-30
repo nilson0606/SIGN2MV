@@ -585,7 +585,8 @@
   "＋ 插入照片": "＋ Insert photos",
   "在這張前面插入照片：可一次選多張，選幾張就插幾張（依檔名順序）；也可以把照片直接拖到這個按鈕上。這張和後面的卡片連同歌詞往後讓位": "Insert photos in front of this card: choose several at once, one card per photo (in file-name order); you can also drag photos onto this button. This card and the ones after it move back together with their lyrics",
   "請選照片": "Choose photos",
-  "專案資料不正確": "Invalid project data"
+  "專案資料不正確": "Invalid project data",
+  "顯示卡編碼失敗，改用 CPU 編碼，會比較慢": "Graphics card encoding failed, encoding on the CPU (slower)"
  },
  "patterns": [
   {

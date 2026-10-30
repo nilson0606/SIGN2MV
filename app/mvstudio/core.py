@@ -1383,7 +1383,15 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
     for enc_name, enc_args in attempts:
         _check_cancel()
         if enc_name == "libx264":
-            update_progress(True, "render", 72, "🎬 [階段 3/4] 顯示卡編碼失敗，改用 CPU（libx264）編碼，會比較慢...", last_err[-160:])
+            # [SIGN2MV] show ffmpeg's reason (e.g. "minimum required Nvidia driver for nvenc is 610.00"),
+            # not the last line ("Conversion failed!"), and keep the whole message next to the project
+            reason = nvenc_reason(last_err)
+            try:
+                with open(os.path.join(os.path.dirname(output_mv), "nvenc_error.log"), "w", encoding="utf-8") as fh:
+                    fh.write(last_err)
+            except OSError:
+                pass
+            update_progress(True, "render", 72, "🎬 [階段 3/4] 顯示卡編碼失敗，改用 CPU（libx264）編碼，會比較慢...", reason)
         try:
             proc = subprocess.Popen(_encode_cmd(enc_args), stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=NO_WINDOW)
             ACTIVE_RENDER_PROC = proc
@@ -1670,6 +1678,14 @@ def restore_instrumentals(new_tl: List[Dict[str, Any]], old_tl: List[Dict[str, A
 # [SIGN2MV] was 36 (old MV studio). Photo files are named scene_NN with two digits, so 99 keeps
 # every name the same length (and their order the same when sorted as text).
 MAX_SCENES = 99
+
+
+def nvenc_reason(stderr: str) -> str:
+    """The lines of an ffmpeg error that say why NVENC failed (driver / API version, no device...)."""
+    lines = [l.strip() for l in (stderr or "").splitlines() if l.strip()]
+    keys = ("nvenc", "cuda", "driver", "openencodesession", "no capable devices", "cannot load")
+    hit = [l.split("] ", 1)[-1] for l in lines if any(k in l.lower() for k in keys)]
+    return (" ".join(dict.fromkeys(hit)) or " ".join(lines[-3:]))[:300]
 
 
 def _scene_files(illust_dir: str, sid: int) -> List[str]:

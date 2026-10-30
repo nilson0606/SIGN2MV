@@ -239,6 +239,7 @@ def main() -> None:
             audio_map, fps = "0:a:0", "30"
         order = ["h264_nvenc", "libx264"] if not os.environ.get("SIGN2MV_FORCE_CPU") else ["libx264"]
         used, rc, err = "", 1, ""
+        nvenc_error = ""
         for enc in order:
             args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", *inputs,
                     "-filter_complex", graph, "-map", "[v]", "-map", audio_map, "-t", f"{seconds:.3f}",
@@ -248,7 +249,13 @@ def main() -> None:
             if rc == 0 and (tmp / "result.mp4").is_file():
                 used = enc
                 break
-            protocol.log(f"{enc} failed, trying the next encoder: {err[-300:]}")
+            reason = " ".join(dict.fromkeys(l.split("] ", 1)[-1].strip() for l in err.splitlines()
+                                            if any(k in l.lower() for k in ("nvenc", "cuda", "driver", "no capable", "cannot load"))))
+            protocol.log(f"{enc} failed, trying the next encoder: {(reason or err[-300:])[:400]}")
+            if enc == "h264_nvenc":
+                nvenc_error = (reason or err.strip()[-300:])[:300]
+                # [SIGN2MV] say it on the job line too (it fell back to the CPU without a word)
+                protocol.progress(2, "encode", "顯示卡編碼失敗，改用 CPU 編碼，會比較慢")
             (tmp / "result.mp4").unlink(missing_ok=True)
         if not used:
             protocol.fail("quickmv_failed", err)
@@ -262,7 +269,7 @@ def main() -> None:
                 **({"subtitle": data.get("subtitle") or "", "badge": data.get("badge") or "",
                     "credits": data.get("credits") or "", "lyric_lines": len(data.get("lyrics") or [])}
                    if style == "studio" else {}),
-                "duration": round(seconds, 2), "bytes": final.stat().st_size, "encoder": used,
+                "duration": round(seconds, 2), "bytes": final.stat().st_size, "encoder": used, **({"nvenc_error": nvenc_error} if nvenc_error and used != "h264_nvenc" else {}),
                 "render_s": round(time.time() - started, 1), "created_at": time.time()}
         write_json(tmp / "info.json", info)
         if out_dir.exists():
