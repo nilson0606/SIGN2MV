@@ -327,3 +327,48 @@ def test_quick_mv_lyrics(client, root, tmp_path, monkeypatch, fake_whisper):
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(at), "-i", str(video), "-frames:v", "1", str(frame)], check=True)
         band = Image.open(frame).convert("L").crop((500, 700, 1420, 775))
         assert (max(band.getdata()) > 240) == expect, at                # white lyric only while the line is on
+
+
+def test_mv_scene_move_and_99_slots(client, root, tmp_path):
+    """Drag a photo to another card (the photos in between shift by one, lyrics stay), and insert
+    slots past the old 36-photo limit up to 99."""
+    song = import_file(client, tmp_path, secs=6)
+    sid = song["song_id"]
+    slug = client.post("/api/mv/project/create", json={"song_id": sid, "slug": "drag", "scene_count": 4}).json()["project"]["slug"]
+    sdir = root / "library" / "songs" / sid / "mv" / "drag" / "scenes"
+    colors = ["red", "green", "blue", "yellow"]
+    files = [("files", (f"p{i}.png", png(c), "image/png")) for i, c in enumerate(colors, 1)]
+    assert client.post("/api/mv/upload_scenes_batch", data={"slug": slug, "start_scene": "1", "fill_empty": "1"},
+                       files=files).json()["count"] == 4
+
+    def order():
+        out = []
+        for n in range(1, 5):
+            r, g, b = Image.open(sdir / f"scene_{n:02d}.png").convert("RGB").getpixel((960, 540))
+            out.append({(255, 0, 0): "red", (0, 128, 0): "green", (0, 0, 255): "blue", (255, 255, 0): "yellow"}.get((r, g, b), (r, g, b)))
+        return out
+
+    timeline = [{"scene": n, "start": n - 1.0, "end": float(n), "text": f"第{n}句", "type": "lyric"} for n in range(1, 5)]
+    proj = client.get(f"/api/mv/project/{slug}").json()["project"]
+    proj["timeline"] = timeline
+    assert client.post("/api/mv/project/save", json=proj).status_code == 200
+
+    res = client.post("/api/mv/scenes/move", json={"slug": slug, "a": 1, "b": 3}).json()
+    assert res["status"] == "ok" and order() == ["green", "blue", "red", "yellow"]
+    res = client.post("/api/mv/scenes/move", json={"slug": slug, "a": 4, "b": 1}).json()
+    assert order() == ["yellow", "green", "blue", "red"]
+    # the lyrics stay with their positions
+    assert [s["text"] for s in res["project"]["timeline"]] == ["第1句", "第2句", "第3句", "第4句"]
+    assert [s["scene"] for s in res["project"]["timeline"]] == [1, 2, 3, 4]
+    assert client.post("/api/mv/scenes/move", json={"slug": slug, "a": 2, "b": 2}).status_code == 400
+
+    # insert empty slots in front of card 1 until the limit: 99 photos (was 36)
+    n = 4
+    while True:
+        r = client.post("/api/mv/scenes/insert_slot", json={"slug": slug, "before": 1})
+        if r.status_code != 200:
+            assert r.status_code == 409
+            break
+        n += 1
+    assert n == 99
+    assert (sdir / "scene_99.png").is_file() and (sdir / "scene_96.png").is_file()   # the four photos moved to the end

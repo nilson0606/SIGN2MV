@@ -390,6 +390,9 @@
       display: flex;
       flex-direction: column;
     }
+    .scene-card-img-wrap img[draggable="true"] { cursor: grab; }
+    body.scene-dragging .scene-card:not(.inst-card) { outline: 1px dashed rgba(245, 200, 76, .55); outline-offset: 2px; }
+    body.scene-dragging .scene-card.dragover { outline: 2px solid var(--gold); }
     .scene-card:hover, .scene-card.dragover {
       border-color: var(--gold);
       box-shadow: 0 4px 14px rgba(245, 215, 135, 0.25);
@@ -1634,6 +1637,12 @@
         card.ondrop = async (e) => {
           e.preventDefault();
           card.classList.remove('dragover');
+          // [SIGN2MV] a photo dragged from another card: move it here (the photos in between shift by one)
+          const fromScene = parseInt(e.dataTransfer.getData('application/x-sign2mv-scene') || '0', 10);
+          if (fromScene) {
+            if (fromScene !== parseInt(sc.scene_id, 10)) await moveScenePhoto(fromScene, parseInt(sc.scene_id, 10));
+            return;
+          }
           if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             if (e.dataTransfer.files.length > 1) {
               await uploadBatchSceneFilesList(e.dataTransfer.files, sc.scene_id);
@@ -1683,7 +1692,7 @@
         card.innerHTML = `
           <div class="scene-card-img-wrap" title="點擊或拖曳圖片更換 Scene ${String(sc.scene_id).padStart(2, '0')} 照片">
             ${imgUrl
-              ? `<img src="${imgUrl}" alt="Scene ${sc.scene_id}" onclick="triggerUploadScene(${sc.scene_id})" />`
+              ? `<img src="${imgUrl}" alt="Scene ${sc.scene_id}" draggable="true" title="拖到別張卡片＝把這張照片移到那個位置（中間的照片往旁邊讓一格，歌詞不動）；點一下＝換照片" ondragstart="sceneDragStart(event, ${sc.scene_id})" ondragend="sceneDragEnd()" onclick="triggerUploadScene(${sc.scene_id})" />`
               : `<div class="scene-card-empty" onclick="triggerUploadScene(${sc.scene_id})"><span>📥 點擊或拖曳放入照片</span><span>Scene ${String(sc.scene_id).padStart(2, '0')} (自動轉 1920x1080)</span></div>`
             }
             <label class="scene-card-overlay-badge" style="display:inline-flex; align-items:center; gap:5px; cursor:pointer;" onclick="event.stopPropagation()" title="勾選此張照片以進行批次刪除">
@@ -2354,7 +2363,7 @@
     }
     function triggerUploadNextEmptyScene() {
       const nextId = nextAppendSlot();
-      if (nextId > 36) { showToast('照片最多 36 張，已經放滿了', true); return; }
+      if (nextId > 99) { showToast('照片最多 99 張，已經放滿了', true); return; }
       setInlineStatus('step2StatusBox', 'work', `📥 請在檔案視窗選擇照片，將放在最後一張照片之後：<strong>Scene ${String(nextId).padStart(2, '0')}</strong>...`);
       triggerUploadScene(nextId);
     }
@@ -3884,7 +3893,7 @@
           }
           const placed = (data.scenes || []).map(x => parseInt(x.scene_id));
           const endSc = placed.length ? Math.max(...placed) : startScene + data.count - 1;
-          if (data.skipped && data.skipped.length) showToast(`⚠️ 照片最多 36 張，有 ${data.skipped.length} 張沒放：${data.skipped.slice(0, 3).join('、')}${data.skipped.length > 3 ? '…' : ''}`, true);
+          if (data.skipped && data.skipped.length) showToast(`⚠️ 照片最多 99 張，有 ${data.skipped.length} 張沒放：${data.skipped.slice(0, 3).join('、')}${data.skipped.length > 3 ? '…' : ''}`, true);
           const msg = `✅ 已依檔名順序成功放入 <strong>${data.count} 張分鏡圖</strong>（<strong>Scene ${String(startScene).padStart(2, '0')} ~ Scene ${String(endSc).padStart(2, '0')}</strong>）！接下來請在右側貼上歌詞並點擊「⚡ 貼上並依 Whisper 自動對齊」。`;
           setInlineStatus('step2StatusBox', 'ok', msg);
           showToast(`✔ 已依序放入 ${data.count} 張分鏡圖 (Scene ${String(startScene).padStart(2, '0')} ~ ${String(endSc).padStart(2, '0')})！`);
@@ -4023,6 +4032,31 @@
         showToast(`✔ 已在 Scene ${String(sid).padStart(2, '0')} 插入空白照片格`);
       } catch (e) { showToast(`❌ 插入失敗：${e.message}`, true); }
     }
+    // [SIGN2MV] drag a card's photo onto another card (old MV studio only had ◀ ▶)
+    function sceneDragStart(e, sid) {
+      e.dataTransfer.setData('application/x-sign2mv-scene', String(sid));
+      e.dataTransfer.effectAllowed = 'move';
+      document.body.classList.add('scene-dragging');
+    }
+    function sceneDragEnd() {
+      document.body.classList.remove('scene-dragging');
+      document.querySelectorAll('.scene-card.dragover').forEach(c => c.classList.remove('dragover'));
+    }
+    async function moveScenePhoto(a, b) {
+      sceneDragEnd();
+      if (!currentSlug || a === b) return;
+      try {
+        const data = await postSceneOp('/api/mv/scenes/move', { slug: currentSlug, a, b });
+        currentScenesList = data.all_scenes || currentScenesList;
+        currentScenesMap = {};
+        currentScenesList.forEach(sc => { currentScenesMap[sc.scene_id] = sc; });
+        const lo = Math.min(a, b), hi = Math.max(a, b);
+        lastCascadeSceneIds = Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+        renderSceneGallery(); renderTimelineTable(); liveLayerKeys = ['', '', ''];
+        showToast(`✔ Scene ${String(a).padStart(2, '0')} 的照片已移到 Scene ${String(b).padStart(2, '0')}（中間的照片往旁邊讓一格，歌詞不動）`);
+      } catch (e) { showToast(`❌ 移動失敗：${e.message}`, true); }
+    }
+
     async function swapScenes(a, b) {
       if (!currentSlug || b < 1 || b > currentScenesList.length) return;
       try {

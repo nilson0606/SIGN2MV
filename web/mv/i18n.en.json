@@ -312,7 +312,7 @@
   "渲染發生錯誤：": "Render error:",
   "準備開始...": "Getting ready...",
   "無法播放：": "Cannot play:",
-  "照片最多 36 張，已經放滿了": "Up to 36 photos; all slots are full",
+  "照片最多 99 張，已經放滿了": "Up to 99 photos; all slots are full",
   "照片牆、Whisper 逐字對齊、20 種轉場；名牌卡的名字來自 SIGN2MV「設定」": "Photo wall, word-level Whisper alignment, 20 transitions; title card names come from SIGN2MV \"Settings\"",
   "照片編號不正確": "Invalid photo number",
   "片尾名牌卡": "Outro title card",
@@ -578,7 +578,9 @@
   "若要使用 Whisper 語音辨識對齊，請先在 Step 1 下拉選單挑選音檔後再按一次！": "to align with Whisper speech recognition, pick the audio in the Step 1 list first and press the button again.",
   "若台語/國語同音字有誤差，您可直接在卡片上改字，或貼上正確歌詞後點「✏️ 僅替換歌詞文字（保留時間）」。": "If a word was heard as a wrong homophone (Taiwanese / Mandarin), fix it on the card, or paste the correct lyrics and click “✏️ Replace lyric text only (keep timing)”.",
   "分鏡畫面預覽": "Scene preview",
-  "翻唱": "Cover"
+  "翻唱": "Cover",
+  "拖到別張卡片＝把這張照片移到那個位置（中間的照片往旁邊讓一格，歌詞不動）；點一下＝換照片": "Drag onto another card = move this photo to that position (the photos in between shift by one; lyrics stay); click = replace the photo",
+  "這一格沒有照片可以移動": "This slot has no photo to move"
  },
  "patterns": [
   {
@@ -1006,8 +1008,8 @@
    "en": "Batch uploading {0} scene photos in filename order..."
   },
   {
-   "zh": "⚠️ 照片最多 36 張，有 {0} 張沒放：{1}{2}",
-   "en": "⚠️ Up to 36 photos; {0} were not added: {1}{2}"
+   "zh": "⚠️ 照片最多 99 張，有 {0} 張沒放：{1}{2}",
+   "en": "⚠️ Up to 99 photos; {0} were not added: {1}{2}"
   },
   {
    "zh": "已從提前 {0}s 調整成提前 {1}s（移動 {2}s）",
@@ -1608,6 +1610,14 @@
   {
    "zh": "{0}. 模糊溶解",
    "en": "{0}. Blur dissolve"
+  },
+  {
+   "zh": "✔ Scene {0} 的照片已移到 Scene {1}（中間的照片往旁邊讓一格，歌詞不動）",
+   "en": "✔ Photo of Scene {0} moved to Scene {1} (the photos in between shifted by one; lyrics unchanged)"
+  },
+  {
+   "zh": "❌ 移動失敗：{0}",
+   "en": "❌ Move failed: {0}"
   }
  ]
 }

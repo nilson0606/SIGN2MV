@@ -1297,6 +1297,35 @@ def router(ctx: Context) -> APIRouter:
         saved = save_project_dict(proj)
         return {"status": "ok", "project": saved, "all_scenes": _scene_payload(saved)}
 
+    @r.post("/api/mv/scenes/move")
+    async def api_move_scene(request: Request):
+        """Drag a photo to another position: it moves there and the photos in between shift by one
+        (like pressing ◀ / ▶ repeatedly). Lyrics and timing stay with their positions."""
+        configure()
+        body = await request.json()
+        try:
+            proj = load_project_dict(str(body.get("slug", "")))
+        except ProjectNotFound as exc:
+            return jerr(404, str(exc))
+        illust_dir = proj["illust_dir"]
+        try:
+            a, b = int(body.get("a")), int(body.get("b"))
+        except (TypeError, ValueError):
+            return jerr(400, "照片編號不正確")
+        if a == b or not (1 <= a <= MAX_SCENES and 1 <= b <= MAX_SCENES):
+            return jerr(400, "照片編號不正確")
+        if not _scene_files(illust_dir, a):
+            return jerr(400, "這一格沒有照片可以移動")
+        if a < b:
+            mapping = {a: b, **{k: k - 1 for k in range(a + 1, b + 1)}}
+        else:
+            mapping = {a: b, **{k: k + 1 for k in range(b, a)}}
+        os.makedirs(illust_dir, exist_ok=True)
+        renumber_scene_files(illust_dir, mapping)
+        proj["scene_count"] = max(int(proj.get("scene_count", 12) or 12), a, b)
+        saved = save_project_dict(proj)
+        return {"status": "ok", "project": saved, "all_scenes": _scene_payload(saved)}
+
     @r.post("/api/mv/scenes/insert_slot")
     async def api_insert_scene_slot(request: Request):
         configure()

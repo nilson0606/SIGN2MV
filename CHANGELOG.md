@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Full MV: up to 99 photo cards (was 36, the old MV studio's number), so long lyrics can get more
+  "insert before" slots; drag a photo onto another card to move it there (the photos in between shift
+  by one, lyrics and timing stay with their positions), besides ◀ / ▶.
 - Whisper (full MV timing and quick MV lyrics) failed on every song with "open() got an unexpected keyword
   argument 'metadata_errors'": the installed faster-whisper 1.2.1 decodes files with an option PyAV 19
   removed. The audio is now decoded by SIGN2MV's FFmpeg and handed to Whisper as samples. The test double

@@ -1667,7 +1667,9 @@ def restore_instrumentals(new_tl: List[Dict[str, Any]], old_tl: List[Dict[str, A
 # [Claude 2026-10-27] 中途刪一張／插一張（使用者：照片照歌詞順序放，要能刪某張或插到某個位置）：
 # 照片檔改號、時間軸的 scene 一起改號，時間軸不清空；刪掉那張原本用它的段落改用前一句的照片（使用者選）
 # ---------------------------------------------------------------------------
-MAX_SCENES = 36
+# [SIGN2MV] was 36 (old MV studio). Photo files are named scene_NN with two digits, so 99 keeps
+# every name the same length (and their order the same when sorted as text).
+MAX_SCENES = 99
 
 
 def _scene_files(illust_dir: str, sid: int) -> List[str]:
