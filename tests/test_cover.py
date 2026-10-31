@@ -335,3 +335,19 @@ def test_train_smoke(client, root, tmp_path):
     assert not (root / "runtime" / "applio-logs" / "Smoke_1").exists()        # scratch cleaned
     assert client.post("/api/cover/train", json={"name": "Smoke_1", "token": up["token"]}).json()["error"] in (
         "model_exists", "train_no_audio")
+
+
+def test_new_song_takes_only_model_and_pitch(client, root):
+    """A song without cover settings starts from the defaults, keeping only the last cover's voice model and
+    pitch (like the old AI cover); the accompaniment key, separation and mix of the last song stay with it."""
+    vdir = root / "models" / "voices" / "Last_Voice"
+    vdir.mkdir(parents=True)
+    (vdir / "Last_Voice.pth").write_bytes(b"x" * 1024)
+    last = {"model": "Last_Voice", "pitch": 5, "key": -4, "sep_model": "bs_roformer", "vocal_mode": "all",
+            "mix": {"vocal_vol": 1.5, "bgm_vol": 0.4}}
+    (root / "config").mkdir(exist_ok=True)
+    (root / "config" / "cover_defaults.json").write_text(json.dumps(last), encoding="utf-8")
+    d = client.get("/api/cover/status").json()["defaults"]
+    assert d["model"] == "Last_Voice" and d["pitch"] == 5
+    assert d["key"] == 0 and d["sep_model"] == "demucs" and d["vocal_mode"] == "lead_keep_backing"
+    assert d["mix"]["vocal_vol"] != 1.5 and d["masks"] == [] and d["vol_segments"] == []
