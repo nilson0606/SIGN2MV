@@ -96,6 +96,17 @@ a { color:var(--accent); }
 <li>MV：到 MV 頁刪專案。</li>
 </ul>
 <p><b>改名</b> 改歌名。<b>刪除</b> 會在確認後刪除這首歌和它產生的所有東西（分軌、錄音、翻唱、MV）。</p>
+<h3>成品資料夾</h3>
+<p>歌曲庫裡每首歌的資料夾是用編號命名的，在檔案總管不好找。SIGN2MV 會在歌曲庫裡維護一個 <code>成品</code> 資料夾（英文介面叫 <code>Finished</code>）：每首歌一個資料夾，用歌名命名，裡面是捷徑，點兩下就開。檔案不會複製，不多佔空間。</p>
+<ul>
+<li>翻唱版本：<code>翻唱 #1 My_Voice_Ver8 -12 · Key -2</code></li>
+<li>唱錄後製存的版本：<code>唱錄 10-31 09：05</code></li>
+<li>快速 MV：<code>快速MV 錄音室 1080p · 翻唱 #1 · 10-31 09：20</code></li>
+<li>完整 MV（算圖完成後）：<code>MV 專案標題</code></li>
+</ul>
+<p>時間用全形冒號（09：05），因為 Windows 檔名不能有「:」。兩首歌同名時，資料夾後面加匯入日期，例如 <code>童話（10-29 匯入）</code>；同一天匯入的再加時間。同一首歌裡名稱還是重複的，後面自動加 (2)、(3)。</p>
+<p>改歌名，資料夾跟著改名。刪掉版本、MV 或整首歌，對應的捷徑也會刪掉；只會刪 SIGN2MV 自己建的捷徑，你自己放進去的檔案不會動（資料夾裡還有你的檔案時，資料夾會留著）。手動刪掉某個捷徑，下次有變動時會再建回來；不要的成品請在 SIGN2MV 裡刪。</p>
+<p>按歌曲庫的 <b>📂 成品資料夾</b> 開整個資料夾，或歌曲詳情的 <b>📂 成品</b> 直接開這首歌的資料夾（Windows）。</p>
 </section>
 
 <section id="sing">
@@ -230,6 +241,7 @@ a { color:var(--accent); }
 <table>
 <tr><th>資料夾（在 SIGN2MV 裡）</th><th>內容</th></tr>
 <tr><td><code>library\songs\&lt;歌曲&gt;\</code></td><td><code>source</code>（原曲）、<code>stems</code>、<code>keys</code>、<code>sing</code>、<code>renders</code>（當 MV 音檔用的錄音與翻唱版本）、<code>cover</code>（翻唱版本與快取）、<code>mv</code>（MV 專案）</td></tr>
+<tr><td><code>library\成品\</code></td><td>每首歌的成品捷徑（見「成品資料夾」）；只是捷徑，刪掉不影響作品</td></tr>
 <tr><td><code>library\recordings\</code></td><td>所有歌曲的唱錄錄音（沿用原唱錄程式的格式）</td></tr>
 <tr><td><code>models\</code></td><td>AI 模型；<code>models\voices</code>＝你的 RVC 音色模型</td></tr>
 <tr><td><code>runtime\</code></td><td>Python 環境、Applio、ffmpeg、快取、暫存檔、訓練暫存</td></tr>

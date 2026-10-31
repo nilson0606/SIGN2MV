@@ -104,6 +104,8 @@ class JobQueue:
         self._cv = threading.Condition()
         self._stopping = False
         self._on_change = on_change
+        # called (without the lock, on a helper thread) after a job ends; e.g. the finished-outputs folder
+        self.finished_listeners: list[Callable[[], None]] = []
         self._threads: list[threading.Thread] = []
         for lane, slots in self.lanes.items():
             for n in range(slots):
@@ -216,6 +218,11 @@ class JobQueue:
         took = f" ({job.finished_at - job.started_at:.0f} s)" if job.started_at else ""
         job.add_log(("✔ " if status == "succeeded" else "■ ") + status + took + (f" — {code}" if code else ""))
         self._cv.notify_all()
+        for fn in list(self.finished_listeners):
+            try:
+                fn()
+            except Exception:  # noqa: BLE001
+                pass
 
     def _next_locked(self, lane: str) -> Job | None:
         queued = [j for j in self._jobs.values() if j.spec.lane == lane and j.status == "queued"]

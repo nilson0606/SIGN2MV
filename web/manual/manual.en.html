@@ -96,6 +96,17 @@ a { color:var(--accent); }
 <li>MV: delete projects on the MV page.</li>
 </ul>
 <p><b>Rename</b> changes the title. <b>Delete</b> removes the song and everything made from it (stems, recordings, covers, MVs) after a confirmation.</p>
+<h3>Finished folder</h3>
+<p>The song folders in the library are named by id, which is hard to find your way around in Explorer. SIGN2MV keeps a <code>Finished</code> folder in the library (<code>成品</code> in the Chinese UI): one folder per song, named by its title, with shortcuts you can double-click. Nothing is copied, so it takes no extra space.</p>
+<ul>
+<li>Cover versions: <code>Cover #1 My_Voice_Ver8 -12 · Key -2</code></li>
+<li>Saved sing &amp; record versions: <code>Sing 10-31 09.05</code></li>
+<li>Quick MVs: <code>Quick MV Studio 1080p · Cover #1 · 10-31 09.20</code></li>
+<li>Full MVs (once rendered): <code>MV project title</code></li>
+</ul>
+<p>Times use a dot (09.05) because Windows file names cannot hold ":". When two songs have the same title, their folders get the import date, e.g. <code>Song (imported 10-29)</code>, and the time as well when they were imported on the same day. Names that still clash within a song get (2), (3).</p>
+<p>Renaming a song renames its folder. Deleting a version, an MV or the song deletes its shortcuts. Only the shortcuts SIGN2MV made are ever deleted; files you put in the folders are left alone (a folder that still holds your files stays). A shortcut you delete by hand comes back at the next change; delete finished work you no longer want in SIGN2MV.</p>
+<p><b>📂 Finished folder</b> on the library page opens the whole folder; <b>📂 Finished</b> in a song's details opens that song's folder (Windows).</p>
 </section>
 
 <section id="sing">
@@ -230,6 +241,7 @@ a { color:var(--accent); }
 <table>
 <tr><th>Folder (inside SIGN2MV)</th><th>Contents</th></tr>
 <tr><td><code>library\songs\&lt;song&gt;\</code></td><td><code>source</code> (original), <code>stems</code>, <code>keys</code>, <code>sing</code>, <code>renders</code> (takes and cover versions used as MV audio), <code>cover</code> (cover versions and caches), <code>mv</code> (MV projects)</td></tr>
+<tr><td><code>library\Finished\</code></td><td>shortcuts to each song's finished work (see "Finished folder"); only shortcuts, deleting them loses nothing</td></tr>
 <tr><td><code>library\recordings\</code></td><td>sing &amp; record takes of all songs (the format sign_record uses)</td></tr>
 <tr><td><code>models\</code></td><td>AI models; <code>models\voices</code> = your RVC voice models</td></tr>
 <tr><td><code>runtime\</code></td><td>Python environments, Applio, ffmpeg, caches, temporary files, training scratch</td></tr>

@@ -23,7 +23,7 @@ export default {
 
   'lib.title': 'Song library', 'lib.new_placeholder': 'Song title', 'lib.add': 'Add song', 'lib.empty': 'No songs yet.',
   'lib.rename_prompt': 'New title:', 'lib.delete_confirm': 'Delete "{0}"? All of its files (stems, recordings, MVs, covers) are deleted too. This cannot be undone.',
-  'lib.deleted': 'Deleted "{0}"', 'lib.location': 'Library folder: {0}',
+  'lib.deleted': 'Deleted "{0}"', 'lib.finished_open': '📂 Finished folder', 'lib.finished_song': '📂 Finished', 'lib.finished_hint': 'Finished folder: one folder per song (by title) with shortcuts to its covers, sing takes, quick MVs and full MVs.', 'lib.location': 'Library folder: {0}',
   'lib.source.youtube': 'YouTube', 'lib.source.audio': 'Audio file', 'lib.source.video': 'Video file',
 
   'jobs.title': 'Job queue', 'jobs.hint': 'GPU jobs run one at a time; others wait. Non-GPU jobs can run in parallel.',

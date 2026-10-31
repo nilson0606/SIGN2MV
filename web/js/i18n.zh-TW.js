@@ -23,7 +23,7 @@ export default {
 
   'lib.title': '歌曲庫', 'lib.new_placeholder': '歌名（可以是中文）', 'lib.add': '新增歌曲', 'lib.empty': '還沒有歌曲。',
   'lib.rename_prompt': '新的歌名：', 'lib.delete_confirm': '確定刪除「{0}」？這首歌的所有檔案（分軌、錄音、MV、翻唱）都會一起刪除，無法復原。',
-  'lib.deleted': '已刪除「{0}」', 'lib.location': '歌曲庫位置：{0}',
+  'lib.deleted': '已刪除「{0}」', 'lib.finished_open': '📂 成品資料夾', 'lib.finished_song': '📂 成品', 'lib.finished_hint': '成品資料夾：每首歌一個資料夾（用歌名），裡面是翻唱、唱錄、快速 MV、完整 MV 的捷徑。', 'lib.location': '歌曲庫位置：{0}',
   'lib.source.youtube': 'YouTube', 'lib.source.audio': '本機音檔', 'lib.source.video': '本機影片',
 
   'jobs.title': '工作佇列', 'jobs.hint': '顯示卡工作一次只跑一個，其他排隊；不用顯示卡的工作可以同時跑。',

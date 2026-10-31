@@ -42,6 +42,13 @@ async function loadSongs() {
   }
 }
 bus.addEventListener('reload-songs', loadSongs);
+
+// <library>/成品: readable shortcuts to every finished file (the song folders are named by id)
+export async function openFinished(songId) {
+  try { await api.post('/api/finished/open', songId ? { song_id: songId } : {}); }
+  catch (err) { toast(errorText(err), 'error'); }
+}
+$('#open-finished')?.addEventListener('click', () => openFinished());
 bus.addEventListener('job-finished', () => loadSizes());
 bus.addEventListener('settings', (e) => { setText($('#library-path'), 'lib.location', e.detail.library_dir || ''); });
 bus.addEventListener('song-selected', () => { renderList(); renderDetail(); });
@@ -91,6 +98,7 @@ function renderDetail() {
 
   const header = el('div', { class: 'row' },
     el('h2', { style: 'margin:0;flex:1' }, song.title),
+    el('button', { class: 'btn small', title: t('lib.finished_hint'), onclick: () => openFinished(song.song_id) }, t('lib.finished_song')),
     el('button', { class: 'btn small', onclick: () => rename(song) }, t('common.rename')),
     el('button', { class: 'btn small danger', onclick: () => remove(song) }, t('common.delete')));
 

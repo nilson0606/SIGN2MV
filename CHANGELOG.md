@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Library: a 成品 folder (Finished in the English UI) inside the library, kept in step with the songs: one
+  folder per song named by its title, with shortcuts to every cover version, saved sing & record version,
+  quick MV and full MV (the song folders themselves are named by id). Same titles get the import date
+  (and time); renaming a song renames its folder; deleting work deletes its shortcuts. Only shortcuts
+  SIGN2MV made are removed, never the user's own files. Buttons: 📂 成品資料夾 (library), 📂 成品 (song).
 - Cover: 「原唱和聲混進成品」 moved from the folded 「分離與和聲」 block to the mix block (under the accompaniment
   volume), like the old 🎶 混入原唱和聲: it is a mix option that quick remix switches.
 - Cover: a song covered for the first time starts from the default settings; only the last cover's voice model

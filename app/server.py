@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import API_LEVEL, APP_NAME, VERSION, settings as settings_mod
 from .context import Context
+from .finished import FinishedSync
 from .jobs import JobQueue
 from .paths import Paths
 from .util import body_json, err
@@ -40,6 +41,8 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
     app = FastAPI(title=APP_NAME, docs_url=None, redoc_url=None, openapi_url=None)
     jobs = queue or JobQueue()
     ctx = Context(paths, jobs)
+    ctx.finished = FinishedSync(ctx)
+    jobs.finished_listeners.append(ctx.finished.request)
     state = {"shutting_down": False}
     app.state.jobs = jobs
     app.state.ctx = ctx
@@ -60,6 +63,8 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
         if request.method not in ("GET", "HEAD") and not sr and request.headers.get(CONTROL_HEADER) != "1":
             return err("missing_control_header", 403)
         response = await call_next(request)
+        if request.method not in ("GET", "HEAD", "OPTIONS"):
+            ctx.finished.request()   # something may have been added, renamed or deleted
         if not request.url.path.startswith("/media/"):
             response.headers["Cache-Control"] = "no-store"
         return response
@@ -231,6 +236,38 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
     app.include_router(api_songs.router(ctx))
     for factory in _load_feature_routers():
         app.include_router(factory(ctx))
+
+    # ---------------- finished-outputs folder (<library>/成品) ----------------
+    @app.get("/api/finished")
+    def finished_status():
+        cfg = settings_mod.load(paths)
+        from .finished import MANIFEST, ROOT_NAMES, lang_key
+        lib = Path(cfg["library_dir"])
+        man = _read_json(lib / MANIFEST) or {}
+        name = man.get("root") or ROOT_NAMES[lang_key(settings_mod.effective_language(cfg))]
+        return {"path": str(lib / name), "songs": {k: v.get("folder") for k, v in (man.get("songs") or {}).items()},
+                "last": ctx.finished.last}
+
+    @app.post("/api/finished/open")
+    async def finished_open(request: Request):
+        """Bring the folder up to date, then show it (or one song's folder) in Explorer."""
+        import subprocess
+        from starlette.concurrency import run_in_threadpool
+        body = await body_json(request)
+        await run_in_threadpool(ctx.finished.run_now)
+        info = finished_status()
+        target = Path(info["path"])
+        folder = info["songs"].get(str(body.get("song_id") or ""))
+        if folder and (target / folder).is_dir():
+            target = target / folder
+        if not target.is_dir():
+            return err("file_not_found", 404)
+        if os.name != "nt":
+            return err("open_folder_windows_only")
+        subprocess.Popen(["explorer", str(target)])
+        return {"ok": True, "path": str(target)}
+
+    ctx.finished.request()   # bring the folder up to date at start
 
     # ---------------- web page ----------------
     @app.get("/")
