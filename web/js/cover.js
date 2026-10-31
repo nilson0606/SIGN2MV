@@ -220,7 +220,7 @@ function sectionVoice() {
     details(t('cover.separation'),
       field(t('sep.model'), sepSel), field(t('cover.vocal_mode'), vmodeSel), field(t('cover.karaoke_model'), karaokeSel), karaokeNote,
       field(t('cover.bgm_refine'), refineSel),
-      el('div', { class: 'cv-backing' }, backingCtl.el), backingHint, sepStatus, el('p', { class: 'muted small' }, t('cover.sep_hint'))),
+      sepStatus, el('p', { class: 'muted small' }, t('cover.sep_hint'))),
     mfDetails = details(t('cover.mf'),
       el('p', { class: 'muted small' }, t('cover.mf_hint')),
       el('div', { class: 'row' }, mfOn.el, el('span', { class: 'muted' }, t('cover.mf_sep')), mfSep.el),
@@ -266,6 +266,8 @@ function sectionMix() {
       ...[['cover.vol_vocal', 1.05, 0.8], ['cover.vol_golden', 0.95, 0.85], ['cover.vol_bgm', 0.85, 0.95]].map(([k, v, b]) =>
         el('button', { class: 'btn small', onclick: () => { mix.vocal_vol.set(v); mix.bgm_vol.set(b); changed(); } }, t(k)))),
     field(t('cover.vocal_vol'), mix.vocal_vol), field(t('cover.bgm_vol'), mix.bgm_vol),
+    // [SIGN2MV] a mix option (quick remix switches it), so it sits with the mix like the old 🎶 混入原唱和聲
+    el('div', { class: 'cv-backing' }, backingCtl.el), backingHint,
     masksDetails = details(t('cover.masks'), el('p', { class: 'muted small' }, t('cover.masks_hint')), maskEditor(), maskList),
     vsegsDetails = details(t('cover.vsegs'), el('p', { class: 'muted small' }, t('cover.vsegs_hint')), vsegEditor(), vsegList),
     runSummary,

@@ -541,7 +541,7 @@ export default {
   "sep.name.aufr33": "男女分離 aufr33",
   "sep.name.sucial": "男女分離 Sucial",
   "sep.name.becruily": "主唱／和聲 becruily",
-  "cover.backing_hint_full": "只在「和聲處理」選拆出主唱時有作用（不拆時和聲已跟主唱一起轉成 AI 聲音）。",
+  "cover.backing_hint_full": "只在「人聲處理」選拆出主唱時有作用（不拆時和聲已跟主唱一起轉成 AI 聲音）。",
   "cover.backing_hint_on": "預設開啟：原唱和聲混回伴奏。關掉＝成品只有 AI 主唱＋純伴奏；快速混音也能切換。",
   "cover.backing_hint_off": "已關閉：成品只有 AI 主唱＋純伴奏，不含原唱和聲。",
   "cover.mf_active_note": "男女對唱已啟用：這裡的模型和變調不使用，改用下面男／女各自的設定。",

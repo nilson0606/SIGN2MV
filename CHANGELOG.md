@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Cover: 「原唱和聲混進成品」 moved from the folded 「分離與和聲」 block to the mix block (under the accompaniment
+  volume), like the old 🎶 混入原唱和聲: it is a mix option that quick remix switches.
 - Cover: a song covered for the first time starts from the default settings; only the last cover's voice model
   is kept. It used to take everything from the last song, including its accompaniment key (a new song got
   the previous song's −4 key).
