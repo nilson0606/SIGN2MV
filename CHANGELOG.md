@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Cover: a song covered for the first time starts from the default settings; only the last cover's voice model
+  is kept. It used to take everything from the last song, including its accompaniment key (a new song got
+  the previous song's −4 key).
 - Cover speed: Python no longer recompiles torch, transformers, librosa… on every job. Child processes ran with
   PYTHONDONTWRITEBYTECODE=1 and the installer never compiled the environments, so Applio took 89–100 s to
   start (5.8 s when the files happened to be in memory) and covers were slow off and on; the old programs keep

@@ -192,13 +192,13 @@ def router(ctx: Context) -> APIRouter:
         return {"none": True, "steel_guitar": gm, "yangqin": gm, "guzheng": gz, "dizi": dz, "duet": gz and dz}
 
     def defaults() -> dict[str, Any]:
-        """Settings for a song that has none yet: everything at its default except the voice model and the
-        pitch of the last cover (the old AI cover did the same for a new song: 聲音模型與變調保留). The rest —
-        separation, accompaniment key, mix, fine-tuning — belongs to one song and is not carried over."""
+        """Settings for a song that has none yet: everything at its default, only the voice model of the last
+        cover is kept (Nilson 2026-10-31). Pitch, accompaniment key, separation, mix and fine-tuning belong
+        to one song and are not carried over."""
         saved = cover.read_json(paths.config / DEFAULTS_FILE, {}) or {}
         last = cover.clean_params(saved)
         p = cover.clean_params({})
-        p["model"], p["pitch"] = last["model"], last["pitch"]
+        p["model"] = last["model"]
         p["masks"], p["vol_segments"] = [], []
         if not p["model"] or not cover.model_dir(voices(), p["model"].split("__e")[0]):
             models = cover.list_models(voices())
