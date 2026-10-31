@@ -144,7 +144,7 @@ def song_items(song_dir: Path, lang: str) -> list[tuple[str, Path]]:
             target = d / str(info["audio"])
             if not target.is_file():
                 continue
-            when = float(info.get("created_at") or 0)
+            when = float(info.get("created_at") or 0) or target.stat().st_mtime
             if info.get("kind") == "cover":
                 v = version_of.get(d.name) or {}
                 title = v.get("title") or info.get("title") or d.name
@@ -162,7 +162,7 @@ def song_items(song_dir: Path, lang: str) -> list[tuple[str, Path]]:
             src = (f"{T['cover']} {_cover_ref(info.get('source_title'))}" if kind == "cover"
                    else T["sing"] if kind == "sing" else T["original"])
             look = T["studio"] if info.get("style") == "studio" else T["card"]
-            when = float(info.get("created_at") or 0)
+            when = float(info.get("created_at") or 0) or target.stat().st_mtime   # older quick MVs: no created_at
             parts = [f"{T['quick']} {look} {info.get('resolution') or ''}".strip(), src, _stamp(when, True, lang)]
             items.append((when, " · ".join(p for p in parts if p), target))
     mbase = song_dir / "mv"
@@ -251,7 +251,10 @@ public static class Sign2mvLink {
   }
 }
 '@
-$items = @(Get-Content -LiteralPath $args[0] -Raw -Encoding UTF8 | ConvertFrom-Json)
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+# not "Get-Content | ConvertFrom-Json" inside @(): Windows PowerShell 5.1 passes the whole array as ONE
+# object down the pipe, so every link name was joined into one path (IShellLinkW Save: E_FAIL)
+$items = ConvertFrom-Json (Get-Content -LiteralPath $args[0] -Raw -Encoding UTF8)
 foreach ($it in $items) {
   try { [Sign2mvLink]::Make([string]$it.link, [string]$it.target) }
   catch { [Console]::Error.WriteLine("$($it.link): $($_.Exception.Message)") }
