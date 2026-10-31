@@ -237,7 +237,7 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
     for factory in _load_feature_routers():
         app.include_router(factory(ctx))
 
-    # ---------------- finished-outputs folder (<library>/成品) ----------------
+    # ---------------- finished-outputs folder (<library>/Finished) ----------------
     @app.get("/api/finished")
     def finished_status():
         cfg = settings_mod.load(paths)

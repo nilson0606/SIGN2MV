@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Library: a 成品 folder (Finished in the English UI) inside the library, kept in step with the songs: one
+- Library: a Finished folder (成品資料夾; the folder name is English in every UI language) inside the library, kept in step with the songs: one
   folder per song named by its title, with shortcuts to every cover version, saved sing & record version,
   quick MV and full MV (the song folders themselves are named by id). Same titles get the import date
   (and time); renaming a song renames its folder; deleting work deletes its shortcuts. Only shortcuts

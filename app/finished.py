@@ -1,14 +1,14 @@
 """The finished-outputs folder: readable shortcuts to every result in the library.
 
 Song folders in the library are named by id (songs/<id>/...), so the finished files are hard to
-find in Explorer. This module keeps <library>/成品 (English UI: "Finished") in step with the
+find in Explorer. This module keeps <library>/Finished (always English; 成品 in the UI) in step with the
 library: one folder per song, named by its title, holding a shortcut to each cover version,
 sing & record take, quick MV and full MV. Nothing is copied; the shortcuts point at the real files.
 
-  成品/童話/翻唱 #1 My_Voice_Ver8 -12 · Key -2.lnk
-  成品/童話/唱錄 10-31 09：05.lnk
-  成品/童話/快速MV 錄音室 1080p · 翻唱 #1 · 10-31 09：20.lnk
-  成品/童話/MV 童話.lnk
+  Finished/童話/翻唱 #1 My_Voice_Ver8 -12 · Key -2.lnk
+  Finished/童話/唱錄 10-31 09：05.lnk
+  Finished/童話/快速MV 錄音室 1080p · 翻唱 #1 · 10-31 09：20.lnk
+  Finished/童話/MV 童話.lnk
 
 Two songs with the same title get the import date ("童話（10-29 匯入）"), and the import time
 when that is the same too. Times use a full-width colon (09：05): Windows names cannot hold ":". Clashing shortcut names get " (2)", " (3)".
@@ -35,7 +35,8 @@ from typing import Any
 log = logging.getLogger("sign2mv.finished")
 
 MANIFEST = "finished_shortcuts.json"
-ROOT_NAMES = {"zh": "成品", "en": "Finished"}
+ROOT_NAMES = {"zh": "Finished", "en": "Finished"}   # one English name for every UI language
+LEGACY_ROOTS = ("成品",)   # earlier name: moved to Finished
 DEBOUNCE_S = 1.5
 NAME_MAX = 80
 _BAD = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
@@ -335,7 +336,7 @@ def _rmdir_if_empty(path: Path) -> None:
 
 
 def sync(library_root: Path, language: str | None, tmp_dir: Path) -> dict[str, Any]:
-    """Bring <library>/成品 in step with the library. Returns counts (for tests and the log)."""
+    """Bring <library>/Finished in step with the library. Returns counts (for tests and the log)."""
     library_root = Path(library_root)
     lang = lang_key(language)
     if not (library_root / "songs").is_dir():
@@ -346,7 +347,7 @@ def sync(library_root: Path, language: str | None, tmp_dir: Path) -> dict[str, A
     root_name = ROOT_NAMES[lang]
     root = library_root / root_name
     # the UI language changed: move the folder to its new name (it may hold the user's own files)
-    if old_root_name and old_root_name != root_name and old_root_name in ROOT_NAMES.values():
+    if old_root_name and old_root_name != root_name and old_root_name in (*ROOT_NAMES.values(), *LEGACY_ROOTS):
         old_root = library_root / old_root_name
         if old_root.is_dir() and not root.exists():
             try:
