@@ -58,20 +58,20 @@ a { color:var(--accent); }
 <section id="install">
 <h2>2. Install</h2>
 <ol>
-<li>Put the SIGN2MV folder where it should live (for example <code>D:\AI_SIGN2MV</code>). Everything — Python, AI models, caches, temporary files — is installed inside this folder, not on C:.</li>
+<li>Windows 10 or 11 (64-bit) is required; macOS and Linux are not supported yet. Put the SIGN2MV folder where it should live (for example <code>D:\AI_SIGN2MV</code>). Everything — Python, AI models, caches, temporary files — is installed inside this folder, not on C:.</li>
 <li>Double-click <code>install.bat</code>. The first run downloads about 10 GB and can take a long time.</li>
 <li>When asked about the <b>Sucial</b> male/female separation model, answer yes only if you accept its non-commercial licence. Without it, duet mode uses the aufr33 model.</li>
 <li>Wait for <code>Done. Double-click start.bat to open SIGN2MV.</code></li>
 </ol>
 <p>If installation stops (network drop, full disk), run <code>install.bat</code> again: finished steps are skipped. The log is in <code>logs\install.log</code>. On the Home page, <i>Installation</i> and the checks list show what is ready.</p>
-<p>An NVIDIA graphics card is used automatically when present. Without one everything still works on the CPU, only slower (training on the CPU is very slow). MV encoding tries the NVIDIA, AMD and Intel graphics card encoders in turn and uses the CPU only if none works. The last installation step compiles every environment's Python files once, so separation, covers and Whisper start faster.</p>
+<p>An NVIDIA graphics card is used automatically when present. Without one everything still works on the CPU, only slower (training on the CPU is very slow). MV encoding tries the NVIDIA (NVENC, driver 570 or newer), AMD and Intel graphics card encoders in turn and uses the CPU only if none works; the installer writes which one works to <code>logs\install.log</code>. FFmpeg is a fixed version checked against its checksum, so every PC gets the same file. The last installation step compiles every environment's Python files once, so separation, covers and Whisper start faster.</p>
 </section>
 
 <section id="start">
 <h2>3. Start and shut down</h2>
 <ol>
 <li>Double-click <code>start.bat</code>. A console window (the server) and a SIGN2MV window open. Keep the console window open while you work.</li>
-<li>To finish, press <b>Shut down</b> at the top right. If jobs are running or a workspace is busy (recording, converting, rendering), SIGN2MV lists them and asks before cancelling them.</li>
+<li>To finish, press <b>Shut down</b> at the top right. If jobs are running or a workspace is busy (recording, converting, rendering), SIGN2MV lists them and asks before cancelling them. The console window then closes by itself within a few seconds.</li>
 </ol>
 <p>The interface language follows Windows; change it with the language menu at the top. The <b>Manual</b> link opens this page.</p>
 </section>
@@ -116,7 +116,7 @@ a { color:var(--accent); }
 <li><b>Prepare the song</b>: choose the key (−12 to +12, tempo unchanged) and press <i>Prepare song reference</i>. Wait until the status says ready. The default is full-song analysis with RMVPE pitch. <i>Analysis range</i> can instead try only the first 15, 30 or 60 seconds (separated on its own, the whole-song stems are not touched). Untick <i>Keep separated tracks</i> to keep only the pitch reference: the stems this preparation made are removed afterwards (previews and backing-only playback then need them rebuilt).</li>
 <li><b>Microphone</b>: choose browser capture, or native capture if enabling the microphone lowers your backing audio; enable the microphone and check the input. (Voice to the speakers and recording diagnostics were removed: the live speaker output sounded poor and diagnostics could affect recording timing.)</li>
 <li><b>Sing</b>: choose what you hear (original vocals + backing, or backing/harmonies only) and what is recorded (singer only, mixed, or nothing), then <i>Sing from the start</i>. Stop, or let the song end; the take waits under <i>Pending review</i>. Save it for post-production when satisfied.</li>
-<li><b>Segments</b>: press the bright pink-orange <i>Enable segment mode</i> button, split the song while it plays, record each segment as many times as you like, choose a take per segment and assemble the full mix. Original-vocal regions can be added to the assembled mix.</li>
+<li><b>Segments</b>: press the bright pink-orange <i>Enable segment mode</i> button, split the song while it plays, record each segment as many times as you like, choose a take per segment and assemble the full mix. A finished take is saved first (“Saving this part's take…”); the next part can be recorded once it is saved, and pressing Record meanwhile says so. Original-vocal regions can be added to the assembled mix.</li>
 <li><b>Post-production</b>: levels, timing correction, smoothing, EQ, compression, reverb/delay, noise and breath reduction, pitch correction; compare A/B on the same phrase; render again (the original vocal is always kept).</li>
 <li><b>Make an MV</b> from a finished recording: the recording is saved as an MV audio of the song and the MV workspace opens with it.</li>
 </ol>
@@ -131,7 +131,7 @@ a { color:var(--accent); }
 <ol>
 <li><b>Voice model</b>: choose a model (and, if it has them, one of its kept training epochs). The last model you used is selected for new songs. If the list is empty, import or train a model first (chapter 7).</li>
 <li><b>Pitch</b>: semitones for the voice (about −12 for female→male, +12 for male→female). The buttons <i>0</i>, <i>−12</i> and <i>+12</i> set it in one click.</li>
-<li><b>Key (whole song)</b>: −8 to +8. The accompaniment and original backing vocals are shifted with Rubber Band (tempo unchanged) and the voice conversion gets the same shift. <i>▶ Preview this key</i> plays the original in that key; the original button continues from the same second, so you can switch back and forth. <i>Reset</i> returns to the original key. If Rubber Band is missing the page says so and the key cannot be changed.</li>
+<li><b>Key (whole song)</b>: −8 to +8. The accompaniment and original backing vocals are shifted with Rubber Band (tempo unchanged) and the voice conversion gets the same shift (converted backing vocals get it in their conversion as well). <i>▶ Preview this key</i> plays the original in that key; the original button continues from the same second, so you can switch back and forth. <i>Reset</i> returns to the original key. If Rubber Band is missing the page says so and the key cannot be changed.</li>
 <li>Optional <b>Conversion fine-tuning</b>: consonant/breath protect (0.33), index rate (0.75), volume envelope (0 = follow the original singer's loudness), pitch detection (rmvpe), auto-tune, noise clean-up.</li>
 <li>Optional <b>Separation and backing vocals</b>: separator; vocals = convert the lead and keep the original backing vocals (default), convert all vocals, or split twice for songs with three or more voices; the lead split model (aufr33 / viperx, or becruily if you have downloaded it: the page shows where to put the 1.7 GB file and its download link); accompaniment single or second pass. The section says which separators are ready. When the lead is split off, <b>Mix the backing vocals into the cover</b> in the mix block decides whether they go back into the cover; changing it only needs a quick remix. Below it, <b>Convert the backing vocals to my voice too</b> (off by default): in many songs the lead singer sang the backing vocals; with it on they are converted with the same model and pitch (about as long again as the lead conversion; quick remix reuses it). Backing vocals with several voices on different notes at once may sound rough; listen and compare. The version name gets “Backing VC”.</li>
 <li><b>Mix</b>: converted vocal volume (95%) and accompaniment (85%), with presets <i>Vocal forward</i>, <i>Standard balance</i> and <i>Backing forward</i>. Each fine-tuning group has <b>Restore defaults</b>.</li>
@@ -217,7 +217,7 @@ a { color:var(--accent); }
 
 <section id="jobs">
 <h2>9. Job queue</h2>
-<p><b>Jobs</b> lists every job with its progress and elapsed time. GPU jobs (separation, conversion, Whisper, training) run one at a time; the others wait with their position. Full MV renders have their own lane, so a long render does not hold up a cover. General jobs (imports, key changes, quick remixes, quick MVs) run beside them. <b>Cancel</b> stops a job and its helper programs. <b>Log</b> shows a job's output (coloured, follows the end, copy and clear), also while it runs.</p>
+<p><b>Jobs</b> lists every job with its progress and elapsed time. GPU jobs (separation, conversion, Whisper, training) run one at a time; the others wait with their position. Full MV renders have their own lane, so a long render does not hold up a cover. General jobs (imports, key changes, quick remixes, quick MVs) run beside them. <b>Cancel</b> stops a job and its helper programs. <b>Log</b> shows a job's output (coloured, follows the end, copy and clear), also while it runs. Cover progress and logs name what is being converted, e.g. “1/2 Lead”, “2/2 Backing”, “✔ Converted Backing (35 s)”. Separation notices that look like warnings but are harmless (such as ONNX Runtime having no CUDA; our separation models use CUDA through PyTorch) are left out.</p>
 </section>
 
 <section id="settings">
@@ -259,6 +259,9 @@ a { color:var(--accent); }
 <tr><td>Voice conversion is not installed</td><td>The Applio part of the installation is incomplete: run <code>install.bat</code> again.</td></tr>
 <tr><td>Key change fails</td><td>ffmpeg without Rubber Band: run <code>install.bat</code> again.</td></tr>
 <tr><td>A job is slow</td><td>Check whether another GPU job (for example a training) is running in <b>Jobs</b>.</td></tr>
+<tr><td>MVs are slow and encoded on the CPU</td><td>The MV status line or the quick MV list gives the graphics card encoder's reason (also kept in <code>encoder_errors.log</code> next to the MV). NVIDIA needs driver 570 or newer; after a driver update nothing needs reinstalling.</td></tr>
+<tr><td>Segment recording says the capture broke off</td><td>Record the part again. If it happens often, note the time and report it; capture records are in <code>logs\native-capture.jsonl</code>.</td></tr>
+<tr><td>The black window stays after Shut down</td><td>Close it with its X button; nothing is lost (the jobs have already stopped).</td></tr>
 <tr><td>The voice index seems ignored</td><td>Keep the SIGN2MV folder path in English letters (for example <code>D:\AI_SIGN2MV</code>): the index library cannot open paths with Chinese characters.</td></tr>
 </table>
 <p>Server details are in <code>logs\server.log</code>.</p>
@@ -266,7 +269,7 @@ a { color:var(--accent); }
 
 <section id="licences">
 <h2>13. Licences</h2>
-<p>SIGN2MV uses open-source components and models with their own licences, listed in <code>THIRD_PARTY.md</code>. Notably: Applio (MIT), RMVPE (downloaded from lj1995/VoiceConversionWebUI, MIT), basic-pitch (Apache-2.0), GeneralUser GS sound font (GeneralUser GS licence v2.0), the Sucial male/female model (CC BY-NC-SA 4.0, non-commercial, optional). Use voice models only for voices you have the right to use.</p>
+<p>SIGN2MV itself is released under the MIT licence (see <code>LICENSE</code>). The open-source components and models it uses have their own licences, listed in <code>THIRD_PARTY.md</code>; all are downloaded by the installer. Notably: Applio (MIT), RMVPE (downloaded from lj1995/VoiceConversionWebUI, MIT), basic-pitch (Apache-2.0), GeneralUser GS sound font (GeneralUser GS licence v2.0), the Sucial male/female model (CC BY-NC-SA 4.0, non-commercial, optional). Import only songs and recordings you have the right to use (YouTube import uses yt-dlp; follow YouTube's terms where you live), use voice models only for voices you have the right to use, and do not present a converted voice as someone else's real performance.</p>
 </section>
 
 </main>

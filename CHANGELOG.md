@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Manuals (Chinese and English) brought up to date: Windows 10/11 only; NVENC needs driver 570+ and the
+  installer logs the working encoder; FFmpeg pinned and checksum-checked; Shut down closes the console;
+  segment takes are saved before the next part; converted backing vocals get the key in their conversion;
+  job log names each conversion and hides harmless separator notices; new troubleshooting rows (CPU MV
+  encoding, capture broke off, console left open); MIT licence and use-responsibly note. The sing &
+  record guide's SIGN2MV note says the install step is skipped and which features were removed.
 - AI cover job line and log name each conversion: 「1/2 主唱 · CUDA」, 「2/2 和聲 · CUDA」, 「✔ 已轉換主唱（28.1 秒）」
   (also 人聲, 和聲 2, 男聲, 女聲, 分段 a–b 秒, 外部音檔 …; English in the English UI). They used to show the
   internal keys (main, backing).
