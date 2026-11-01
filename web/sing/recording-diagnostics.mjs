@@ -1,6 +1,6 @@
 import {localizedConfirm} from './i18n.mjs';
 const base='/sr',key='karaoke.recording-diagnostics.v1';
-// [SIGN2MV] recording diagnostics removed (Nilson 2026-10-31): never collected, the panel is hidden.
+// [SIGN2MV] recording diagnostics removed on request (2026-10-31): never collected, the panel is hidden.
 // It was on by default and its own note says it may affect audio timing.
 let enabled=false,busy=0,tokenPromise;
 const $=id=>document.getElementById(id);

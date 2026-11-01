@@ -213,8 +213,9 @@ def c_drive_free() -> int | None:
 # ---------------------------------------------------------------- steps
 def step_ffmpeg(state: dict) -> None:
     target = RT / "ffmpeg"
-    archive = PATHS.cache / "downloads" / "ffmpeg-win64-gpl.zip"
-    download(MANIFEST["ffmpeg"]["url"], archive)
+    m = MANIFEST["ffmpeg"]
+    archive = PATHS.cache / "downloads" / f"ffmpeg-{m['version']}-win64-gpl.zip"
+    download(m["url"], archive, sha256=m.get("sha256"), size=m.get("size"))
     extract_zip(archive, target)
     exe = target / "bin" / ("ffmpeg.exe" if IS_WINDOWS else "ffmpeg")
     res = run([exe, "-hide_banner", "-filters"], capture=True)

@@ -2,8 +2,8 @@
 
 Replaces the AI cover page of AI_COVER_MV with the same features, reorganised
 around the SIGN2MV song library:
-  * voice models in models/voices/<Name>/ (import from a folder such as the old
-    D:\\AI_COVER_MV\\models, upload, delete, epoch versions, loss curve);
+  * voice models in models/voices/<Name>/ (import from a folder of model folders, upload, delete,
+    epoch versions, loss curve);
   * training with Applio (GPU lane job, scratch in runtime/applio-logs);
   * a cover of a library song = a version (cover/versions/<vid>) whose mixed MP3
     is a render of the song (kind "cover"), so the MV workspace can use it;
@@ -193,7 +193,7 @@ def router(ctx: Context) -> APIRouter:
 
     def defaults() -> dict[str, Any]:
         """Settings for a song that has none yet: everything at its default, only the voice model of the last
-        cover is kept (Nilson 2026-10-31). Pitch, accompaniment key, separation, mix and fine-tuning belong
+        cover is kept (requested 2026-10-31). Pitch, accompaniment key, separation, mix and fine-tuning belong
         to one song and are not carried over."""
         saved = cover.read_json(paths.config / DEFAULTS_FILE, {}) or {}
         last = cover.clean_params(saved)

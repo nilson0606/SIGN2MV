@@ -31,19 +31,36 @@ personal use.
 | Model | Use | Licence / source |
 |---|---|---|
 | htdemucs | separation | MIT (Demucs) |
-| BS-RoFormer ep317 (viperx), Mel-RoFormer Kim, karaoke aufr33/viperx, male/female aufr33 | separation | see the model pages listed by audio-separator |
-| Sucial male/female (chorus BS-RoFormer ep267) | duet split, optional | CC BY-NC-SA 4.0 (non-commercial); installed only after accepting it |
+| BS-RoFormer ep317 (viperx) | separation | licence not verified; UVR public model, downloaded by audio-separator from [TRvlvr/model_repo](https://github.com/TRvlvr/model_repo/releases/tag/all_public_uvr_models) |
+| Mel-RoFormer vocals (Kimberley Jensen) | separation | licence not verified; [KimberleyJSN/melbandroformer](https://huggingface.co/KimberleyJSN/melbandroformer) |
+| Mel-RoFormer karaoke (aufr33, viperx) | lead / backing split | licence not verified; UVR public model, [TRvlvr/model_repo](https://github.com/TRvlvr/model_repo/releases/tag/all_public_uvr_models) |
+| BS-RoFormer male/female (aufr33) | duet split | licence not verified; [python-audio-separator model-configs](https://github.com/nomadkaraoke/python-audio-separator/releases/tag/model-configs) |
+| Sucial male/female (chorus BS-RoFormer ep267) | duet split, optional | CC BY-NC-SA 4.0 (non-commercial); installed only after accepting it; [python-audio-separator model-configs](https://github.com/nomadkaraoke/python-audio-separator/releases/tag/model-configs) |
+| Mel-RoFormer karaoke (becruily) | lead / backing split, optional | licence not verified; downloaded by hand from [python-audio-separator model-configs](https://github.com/nomadkaraoke/python-audio-separator/releases/tag/model-configs) |
+
+"Licence not verified" means the model's own page has not been checked for terms yet. These community
+separation models are widely used with audio-separator and UVR, but before any use beyond personal use,
+check the model page. File sizes and SHA-256 hashes are in `installer/manifest.json`.
 | RMVPE (`rmvpe.pt`) | pitch | from huggingface.co/lj1995/VoiceConversionWebUI (MIT) |
 | ContentVec, HiFi-GAN pretrained G/D | Applio conversion and training | downloaded by Applio (see Applio) |
 | faster-whisper medium / small (Systran) | lyric alignment | MIT (OpenAI Whisper weights) |
 | GeneralUser GS 2.0.3 (S. Christian Collins) | steel guitar / yangqin sounds | GeneralUser GS License v2.0: free use and redistribution |
 
-Guzheng and dizi samples are not downloaded; the user can import their own
-copies (for example from the old AI cover folder) on the AI cover page.
+Guzheng and dizi samples are not downloaded; users can import their own .ogg
+samples (a folder with guzheng / dizi subfolders) on the AI cover page.
 
 ## Code carried over
 
-- The sing & record front end (`web/sing/`) and its recording/diagnostics
-  modules come from the author's sign_record project.
-- The MV page (`web/mv/index.html`) and the MV, mixing, melody, training and
-  alignment logic are ported from the author's AI_COVER_MV project.
+Both projects are by the same author as SIGN2MV and are covered by this project's licence (MIT):
+
+- The sing & record front end (`web/sing/`) and its recording modules come from the author's
+  [sign_record](https://github.com/nilson0606/sign_record) project.
+- The MV page (`web/mv/index.html`) and the MV, mixing, melody, training and alignment logic are
+  ported from the author's earlier private project (AI_COVER_MV).
+
+## FFmpeg (GPL)
+
+This repository contains no FFmpeg binaries: `install.bat` downloads the BtbN GPL build (pinned
+release and SHA-256 in `installer/manifest.json`) and SIGN2MV runs it as a separate program. Anyone who
+redistributes a package that includes `ffmpeg.exe` must ship it under the GPL (licence text and a way to
+get the corresponding source), as for any GPL program.

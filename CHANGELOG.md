@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Open-source groundwork: MIT licence (`LICENSE`); README gains requirements and limits (Windows only,
+  NVIDIA CUDA for AI work, NVIDIA/AMD/Intel/CPU for MV encoding) and a "use responsibly" note;
+  THIRD_PARTY lists each separation model with its download page (licence marked "not verified" where
+  the author's terms were not checked), where the carried-over code comes from, and the FFmpeg GPL note.
+- Installer: FFmpeg is pinned to the BtbN build `autobuild-2026-10-31-12-59` (8.1.3, NVENC needs driver
+  570+) and checked by size and SHA-256, instead of the moving "latest" file. The male/female separation
+  models (aufr33, Sucial) and the becruily karaoke model now have size and SHA-256 too (computed from the
+  downloaded files). The next install.bat run fetches FFmpeg again and re-checks the models.
+- Personal names and paths of the author's older setup removed from hints, comments, tests and the
+  manual (model import example is now `D:\voice-models`; guzheng/dizi hint describes the folder layout).
 - Cover: the spectrum bars of a playing version froze after switching to another page and back (the
   animation stopped while the page was hidden and nothing started it again).
 - 全部關閉 now closes the black window: the server waited forever for connections the open page keeps

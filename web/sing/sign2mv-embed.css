@@ -42,7 +42,7 @@ html[data-sign2mv] button:active:not(:disabled) { transform: translateY(2px); bo
 html[data-sign2mv] .card { border-color: rgba(245, 200, 76, .42) !important; }
 html[data-sign2mv] .card:focus-within { border-color: rgba(245, 200, 76, .85) !important;
   box-shadow: 0 0 0 1px rgba(245, 200, 76, .42), 0 30px 50px -12px #000d, 0 0 28px rgba(245, 200, 76, .18), inset 0 1px #ffffff12; }
-/* [SIGN2MV] removed on Nilson's request (2026-10-31): voice to the speakers (poor result) and recording
+/* [SIGN2MV] removed on request (2026-10-31): voice to the speakers (poor result) and recording
    diagnostics (off in recording-diagnostics.mjs too) */
 html[data-sign2mv] #voice-output,
 html[data-sign2mv] #recording-diagnostics-panel { display: none !important; }

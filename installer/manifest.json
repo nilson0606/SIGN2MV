@@ -7,9 +7,12 @@
     "sha256": "a2a8820d5eea32f08ef467ef3b7f66883a9b076d5737a2fc2fbb5f458d1bb50f"
   },
   "ffmpeg": {
-    "note": "BtbN GPL build of the 8.1 release branch (includes librubberband, needed for key shifting). Not the master build: master follows NVIDIA's newest encoder API (13.1 needs driver 610+, newer than the drivers people have), so NVENC failed and every MV fell back to the CPU. 8.1 uses NVENC API 13.0 (driver 570+). The file moves with 8.1 fixes; the installer verifies the rubberband filter and tries NVENC instead of a fixed hash.",
-    "version": "8.1",
-    "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-gpl-8.1.zip"
+    "note": "BtbN GPL build of the 8.1 release branch (includes librubberband, needed for key shifting; NVENC needs driver 570+, AMF and Quick Sync are enabled). Not the master build: master follows NVIDIA's newest encoder API (13.1 needs driver 610+), so NVENC failed and every MV fell back to the CPU. Pinned to the last build of a month (BtbN keeps those two years) with its sha256, so every install gets the same file.",
+    "version": "8.1.3",
+    "release": "autobuild-2026-10-31-12-59",
+    "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-31-12-59/ffmpeg-n8.1.3-27-g8dca1586f4-win64-gpl-8.1.zip",
+    "size": 194182300,
+    "sha256": "401dffcf14c301082e1fc03b0bc876b92ea676bfc521fc56e80a1537d137034f"
   },
   "deno": {
     "version": "2.9.8",
@@ -17,41 +20,93 @@
     "sha256": "cba84b26e0df5ae7f74fc66b86a95b866872a86292ebd84fa1e959927edd93bf"
   },
   "torch": {
-    "engine": {"torch": "2.11.0", "torchaudio": "2.11.0", "torchvision": "0.26.0"},
+    "engine": {
+      "torch": "2.11.0",
+      "torchaudio": "2.11.0",
+      "torchvision": "0.26.0"
+    },
     "cuda_index": "https://download.pytorch.org/whl/cu128",
     "cpu_index": "https://download.pytorch.org/whl/cpu"
   },
-  "basic_pitch": {"version": "0.4.0", "license": "Apache-2.0", "note": "installed with --no-deps; the ONNX model is used"},
+  "basic_pitch": {
+    "version": "0.4.0",
+    "license": "Apache-2.0",
+    "note": "installed with --no-deps; the ONNX model is used"
+  },
   "applio": {
     "version": "3.7.1",
     "url": "https://github.com/IAHispano/Applio/archive/refs/tags/3.7.1.zip",
     "license": "MIT"
   },
   "models": {
-    "htdemucs": {"file": "torch/hub/checkpoints/955717e8-8726e21a.th", "size": 84141911,
-                 "sha256": "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4"},
-    "bs_roformer": {"file": "separation/model_bs_roformer_ep_317_sdr_12.9755.ckpt", "size": 639331213,
-                    "sha256": "5b84f37e8d444c8cb30c79d77f613a41c05868ff9c9ac6c7049c00aefae115aa"},
-    "mel_roformer_kim": {"file": "separation/vocals_mel_band_roformer.ckpt", "size": 913106900,
-                         "sha256": "87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e",
-                         "url": "https://huggingface.co/KimberleyJSN/melbandroformer/resolve/ac9b0614ab3cd7f77219e18ba494dfd93956c348/MelBandRoformer.ckpt"},
-    "karaoke_aufr33": {"file": "separation/mel_band_roformer_karaoke_aufr33_viperx_sdr_10.1956.ckpt", "size": 913096801,
-                       "sha256": "1de20d459332fe8869aeb01327a31df0032262706e1365114e852dc271779813"},
-    "male_female_aufr33": {"file": "separation/bs_roformer_male_female_by_aufr33_sdr_7.2889.ckpt"},
-    "male_female_sucial": {"file": "separation/model_chorus_bs_roformer_ep_267_sdr_24.1275.ckpt",
-                           "license": "CC BY-NC-SA 4.0 (non-commercial)", "optional": true},
-    "karaoke_becruily": {"file": "separation/mel_band_roformer_karaoke_becruily.ckpt", "optional": true,
-                         "url": "https://github.com/nomadkaraoke/python-audio-separator/releases/download/model-configs/mel_band_roformer_karaoke_becruily.ckpt",
-                         "note": "downloaded by hand (about 1.7 GB), like in AI_COVER_MV"},
-    "rmvpe": {"file": "rmvpe/rmvpe.pt", "size": 181184272,
-              "sha256": "6d62215f4306e3ca278246188607209f09af3dc77ed4232efdd069798c4ec193",
-              "url": "https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/rmvpe.pt"},
-    "whisper_medium": {"dir": "whisper/medium", "repo": "Systran/faster-whisper-medium"},
-    "whisper_small": {"dir": "whisper/small", "repo": "Systran/faster-whisper-small",
-                      "note": "CPU fallback (same as the old MV Studio)"},
-    "soundfont_generaluser": {"file": "soundfonts/GeneralUser-GS.sf2", "size": 32319396,
-                              "sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe",
-                              "url": "https://raw.githubusercontent.com/mrbumpy409/GeneralUser-GS/684543d5e5efaef08d02be50dcda8d552478fa60/GeneralUser-GS.sf2",
-                              "version": "2.0.3", "license": "GeneralUser GS License v2.0 (free use and redistribution)"}
-  }
+    "htdemucs": {
+      "file": "torch/hub/checkpoints/955717e8-8726e21a.th",
+      "size": 84141911,
+      "sha256": "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4"
+    },
+    "bs_roformer": {
+      "file": "separation/model_bs_roformer_ep_317_sdr_12.9755.ckpt",
+      "size": 639331213,
+      "sha256": "5b84f37e8d444c8cb30c79d77f613a41c05868ff9c9ac6c7049c00aefae115aa",
+      "source": "https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/model_bs_roformer_ep_317_sdr_12.9755.ckpt"
+    },
+    "mel_roformer_kim": {
+      "file": "separation/vocals_mel_band_roformer.ckpt",
+      "size": 913106900,
+      "sha256": "87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e",
+      "url": "https://huggingface.co/KimberleyJSN/melbandroformer/resolve/ac9b0614ab3cd7f77219e18ba494dfd93956c348/MelBandRoformer.ckpt"
+    },
+    "karaoke_aufr33": {
+      "file": "separation/mel_band_roformer_karaoke_aufr33_viperx_sdr_10.1956.ckpt",
+      "size": 913096801,
+      "sha256": "1de20d459332fe8869aeb01327a31df0032262706e1365114e852dc271779813",
+      "source": "https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/mel_band_roformer_karaoke_aufr33_viperx_sdr_10.1956.ckpt"
+    },
+    "male_female_aufr33": {
+      "file": "separation/bs_roformer_male_female_by_aufr33_sdr_7.2889.ckpt",
+      "size": 527119779,
+      "sha256": "3cf11736d1b42a11ae55d8299316585921477dd2a671b24b663660846ca9861b",
+      "source": "https://github.com/nomadkaraoke/python-audio-separator/releases/download/model-configs/bs_roformer_male_female_by_aufr33_sdr_7.2889.ckpt"
+    },
+    "male_female_sucial": {
+      "file": "separation/model_chorus_bs_roformer_ep_267_sdr_24.1275.ckpt",
+      "license": "CC BY-NC-SA 4.0 (non-commercial)",
+      "optional": true,
+      "size": 527121477,
+      "sha256": "123c00786bdbc6bd462dddb35cd21fd6ae99ab8319f93f63a8abc1012e593d94",
+      "source": "https://github.com/nomadkaraoke/python-audio-separator/releases/download/model-configs/model_chorus_bs_roformer_ep_267_sdr_24.1275.ckpt"
+    },
+    "karaoke_becruily": {
+      "file": "separation/mel_band_roformer_karaoke_becruily.ckpt",
+      "optional": true,
+      "url": "https://github.com/nomadkaraoke/python-audio-separator/releases/download/model-configs/mel_band_roformer_karaoke_becruily.ckpt",
+      "note": "downloaded by hand (about 1.7 GB), like in AI_COVER_MV",
+      "size": 1719139254,
+      "sha256": "d3aa262ac01df870b9fc033e9c7b6cad33fe04fc9c148b6c40841326a515a0e0"
+    },
+    "rmvpe": {
+      "file": "rmvpe/rmvpe.pt",
+      "size": 181184272,
+      "sha256": "6d62215f4306e3ca278246188607209f09af3dc77ed4232efdd069798c4ec193",
+      "url": "https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/rmvpe.pt"
+    },
+    "whisper_medium": {
+      "dir": "whisper/medium",
+      "repo": "Systran/faster-whisper-medium"
+    },
+    "whisper_small": {
+      "dir": "whisper/small",
+      "repo": "Systran/faster-whisper-small",
+      "note": "CPU fallback (same as the old MV Studio)"
+    },
+    "soundfont_generaluser": {
+      "file": "soundfonts/GeneralUser-GS.sf2",
+      "size": 32319396,
+      "sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe",
+      "url": "https://raw.githubusercontent.com/mrbumpy409/GeneralUser-GS/684543d5e5efaef08d02be50dcda8d552478fa60/GeneralUser-GS.sf2",
+      "version": "2.0.3",
+      "license": "GeneralUser GS License v2.0 (free use and redistribution)"
+    }
+  },
+  "models_note": "'source' is where audio-separator downloads a model from (informational; the installer lets audio-separator fetch it). size/sha256 were computed from the downloaded files and are checked after the download."
 }

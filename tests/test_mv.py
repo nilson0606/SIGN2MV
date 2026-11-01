@@ -183,11 +183,11 @@ def test_quick_mv(client, root, tmp_path, monkeypatch):
     monkeypatch.setenv("SIGN2MV_MV_FONT", str(fonts[0]))
     song = import_file(client, tmp_path, video=False, secs=12)
     sid = song["song_id"]
-    client.put("/api/settings", json={"cover_singer_name": "Nilson", "language": "zh-TW"})
+    client.put("/api/settings", json={"cover_singer_name": "Singer", "language": "zh-TW"})
 
     info = client.get(f"/api/songs/{sid}/quickmv").json()
     assert info["font_ok"] and info["items"] == []
-    assert info["sources"][0]["id"] == "original" and info["defaults"]["artist"] == "Nilson"
+    assert info["sources"][0]["id"] == "original" and info["defaults"]["artist"] == "Singer"
     title = info["defaults"]["title"]
 
     # bad input is refused before a job starts
@@ -195,14 +195,14 @@ def test_quick_mv(client, root, tmp_path, monkeypatch):
     assert client.post(f"/api/songs/{sid}/quickmv", json={"source": "nope", "title": "t", "artist": "x"}).status_code == 400
     assert client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "a\nb", "artist": "x"}).status_code == 400
 
-    res = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "AI 翻唱 測試", "artist": "Nilson"}).json()
+    res = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "AI 翻唱 測試", "artist": "Singer"}).json()
     done = wait_job(client, res["job"]["id"], 600)
     assert done["status"] == "succeeded", (done["error_code"], done["error_message"])
     items = client.get(f"/api/songs/{sid}/quickmv").json()["items"]
     assert len(items) == 1
     it = items[0]
-    assert it["title"] == "Nilson 翻唱 測試"           # never shows "AI"
-    assert it["artist_line"] == "翻唱｜Nilson" and it["source"] == "original"
+    assert it["title"] == "Singer 翻唱 測試"           # never shows "AI"
+    assert it["artist_line"] == "翻唱｜Singer" and it["source"] == "original"
     sdir = root / "library" / "songs" / sid
     video = sdir / it["path"]
     pr = probe(video)
@@ -234,7 +234,7 @@ def test_quick_mv(client, root, tmp_path, monkeypatch):
 
     # every song's quick MVs: list, delete selected, delete all (sign_record's saved-MV panel)
     for name in ("one", "two"):
-        j = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": name, "artist": "Nilson"}).json()
+        j = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": name, "artist": "Singer"}).json()
         assert wait_job(client, j["job"]["id"], 600)["status"] == "succeeded"
     allq = client.get("/api/quickmv").json()
     assert sorted(i["title"] for i in allq["items"]) == ["one", "two"] and allq["bytes"] > 0
@@ -255,14 +255,14 @@ def test_quick_mv(client, root, tmp_path, monkeypatch):
                                                           "resolution": "4k"}).status_code == 400
     assert client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "t", "artist": "x", "style": "studio",
                                                           "credits": "x" * 121}).status_code == 400
-    j = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "錄音室", "artist": "Nilson",
+    j = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "錄音室", "artist": "Singer",
                                                        "style": "studio", "resolution": "720p", "subtitle": "AI Cover · 測試",
                                                        "badge": "🎸 吉他版", "credits": "Model: X | Pitch: +2"}).json()
     done = wait_job(client, j["job"]["id"], 600)
     assert done["status"] == "succeeded", (done["error_code"], done["error_message"])
     st = client.get(f"/api/songs/{sid}/quickmv").json()["items"][0]
     assert st["style"] == "studio" and st["resolution"] == "720p" and st["fps"] == 60
-    assert st["subtitle"] == "Nilson 翻唱 · 測試" and st["badge"] == "🎸 吉他版"     # never shows "AI"
+    assert st["subtitle"] == "Singer 翻唱 · 測試" and st["badge"] == "🎸 吉他版"     # never shows "AI"
     video = sdir / st["path"]
     v = next(s for s in probe(video)["streams"] if s["codec_type"] == "video")
     assert (v["width"], v["height"], v["r_frame_rate"]) == (1280, 720, "60/1")
@@ -273,7 +273,7 @@ def test_quick_mv(client, root, tmp_path, monkeypatch):
     assert g > 120 and g > r and g > b
     sub = img.crop((83, 133, 600, 160))
     assert any(px[1] > 150 and px[0] < 120 for px in sub.getdata())             # green subtitle
-    j2 = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "card720", "artist": "Nilson",
+    j2 = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "card720", "artist": "Singer",
                                                         "resolution": "720p"}).json()
     assert wait_job(client, j2["job"]["id"], 600)["status"] == "succeeded"
     c720 = next(i for i in client.get(f"/api/songs/{sid}/quickmv").json()["items"] if i["title"] == "card720")
@@ -289,7 +289,7 @@ def test_quick_mv_lyrics(client, root, tmp_path, monkeypatch, fake_whisper):
     monkeypatch.setenv("SIGN2MV_MV_FONT", str(fonts[0]))
     song = import_file(client, tmp_path, video=False, secs=12)
     sid = song["song_id"]
-    client.put("/api/settings", json={"cover_singer_name": "Nilson", "language": "zh-TW"})
+    client.put("/api/settings", json={"cover_singer_name": "Singer", "language": "zh-TW"})
     base = f"/api/songs/{sid}/quickmv/lyrics"
 
     lrc = client.post(f"{base}/align", json={"text": "[00:01.00]第一句\n[00:04.50]第二句\n[00:07.00]第三句"}).json()
@@ -315,7 +315,7 @@ def test_quick_mv_lyrics(client, root, tmp_path, monkeypatch, fake_whisper):
     got = client.get(base, params={"source": "original"}).json()
     assert got["text"] == "第一句" and got["lines"] == saved["lines"] and got["whisper_ready"]
 
-    j = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "字幕", "artist": "Nilson",
+    j = client.post(f"/api/songs/{sid}/quickmv", json={"source": "original", "title": "字幕", "artist": "Singer",
                                                        "style": "studio", "lyrics": saved["lines"]}).json()
     done = wait_job(client, j["job"]["id"], 600)
     assert done["status"] == "succeeded", (done["error_code"], done["error_message"])

@@ -1064,7 +1064,7 @@ function versionItem(v, hi) {
 
 // ------------------------------------------------------------------ models
 const modelsList = el('div', { class: 'list' });
-const importPath = el('input', { type: 'text', style: 'flex:1;min-width:220px', placeholder: 'D:\\AI_COVER_MV\\models' });
+const importPath = el('input', { type: 'text', style: 'flex:1;min-width:220px', placeholder: 'D:\\voice-models' });
 const upName = el('input', { type: 'text', placeholder: 'My_Voice', style: 'width:140px' });
 const importName = el('input', { type: 'text', style: 'width:150px', 'data-i18n-placeholder': 'cover.import_name' });
 const upPth = el('input', { type: 'file', accept: '.pth' });

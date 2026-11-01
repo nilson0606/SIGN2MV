@@ -16,10 +16,25 @@ Everything runs locally; nothing is uploaded.
 3. Double-click `start.bat`. The app opens in its own window at `http://127.0.0.1:9700`.
 
 Everything (Python, models, caches, temp files) is installed inside the folder, not on C:.
-An NVIDIA GPU is used when present; otherwise the CPU.
 
 The manual is in `web/manual/` (English master, Traditional Chinese translation) and
 is linked from the app.
+
+## Requirements and limits
+
+- Windows 10 or 11 (64-bit). macOS and Linux are not supported yet.
+- About 10 GB of downloads for the first install, kept inside the folder.
+- AI work (separation, voice conversion, training, Whisper) uses an NVIDIA graphics card through CUDA
+  when present, otherwise the CPU (much slower). Developed on an RTX 4060 Laptop GPU (8 GB).
+- MV video encoding tries the graphics card encoders in turn — NVIDIA (NVENC, driver 570 or newer),
+  AMD (AMF), Intel (Quick Sync) — then the CPU. The installer reports which one works.
+- A microphone for sing & record.
+
+## Use responsibly
+
+Import only songs and recordings you have the right to use. YouTube import uses yt-dlp; check
+YouTube's terms where you live. Use voice models only for voices you have the right to use, and do not
+present a converted voice as someone else's real performance.
 
 ## Layout
 
@@ -42,4 +57,5 @@ Engine, Applio and voice-model tests run only when these are set:
 
 ## Licences
 
-See `THIRD_PARTY.md`.
+This project: MIT (see `LICENSE`). Third-party programs and models are downloaded by the installer and
+keep their own licences: see `THIRD_PARTY.md`.
