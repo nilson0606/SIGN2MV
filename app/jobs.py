@@ -29,6 +29,12 @@ FINISHED = ("succeeded", "failed", "cancelled", "timeout")
 MAX_FINISHED_KEPT = 200
 
 
+# Notices that only look like problems, kept out of the job log: audio-separator says ONNX Runtime has no
+# CUDA (our separation models are PyTorch .ckpt/.th files and run on CUDA through PyTorch) and which
+# library it writes with.
+HARMLESS_LOG_LINES = ("CUDAExecutionProvider not available in ONNXruntime", "Using soundfile for writing")
+
+
 @dataclass
 class JobSpec:
     """What to run. `args` is the full command line of the worker process."""
@@ -67,7 +73,7 @@ class Job:
     def add_log(self, text: str) -> None:
         for part in str(text).replace("\r\n", "\n").split("\n"):
             part = part.split("\r")[-1].rstrip()   # progress bars redraw with \r: keep the last state
-            if not part:
+            if not part or any(h in part for h in HARMLESS_LOG_LINES):
                 continue
             self.log.append(time.strftime("%H:%M:%S ") + part[:500])
             self.log_total += 1

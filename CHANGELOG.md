@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Job log: audio-separator's 「CUDAExecutionProvider not available in ONNXruntime」 and 「Using soundfile for
+  writing」 are no longer shown. They are not problems: the separation models are PyTorch files and run on
+  CUDA through PyTorch, ONNX Runtime is not used for them.
 - Open-source groundwork: MIT licence (`LICENSE`); README gains requirements and limits (Windows only,
   NVIDIA CUDA for AI work, NVIDIA/AMD/Intel/CPU for MV encoding) and a "use responsibly" note;
   THIRD_PARTY lists each separation model with its download page (licence marked "not verified" where

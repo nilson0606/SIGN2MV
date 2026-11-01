@@ -227,3 +227,17 @@ def test_cover_versions_mvs_batch_delete_open_folder(client, root):
     done = client.post(f"/api/cover/songs/{sid}/cleanup", json={}).json()
     assert done["freed"] == 340 and not (sd / "cover/rvc/old.wav").exists() and (sd / "cover/rvc/used.wav").is_file()
     assert client.get(f"/api/cover/songs/{sid}/cleanup").json()["total"] == 0
+
+
+def test_harmless_separator_notices_stay_out_of_the_job_log():
+    from app.jobs import HARMLESS_LOG_LINES, Job
+    import dataclasses
+    fields = {f.name for f in dataclasses.fields(Job)}
+    job = Job.__new__(Job)
+    job.log, job.log_total = [], 0
+    job.add_log("2026-11-01 19:04:31,864 - WARNING - separator - CUDAExecutionProvider not available in "
+                "ONNXruntime, so acceleration will NOT be enabled")
+    job.add_log("WARNING - separator - Using soundfile for writing.")
+    job.add_log("[lead] CUDA")
+    assert [l[9:] for l in job.log] == ["[lead] CUDA"] and job.log_total == 1
+    assert "log" in fields and len(HARMLESS_LOG_LINES) == 2
