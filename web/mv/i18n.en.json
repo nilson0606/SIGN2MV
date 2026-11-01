@@ -592,10 +592,10 @@
   "Intel 顯示卡（Quick Sync）": "Intel graphics (Quick Sync)",
   "CPU（libx264）": "CPU (libx264)",
   "人聲": "vocals",
-  "和聲": "backing vocals",
-  "和聲 2": "backing vocals 2",
-  "男聲": "male voice",
-  "女聲": "female voice"
+  "和聲": "Backing",
+  "和聲 2": "Backing 2",
+  "男聲": "Male",
+  "女聲": "Female"
  },
  "patterns": [
   {
