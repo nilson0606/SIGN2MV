@@ -564,7 +564,7 @@ function updateVis() {
   sepStatus.className = `small ${missing.length ? 'cv-warn' : 'cv-ok'}`;
   // what the original backing does in this mode
   const vm = vmodeSel.get();
-  backingHint.textContent = mf ? '' : (vm === 'full' ? t('cover.backing_hint_full') : (backingCtl.get() ? t('cover.backing_hint_on') : t('cover.backing_hint_off')));
+  backingHint.textContent = mf ? '' : (vm === 'full' ? t('cover.backing_hint_full') : (backingCtl.get() ? t(backingRvcCtl.get() ? 'cover.backing_hint_on_rvc' : 'cover.backing_hint_on') : t('cover.backing_hint_off')));
   // duet: status chip, note above the model, both-kept warning, model availability
   mfActiveNote.classList.toggle('hidden', !mf);
   mfActiveNote.textContent = t('cover.mf_active_note');

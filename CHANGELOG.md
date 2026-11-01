@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- AI cover job line and log name each conversion: 「1/2 主唱 · CUDA」, 「2/2 和聲 · CUDA」, 「✔ 已轉換主唱（28.1 秒）」
+  (also 人聲, 和聲 2, 男聲, 女聲, 分段 a–b 秒, 外部音檔 …; English in the English UI). They used to show the
+  internal keys (main, backing).
+- AI cover: 「原唱和聲混進成品」 is now 「和聲混進成品」 (the backing may be the converted one); its note says
+  which backing goes in, and the volume sections say 「和聲」.
 - AI cover: new option 「和聲也轉成我的聲音」 (off by default) under 「原唱和聲混進成品」. With the lead split
   off, the backing vocals are converted too, with the lead's model and pitch (+ key), and replace the
   original backing in the mix; quick remix reuses the converted backing. Versions made with it are named

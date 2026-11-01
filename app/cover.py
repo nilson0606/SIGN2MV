@@ -363,13 +363,18 @@ def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict],
 
     rvc_tasks: list[dict] = []
 
-    def rvc_task(input_rel: str, model: str, pitch: int, r: dict, label: str, input_sig: str | None = None) -> str:
+    # what the job line and log call each conversion (label stays the internal key)
+    titles = {"main": "主唱" if lead else "人聲", "backing": "和聲", "backing2": "和聲 2", "male": "男聲", "female": "女聲"}
+
+    def rvc_task(input_rel: str, model: str, pitch: int, r: dict, label: str, input_sig: str | None = None,
+                 title: str | None = None) -> str:
         m = resolve(model)
         h = _h("rvc", input_sig or input_rel, m["sig"], pitch, _rvc_sig(r))
         out = f"cover/rvc/{h}.wav"
         if not any(t["output"] == out for t in rvc_tasks):
             rvc_tasks.append({"input": input_rel, "output": out, "pth": m["pth"], "index": m["index"], "pitch": pitch,
-                              "label": label, "sig": m["sig"], **{k: r[k] for k in RVC_DEFAULTS}})
+                              "label": label, "title": title or titles.get(label, label), "sig": m["sig"],
+                              **{k: r[k] for k in RVC_DEFAULTS}})
         return out
 
     files: list[str] = []
@@ -447,7 +452,8 @@ def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict],
                     cut_jobs.append({"src": voice, "start": c0, "dur": dur, "dst": rvc_in})
                 in_sig = rvc_in
                 files.append(rvc_in)
-            clip = rvc_task(rvc_in, pr["model"], pr["pitch"] + key, pr, f"{m['start']:.1f}-{m['end']:.1f}s", in_sig)
+            clip = rvc_task(rvc_in, pr["model"], pr["pitch"] + key, pr, f"{m['start']:.1f}-{m['end']:.1f}s", in_sig,
+                            title=f"分段 {m['start']:.1f}–{m['end']:.1f} 秒")
             files.append(clip)
             mix_masks.append({"start": m["start"], "end": m["end"], "mode": "replace", "target": "vocal",
                               "src": clip, "src_start": c0, "match": False})
@@ -462,7 +468,8 @@ def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict],
             files.append(src_rel)
             if m.get("to_ai"):
                 pr = m["rvc"]
-                src_rel = rvc_task(src_rel, pr["model"], pr["pitch"], pr, m.get("name", "file"))
+                src_rel = rvc_task(src_rel, pr["model"], pr["pitch"], pr, m.get("name", "file"),
+                                   title=f"外部音檔 {m.get('name') or m['file']}")
                 files.append(src_rel)
             mix_masks.append({"start": m["start"], "end": m["end"], "mode": "replace",
                               "target": m.get("target", "vocal"), "src": src_rel,

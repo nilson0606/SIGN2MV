@@ -590,7 +590,12 @@
   "NVIDIA 顯示卡（NVENC）": "NVIDIA graphics card (NVENC)",
   "AMD 顯示卡（AMF）": "AMD graphics card (AMF)",
   "Intel 顯示卡（Quick Sync）": "Intel graphics (Quick Sync)",
-  "CPU（libx264）": "CPU (libx264)"
+  "CPU（libx264）": "CPU (libx264)",
+  "人聲": "vocals",
+  "和聲": "backing vocals",
+  "和聲 2": "backing vocals 2",
+  "男聲": "male voice",
+  "女聲": "female voice"
  },
  "patterns": [
   {
@@ -1668,6 +1673,26 @@
   {
    "zh": "{0} 顯示卡編碼失敗，改用 CPU 編碼，會比較慢",
    "en": "{0} graphics card encoding failed, encoding on the CPU (slower)"
+  },
+  {
+   "zh": "✔ 已轉換{0}（{1} 秒）",
+   "en": "✔ Converted {0} ({1} s)"
+  },
+  {
+   "zh": "{0}/{1} {2} · {3}",
+   "en": "{0}/{1} {2} · {3}"
+  },
+  {
+   "zh": "{0} · {1}",
+   "en": "{0} · {1}"
+  },
+  {
+   "zh": "分段 {0}–{1} 秒",
+   "en": "section {0}–{1} s"
+  },
+  {
+   "zh": "外部音檔 {0}",
+   "en": "external file {0}"
   }
  ]
 }

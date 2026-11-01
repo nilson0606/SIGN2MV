@@ -86,7 +86,7 @@ def main() -> None:
             shutil.copyfile(index, tmp_index)
             index = str(tmp_index)
         try:
-            with protocol.Heartbeat(pct, "rvc", f"{t.get('label', '')} · {where}"), \
+            with protocol.Heartbeat(pct, "rvc", f"{t.get('title') or t.get('label', '')} · {where}"), \
                     contextlib.redirect_stdout(sys.stderr):
                 vc.convert_audio(audio_input_path=str(t["input"]), audio_output_path=str(raw),
                                  model_path=str(t["pth"]), index_path=index,
@@ -110,7 +110,7 @@ def main() -> None:
         except Exception:  # noqa: BLE001
             audio_s = 0
         done.append({"output": str(out), "seconds": round(time.time() - started, 1), "audio_s": round(audio_s, 1)})
-        protocol.log(f"converted {t.get('label', '')} in {done[-1]['seconds']} s")
+        protocol.log(f"✔ 已轉換{t.get('title') or t.get('label', '')}（{done[-1]['seconds']} 秒）")
     protocol.progress(100, "rvc", "")
     protocol.result({"done": done, "device": dev, "gpu": gpu if dev.startswith("cuda") else "", "load_s": load_s,
                      "convert_s": round(sum(d.get("seconds", 0) for d in done), 1),
