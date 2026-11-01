@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- 全部關閉 now closes the black window: the server waited forever for connections the open page keeps
+  (a paused video, the microphone stream). It now gives them 3 seconds and then ends, also when a worker
+  thread is stuck.
 - Segment recording: pressing 錄製 while the last take was still being saved did nothing (the button was
   disabled without a word until the save ended). The panel now says 「正在保存本段錄音…」 as soon as a
   take ends, and a press during that time says to wait instead of being ignored.

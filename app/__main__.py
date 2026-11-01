@@ -78,8 +78,10 @@ def main() -> int:
             srv.should_exit = True
 
     app = create_app(paths, port=args.port, request_shutdown=request_shutdown)
+    # timeout_graceful_shutdown: an open page keeps connections (paused video, microphone stream) open
+    # and uvicorn waited for them forever, so 全部關閉 left the black window running
     config = uvicorn.Config(app, host="127.0.0.1", port=args.port, log_level="warning",
-                            access_log=False, lifespan="off")
+                            access_log=False, lifespan="off", timeout_graceful_shutdown=3)
     server = uvicorn.Server(config)
     server_ref["server"] = server
 
@@ -100,7 +102,21 @@ def main() -> int:
     server.run()
     app.state.jobs.stop(wait_s=5.0)
     log.info("%s stopped", APP_NAME)
+    _exit_now()
     return 0
+
+
+def _exit_now() -> None:
+    """End the process even when a worker thread is still blocked (a stuck read keeps Python waiting at
+    exit, and with it the start.bat window). Child processes go with the job object."""
+    deadline = time.monotonic() + 3.0
+    for t in threading.enumerate():
+        if t is not threading.current_thread() and not t.daemon:
+            t.join(timeout=max(0.0, deadline - time.monotonic()))
+    logging.shutdown()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":
