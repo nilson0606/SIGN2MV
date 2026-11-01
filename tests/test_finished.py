@@ -169,3 +169,91 @@ def test_old_chinese_folder_is_moved(tmp_path):
     finished.sync(lib, "zh-TW", tmp_path / "tmp")
     assert not (lib / "成品").exists()
     assert sorted(p.name for p in (lib / "Finished" / "Song").iterdir()) == ["mine.txt", "唱錄 10-31 10：00"]
+
+
+def _set_title(sd: Path, title: str) -> None:
+    meta = json.loads((sd / "song.json").read_text(encoding="utf-8"))
+    meta["title"] = title
+    (sd / "song.json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
+
+
+def test_two_songs_swap_names(tmp_path):
+    lib = tmp_path / "lib"
+    a = _song(lib, "s000000000a", "X", _ts("10-29 10:00"))
+    b = _song(lib, "s000000000b", "Y", _ts("10-30 10:00"))
+    sa = _sing(a, "r000000000001", _ts("10-31 10:00"))
+    sb = _sing(b, "r000000000002", _ts("10-31 11:00"))
+    finished.sync(lib, "zh-TW", tmp_path / "tmp")
+    (lib / "Finished" / "X" / "mine.txt").write_text("a's")
+    _set_title(a, "Y")
+    _set_title(b, "X")
+    res = finished.sync(lib, "zh-TW", tmp_path / "tmp")
+    assert not res["errors"] and res["renamed"] == 2
+    assert _links(lib / "Finished" / "Y") == {"唱錄 10-31 10：00": str(sa)}
+    assert _links(lib / "Finished" / "X") == {"唱錄 10-31 11：00": str(sb)}
+    assert (lib / "Finished" / "Y" / "mine.txt").read_text() == "a's"   # moved with song a
+    assert sorted(p.name for p in (lib / "Finished").iterdir()) == ["X", "Y"]
+
+
+def test_a_file_in_the_way_does_not_stop_the_other_songs(tmp_path):
+    lib = tmp_path / "lib"
+    a = _song(lib, "s000000000a", "A", _ts("10-29 10:00"))
+    b = _song(lib, "s000000000b", "B", _ts("10-30 10:00"))
+    _sing(a, "r000000000001", _ts("10-31 10:00"))
+    _sing(b, "r000000000002", _ts("10-31 11:00"))
+    (lib / "Finished").mkdir(parents=True)
+    (lib / "Finished" / "A").write_text("the user's file, not a folder")
+    res = finished.sync(lib, "zh-TW", tmp_path / "tmp")
+    assert res["created"] == 1 and len(res["errors"]) == 1
+    assert (lib / "Finished" / "A").read_text() == "the user's file, not a folder"
+    assert list(_links(lib / "Finished" / "B")) == ["唱錄 10-31 11：00"]
+    # it keeps working afterwards
+    assert finished.sync(lib, "zh-TW", tmp_path / "tmp")["created"] == 0
+
+
+def test_links_are_claimed_before_they_are_made_and_failures_wait(tmp_path, monkeypatch):
+    lib = tmp_path / "lib"
+    a = _song(lib, "s000000000a", "A", _ts("10-29 10:00"))
+    _sing(a, "r000000000001", _ts("10-31 10:00"))
+    calls = []
+
+    def failing(pairs, tmp_dir):
+        # the manifest already lists the link when it is being made
+        man = json.loads((lib / finished.MANIFEST).read_text(encoding="utf-8"))
+        assert "唱錄 10-31 10：00" in man["songs"]["s000000000a"]["links"]
+        calls.append(len(pairs))
+        return ["E_FAIL"]
+
+    monkeypatch.setattr(finished, "make_links", failing)
+    finished._FAILED.clear()
+    res = finished.sync(lib, "zh-TW", tmp_path / "tmp")
+    assert res["created"] == 0 and res["failed"] == 1 and calls == [1]
+    # right after a failure: not tried again
+    res = finished.sync(lib, "zh-TW", tmp_path / "tmp")
+    assert calls == [1] and res["failed"] == 1
+    # after the wait it is tried again
+    for k, (n, _after) in list(finished._FAILED.items()):
+        finished._FAILED[k] = (n, 0.0)
+    finished.sync(lib, "zh-TW", tmp_path / "tmp")
+    assert calls == [1, 1]
+    finished._FAILED.clear()
+
+
+def test_same_title_without_import_time(tmp_path):
+    lib = tmp_path / "lib"
+    a = _song(lib, "s000000000a", "Same", 0)
+    b = _song(lib, "s000000000b", "Same", 0)
+    _sing(a, "r000000000001", _ts("10-31 10:00"))
+    _sing(b, "r000000000002", _ts("10-31 11:00"))
+    finished.sync(lib, "zh-TW", tmp_path / "tmp")
+    assert sorted(p.name for p in (lib / "Finished").iterdir()) == ["Same", "Same (2)"]
+
+
+def test_sing_requests_while_recording_do_not_sync(client):
+    calls = []
+    client.app.state.ctx.finished.request = lambda: calls.append(1)
+    client.post("/sr/playback-trace", json={})
+    client.post("/sr/microphone/monitor", json={})
+    assert calls == []
+    client.post("/api/songs", json={"title": "x"})
+    assert calls == [1]

@@ -63,8 +63,10 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
         if request.method not in ("GET", "HEAD") and not sr and request.headers.get(CONTROL_HEADER) != "1":
             return err("missing_control_header", 403)
         response = await call_next(request)
-        if request.method not in ("GET", "HEAD", "OPTIONS"):
-            ctx.finished.request()   # something may have been added, renamed or deleted
+        # something may have been added, renamed or deleted. Not on the sing & record requests made
+        # while recording (microphone, traces, jobs): only a saved version there is a finished file.
+        if request.method not in ("GET", "HEAD", "OPTIONS") and (not sr or request.url.path == "/sr/renders"):
+            ctx.finished.request()
         if not request.url.path.startswith("/media/"):
             response.headers["Cache-Control"] = "no-store"
         return response

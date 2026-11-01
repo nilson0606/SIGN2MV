@@ -110,9 +110,12 @@ def load_audio_16k(path: str):
     accepts (installed: faster-whisper 1.2.1 with PyAV 19): every file failed with
     "open() got an unexpected keyword argument 'metadata_errors'". Whisper takes the samples instead."""
     import numpy as np
-    proc = subprocess.run([ffmpeg(), "-nostdin", "-v", "error", "-i", path, "-vn", "-ac", "1", "-ar", "16000",
-                           "-f", "f32le", "-"], capture_output=True, stdin=subprocess.DEVNULL,
-                          creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+    try:
+        proc = subprocess.run([ffmpeg(), "-nostdin", "-v", "error", "-i", path, "-vn", "-ac", "1", "-ar", "16000",
+                               "-f", "f32le", "-"], capture_output=True, stdin=subprocess.DEVNULL, timeout=600,
+                              creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("ffmpeg did not finish reading the audio in 10 minutes")
     if proc.returncode != 0:
         raise RuntimeError(f"ffmpeg could not read the audio: {proc.stderr.decode('utf-8', 'replace')[-300:]}")
     audio = np.frombuffer(proc.stdout, dtype=np.float32)

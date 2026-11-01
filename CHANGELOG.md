@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Finished folder (review of 2026-11-01): shortcuts are recorded before they are made, so one made just
+  before closing is never taken for the user's file; a file in the way of a song folder no longer stops
+  the folder for every other song; failing shortcuts wait before the next try (30 s, doubling, up to an
+  hour) instead of starting PowerShell on every click; PowerShell errors are readable (UTF-8 from the
+  first line, exit code checked); two songs can swap names; a same-title song without an import time
+  gets (2) instead of "（ 匯入）"; sing & record requests made while recording no longer trigger it (only
+  a saved version does).
+- Whisper: reading the audio stops after 10 minutes instead of waiting forever on a stuck ffmpeg.
 - Library: a Finished folder (成品資料夾; the folder name is English in every UI language) inside the library, kept in step with the songs: one
   folder per song named by its title, with shortcuts to every cover version, saved sing & record version,
   quick MV and full MV (the song folders themselves are named by id). Same titles get the import date

@@ -73,6 +73,8 @@ TIME_SEP = {"zh": "：", "en": "."}
 
 def _stamp(ts: Any, with_time: bool = True, lang: str = "zh") -> str:
     try:
+        if not float(ts):   # not recorded (0 would read as 1970-01-01)
+            return ""
         lt = time.localtime(float(ts))
     except (TypeError, ValueError, OverflowError, OSError):
         return ""
@@ -113,7 +115,8 @@ def song_folders(songs: list[dict], lang: str) -> dict[str, str]:
         days = [_stamp(s.get("created_at"), False) for s in group]
         for s, day in zip(group, days):
             d = day if days.count(day) == 1 else _stamp(s.get("created_at"), True, lang)
-            out[s["song_id"]] = base[s["song_id"]] + fmt.format(d=d)
+            # no import time on record: the plain title, told apart by (2), (3) below
+            out[s["song_id"]] = base[s["song_id"]] + fmt.format(d=d) if d else base[s["song_id"]]
     taken: set[str] = set()
     order = sorted(songs, key=lambda s: (float(s.get("created_at") or 0), s["song_id"]))
     return {s["song_id"]: _unique(out[s["song_id"]], taken) for s in order}
@@ -213,6 +216,8 @@ LINK_EXT = ".lnk" if os.name == "nt" else ""
 # IShellLinkW (not WScript.Shell, whose shortcuts turn characters outside the ANSI code page into "?")
 _PS = r"""
 $ErrorActionPreference = 'Continue'
+# first, so that Add-Type's compile errors are readable too; UTF-8 without a BOM
+[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -251,7 +256,6 @@ public static class Sign2mvLink {
   }
 }
 '@
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 # not "Get-Content | ConvertFrom-Json" inside @(): Windows PowerShell 5.1 passes the whole array as ONE
 # object down the pipe, so every link name was joined into one path (IShellLinkW Save: E_FAIL)
 $items = ConvertFrom-Json (Get-Content -LiteralPath $args[0] -Raw -Encoding UTF8)
@@ -260,6 +264,25 @@ foreach ($it in $items) {
   catch { [Console]::Error.WriteLine("$($it.link): $($_.Exception.Message)") }
 }
 """
+
+
+# shortcuts that could not be made: link path -> (failures, do not retry before). Without this every
+# change request started PowerShell again for the same failing links.
+_FAILED: dict[str, tuple[int, float]] = {}
+RETRY_MAX_S = 3600.0
+
+
+def _may_retry(link: Path) -> bool:
+    n, after = _FAILED.get(str(link), (0, 0.0))
+    return time.time() >= after
+
+
+def _note_result(link: Path, ok: bool) -> None:
+    if ok:
+        _FAILED.pop(str(link), None)
+        return
+    n = _FAILED.get(str(link), (0, 0.0))[0] + 1
+    _FAILED[str(link)] = (n, time.time() + min(RETRY_MAX_S, 30.0 * 2 ** (n - 1)))
 
 
 def link_target(link: Path) -> str | None:
@@ -303,6 +326,8 @@ def make_links(pairs: list[tuple[Path, str]], tmp_dir: Path) -> list[str]:
         text = proc.stderr.decode("utf-8", "replace").strip()
         if text:
             errors += text.splitlines()[-20:]
+        elif proc.returncode != 0:
+            errors.append(f"powershell exited with code {proc.returncode}")
     except (OSError, subprocess.SubprocessError) as exc:
         errors.append(f"powershell: {exc}")
     finally:
@@ -362,10 +387,18 @@ def sync(library_root: Path, language: str | None, tmp_dir: Path) -> dict[str, A
             root, root_name = old_root, old_root_name
     want = desired(library_root, lang)
     old_songs: dict[str, dict] = old.get("songs") if isinstance(old.get("songs"), dict) else {}
-    counts = {"created": 0, "removed": 0, "renamed": 0, "errors": []}
-    root.mkdir(exist_ok=True)
+    counts: dict[str, Any] = {"created": 0, "removed": 0, "renamed": 0, "failed": 0, "errors": []}
+    try:
+        root.mkdir(exist_ok=True)
+    except OSError as exc:   # e.g. a file called Finished
+        counts["errors"].append(f"{root}: {exc}")
+        return counts
+    if not root.is_dir():
+        counts["errors"].append(f"{root}: not a folder")
+        return counts
 
-    # 1. remove what we made and no longer want; rename folders of renamed songs
+    # 1. remove what we made and no longer want; list the folders of renamed songs
+    renames: list[tuple[str, Path, Path]] = []
     for sid, rec in list(old_songs.items()):
         folder = root / str(rec.get("folder") or "")
         if not rec.get("folder") or not _is_inside(folder, root) or folder == root:
@@ -380,20 +413,35 @@ def sync(library_root: Path, language: str | None, tmp_dir: Path) -> dict[str, A
         if not new:
             _rmdir_if_empty(folder)
             continue
-        target = root / new["folder"]
-        if folder != target and folder.is_dir():
-            if not target.exists():
-                try:
-                    os.replace(folder, target)
-                    counts["renamed"] += 1
-                except OSError as exc:
-                    counts["errors"].append(f"rename {folder.name}: {exc}")
-                    new["folder"] = rec["folder"]
-            else:
-                # the new name is taken (by the user): keep the old folder name
-                new["folder"] = rec["folder"]
+        if root / new["folder"] != folder and folder.is_dir():
+            renames.append((sid, folder, root / new["folder"]))
+        elif not folder.is_dir():
+            pass   # gone (or never made): step 2 makes it under the new name
+    # two steps, so that two songs can swap names: first out of the way, then to the new names
+    parked: list[tuple[str, Path, Path, Path]] = []
+    for sid, src, dst in renames:
+        tmp = root / f".renaming-{sid}"
+        try:
+            os.replace(src, tmp)
+            parked.append((sid, src, dst, tmp))
+        except OSError as exc:
+            counts["errors"].append(f"rename {src.name}: {exc}")
+            want[sid]["folder"] = src.name
+    for sid, src, dst, tmp in parked:
+        for final in (dst, src):
+            if final.exists():
+                continue   # taken (by the user, or by a song that kept its name): try the next
+            try:
+                os.replace(tmp, final)
+                want[sid]["folder"] = final.name
+                counts["renamed"] += final == dst
+                break
+            except OSError as exc:
+                counts["errors"].append(f"rename {src.name}: {exc}")
+        else:
+            want[sid]["folder"] = tmp.name   # both names taken: keep it where it is, nothing is lost
 
-    # 2. create the missing links
+    # 2. work out the missing links
     pairs: list[tuple[Path, str]] = []
     for sid, rec in want.items():
         folder = root / rec["folder"]
@@ -407,11 +455,13 @@ def sync(library_root: Path, language: str | None, tmp_dir: Path) -> dict[str, A
                 continue
             if here and before.get(name) == target and (os.name == "nt" or link_target(link) == target):
                 continue
-            folder.mkdir(parents=True, exist_ok=True)
+            if not _may_retry(link):
+                counts["failed"] += 1
+                continue
             pairs.append((link, target))
-    counts["errors"] += make_links(pairs, tmp_dir)
-    counts["created"] = len(pairs)
 
+    # 3. claim them in the manifest BEFORE making them: a link made just before the app is closed
+    #    must not look like the user's file at the next start
     manifest = {"schema_version": 1, "root": root_name, "language": lang, "songs": want, "updated_at": time.time()}
     tmp = mpath.with_name(mpath.name + ".tmp")
     try:
@@ -419,6 +469,23 @@ def sync(library_root: Path, language: str | None, tmp_dir: Path) -> dict[str, A
         os.replace(tmp, mpath)
     except OSError as exc:
         counts["errors"].append(f"manifest: {exc}")
+        return counts   # without the record, making links would leave shortcuts nobody owns
+
+    # 4. make them
+    ready: list[tuple[Path, str]] = []
+    for link, target in pairs:
+        try:
+            link.parent.mkdir(parents=True, exist_ok=True)
+            ready.append((link, target))
+        except OSError as exc:   # e.g. a file of the user's with the song folder's name
+            counts["errors"].append(f"{link.parent}: {exc}")
+            _note_result(link, False)
+    if ready:
+        counts["errors"] += make_links(ready, tmp_dir)
+    for link, _ in ready:
+        ok = link.is_symlink() or link.exists()
+        _note_result(link, ok)
+        counts["created" if ok else "failed"] += 1
     if old_root_name and old_root_name != root_name:
         _rmdir_if_empty(library_root / old_root_name)
     return counts
