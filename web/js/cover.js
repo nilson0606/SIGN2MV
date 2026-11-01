@@ -112,6 +112,8 @@ const refineSel = select('bgm_refine', [['none', ''], ['second_pass', '']]);
 const karaokeSel = select('karaoke_model', [['aufr33', ''], ['becruily', '']], () => updateVis());
 const karaokeNote = el('p', { class: 'small hidden' });
 const backingCtl = check('backing_on', 'cover.backing_on', () => updateVis());
+// convert the backing vocals too (when the lead singer sang them); same model and pitch as the lead
+const backingRvcCtl = check('backing_rvc', 'cover.backing_rvc', () => updateVis());
 const rvc = {
   protect: slider('rvc.protect', 0, 0.5, 0.01), index_rate: slider('rvc.index_rate', 0, 1, 0.01),
   envelope: slider('rvc.envelope', 0, 1, 0.01), f0: select('rvc.f0', [['rmvpe', ''], ['fcpe', ''], ['crepe', '']]),
@@ -198,6 +200,7 @@ const mfStatus = el('span', { class: 'cv-mfstatus hidden' });
 const mfCapNote = el('p', { class: 'small cv-warn hidden' });
 const mfKeepWarn = el('p', { class: 'small cv-warn hidden' });
 const backingHint = el('p', { class: 'muted small' });
+const backingRvcHint = el('p', { class: 'muted small' });
 const sepStatus = el('p', { class: 'small' });
 let mfDetails = null;
 function sectionVoice() {
@@ -268,6 +271,7 @@ function sectionMix() {
     field(t('cover.vocal_vol'), mix.vocal_vol), field(t('cover.bgm_vol'), mix.bgm_vol),
     // [SIGN2MV] a mix option (quick remix switches it), so it sits with the mix like the old 🎶 混入原唱和聲
     el('div', { class: 'cv-backing' }, backingCtl.el), backingHint,
+    el('div', { class: 'cv-backing' }, backingRvcCtl.el), backingRvcHint,
     masksDetails = details(t('cover.masks'), el('p', { class: 'muted small' }, t('cover.masks_hint')), maskEditor(), maskList),
     vsegsDetails = details(t('cover.vsegs'), el('p', { class: 'muted small' }, t('cover.vsegs_hint')), vsegEditor(), vsegList),
     runSummary,
@@ -527,6 +531,11 @@ function scheduleSave() {
 function updateVis() {
   const mf = mfOn.get();
   backingCtl.el.classList.toggle('hidden', vmodeSel.get() === 'full' || mf);
+  const bvShown = vmodeSel.get() !== 'full' && !mf;
+  backingRvcCtl.el.classList.toggle('hidden', !bvShown);
+  backingRvcCtl.box.disabled = !backingCtl.get();
+  backingRvcHint.classList.toggle('hidden', !bvShown);
+  backingRvcHint.textContent = !backingCtl.get() ? t('cover.backing_rvc_needs_on') : (backingRvcCtl.get() ? t('cover.backing_rvc_hint_on') : t('cover.backing_rvc_hint_off'));
   vmodeSel.el.disabled = mf;
   [male, female].forEach((s) => s.box.querySelector('.cv-side-body').classList.toggle('hidden', s.keep.get()));
   page.querySelectorAll('.cv-sides').forEach((n) => n.classList.toggle('hidden', !mf));
@@ -788,7 +797,8 @@ function formRemix(asNew) {
 
 async function remix(v, asNew) {
   const p = readForm();
-  const body = { mix: p.mix, masks: p.masks, vol_segments: p.vol_segments, backing_on: p.backing_on, save_as_new: asNew };
+  const body = { mix: p.mix, masks: p.masks, vol_segments: p.vol_segments, backing_on: p.backing_on,
+    backing_rvc: p.backing_rvc, save_as_new: asNew };
   if (p.mf) body.mf_vols = { male: p.mf.male.vol, female: p.mf.female.vol };
   try {
     const res = await api.post(`/api/cover/songs/${songId}/versions/${v.id}/remix`, body);

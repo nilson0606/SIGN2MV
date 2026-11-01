@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- AI cover: new option 「和聲也轉成我的聲音」 (off by default) under 「原唱和聲混進成品」. With the lead split
+  off, the backing vocals are converted too, with the lead's model and pitch (+ key), and replace the
+  original backing in the mix; quick remix reuses the converted backing. Versions made with it are named
+  "… · Backing VC". New feature (the old AI cover had no such option).
 - Job log: audio-separator's 「CUDAExecutionProvider not available in ONNXruntime」 and 「Using soundfile for
   writing」 are no longer shown. They are not problems: the separation models are PyTorch files and run on
   CUDA through PyTorch, ONNX Runtime is not used for them.

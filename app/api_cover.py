@@ -634,8 +634,8 @@ def router(ctx: Context) -> APIRouter:
             raise CoverError("separator_missing:" + ",".join(missing))
 
     def submit_cover(song_id: str, song: dict, sdir: Path, p: dict, version: dict, render: dict,
-                     reuse: dict | None = None) -> dict:
-        plan = cover.plan(sdir, song, p, resolver(), reuse=reuse)
+                     reuse: dict | None = None, reuse_backings: list | None = None) -> dict:
+        plan = cover.plan(sdir, song, p, resolver(), reuse=reuse, reuse_backings=reuse_backings)
         check_separators(plan)
         if plan["need_gpu"] and not applio_status()["ready"] and any(
                 not (sdir / t["output"]).is_file() for t in plan["rvc_tasks"]):
@@ -682,7 +682,8 @@ def router(ctx: Context) -> APIRouter:
 
     @r.post("/api/cover/songs/{song_id}/versions/{vid}/remix")
     async def remix(song_id: str, vid: str, request: Request):
-        """Body: {"mix", "masks", "vol_segments", "backing_on", "mf_vols": {"male","female"}, "save_as_new"}"""
+        """Body: {"mix", "masks", "vol_segments", "backing_on", "backing_rvc", "mf_vols": {"male","female"},
+        "save_as_new"}"""
         body = await body_json(request)
         try:
             _lib, song, sdir = song_ctx(song_id)
@@ -690,7 +691,7 @@ def router(ctx: Context) -> APIRouter:
                 raise CoverError("cover_busy", 409)
             base = cover.load_version(sdir, vid)
             raw = dict(base.get("params") or {})
-            for k in ("mix", "masks", "vol_segments", "backing_on"):
+            for k in ("mix", "masks", "vol_segments", "backing_on", "backing_rvc"):
                 if k in body:
                     raw[k] = body[k]
             if raw.get("mf") and isinstance(body.get("mf_vols"), dict):
@@ -710,7 +711,9 @@ def router(ctx: Context) -> APIRouter:
                 version = {k: base[k] for k in ("id", "number", "title", "created_at") if k in base}
                 version.update(label=label, source_version=base.get("source_version"))
                 render = {"id": base.get("render_id") or "r" + uuid.uuid4().hex[:12], "replace": True, "title": None}
-            job = submit_cover(song_id, song, sdir, p, version, render, reuse=(base.get("plan") or {}).get("vocal"))
+            base_plan = base.get("plan") or {}
+            job = submit_cover(song_id, song, sdir, p, version, render, reuse=base_plan.get("vocal"),
+                               reuse_backings=base_plan.get("backings") if (base.get("params") or {}).get("backing_rvc") else None)
         except Exception as exc:  # noqa: BLE001
             return fail(exc)
         return {"job": job, "version_id": version["id"]}

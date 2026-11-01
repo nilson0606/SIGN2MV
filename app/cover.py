@@ -49,7 +49,7 @@ MIX_DEFAULTS = {"vocal_vol": 0.95, "bgm_vol": 0.85, "inst_vol": 0.0, "instrument
 DEFAULTS: dict[str, Any] = {
     "model": "", "pitch": 0, "key": 0, "rvc": dict(RVC_DEFAULTS),
     "sep_model": "demucs", "bgm_refine": "none", "vocal_mode": "lead_keep_backing", "backing_on": True,
-    "mf": None, "mix": dict(MIX_DEFAULTS), "masks": [], "vol_segments": [],
+    "backing_rvc": False, "mf": None, "mix": dict(MIX_DEFAULTS), "masks": [], "vol_segments": [],
 }
 
 
@@ -187,7 +187,10 @@ def clean_params(p: Any) -> dict:
            "sep_model": p.get("sep_model") if p.get("sep_model") in SEPARATORS else "demucs",
            "bgm_refine": "second_pass" if p.get("bgm_refine") == "second_pass" else "none",
            "vocal_mode": p.get("vocal_mode") if p.get("vocal_mode") in VOCAL_MODES else "lead_keep_backing",
-           "backing_on": p.get("backing_on") is not False, "mf": None, "mix": clean_mix(p.get("mix")),
+           "backing_on": p.get("backing_on") is not False,
+           # convert the split-off backing vocals too (same model and pitch as the lead); off by default
+           "backing_rvc": p.get("backing_rvc") is True,
+           "mf": None, "mix": clean_mix(p.get("mix")),
            "masks": clean_masks(p.get("masks"), model, pitch, rvc),
            "vol_segments": clean_vol_segments(p.get("vol_segments"))}
     if p.get("karaoke_model") == "becruily":
@@ -328,12 +331,14 @@ def recipe_for(p: dict) -> dict:
 
 
 def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict],
-         reuse: dict | None = None) -> dict:
+         reuse: dict | None = None, reuse_backings: list[str] | None = None) -> dict:
     """Everything the worker has to do (paths relative to the song folder).
 
     reuse: the "vocal" entry of the version being remixed. Its converted vocal
     (or male / female sides) is used as it is, so a remix never needs the voice
     model again (the model may have been deleted or retrained since).
+    reuse_backings: the converted backing vocals of that version (used the same way when the remix keeps
+    "backing_rvc" on).
     """
     skipped: list[str] = []
     layers, tracks = stems_mod.plan(song_dir, song, recipe_for(p))
@@ -396,9 +401,17 @@ def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict],
 
     backings = []
     if lead and p["backing_on"]:
-        backings = [shifted("backing", tracks["backing"])]
-        if tracks.get("backing2"):
-            backings.append(shifted("backing2", tracks["backing2"]))
+        names = ["backing"] + (["backing2"] if tracks.get("backing2") else [])
+        if p.get("backing_rvc"):
+            # backing vocals sung by the lead singer: convert them with the lead's model and pitch (+ key)
+            old = [b for b in (reuse_backings or []) if b.startswith("cover/rvc/") and (song_dir / b).is_file()]
+            if len(old) == len(names):
+                backings = old
+            else:
+                backings = [rvc_task(tracks[n], p["model"], p["pitch"] + key, p["rvc"], n) for n in names]
+            files += backings
+        else:
+            backings = [shifted(n, tracks[n]) for n in names]
     bgm = shifted("instrumental", tracks["instrumental"])
 
     # vocal sections
@@ -530,6 +543,8 @@ def version_label(p: dict) -> str:
         label = name(p["model"], p["pitch"])
     if p["key"]:
         label += " · Key %+d" % p["key"]
+    if p.get("backing_rvc") and p.get("backing_on") and not p.get("mf") and p.get("vocal_mode") in LEAD_MODES:
+        label += " · Backing VC"
     return label
 
 

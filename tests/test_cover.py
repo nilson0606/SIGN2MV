@@ -94,6 +94,27 @@ def test_params_and_plan(tmp_path):
         raise AssertionError("model resolved")
     plr = cover.plan(song_dir, song, cover.clean_params({"model": "Gone"}), no_model, reuse={"path": "cover/rvc/old.wav"})
     assert plr["vocal"]["path"] == "cover/rvc/old.wav" and plr["rvc_tasks"] == [] and "cover/rvc/old.wav" in plr["files"]
+    # backing vocals converted too (off by default): same model and pitch + key, both x2 backings
+    assert cover.clean_params({})["backing_rvc"] is False
+    pbv = cover.clean_params({"model": "A", "pitch": 2, "key": 3, "backing_rvc": True})
+    plv = cover.plan(song_dir, song, pbv, resolve)
+    bt = [t for t in plv["rvc_tasks"] if t["label"] == "backing"]
+    assert len(bt) == 1 and bt[0]["pitch"] == 5 and bt[0]["input"] == plv["tracks"]["backing"]
+    assert plv["backings"] == [bt[0]["output"]] and bt[0]["output"] in plv["files"]
+    assert cover.version_label(pbv) == "A +2 · Key +3 · Backing VC"
+    plv2 = cover.plan(song_dir, song, cover.clean_params({"model": "A", "vocal_mode": "lead_keep_backing_x2",
+                                                        "backing_rvc": True}), resolve)
+    assert sorted(t["label"] for t in plv2["rvc_tasks"]) == ["backing", "backing2", "main"]
+    # no effect without the backing in the mix, or without the lead split
+    off = cover.clean_params({"model": "A", "backing_rvc": True, "backing_on": False})
+    assert cover.plan(song_dir, song, off, resolve)["backings"] == [] and "Backing" not in cover.version_label(off)
+    full = cover.clean_params({"model": "A", "backing_rvc": True, "vocal_mode": "full"})
+    assert len(cover.plan(song_dir, song, full, resolve)["rvc_tasks"]) == 1
+    # a remix reuses the version's converted backing: no model needed
+    (song_dir / "cover" / "rvc" / "bv.wav").write_bytes(b"x")
+    plrb = cover.plan(song_dir, song, cover.clean_params({"model": "Gone", "backing_rvc": True}), no_model,
+                      reuse={"path": "cover/rvc/old.wav"}, reuse_backings=["cover/rvc/bv.wav"])
+    assert plrb["backings"] == ["cover/rvc/bv.wav"] and plrb["rvc_tasks"] == []
 
 
 def fake_model(folder: Path, name: str, epochs=(10, 20)) -> Path:
