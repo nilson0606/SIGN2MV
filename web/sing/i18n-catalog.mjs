@@ -1519,6 +1519,7 @@ export const messages = {
 export const templates = [
   ["這首歌的「{0}」還沒有歌唱基準：已幫你選好 Key，請按「準備歌曲基準」建立（會分離人聲並分析音高，需要幾分鐘）。", "This song has no singing reference for “{0}” yet: the key is selected; click “Prepare song reference” to build it (separates the vocals and analyses the pitch; takes a few minutes).", [0]],
   ["已有歌唱基準（{0}），正在載入…", "Singing reference found ({0}), loading…", [0]],
+  ["已載入歌唱基準（{0}）。", "Singing reference loaded ({0}).", [0]],
   ["{0} · {1} · {2} · {3} · {4} 秒{5}{6}", "{0} · {1} · {2} · {3} · {4} seconds{5}{6}", [1, 2, 3, 5, 6]],
   ["使用 {0} 在本機分離{1}…", "Separating {1} locally on {0}…", [1]],
   ["建立 {0} 音高與節拍基準…", "Building the {0} pitch and beat reference…", []],

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Sing & record: loading a song that is already in the player no longer leaves 「正在載入本機媒體…」 on screen
+  (it says the song is loaded); 「已有歌唱基準…，正在載入…」 changes to 「已載入歌唱基準（…）。」 when it is in.
 - Finished folder (review of 2026-11-01): shortcuts are recorded before they are made, so one made just
   before closing is never taken for the user's file; a file in the way of a song folder no longer stops
   the folder for every other song; failing shortcuts wait before the next try (30 s, doubling, up to an

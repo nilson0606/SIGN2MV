@@ -76,9 +76,16 @@ $('local-media-load').addEventListener('click',async e=>{
   const ref=bestRef(vid,key);
   if(ref){
     const btn=await libraryButton(ref.id);
-    if(btn){$('local-media-status').textContent=`已有歌唱基準（${keyLabel(key)}），正在載入…`;btn.click();return;}
+    if(btn){
+      const note=$('local-media-status');note.textContent=`已有歌唱基準（${keyLabel(key)}），正在載入…`;btn.click();
+      // replace the 「正在載入…」 once the reference is in (it used to stay)
+      for(let i=0;i<300&&!$('prepare-status').textContent.startsWith('已就緒');i++)await new Promise(r=>setTimeout(r,100));
+      if(note.textContent.startsWith('已有歌唱基準'))note.textContent=$('prepare-status').textContent.startsWith('已就緒')?`已載入歌唱基準（${keyLabel(key)}）。`:'';
+      return;
+    }
   }
   // no reference (or the list did not show it): load the song itself, then point at 「準備歌曲基準」
+  $('local-media-status').textContent='';
   const sel=$('local-media-saved');sel.value=vid;
   passThrough=true;try{$('local-media-load').click();}finally{passThrough=false;}
   sel.value=value;

@@ -237,7 +237,10 @@ async function loadVideo(e) {
     tracePlayback('load-video-request',{videoId:id});
     await singing.changeSong(id);
     if(isLocalMediaId(id)){
-      if(player?.sourceKind==='local'&&player.getVideoData().video_id===id&&player.getIframe().readyState>=1){selectMediaSource(id,document,player.getIframe().tagName==='AUDIO'?'audio':'video');return true;}
+      if(player?.sourceKind==='local'&&player.getVideoData().video_id===id&&player.getIframe().readyState>=1){
+        // already loaded: say so (the status stayed at 「正在載入本機媒體…」)
+        const el=player.getIframe(),audioOnly=el.tagName==='AUDIO';selectMediaSource(id,document,audioOnly?'audio':'video');
+        status(`已載入${audioOnly?'本機音檔':'本機 MV'}：${el.dataset.title||''}。請按播放，或準備歌曲基準。`);return true;}
       const media=await mediaRequest('/local-media/'+id);resetPlayer();
       const audioOnly=media.kind==='audio';selectMediaSource(id,document,media.kind);
       const video=$(audioOnly?'local-audio':'local-video');video.hidden=false;video.dataset.title=media.title;$('player').hidden=true;
