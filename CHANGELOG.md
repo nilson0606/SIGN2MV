@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Cover: the spectrum bars of a playing version froze after switching to another page and back (the
+  animation stopped while the page was hidden and nothing started it again).
 - 全部關閉 now closes the black window: the server waited forever for connections the open page keeps
   (a paused video, the microphone stream). It now gives them 3 seconds and then ends, also when a worker
   thread is stuck.

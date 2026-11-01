@@ -95,6 +95,10 @@ export function spectrum(root, { bars = 72, height = 64 } = {}) {
   }, true);
   root.addEventListener('pause', start, true);
   root.addEventListener('ended', start, true);
+  // While its page is hidden the canvas has no width, so the loop stops (frame() returns early).
+  // Start it again when the page shows (size changes) and while the player keeps playing.
+  root.addEventListener('timeupdate', start, true);
+  if (window.ResizeObserver) new ResizeObserver(start).observe(canvas);
   requestAnimationFrame(frame);
   return canvas;
 }
