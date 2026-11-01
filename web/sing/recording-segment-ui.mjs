@@ -228,7 +228,7 @@ export function createSegmentRecording(options) {
     if(p.takeId&&![...$('take').options].some(o=>o.value===p.takeId))option($('take'),p.takeId,inherited?`沿用已選錄音 · ${takeName(inherited)||inherited.title} · ${new Date(inherited.created).toLocaleString()}`:'已選版本未找到');$('take').value=p.takeId||'';
     $('take-count').textContent=`本段共有 ${partTakes.length} 個錄音版本，全部列出；可重錄多次，沒有三次上限。${inherited?'另保留草稿原先選用的錄音，可改選本段版本。':''}`;
     const missing=missingSegmentRanges(draft,eligible,Number($('delay').value)||0,$('output').value==='mix');$('coverage').textContent=missing.length?`待補錄或涵蓋不足：${missing.join('、')}。可改選本段版本，或明確勾選保留靜音。`:'所有段落都有可用人聲；可試合完整版本。';
-    $('loop').setAttribute('aria-pressed',String(loop));$('loop').textContent=loop?'停止循環練唱':'循環練唱本段';$('record').disabled=locked||!ref||(guideMode==='backing'&&!ref.hasPreview);
+    $('loop').setAttribute('aria-pressed',String(loop));$('loop').textContent=loop?'停止循環練唱':'循環練唱本段';$('record').disabled=!!capture||conflict||!ref||(guideMode==='backing'&&!ref.hasPreview);
   }
   async function refresh(){const request=++loading,currentKey=key,list=await store.list();if(request!==loading||currentKey!==key)return;rows=list;render();}
   function referenceChanged(){
@@ -272,6 +272,7 @@ export function createSegmentRecording(options) {
   async function stop(error=null){
     serial++;loop=false;previewEnd=null;const c=capture;if(!c)return ending;
     capture=null;c.armed=false;work=true;stopMonitor(c);options.player()?.pauseVideo?.();
+    status('正在保存本段錄音…保存完成前不能錄下一段。');render(); // [SIGN2MV] the record button used to stay silent meanwhile
     const stopped=options.recording.stop(error); // Drain PCM before microphone/context is released.
     ending=(async()=>{
       try{const row=await stopped;if(row?.segmentTake?.captureId===c.captureId&&draft?.key===c.key){rows=[row,...rows.filter(r=>r.id!==row.id)];const p=draft.parts.find(p=>p.id===c.partId);if(p)p.takeId=row.id;persist();invalidate();status(row.diagnostics?.status==='incomplete'?`本段錄音已保留，但診斷未完整保存：${row.diagnostics.error}。`:'本段已保存，可按「試聽本段錄音」立即聽這一版，也可切換演唱版本；原先錄音保留。'+(row.diagnostics?.status==='saved'?' 診斷已確認保存。':''));}else status(error?(error.message?`本段收音中斷：${error.message} 請再按「錄這一段」重錄。`:'本段收音中斷，請查看錄音狀態中的保留片段。'):'沒有完成新的錄音；既有版本保留。');} // [SIGN2MV] say why the take was not kept
@@ -280,7 +281,10 @@ export function createSegmentRecording(options) {
     })();return ending;
   }
   async function record(){
-    if(busy()||!enabled||!draft)return;if(!options.canEnter())throw Error('請先結束整首演唱。');
+    // [SIGN2MV] a press while the last take is still being saved did nothing at all
+    if(capture)throw Error('正在錄製這一段；要重錄請先按「停止」。');
+    if(work)throw Error('上一個動作還在處理（保存錄音或試合），完成後再按「錄製」。');
+    if(!enabled||!draft)return;if(!options.canEnter())throw Error('請先結束整首演唱。');
     if(!$('preroll').checkValidity()){$('record-settings').open=true;$('preroll').reportValidity();throw Error('提前播放請輸入 0～60 的整數秒數。');}
     // Capture the visible choice before callbacks can refresh controls. Browser
     // restoration and native input/blur ordering need not emit a change event.

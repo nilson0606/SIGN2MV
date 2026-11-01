@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Segment recording: pressing 錄製 while the last take was still being saved did nothing (the button was
+  disabled without a word until the save ended). The panel now says 「正在保存本段錄音…」 as soon as a
+  take ends, and a press during that time says to wait instead of being ignored.
 - Sing & record: loading a song that is already in the player no longer leaves 「正在載入本機媒體…」 on screen
   (it says the song is loaded); 「已有歌唱基準…，正在載入…」 changes to 「已載入歌唱基準（…）。」 when it is in.
 - Finished folder (review of 2026-11-01): shortcuts are recorded before they are made, so one made just

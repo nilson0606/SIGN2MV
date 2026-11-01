@@ -1512,6 +1512,9 @@ export const messages = {
   "載入歌曲": "Load song",
   "不支援的音檔格式。": "Unsupported audio format.",
   "音檔太大。": "The audio file is too large.",
+  "正在保存本段錄音…保存完成前不能錄下一段。": "Saving this part's take… The next part can be recorded once it is saved.",
+  "正在錄製這一段；要重錄請先按「停止」。": "This part is being recorded; press “Stop” first to record it again.",
+  "上一個動作還在處理（保存錄音或試合），完成後再按「錄製」。": "The last action (saving a take or a trial mix) is still running; press “Record” again when it is done.",
   "音檔為空。": "The audio file is empty.",
   "錄音太大。": "The recording is too large."
 };
