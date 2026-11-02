@@ -5,6 +5,8 @@ import {remixRecording,wavBlob,delaySeconds,originalVocalRanges} from './recordi
 import {recordingSceneDefaultsVersion} from './recording-scenes.mjs';
 import {createRenderedRecordingPreview} from './recording-live-preview.mjs';
 
+const DELAY_KEY='sign2mv.segment-delay.v1';
+
 export function createSegmentRecording(options) {
   const $=id=>document.getElementById('segment-'+id),store=options.recording.store;
   const sectionHome=document.createComment('segment controls home');$('section').before(sectionHome);
@@ -172,6 +174,7 @@ export function createSegmentRecording(options) {
     $('original-help').textContent=$('output').value==='voice'?'目前選擇純人聲：不加入原唱，也不套用「只用原唱」替換。設定仍保留。':!reference()?.hasPreview?'需先準備並保留歌曲分離音軌，才能加入原唱。':'設定隨本歌曲草稿保存；調整後請重新試合。原唱使用歌曲目前的 Key，不套用收音延時校正。';
   }
   function render(){
+    followLatency();
     const ref=reference(),locked=busy()||conflict;
     $('open').disabled=!ref||busy();$('open').hidden=enabled;$('whole').hidden=!enabled;$('whole').disabled=busy();$('tools').hidden=!enabled;
     $('mode-label').textContent=enabled?'分段模式 · 不計整首分數':'整首評分模式';
@@ -393,7 +396,18 @@ export function createSegmentRecording(options) {
   $('name').onchange=()=>change(()=>{const name=$('name').value.trim();part().autoName=!name;part().name=name||`第 ${selected+1} 段`;});$('boundary-time').onchange=()=>change(()=>moveBoundary(draft,boundary,parseSegmentTime($('boundary-time').value)));
   $('take').onchange=()=>change(()=>{part().takeId=$('take').value||null;});
   $('seek').oninput=()=>{$('position').textContent=fmt(Number($('seek').value));};$('seek').onchange=()=>{options.player()?.seekTo?.(Number($('seek').value),true);};
-  for(const id of ['delay','output','allow-gaps'])$(id).onchange=()=>{invalidate();render();status('試合設定已變更，請重新試合完整一版。');};
+  for(const id of ['delay','output','allow-gaps'])$(id).onchange=()=>{if(id==='delay')saveDelay();invalidate();render();status('試合設定已變更，請重新試合完整一版。');};
+  // [SIGN2MV] the vocal correction starts at the input latency (收音延遲) and follows it until it is
+  // changed here; a value changed here is remembered on its own and no longer follows.
+  function ownDelay(){try{const v=localStorage.getItem(DELAY_KEY);return v!==null&&Number.isFinite(+v)&&Math.abs(+v)<=2000?String(+v):null;}catch{return null;}}
+  function saveDelay(){const v=Math.max(-2000,Math.min(2000,Math.round(+$('delay').value||0)));$('delay').value=String(v);try{localStorage.setItem(DELAY_KEY,String(v));}catch{/* not remembered */}}
+  function followLatency(){
+    const own=ownDelay(),latency=document.getElementById('offset')?.value,next=own??(latency!==undefined&&Number.isFinite(+latency)?String(+latency):null);
+    if(next===null||$('delay').value===next)return;
+    $('delay').value=next;if(trial||takeURL)invalidate();
+  }
+  followLatency();
+  for(const type of ['input','change'])document.getElementById('offset')?.addEventListener(type,()=>{followLatency();render();});
   $('audio').onplay=()=>{loop=false;previewEnd=null;options.player()?.pauseVideo?.();options.pauseOther();};$('audio').onended=()=>{audioEnd=null;};$('audio').ontimeupdate=()=>{if(audioEnd!==null&&$('audio').currentTime>=audioEnd){$('audio').pause();audioEnd=null;}};
   $('take-audio').onplay=()=>{
     if(busy()||!enabled){clearTakePreview();return;}
