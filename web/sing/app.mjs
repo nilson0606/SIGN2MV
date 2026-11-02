@@ -365,7 +365,10 @@ async function activateMic() {
     pendingContext = new AudioContext({ latencyHint: 'interactive', ...(native?{sampleRate:48000}:{}), sinkId: { type: 'none' } });
     const resumed = pendingContext.resume().catch(() => {});
     tracePlayback('mic-context-created',{sink:pendingContext.sinkId});
-    if(native){pendingNative=await openNativeMicrophone(pendingContext,{deviceId:$('input-device').value,signal:controller.signal,onError:error=>{if(token===generation)stopMic(error.message,false,error);}});pendingStream=pendingNative.stream;}
+    // [SIGN2MV] 「測試原唱分數」: the stand-in vocal is a source inside this context, not a microphone stream
+    const testInput=window.sign2mvTestInput;
+    if(testInput){pendingNative=await testInput(pendingContext);pendingStream=pendingNative.stream;}
+    else if(native){pendingNative=await openNativeMicrophone(pendingContext,{deviceId:$('input-device').value,signal:controller.signal,onError:error=>{if(token===generation)stopMic(error.message,false,error);}});pendingStream=pendingNative.stream;}
     else pendingStream = await navigator.mediaDevices.getUserMedia({ audio: { ...($('input-device').value ? { deviceId: { exact: $('input-device').value } } : {}), echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false });
     tracePlayback('mic-stream-acquired',{input:pendingStream.getAudioTracks()[0]?.label});
     await resumed;

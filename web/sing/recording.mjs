@@ -273,7 +273,14 @@ export function createSingerRecorder(options) {
   // [SIGN2MV] the dry vocal of the take being recorded, for RMVPE scoring (rmvpe-score.mjs)
   function live(){
     const a=active;if(!a||a.meta.segmentTake)return null;
-    return {observe:fn=>a.recorder.observeSamples(fn),segments:a.meta.post.segments,sampleRate:a.context.sampleRate,delayMs:a.meta.recordingDelayMs};
+    return {observe:fn=>a.recorder.observeSamples(fn),segments:a.meta.post.segments,sampleRate:a.context.sampleRate,delayMs:a.meta.recordingDelayMs,
+      context:a.context,recording:()=>active===a&&a.recorder.state==='recording',
+      // context time at which the recording reached `seconds` of recorded audio (null = not reached yet)
+      contextTimeOf(seconds){
+        let left=Math.round(seconds*a.context.sampleRate);
+        for(const r of a.recorder.clock.ranges){const length=(r.end??Infinity)-r.start;if(left<=length)return (r.start+left)/a.context.sampleRate;left-=length;}
+        return null;
+      }};
   }
   return { prepare, stop, playerState, clearPreview, sample, live, referenceChanged(){post.controls();review.referenceChanged();}, store, refresh:render, balanceSettings, setBalanceSettings };
 }

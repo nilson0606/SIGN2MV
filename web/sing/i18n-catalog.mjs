@@ -1525,6 +1525,7 @@ export const messages = {
   "正在用 RMVPE 分析保存的乾淨歌聲…": "Analysing the saved dry vocal with RMVPE…",
   "音檔重評（RMVPE）": "Audio rescore (RMVPE)",
   "原唱延後": "Delay the original vocal",
+  "原唱人聲（測試）": "Original vocal (test)",
   "評分延遲": "Scoring delay",
   "重新評分": "Rescore",
   "重評": "rescored",

@@ -132,6 +132,7 @@ export function createKaraokeSession(options) {
   // [SIGN2MV] 「重新評分」 next to the original-vocal controls: the last RMVPE-scored take at another
   // delay, without singing again. Each rescore is added to the score history as its own row.
   let lastTitle = '';
+  window.sign2mvRecordingLive = () => recording.live();   // the 「測試原唱分數」 vocal is placed on this recording's timeline
   function rescoreChanged() { window.dispatchEvent(new Event('sign2mv-rescore')); }
   window.sign2mvRescore = {
     delayMs: () => rmvpe.lastDelayMs(),
