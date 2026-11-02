@@ -143,7 +143,6 @@ function createVoiceOutput() {
 const LATENCY_KEY = 'karaoke.input-latency.v1';
 function showOffset() { $('offset-value').textContent = `${$('offset').value} ms`; }
 function saveOffset() { try { localStorage.setItem(LATENCY_KEY, $('offset').value); } catch { /* storage may be unavailable */ } }
-function resetOffset() { $('offset').value = $('offset').defaultValue; showOffset(); saveOffset(); }
 try { const saved = Number(localStorage.getItem(LATENCY_KEY)); if (localStorage.getItem(LATENCY_KEY) !== null && Number.isFinite(saved) && saved >= -500 && saved <= 1000) { $('offset').value = String(saved); showOffset(); } } catch { /* default */ }
 function loadAPI() {
   if (window.YT?.Player) return Promise.resolve();
@@ -464,7 +463,7 @@ setInterval(() => {
   if (!player?.getCurrentTime) return; const t = player.getCurrentTime(); if (!Number.isFinite(t)) return;
   $('player-time').textContent = `${t.toFixed(2)} s`; $('aligned-time').textContent = `${alignedTime(t, Number($('offset').value)).toFixed(2)} s`;
 }, 100);
-navigator.mediaDevices?.addEventListener('devicechange', () => { voiceOutput.refreshDevices(); resetOffset(); if (stream) stopMic('裝置已變更，收音延遲已回到預設＋300 ms。請重新開啟收音並校正。'); });
+navigator.mediaDevices?.addEventListener('devicechange', () => { voiceOutput.refreshDevices(); if (stream) stopMic('裝置已變更，請重新開啟收音；收音延遲維持不變。'); });
 function cleanup() { probeController?.abort(); stopBeats(); stopMic('頁面已離開前景，收音已停止。請重新開啟。'); }
 document.addEventListener('visibilitychange', () => { if (document.hidden) cleanup(); }); window.addEventListener('pagehide', cleanup);
 
@@ -484,7 +483,7 @@ async function refreshInputs() {
 }
 $('capture-mode').addEventListener('change',async()=>{await stopMic('已切換收音方式，請重新選擇麥克風並開啟。');$('input-device').replaceChildren(new Option('系統預設麥克風',''));try{localStorage.setItem('karaoke.capture-mode.v1',$('capture-mode').value);}catch{}await refreshInputs();});
 $('input-device').addEventListener('change', () => {
-  resetOffset(); stopMic('已切換麥克風，收音延遲已回到預設＋300 ms。請按開啟麥克風使用新裝置。');
+  stopMic('已切換麥克風，請按開啟麥克風使用新裝置；收音延遲維持不變。');
 });
 
 const localToolNames = { python: 'Python 環境', node: 'Node.js 22+', ffmpeg: 'FFmpeg', ffprobe: 'ffprobe', ytDlp: 'yt-dlp', demucs: 'Demucs', torch: 'PyTorch', torchaudio: 'TorchAudio', soundfile: 'SoundFile' };
