@@ -166,13 +166,25 @@ const testButton=document.createElement('button');
 testButton.type='button';testButton.id='sign2mv-original-test';testButton.className='secondary';testButton.textContent='🧪 測試原唱分數';
 testButton.title='用分離出的原唱人聲代替麥克風，跑一次跟你演唱完全相同的評分與錄音流程';
 $('finish-song').after(testButton);
+// The original vocal follows the video directly, so it skips the speaker / hearing part of the
+// latency loop that a singer has (hear the song, sing along); only the microphone part is replaced.
+// It is therefore played this much later than the video (default 200 ms, adjustable, remembered).
+const DELAY_KEY='sign2mv.original-test-delay.v1';
+const testDelay=document.createElement('input');
+testDelay.type='number';testDelay.id='sign2mv-original-delay';testDelay.min='0';testDelay.max='1000';testDelay.step='10';testDelay.value='200';
+try{const v=localStorage.getItem(DELAY_KEY);if(v!==null&&Number.isFinite(+v)&&+v>=0&&+v<=1000)testDelay.value=String(+v);}catch{}
+testDelay.addEventListener('change',()=>{const v=Math.max(0,Math.min(1000,Math.round(+testDelay.value||0)));testDelay.value=String(v);try{localStorage.setItem(DELAY_KEY,String(v));}catch{}});
+const testDelayLabel=document.createElement('label');testDelayLabel.className='sign2mv-original-delay';
+testDelayLabel.title='原唱直接跟著影片，少了「喇叭放出來、聽到再跟唱」那段延遲；這裡補上，讓它跟真人一樣晚到';
+testDelayLabel.append('原唱延後',testDelay,'ms');
+testButton.after(testDelayLabel);
 const testStatus=document.createElement('p');
 testStatus.id='sign2mv-original-test-status';testStatus.className='status';testStatus.setAttribute('role','status');testStatus.hidden=true;
 $('finish-song').parentElement.after(testStatus);
 function testSay(text){testStatus.textContent=text;testStatus.hidden=!text;}
 function workflow(){try{return JSON.parse($('player-section').dataset.workflow||'{}');}catch{return {};}}
 // the button follows 「從頭開始唱」 (same conditions) and is off while a test runs
-function testControls(){testButton.disabled=originalTest.active||$('sing-start').disabled||!workflow().reference;}
+function testControls(){testButton.disabled=originalTest.active||$('sing-start').disabled||!workflow().reference;testDelay.disabled=originalTest.active;}
 new MutationObserver(testControls).observe($('sing-start'),{attributes:true,attributeFilter:['disabled']});
 new MutationObserver(testControls).observe($('player-section'),{attributes:true,attributeFilter:['data-workflow']});
 testControls();
@@ -192,8 +204,10 @@ function startVoice(at,rate){
 function followPlayer(){
   const p=songPlayer();
   if(p&&!p.paused&&!p.ended&&p.readyState>=2){
+    const want=p.currentTime-originalTest.delay;   // where the vocal should be now
     const at=originalTest.source?originalTest.offset+(originalTest.ctx.currentTime-originalTest.startedAt)*originalTest.rate:null;
-    if(at===null||originalTest.rate!==p.playbackRate||Math.abs(at-p.currentTime)>.08)startVoice(p.currentTime,p.playbackRate);
+    if(want<0){if(originalTest.source)stopVoice();}
+    else if(at===null||originalTest.rate!==p.playbackRate||Math.abs(at-want)>.08)startVoice(want,p.playbackRate);
   }else if(originalTest.source)stopVoice();
   const w=workflow();
   if(w.reference!==originalTest.cacheId){void endOriginalTest(false);return;}   // another song was loaded
@@ -212,7 +226,7 @@ async function endOriginalTest(finished){
   const total=$('total-score').textContent.trim();
   Object.assign(originalTest,{active:false,ending:false,ctx:null,buffer:null,dest:null});
   testSay(finished&&/^\d+$/.test(total)
-    ?`原唱測試完成：總分 ${total}（音準 ${$('pitch-score').textContent}、節奏 ${$('rhythm-score').textContent}、完整度 ${$('coverage-score').textContent}）。錄音已保存並標成「原唱測試」；存到錄音後處理後按「錄音重新評分」，可看到套用歌聲延時校正後的分數。下次按「從頭開始唱」會改回你的麥克風。`
+    ?`原唱測試完成（原唱延後 ${Math.round(originalTest.delay*1000)} ms）：總分 ${total}（音準 ${$('pitch-score').textContent}、節奏 ${$('rhythm-score').textContent}、完整度 ${$('coverage-score').textContent}）。錄音已保存並標成「原唱測試」；存到錄音後處理後按「錄音重新評分」，可看到套用歌聲延時校正後的分數。下次按「從頭開始唱」會改回你的麥克風。`
     :'原唱測試沒有完成，下次按「從頭開始唱」會使用你的麥克風。');
   testControls();
 }
@@ -234,7 +248,7 @@ testButton.addEventListener('click',async()=>{
     // a microphone that is already open is closed first, so 「從頭開始唱」 opens this one
     if(!$('mic-stop').disabled){$('mic-stop').click();if(!await waitFor(()=>$('mic-stop').disabled,5000))throw Error('麥克風沒有關閉，請先按「停止收音」再試。');}
     Object.assign(originalTest,{active:true,cacheId,seen:false,ending:false,began:Date.now(),ctx,buffer,dest:ctx.createMediaStreamDestination(),
-      source:null,resyncs:0,captureMode:$('capture-mode').value});
+      source:null,resyncs:0,captureMode:$('capture-mode').value,delay:Math.max(0,Math.min(1000,+testDelay.value||0))/1000});
     $('capture-mode').value='browser';   // the stand-in arrives through the browser path; restored afterwards
     await ctx.resume().catch(()=>{});
     originalTest.timer=setInterval(followPlayer,40);

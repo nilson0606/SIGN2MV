@@ -1518,6 +1518,8 @@ export const messages = {
   "音檔為空。": "The audio file is empty.",
   "錄音太大。": "The recording is too large.",
   "原唱測試": "original vocal test",
+  "原唱延後": "Delay the original vocal",
+  "原唱直接跟著影片，少了「喇叭放出來、聽到再跟唱」那段延遲；這裡補上，讓它跟真人一樣晚到": "The original vocal follows the video directly and skips the “hear it from the speakers, then sing” part of the delay; this adds it back so it arrives as late as a real singer",
   "節拍燈 · 收音延遲 · 五音測試": "Beat light · Input latency · Five-note test",
   "收音延遲": "Input latency",
   "預設＋300 ms：歌手聲音提前 300 ms 對齊，例如 10.300 秒的歌聲對照 10.000 秒的歌曲基準。即時評分和整首錄音的歌聲校正都用這個數字（也會記住），錄音後處理可再逐筆調整；不改變播放器。": "Default +300 ms lines your voice up 300 ms earlier: for example, vocals at 10.300 seconds against the reference at 10.000 seconds. Live scoring and the vocal correction of whole-song recordings both use this number (it is remembered); post-production can adjust each take. The player is not changed.",
@@ -3405,5 +3407,5 @@ export const templates = [
   ["清理完成：已刪除 {0} 部 MV，釋出 {1}。原始影片、歌曲與錄音保留。", "Cleanup complete: deleted {0} videos, freed {1}. Original videos, songs, and recordings kept.", [0, 1]],
   ["清理未全部完成{0}：{1} 請查看重新整理後的清單。", "Cleanup incomplete{0}: {1} Check the refreshed list.", [0, 1]],
   ["（已確認刪除 {0} 部，釋出 {1}）", "(confirmed {0} videos deleted, {1} freed)", [0, 1]],
-  ["原唱測試完成：總分 {0}（音準 {1}、節奏 {2}、完整度 {3}）。錄音已保存並標成「原唱測試」；存到錄音後處理後按「錄音重新評分」，可看到套用歌聲延時校正後的分數。下次按「從頭開始唱」會改回你的麥克風。", "Original vocal test finished: total {0} (pitch {1}, timing {2}, completeness {3}). The take is saved and labelled “original vocal test”; save it for post-production and click “Rescore recording” to see the score with the recorded vocal timing correction. The next “Sing from the start” uses your microphone again.", []]
+  ["原唱測試完成（原唱延後 {0} ms）：總分 {1}（音準 {2}、節奏 {3}、完整度 {4}）。錄音已保存並標成「原唱測試」；存到錄音後處理後按「錄音重新評分」，可看到套用歌聲延時校正後的分數。下次按「從頭開始唱」會改回你的麥克風。", "Original vocal test finished (original vocal delayed {0} ms): total {1} (pitch {2}, timing {3}, completeness {4}). The take is saved and labelled “original vocal test”; save it for post-production and click “Rescore recording” to see the score with the recorded vocal timing correction. The next “Sing from the start” uses your microphone again.", []]
 ];
