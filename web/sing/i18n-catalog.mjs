@@ -1524,6 +1524,11 @@ export const messages = {
   "正在用 RMVPE 分析保存的乾淨歌聲…": "Analysing the saved dry vocal with RMVPE…",
   "音檔重評（RMVPE）": "Audio rescore (RMVPE)",
   "原唱延後": "Delay the original vocal",
+  "評分延遲": "Scoring delay",
+  "重新評分": "Rescore",
+  "重評": "rescored",
+  "唱完一次（用 RMVPE 結算）後，用不同的延遲重算剛唱完的那次，不用重唱；每次重算另存一筆分數紀錄": "After a take is scored with RMVPE, score it again with another delay without singing again; each rescore is saved as its own score history row",
+  "沒有可以重新評分的演唱：請先唱完一次，並用 RMVPE 結算。": "Nothing to rescore: sing once first and let RMVPE score it.",
   "原唱直接跟著影片，少了「喇叭放出來、聽到再跟唱」那段延遲；這裡補上，讓它跟真人一樣晚到": "The original vocal follows the video directly and skips the “hear it from the speakers, then sing” part of the delay; this adds it back so it arrives as late as a real singer",
   "節拍燈 · 收音延遲 · 五音測試": "Beat light · Input latency · Five-note test",
   "收音延遲": "Input latency",
@@ -3413,5 +3418,8 @@ export const templates = [
   ["清理未全部完成{0}：{1} 請查看重新整理後的清單。", "Cleanup incomplete{0}: {1} Check the refreshed list.", [0, 1]],
   ["（已確認刪除 {0} 部，釋出 {1}）", "(confirmed {0} videos deleted, {1} freed)", [0, 1]],
   ["正在用 RMVPE 分析乾淨歌聲 {0}%…", "Analysing the dry vocal with RMVPE {0}%…", []],
-  ["原唱測試完成（原唱延後 {0} ms）：總分 {1}（音準 {2}、節奏 {3}、完整度 {4}）。錄音已保存並標成「原唱測試」；存到錄音後處理後按「錄音重新評分」，可看到套用歌聲延時校正後的分數。下次按「從頭開始唱」會改回你的麥克風。", "Original vocal test finished (original vocal delayed {0} ms): total {1} (pitch {2}, timing {3}, completeness {4}). The take is saved and labelled “original vocal test”; save it for post-production and click “Rescore recording” to see the score with the recorded vocal timing correction. The next “Sing from the start” uses your microphone again.", []]
+  ["原唱測試完成（原唱延後 {0} ms）：總分 {1}（音準 {2}、節奏 {3}、完整度 {4}）。錄音已保存並標成「原唱測試」；存到錄音後處理後按「錄音重新評分」，可看到套用歌聲延時校正後的分數。下次按「從頭開始唱」會改回你的麥克風。", "Original vocal test finished (original vocal delayed {0} ms): total {1} (pitch {2}, timing {3}, completeness {4}). The take is saved and labelled “original vocal test”; save it for post-production and click “Rescore recording” to see the score with the recorded vocal timing correction. The next “Sing from the start” uses your microphone again.", []],
+  ["評分延遲 {0} ms 時沒有可評分的旋律。", "No scorable melody at a {0} ms scoring delay.", []],
+  ["重新評分（評分延遲 {0} ms）：總分 {1}（音準 {2}、節奏 {3}、完整度 {4}）。已另存一筆分數紀錄。", "Rescored (scoring delay {0} ms): total {1} (pitch {2}, timing {3}, completeness {4}). Saved as a new score history row.", []],
+  ["重新評分（評分延遲 {0} ms）：總分 {1}（音準 {2}、節奏 {3}、完整度 {4}）。瀏覽器不允許儲存紀錄，分數只顯示在這裡。", "Rescored (scoring delay {0} ms): total {1} (pitch {2}, timing {3}, completeness {4}). The browser does not allow saving history; the score is shown here only.", []],
 ];

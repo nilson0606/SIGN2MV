@@ -90,16 +90,16 @@ function resultIn(take, start, end) {
 
 // ---- while singing ----
 export function createRmvpeScoring({ onUpdate = () => {} } = {}) {
-  let session = null;
+  let session = null, last = null;   // last: what the finished take was scored from, for rescoring at another delay
   function cancel() {
     if (!session) return;
     session.stopped = true; clearInterval(session.timer); session.unobserve?.(); session.abort.abort();
     session = null;
   }
   function start(reference, scoring, live) {
-    cancel();
+    cancel(); last = null;
     if (!live) return false;
-    const s = session = { reference, live, take: new ScoringTake(reference, scoring), f0: [], chunks: [], received: 0,
+    const s = session = { reference, scoring, live, take: new ScoringTake(reference, scoring), f0: [], chunks: [], received: 0,
       analysedUntil: 0, coreStart: 0, busy: false, failed: false, stopped: false, cursor: new Map(), abort: new AbortController(),
       shift: (live.delayMs || 0) / 1000, rate: live.sampleRate, lastShown: -1 };
     s.take.begin(0);
@@ -172,11 +172,29 @@ export function createRmvpeScoring({ onUpdate = () => {} } = {}) {
       }
       const ok = s.settledAll && !s.failed;
       const r = ok ? resultIn(s.take, liveTake.startIndex, liveTake.endIndex) : null;
-      if (ok) r.device = s.device;
+      if (ok) {
+        r.device = s.device;
+        last = { reference: s.reference, scoring: s.scoring, segments: structuredClone(s.live.segments), f0: s.f0,
+          analysedUntil: s.analysedUntil, recordedSeconds: s.received / s.rate, start: liveTake.startIndex, end: liveTake.endIndex,
+          delayMs: Math.round(s.shift * 1000) };
+      }
       cancel();
       return r;
     },
     error: () => session?.error || '',
+    // rescore the last finished take with another delay (no singing again); null = nothing to rescore
+    lastDelayMs: () => last?.delayMs ?? null,
+    rescore(ms) {
+      if (!last || !Number.isFinite(ms)) return null;
+      const take = new ScoringTake(last.reference, last.scoring);
+      take.begin(0);
+      settle(take, take.reference, last.segments, last.f0, ms / 1000, last.analysedUntil, last.recordedSeconds, new Map(), true);
+      return resultIn(take, last.start, last.end);
+    },
+    forget() { last = null; },
+    // test and support aid: what the last finished take was scored from
+    summary: () => last && { seconds: Math.round(last.recordedSeconds * 10) / 10, analysed: Math.round(last.analysedUntil * 10) / 10,
+      frames: last.f0.length, voicedFrames: last.f0.filter(v => v > 0).length, delayMs: last.delayMs, segments: last.segments },
   };
 }
 

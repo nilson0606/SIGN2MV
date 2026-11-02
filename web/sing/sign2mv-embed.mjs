@@ -182,6 +182,35 @@ const testStatus=document.createElement('p');
 testStatus.id='sign2mv-original-test-status';testStatus.className='status';testStatus.setAttribute('role','status');testStatus.hidden=true;
 $('finish-song').parentElement.after(testStatus);
 function testSay(text){testStatus.textContent=text;testStatus.hidden=!text;}
+// 「重新評分」: score the take just sung again at another delay (no singing again). Uses the RMVPE
+// pitch kept from that take; each rescore is added to the score history as its own row.
+const rescoreDelay=document.createElement('input');
+rescoreDelay.type='number';rescoreDelay.id='sign2mv-rescore-delay';rescoreDelay.min='-1000';rescoreDelay.max='2000';rescoreDelay.step='10';rescoreDelay.value='300';
+const rescoreLabel=document.createElement('label');rescoreLabel.className='sign2mv-original-delay';
+rescoreLabel.title='唱完一次（用 RMVPE 結算）後，用不同的延遲重算剛唱完的那次，不用重唱；每次重算另存一筆分數紀錄';
+rescoreLabel.append('評分延遲',rescoreDelay,'ms');
+const rescoreButton=document.createElement('button');
+rescoreButton.type='button';rescoreButton.id='sign2mv-rescore';rescoreButton.className='secondary';rescoreButton.textContent='重新評分';
+rescoreButton.title=rescoreLabel.title;
+testDelayLabel.after(rescoreButton);rescoreButton.after(rescoreLabel);
+const rescoreStatus=document.createElement('p');
+rescoreStatus.id='sign2mv-rescore-status';rescoreStatus.className='status';rescoreStatus.setAttribute('role','status');rescoreStatus.hidden=true;
+testStatus.after(rescoreStatus);
+function rescoreSay(text){rescoreStatus.textContent=text;rescoreStatus.hidden=!text;}
+function rescoreControls(){
+  const last=window.sign2mvRescore?.delayMs?.()??null;
+  rescoreButton.disabled=rescoreDelay.disabled=last===null;
+  return last;
+}
+window.addEventListener('sign2mv-rescore',()=>{const last=rescoreControls();if(last!==null)rescoreDelay.value=String(last);rescoreSay('');});
+rescoreButton.addEventListener('click',()=>{
+  const ms=Math.max(-1000,Math.min(2000,Math.round(+rescoreDelay.value||0)));rescoreDelay.value=String(ms);
+  const r=window.sign2mvRescore?.run?.(ms);
+  if(!r){rescoreSay('沒有可以重新評分的演唱：請先唱完一次，並用 RMVPE 結算。');rescoreControls();return;}
+  if(r.score===null){rescoreSay(`評分延遲 ${ms} ms 時沒有可評分的旋律。`);return;}
+  rescoreSay(`重新評分（評分延遲 ${ms} ms）：總分 ${r.score}（音準 ${r.pitch}、節奏 ${r.rhythm}、完整度 ${r.coverage}）。${r.saved?'已另存一筆分數紀錄。':'瀏覽器不允許儲存紀錄，分數只顯示在這裡。'}`);
+});
+rescoreControls();
 function workflow(){try{return JSON.parse($('player-section').dataset.workflow||'{}');}catch{return {};}}
 // the button follows 「從頭開始唱」 (same conditions) and is off while a test runs
 function testControls(){testButton.disabled=originalTest.active||$('sing-start').disabled||!workflow().reference;testDelay.disabled=originalTest.active;}

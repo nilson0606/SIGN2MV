@@ -1,4 +1,4 @@
-import {originalText,userText} from './i18n.mjs';
+import {originalText,userText,translateMessage} from './i18n.mjs';
 import {revealPlayerVideo} from './player-view.mjs';
 import {selectedMediaId,selectMediaSource,isLocalMediaId,syncMediaMenu} from './media-source.mjs';
 import {keyLabel,keyShift} from './song-key.mjs';
@@ -128,7 +128,23 @@ export function createKaraokeSession(options) {
     $('total-score').textContent = String(r.score); $('pitch-score').textContent = r.pitch; $('rhythm-score').textContent = r.rhythm; $('coverage-score').textContent = r.coverage;
   } });
   let warmedFor = '';
-  function startRmvpe() { if (take && reference) rmvpe.start(reference, { allowOctave: take.allowOctave, rangeMode: take.rangeMode, difficulty: take.difficulty }, recording.live()); }
+  function startRmvpe() { if (take && reference) { rmvpe.start(reference, { allowOctave: take.allowOctave, rangeMode: take.rangeMode, difficulty: take.difficulty }, recording.live()); rescoreChanged(); } }
+  // [SIGN2MV] 「重新評分」 next to the original-vocal controls: the last RMVPE-scored take at another
+  // delay, without singing again. Each rescore is added to the score history as its own row.
+  let lastTitle = '';
+  function rescoreChanged() { window.dispatchEvent(new Event('sign2mv-rescore')); }
+  window.sign2mvRescore = {
+    delayMs: () => rmvpe.lastDelayMs(),
+    summary: () => rmvpe.summary(),
+    run(ms) {
+      const r = rmvpe.rescore(ms);
+      if (!r || r.score === null) return r;
+      let saved = true;
+      try { localStorage.setItem(HISTORY, JSON.stringify([...historyRows(), savedResult(`${lastTitle} · ${translateMessage('重評')} ${ms} ms`, r.score)].slice(-100))); } catch { saved = false; }
+      renderHistory();
+      return { ...r, saved };
+    },
+  };
   function showTakeDifficulty() { $('take-difficulty').textContent = `本輪評分難度：${take.profile.label}（本輪固定）`; }
 
   function controls() {
@@ -200,7 +216,7 @@ export function createKaraokeSession(options) {
     [...$('beats').children].forEach(dot => dot.classList.remove('active'));
   }
   async function clear(text = '已取消／卸載本次工作；已保存的歌曲仍在本機歌曲庫。', finishing = false) {
-    rmvpe.cancel();
+    rmvpe.cancel(); rmvpe.forget(); rescoreChanged();
     generation++; restartToken++; clearTimeout(timer); stopPreview(); stopGuide(); keyPlayback.clear();
     const recordingEnd = segmented?.enabled() ? segmented.stop() : recording.stop();
     const id = jobId; jobId = null; reference = null; updateMaskView(); maskEditor.render();
@@ -444,7 +460,7 @@ export function createKaraokeSession(options) {
     if (rmvpe.running()) {
       $('total-score').textContent = '…'; message('正在用 RMVPE 結算最後幾秒…');
       const official = await rmvpe.finish(take);
-      if (official) { result = official; scoredBy = 'RMVPE'; }
+      if (official) { result = official; scoredBy = 'RMVPE'; lastTitle = title; }
     } else rmvpe.cancel();
     $('take-difficulty').textContent = `本輪已結算 · 評分難度：${take.profile.label}`;
     $('take-difficulty').append(` · ${scoredBy}`);
@@ -460,7 +476,7 @@ export function createKaraokeSession(options) {
     $('prepare-status').textContent = `已就緒：${reference.title} · 基準已保留，直接按「從頭開始唱」即可再唱。`;
     phase = 'result'; $('mic-start').disabled = false;
     message(result.score === null ? '這段沒有可評分的原唱人聲（休息或已遮罩），未保存分數。歌曲已保留，可直接重新開始。' : saved ? '已結算，分數紀錄已保存；錄音結果請看錄音狀態。歌曲已保留，可直接按「從頭開始唱」。' : '已結算，但瀏覽器不允許儲存紀錄；分數仍顯示在這裡。');
-    renderHistory(); controls();
+    renderHistory(); controls(); rescoreChanged();
   }
   function renderPreparation(state) {
     const panel = $('prepare-progress-panel'), bar = $('prepare-progress');
