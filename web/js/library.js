@@ -1,6 +1,6 @@
 // Library page: song list, import (YouTube / file), source preview, stems and key preview.
 import { api } from './api.js';
-import { t, errorText, onLanguageChange, setText } from './i18n.js';
+import { t, errorText, onLanguageChange, setText, language } from './i18n.js';
 import { $, el, toast, confirmDialog, fmtDate, fmtTime, fmtBytes } from './ui.js';
 import { bus, state, selectSong, songById, mediaUrl, reloadJobs } from './app-state.js';
 import { jobBox } from './jobview.js';
@@ -91,7 +91,10 @@ function renderDetail() {
   const box = $('#song-detail');
   const song = songById(state.selectedSongId);
   if (!song) { box.replaceChildren(el('div', { class: 'empty' }, t('lib.pick_song'))); return; }
-  if (box.dataset.song === song.song_id && box.dataset.sourceKey === JSON.stringify(song.source || null) && box.dataset.title === song.title) return;
+  // same song, source, title and language: keep the panel (open sections, typed links)
+  if (box.dataset.song === song.song_id && box.dataset.sourceKey === JSON.stringify(song.source || null) && box.dataset.title === song.title
+      && box.dataset.lang === language()) return;
+  box.dataset.lang = language();
   box.dataset.song = song.song_id;
   box.dataset.sourceKey = JSON.stringify(song.source || null);
   box.dataset.title = song.title;

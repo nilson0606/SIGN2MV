@@ -1,6 +1,6 @@
 import {originalText,userText} from './i18n.mjs';
 import {revealPlayerVideo} from './player-view.mjs';
-import {selectedMediaId,selectMediaSource,isLocalMediaId} from './media-source.mjs';
+import {selectedMediaId,selectMediaSource,isLocalMediaId,syncMediaMenu} from './media-source.mjs';
 import {keyLabel,keyShift} from './song-key.mjs';
 import {recordingReviewKey} from './recording-review.mjs';
 import {libraryRecordingCounts,updateLibraryRecordingBadges} from './library-recordings.mjs';
@@ -343,6 +343,7 @@ export function createKaraokeSession(options) {
           if (['preparing','finishing','restarting'].includes(phase)) return;
           window.dispatchEvent(new CustomEvent('karaoke-library-selected',{detail:{cacheId:song.id,videoId:song.videoId,vocalMode:song.vocalMode}}));
           if (reference?.cacheId === song.id) {
+            syncMediaMenu(reference.videoId,reference.pitchShift||0);
             $('song-key').value=String(reference.pitchShift || 0);
             $('separation-model').value = reference.separationModel;
             $('vocal-mode').value = reference.vocalMode;
@@ -351,7 +352,7 @@ export function createKaraokeSession(options) {
             controls(); $('prepare-status').textContent = `已就緒：${reference.title} · ${modelName(reference.separationModel)} · ${methodName(reference.separationMethod)} · ${reference.pitchMethod.toUpperCase()} 音高。`;
             message('這首歌已載入，可直接試聽或按「從頭開始唱」。'); return;
           }
-          selectMediaSource(song.videoId);
+          selectMediaSource(song.videoId,document,undefined,song.pitchShift||0);
           $('separation-model').value = song.separationModel || 'demucs';
           $('pitch-method').value = song.pitchMethod || 'yin';
           $('separation-method').value = song.separationMethod || 'single';
@@ -371,7 +372,7 @@ export function createKaraokeSession(options) {
         li.append(load, remove);
         searchRows.push({row:li,song});
         if(keyVideos.has(song.videoId)){
-          if(!groups.has(song.videoId)){const group=document.createElement('li'),fold=document.createElement('details'),heading=document.createElement('summary'),versions=document.createElement('ul');group.className='song-key-group';fold.open=true;heading.dataset.i18nUser='';heading.textContent=song.baseTitle || song.title;versions.className='library-list key-versions';fold.append(heading,versions);group.append(fold);list.append(group);groups.set(song.videoId,versions);}
+          if(!groups.has(song.videoId)){const group=document.createElement('li'),fold=document.createElement('details'),heading=document.createElement('summary'),versions=document.createElement('ul');group.className='song-key-group';fold.open=true;heading.append(userText(song.baseTitle || song.title));versions.className='library-list key-versions';fold.append(heading,versions);group.append(fold);list.append(group);groups.set(song.videoId,versions);}
           groups.get(song.videoId).append(li);
         }else list.append(li);
       }

@@ -2,11 +2,21 @@ import {youtubeId} from './audio.mjs';
 export const isLocalMediaId=id=>typeof id==='string'&&/^local_[a-f0-9]{64}$/.test(id);
 export const isMediaId=id=>typeof id==='string'&&(/^[\w-]{11}$/.test(id)||isLocalMediaId(id));
 export function selectedMediaId(doc=document){return ['local','audio'].includes(doc.getElementById('source-kind')?.value)?doc.getElementById('local-media-id').value:youtubeId(doc.getElementById('url').value.trim());}
-export function selectMediaSource(id,doc=document,mediaKind){
+export function selectMediaSource(id,doc=document,mediaKind,key){
   const local=isLocalMediaId(id),kind=doc.getElementById('source-kind');
   if(kind)kind.value=local?(mediaKind==='audio'||(!mediaKind&&doc.getElementById('local-media-id').value===id&&kind.value==='audio')?'audio':'local'):'youtube';
   if(local)doc.getElementById('local-media-id').value=id;else doc.getElementById('url').value=`https://www.youtube.com/watch?v=${id}`;
+  if(local)syncMediaMenu(id,key,doc);
   showMediaSource(doc);
+}
+// [SIGN2MV] keep the song menu on what is loaded (a local-playlist click used to leave it on the previous song);
+// Key versions are listed as "<id>#key<n>" by sign2mv-embed.mjs
+// key undefined = unknown: an entry of the same song (any Key) stays as it is
+export function syncMediaMenu(id,key,doc=document){
+  const menu=doc.getElementById('local-media-saved');if(!menu||!isLocalMediaId(id))return;
+  if(key===undefined&&menu.value.split('#key')[0]===id)return;
+  const values=[...menu.options].map(o=>o.value),want=key?`${id}#key${key}`:id;
+  if(values.includes(want))menu.value=want;else if(values.includes(id))menu.value=id;
 }
 export function showMediaSource(doc=document){
   const kind=doc.getElementById('source-kind')?.value,local=['local','audio'].includes(kind),audio=kind==='audio';

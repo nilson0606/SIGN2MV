@@ -2520,7 +2520,8 @@
       }, 250);
     }
 
-    function stopProgressPolling(finalStage = '🎉 執行完成！', finalDetail = '') {
+    // [SIGN2MV] cancelled / failed / not-applied runs keep the bar where it stopped instead of jumping to 100%
+    function stopProgressPolling(finalStage = '🎉 執行完成！', finalDetail = '', completed = true) {
       isPollingProgress = false;
       if (progressPollTimer) {
         clearInterval(progressPollTimer);
@@ -2529,8 +2530,10 @@
       const escBtn = document.getElementById('btnForceEscapeProgress');
       if (escBtn) escBtn.style.display = 'none';
       document.getElementById('progStageTitle').textContent = finalStage;
-      document.getElementById('progPctBadge').textContent = '100%';
-      document.getElementById('progBarFill').style.width = '100%';
+      if (completed) {
+        document.getElementById('progPctBadge').textContent = '100%';
+        document.getElementById('progBarFill').style.width = '100%';
+      }
       if (finalDetail) {
         document.getElementById('progDetailText').textContent = finalDetail;
       }
@@ -2556,7 +2559,7 @@
       // [Claude 2026-10-26] 使用者決定：對齊失敗／取消／顯示卡忙時，已經有時間軸就不動（原本會連鎖定段一起改成平均分配並自動存檔）
       const hasLyricTimeline = (currentProject.timeline || []).some(s => (s.type || 'lyric') === 'lyric' && !String(s.text || '').startsWith('～'));
       if (hasLyricTimeline) {
-        stopProgressPolling('⚠️ 對齊沒有完成，時間軸沒有變更', reason);
+        stopProgressPolling('⚠️ 對齊沒有完成，時間軸沒有變更', reason, false);
         const safeReason = String(reason || '').replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
         setInlineStatus('step3StatusBox', 'warn', `
           <div style="font-size:14px; font-weight:800; color:#fde68a; margin-bottom:4px;">⚠️ 對齊沒有完成，目前的時間軸保持原樣</div>
@@ -3663,7 +3666,7 @@
         await fetch('/api/mv/cancel_task', { method: 'POST' });
       } catch (e) {}
       setRenderingUiLocked(false);
-      stopProgressPolling('⏹️ 渲染已由使用者強制終止', '已解鎖並恢復所有介面按鈕');
+      stopProgressPolling('⏹️ 渲染已由使用者強制終止', '已解鎖並恢復所有介面按鈕', false);
       showToast('⏹️ 渲染已手動終止，所有按鈕已恢復操作！');
     }
 
@@ -3715,10 +3718,10 @@
               `<span style="color:#86efac;">✔ 已有成品 MV (${p.size_mb} MB, ${p.width}x${p.height} @ ${p.r_frame_rate}fps)</span>`;
           } catch (e) {}
         } else if (data.status === 'cancelled') {
-          stopProgressPolling('⏹️ 已取消 MV 合成', '');
+          stopProgressPolling('⏹️ 已取消 MV 合成', '', false);
           showToast('⏹️ 已取消 MV 合成', true);
         } else {
-          stopProgressPolling('❌ MV 合成失敗', data.detail || '');
+          stopProgressPolling('❌ MV 合成失敗', data.detail || '', false);
           showToast('❌ ' + (data.detail || ('渲染失敗：' + JSON.stringify(data))), true);
         }
       } catch (e) {
