@@ -123,6 +123,9 @@ function showMicNote(text,kind){micNote.textContent=text;micNote.dataset.kind=ki
 if(navigator.mediaDevices?.getUserMedia){
   const original=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
   navigator.mediaDevices.getUserMedia=function(constraints){
+    // 「測試原唱分數」: the original vocal is the microphone for this one take
+    if(window.sign2mvOriginalTest?.active&&window.sign2mvOriginalTest.dest&&constraints?.audio&&!constraints.video)
+      return Promise.resolve(window.sign2mvOriginalTest.dest.stream);
     const asking=setTimeout(()=>showMicNote('🎤 瀏覽器正在詢問「是否允許使用麥克風」：請找到那個視窗（通常在網址列下方，可能被其他視窗擋住）按「允許」。按下之前，錄音和播放都會等著。','wait'),2500);
     return original(constraints).then(stream=>{clearTimeout(asking);showMicNote('','');return stream;},error=>{
       clearTimeout(asking);
@@ -150,3 +153,96 @@ if(segStatus)new MutationObserver(()=>{
   if(!echoTarget||Date.now()>echoUntil)return;
   echo.textContent=segStatus.textContent;echo.hidden=!segStatus.textContent;
 }).observe(segStatus,{childList:true,characterData:true,subtree:true});
+
+// ---- [SIGN2MV] 「測試原唱分數」: one whole-song take where the separated original vocal stands in for
+// the microphone. Everything after the input is the user's own path: 「從頭開始唱」, live pitch
+// detection with the time compensation, scoring, the recording with its delay correction, the
+// score history. The vocal follows the song player (play, pause, seek) through its own audio graph
+// that never reaches the speakers; the page asks for a microphone and gets this stream instead.
+const originalTest={active:false};
+window.sign2mvOriginalTest=originalTest;
+window.sign2mvTakeTitle=title=>originalTest.active?`${title} · ${translateMessage('原唱測試')}`:title;
+const testButton=document.createElement('button');
+testButton.type='button';testButton.id='sign2mv-original-test';testButton.className='secondary';testButton.textContent='🧪 測試原唱分數';
+testButton.title='用分離出的原唱人聲代替麥克風，跑一次跟你演唱完全相同的評分與錄音流程';
+$('finish-song').after(testButton);
+const testStatus=document.createElement('p');
+testStatus.id='sign2mv-original-test-status';testStatus.className='status';testStatus.setAttribute('role','status');testStatus.hidden=true;
+$('finish-song').parentElement.after(testStatus);
+function testSay(text){testStatus.textContent=text;testStatus.hidden=!text;}
+function workflow(){try{return JSON.parse($('player-section').dataset.workflow||'{}');}catch{return {};}}
+// the button follows 「從頭開始唱」 (same conditions) and is off while a test runs
+function testControls(){testButton.disabled=originalTest.active||$('sing-start').disabled||!workflow().reference;}
+new MutationObserver(testControls).observe($('sing-start'),{attributes:true,attributeFilter:['disabled']});
+new MutationObserver(testControls).observe($('player-section'),{attributes:true,attributeFilter:['data-workflow']});
+testControls();
+function songPlayer(){
+  for(const id of ['local-video','local-audio']){const el=$(id);if(el&&!el.hidden&&el.currentSrc)return el;}
+  return null;
+}
+const waitFor=async(test,ms)=>{for(let i=0;i<ms/100&&!test();i++)await new Promise(r=>setTimeout(r,100));return test();};
+function stopVoice(){try{originalTest.source?.stop();}catch{}originalTest.source?.disconnect();originalTest.source=null;}
+function startVoice(at,rate){
+  stopVoice();
+  const s=originalTest.ctx.createBufferSource();s.buffer=originalTest.buffer;s.playbackRate.value=rate;s.connect(originalTest.dest);
+  s.start(0,Math.max(0,Math.min(at,originalTest.buffer.duration)));
+  originalTest.source=s;originalTest.startedAt=originalTest.ctx.currentTime;originalTest.offset=at;originalTest.rate=rate;originalTest.resyncs++;
+}
+// keep the vocal on the song clock; restart it only when it is clearly off (a seek, a pause, drift)
+function followPlayer(){
+  const p=songPlayer();
+  if(p&&!p.paused&&!p.ended&&p.readyState>=2){
+    const at=originalTest.source?originalTest.offset+(originalTest.ctx.currentTime-originalTest.startedAt)*originalTest.rate:null;
+    if(at===null||originalTest.rate!==p.playbackRate||Math.abs(at-p.currentTime)>.08)startVoice(p.currentTime,p.playbackRate);
+  }else if(originalTest.source)stopVoice();
+  const w=workflow();
+  if(w.reference!==originalTest.cacheId){void endOriginalTest(false);return;}   // another song was loaded
+  if(w.phase==='singing')originalTest.seen=true;
+  // done once the take is settled (finish() has already closed the stand-in microphone and saved the take)
+  if(originalTest.seen&&['result','ready','idle'].includes(w.phase))void endOriginalTest(true);
+  else if(!originalTest.seen&&Date.now()-originalTest.began>60000)void endOriginalTest(false);
+}
+async function endOriginalTest(finished){
+  if(!originalTest.active||originalTest.ending)return;
+  originalTest.ending=true;
+  clearInterval(originalTest.timer);stopVoice();
+  if(!$('mic-stop').disabled){$('mic-stop').click();await waitFor(()=>$('mic-stop').disabled,5000);}
+  await originalTest.ctx?.close().catch(()=>{});
+  if(originalTest.captureMode)$('capture-mode').value=originalTest.captureMode;
+  const total=$('total-score').textContent.trim();
+  Object.assign(originalTest,{active:false,ending:false,ctx:null,buffer:null,dest:null});
+  testSay(finished&&/^\d+$/.test(total)
+    ?`原唱測試完成：總分 ${total}（音準 ${$('pitch-score').textContent}、節奏 ${$('rhythm-score').textContent}、完整度 ${$('coverage-score').textContent}）。錄音已保存並標成「原唱測試」；存到錄音後處理後按「錄音重新評分」，可看到套用歌聲延時校正後的分數。下次按「從頭開始唱」會改回你的麥克風。`
+    :'原唱測試沒有完成，下次按「從頭開始唱」會使用你的麥克風。');
+  testControls();
+}
+testButton.addEventListener('click',async()=>{
+  if(originalTest.active)return;
+  const cacheId=workflow().reference;
+  if(!cacheId){testSay('請先載入歌曲並準備好歌曲基準。');return;}
+  testButton.disabled=true;testSay('正在讀取原唱人聲…');
+  let ctx;
+  try{
+    const tk=await token(),headers={'X-Karaoke-Token':tk};
+    const ref=await (await fetch(`/sr/library/${encodeURIComponent(cacheId)}/reference`,{headers,cache:'no-store'})).json();
+    // the same vocal the reference melody was taken from (the lead line when the song was split that way)
+    const stem=ref.vocalMode==='lead'?'lead':'vocals';
+    const r=await fetch(`/sr/library/${encodeURIComponent(cacheId)}/${stem}`,{headers,cache:'no-store'});
+    if(!r.ok)throw Error('這首歌沒有保留原唱人聲音軌，請先在「歌曲準備」按「補建試聽音軌」。');
+    ctx=new AudioContext({latencyHint:'interactive'});
+    const buffer=await ctx.decodeAudioData(await r.arrayBuffer());
+    // a microphone that is already open is closed first, so 「從頭開始唱」 opens this one
+    if(!$('mic-stop').disabled){$('mic-stop').click();if(!await waitFor(()=>$('mic-stop').disabled,5000))throw Error('麥克風沒有關閉，請先按「停止收音」再試。');}
+    Object.assign(originalTest,{active:true,cacheId,seen:false,ending:false,began:Date.now(),ctx,buffer,dest:ctx.createMediaStreamDestination(),
+      source:null,resyncs:0,captureMode:$('capture-mode').value});
+    $('capture-mode').value='browser';   // the stand-in arrives through the browser path; restored afterwards
+    await ctx.resume().catch(()=>{});
+    originalTest.timer=setInterval(followPlayer,40);
+    testSay('原唱測試進行中：用原唱人聲代替麥克風，從頭唱完整首（跟你演唱時一樣，約一首歌的時間）。可按「結束並結算」提早結束。');
+    $('sing-start').click();
+  }catch(error){
+    if(!originalTest.active)await ctx?.close().catch(()=>{});
+    else await endOriginalTest(false);
+    testSay(error.message);testControls();
+  }
+});

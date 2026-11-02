@@ -425,7 +425,8 @@ export function createKaraokeSession(options) {
     if (!take || !reference || ['result', 'finishing'].includes(phase)) return;
     restartToken++; stopGuide(); phase = 'finishing'; controls();
     if (options.micReady() && options.player()?.getPlayerState?.() === 1) take.advance(options.player().getCurrentTime());
-    const result = take.result(), title = reference.title;
+    // [SIGN2MV] a 「測試原唱分數」 take is labelled as such in the score history
+    const result = take.result(), title = window.sign2mvTakeTitle?.(reference.title) ?? reference.title;
     $('take-difficulty').textContent = `本輪已結算 · 評分難度：${take.profile.label}`;
     $('total-score').textContent = result.score === null ? '—' : String(result.score);
     $('pitch-score').textContent = String(result.pitch); $('rhythm-score').textContent = String(result.rhythm); $('coverage-score').textContent = String(result.coverage);

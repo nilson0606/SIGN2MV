@@ -1516,7 +1516,16 @@ export const messages = {
   "正在錄製這一段；要重錄請先按「停止」。": "This part is being recorded; press “Stop” first to record it again.",
   "上一個動作還在處理（保存錄音或試合），完成後再按「錄製」。": "The last action (saving a take or a trial mix) is still running; press “Record” again when it is done.",
   "音檔為空。": "The audio file is empty.",
-  "錄音太大。": "The recording is too large."
+  "錄音太大。": "The recording is too large.",
+  "原唱測試": "original vocal test",
+  "🧪 測試原唱分數": "🧪 Score the original vocal",
+  "用分離出的原唱人聲代替麥克風，跑一次跟你演唱完全相同的評分與錄音流程": "Use the separated original vocal instead of the microphone and run exactly the same scoring and recording as when you sing",
+  "請先載入歌曲並準備好歌曲基準。": "Load a song and prepare its song reference first.",
+  "正在讀取原唱人聲…": "Reading the original vocal…",
+  "這首歌沒有保留原唱人聲音軌，請先在「歌曲準備」按「補建試聽音軌」。": "This song has no original vocal track saved; under Song preparation click “Rebuild preview stems” first.",
+  "麥克風沒有關閉，請先按「停止收音」再試。": "The microphone did not close; click “Stop input” and try again.",
+  "原唱測試進行中：用原唱人聲代替麥克風，從頭唱完整首（跟你演唱時一樣，約一首歌的時間）。可按「結束並結算」提早結束。": "Original vocal test running: the original vocal stands in for the microphone for the whole song (as long as the song, just like when you sing). Click “Finish and score” to stop early.",
+  "原唱測試沒有完成，下次按「從頭開始唱」會使用你的麥克風。": "The original vocal test did not finish; the next “Sing from the start” uses your microphone."
 };
 
 export const templates = [
@@ -3384,5 +3393,6 @@ export const templates = [
   ["正在清理 MV：{0}／{1} 部…", "Cleaning up videos: {0}/{1}…", [0, 1]],
   ["清理完成：已刪除 {0} 部 MV，釋出 {1}。原始影片、歌曲與錄音保留。", "Cleanup complete: deleted {0} videos, freed {1}. Original videos, songs, and recordings kept.", [0, 1]],
   ["清理未全部完成{0}：{1} 請查看重新整理後的清單。", "Cleanup incomplete{0}: {1} Check the refreshed list.", [0, 1]],
-  ["（已確認刪除 {0} 部，釋出 {1}）", "(confirmed {0} videos deleted, {1} freed)", [0, 1]]
+  ["（已確認刪除 {0} 部，釋出 {1}）", "(confirmed {0} videos deleted, {1} freed)", [0, 1]],
+  ["原唱測試完成：總分 {0}（音準 {1}、節奏 {2}、完整度 {3}）。錄音已保存並標成「原唱測試」；存到錄音後處理後按「錄音重新評分」，可看到套用歌聲延時校正後的分數。下次按「從頭開始唱」會改回你的麥克風。", "Original vocal test finished: total {0} (pitch {1}, timing {2}, completeness {3}). The take is saved and labelled “original vocal test”; save it for post-production and click “Rescore recording” to see the score with the recorded vocal timing correction. The next “Sing from the start” uses your microphone again.", []]
 ];

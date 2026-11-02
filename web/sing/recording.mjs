@@ -129,9 +129,10 @@ export function createSingerRecorder(options) {
     try { ({recorder,rawRecorder}=await createPCMRecorders(context,mic,destination)); }
     catch (error) { mix.disconnect(); destination.disconnect(); throw error; }
     if(request!==operation||options.context()!==context){recorder.dispose();mix.disconnect();destination.disconnect();throw new Error('錄音準備已取消。');}
-    const meta = { id: crypto.randomUUID(), title: reference.title, videoId: reference.videoId, mode, mime: recorder.mimeType, rawMime:rawRecorder.mimeType, appliedDelayMs:0, recordingDelayMs, created: Date.now(), seconds: 0, bytes: 0, complete: false, balance: mix.settings, stems, rawBytes:0, post:{version:1, reference:structuredClone(reference), scoring, offsetMs:recordingDelayMs, liveOffsetMs:Number($('offset').value), segments:[], samples:[]} };
+    const meta = { id: crypto.randomUUID(), title: window.sign2mvTakeTitle?.(reference.title) ?? reference.title, videoId: reference.videoId, mode, mime: recorder.mimeType, rawMime:rawRecorder.mimeType, appliedDelayMs:0, recordingDelayMs, created: Date.now(), seconds: 0, bytes: 0, complete: false, balance: mix.settings, stems, rawBytes:0, post:{version:1, reference:structuredClone(reference), scoring, offsetMs:recordingDelayMs, liveOffsetMs:Number($('offset').value), segments:[], samples:[]} };
     // Only new recordings opt into the new editing defaults; saved audio stays dry.
     meta.postDefaults=recordingSceneDefaultsVersion;
+    if(window.sign2mvOriginalTest?.active)meta.originalVocalTest=true;   // [SIGN2MV] 「測試原唱分數」
     if(capture.segmentTake)meta.segmentTake=structuredClone(capture.segmentTake);else meta.postPending=true;
     meta.captureClock={version:1,source:'audio-worklet-pcm',sampleRate:context.sampleRate,input:direct?'native-worklet-v2':'browser-media-stream'};
     if(direct?.nativeCapturePolicy)meta.captureClock.nativeCapturePolicy=direct.nativeCapturePolicy;
