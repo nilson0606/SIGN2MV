@@ -33,7 +33,6 @@ export function createSingerRecorder(options) {
     review.controls();
     const mode=$('recording-mode').value, manual=$('recording-manual').checked;
     $('recording-mode').disabled = !!active;
-    $('recording-delay').disabled=!!active||mode==='off';
     $('recording-manual').disabled = !!active || mode==='off';
     $('recording-voice-level').disabled = !!active || mode==='off' || !manual;
     $('recording-backing-level').disabled = !!active || mode!=='mix' || !manual;
@@ -101,7 +100,8 @@ export function createSingerRecorder(options) {
     await stop(); clearPreview();
     const mode = capture.mode ?? $('recording-mode').value;
     if (mode === 'off') { status('本輪不保存錄音。'); return; }
-    const recordingDelayMs=capture.delayMs ?? Number($('recording-delay').value);delaySeconds(recordingDelayMs);
+    const recordingDelayMs=capture.delayMs ?? Number($('offset').value);   // [SIGN2MV] the shared input latency (「延遲校正」)
+    delaySeconds(recordingDelayMs);
     const request = ++operation;
     if (!window.AudioWorkletNode) throw new Error('瀏覽器不支援同步錄音，請使用桌機 Chrome／Edge，或選不保存錄音。');
     status(mode === 'mix' ? '正在準備錄音配樂／和音…' : '正在準備演唱錄音…');

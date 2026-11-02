@@ -139,7 +139,12 @@ function createVoiceOutput() {
   };
 }
 
-function resetOffset() { $('offset').value = $('offset').defaultValue; $('offset-value').textContent = `${$('offset').value} ms`; }
+// [SIGN2MV] one input latency for live scoring and the recorded-vocal correction; remembered across reloads
+const LATENCY_KEY = 'karaoke.input-latency.v1';
+function showOffset() { $('offset-value').textContent = `${$('offset').value} ms`; }
+function saveOffset() { try { localStorage.setItem(LATENCY_KEY, $('offset').value); } catch { /* storage may be unavailable */ } }
+function resetOffset() { $('offset').value = $('offset').defaultValue; showOffset(); saveOffset(); }
+try { const saved = Number(localStorage.getItem(LATENCY_KEY)); if (localStorage.getItem(LATENCY_KEY) !== null && Number.isFinite(saved) && saved >= -500 && saved <= 1000) { $('offset').value = String(saved); showOffset(); } } catch { /* default */ }
 function loadAPI() {
   if (window.YT?.Player) return Promise.resolve();
   if (apiPromise) return apiPromise;
@@ -331,7 +336,7 @@ $('probe').addEventListener('click', async () => {
   } finally { clearTimeout(timer); if (probeController === controller) probeController = null; $('probe').disabled = false; }
 });
 function latency(x) { return Number.isFinite(x) ? `${Math.round(x * 1000)} ms（估計）` : '未提供，不能當作 0 ms'; }
-$('offset').addEventListener('input', () => { $('offset-value').textContent = `${$('offset').value} ms`; });
+$('offset').addEventListener('input', () => { showOffset(); saveOffset(); });
 async function stopMic(message = '收音已停止，麥克風已釋放；錄音結果請查看下方錄音狀態。', rewind = false, captureError = null) {
   generation++; clearInterval(micTimer); calibration?.cancel(); voiceOutput.stop();
   const recordingEnd = singing.stopRecording(captureError);
@@ -459,7 +464,7 @@ setInterval(() => {
   if (!player?.getCurrentTime) return; const t = player.getCurrentTime(); if (!Number.isFinite(t)) return;
   $('player-time').textContent = `${t.toFixed(2)} s`; $('aligned-time').textContent = `${alignedTime(t, Number($('offset').value)).toFixed(2)} s`;
 }, 100);
-navigator.mediaDevices?.addEventListener('devicechange', () => { voiceOutput.refreshDevices(); resetOffset(); if (stream) stopMic('裝置已變更，補償已回到預設＋200 ms。請重新開啟收音並校正。'); });
+navigator.mediaDevices?.addEventListener('devicechange', () => { voiceOutput.refreshDevices(); resetOffset(); if (stream) stopMic('裝置已變更，收音延遲已回到預設＋300 ms。請重新開啟收音並校正。'); });
 function cleanup() { probeController?.abort(); stopBeats(); stopMic('頁面已離開前景，收音已停止。請重新開啟。'); }
 document.addEventListener('visibilitychange', () => { if (document.hidden) cleanup(); }); window.addEventListener('pagehide', cleanup);
 
@@ -479,7 +484,7 @@ async function refreshInputs() {
 }
 $('capture-mode').addEventListener('change',async()=>{await stopMic('已切換收音方式，請重新選擇麥克風並開啟。');$('input-device').replaceChildren(new Option('系統預設麥克風',''));try{localStorage.setItem('karaoke.capture-mode.v1',$('capture-mode').value);}catch{}await refreshInputs();});
 $('input-device').addEventListener('change', () => {
-  resetOffset(); stopMic('已切換麥克風，補償已回到預設＋200 ms。請按開啟麥克風使用新裝置。');
+  resetOffset(); stopMic('已切換麥克風，收音延遲已回到預設＋300 ms。請按開啟麥克風使用新裝置。');
 });
 
 const localToolNames = { python: 'Python 環境', node: 'Node.js 22+', ffmpeg: 'FFmpeg', ffprobe: 'ffprobe', ytDlp: 'yt-dlp', demucs: 'Demucs', torch: 'PyTorch', torchaudio: 'TorchAudio', soundfile: 'SoundFile' };

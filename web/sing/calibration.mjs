@@ -85,11 +85,11 @@ export function createCalibration(options) {
     } catch { stop('測試音無法播放，請重新開啟麥克風後再試。'); }
   });
   for (const id of ['cal-mode', 'cal-octave']) $(id).addEventListener('change', () => stop('測試設定已變更，請重新測試。'));
-  $('cal-stop').addEventListener('click', () => stop('已停止五音測試，未改動補償。'));
+  $('cal-stop').addEventListener('click', () => stop('已停止五音測試，未改動收音延遲。'));
   $('cal-apply').addEventListener('click', () => {
     if (suggestion === null) return;
     $('offset').value = String(suggestion); $('offset').dispatchEvent(new Event('input'));
-    $('cal-status').textContent += ' 已套用到時間補償。'; $('cal-apply').disabled = true;
+    $('cal-status').append(' 已套用到收音延遲。');   // [SIGN2MV] own text node, so it is translated too $('cal-apply').disabled = true;
   });
   return { sample: (time, hz) => measurement?.sample(time, hz), cancel: () => stop('五音測試已停止；需要時可重新測試。'), active: () => measurement !== null };
 }

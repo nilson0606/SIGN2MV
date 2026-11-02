@@ -432,10 +432,10 @@
     <details id="recordings-panel"><summary>整首演唱與已保存成品</summary><p class="help">此清單顯示整首演唱與明確保存的完整成品；分段錄音請在分段區挑選、試聽或刪除。停止錄音後自動保存於歌曲庫下的「錄音」目錄；Chrome 與 Edge 連到同一本機工具即可共用。既有瀏覽器錄音會自動搬存，成功確認後才清除舊副本；未搬存成功仍保留在瀏覽器。直接按 YouTube 播放只評分；要錄音請按「從頭開始唱」。</p><div class="button-row"><button id="recording-refresh" class="secondary" type="button">重新整理／搬存錄音</button><button id="recording-delete-all" class="secondary" type="button">刪除此清單錄音</button></div><audio id="recording-audio" controls hidden></audio><ul id="recording-list" class="library-list"></ul></details>
   </section>
     <details id="timing-section" tabindex="-1" class="card timing-card section-fold">
-      <summary><span class="step">04</span> 看節拍，調延遲 <span class="fold-caption">節拍燈 · 時間補償 · 五音測試</span></summary>
+      <summary><span class="step">04</span> 看節拍，調延遲 <span class="fold-caption">節拍燈 · 收音延遲 · 五音測試</span></summary>
       <div class="fold-body">
       <div class="timing-grid"><div><label for="bpm">手動節拍速度</label><div class="bpm-row"><input id="bpm" type="number" min="40" max="220" step="1" value="90"><span>BPM</span><button id="beat-toggle" class="secondary" type="button">啟動節拍燈</button></div><div id="beats" class="beats" aria-label="四拍節拍燈"><i></i><i></i><i></i><i></i></div><p id="beat-note" class="help">手動節拍燈；基準建立後，若能辨識節奏，改用自動估計拍點。</p></div>
-      <div><label for="offset">手動時間補償 <output id="offset-value">200 ms</output></label><input id="offset" type="range" min="-500" max="1000" step="10" value="200"><div class="range-label"><span>−500 ms</span><span>+1000 ms</span></div><p class="help">預設＋200 ms：歌手聲音提前 200 ms 比對，例如 10.200 秒的歌聲對照 10.000 秒的歌曲基準。只調整評分時間，不改變播放器或錄音音檔；錄音校正在下方另設。</p></div></div>
+      <div><label for="offset">收音延遲 <output id="offset-value">300 ms</output></label><input id="offset" type="range" min="-500" max="1000" step="10" value="300"><div class="range-label"><span>−500 ms</span><span>+1000 ms</span></div><p class="help">預設＋300 ms：歌手聲音提前 300 ms 對齊，例如 10.300 秒的歌聲對照 10.000 秒的歌曲基準。即時評分和整首錄音的歌聲校正都用這個數字（也會記住），錄音後處理可再逐筆調整；不改變播放器。</p></div></div>
       <details id="calibration-panel"><summary>Do Re Mi Fa Sol 五音延遲測試（選用）</summary>
         <p class="help">先開啟麥克風。測試會播放五個音，畫面同步提示；完成後可選擇套用建議值。</p>
         <label for="cal-mode">測試方式</label><select id="cal-mode"><option value="sing">跟著五音唱（包含人的反應時間）</option><option value="loopback">耳機／喇叭靠近麥克風（不用唱）</option></select>
@@ -443,9 +443,9 @@
         <label for="cal-octave">測試音域</label><select id="cal-octave"><option value="0">中音 C4–G4</option><option value="-1">低音 C3–G3</option></select>
         <div id="cal-notes" class="cal-notes"><span>Do</span><span>Re</span><span>Mi</span><span>Fa</span><span>Sol</span></div>
         <div class="button-row"><button id="cal-start">播放五音並測試</button><button id="cal-stop" class="secondary" disabled>停止測試</button><button id="cal-apply" class="secondary" disabled>套用建議補償</button></div>
-        <p id="cal-status" class="status" role="status">選用測試，不會錄音或保存聲音，也不會自動改動補償。</p>
+        <p id="cal-status" class="status" role="status">選用測試，不會錄音或保存聲音，也不會自動改動收音延遲。</p>
       </details>
-      <div class="notice muted">藍牙、有線、USB 與電腦內建麥克風請分別測試。更換裝置後，補償值會回到預設＋200 ms；這是起始設定，並非裝置實測延遲。</div>
+      <div class="notice muted">藍牙、有線、USB 與電腦內建麥克風請分別測試。更換裝置後，收音延遲會回到預設＋300 ms；這是起始設定，並非裝置實測延遲。</div>
       </div>
     </details>
   <section id="recording-section" tabindex="-1" class="card score-card">
@@ -469,12 +469,11 @@
     <p id="post-score" class="score-title" role="status"></p><p id="rescore-status" class="status" role="status">選擇已保存的錄音後，可調整基準與難度重新評分。</p>
     </section>
     </details>
-    <details id="recording-settings" class="settings-fold" tabindex="-1"><summary>錄音設定 <span class="fold-caption">錄音內容 · 歌聲延時</span></summary>
+    <details id="recording-settings" class="settings-fold" tabindex="-1"><summary>錄音設定 <span class="fold-caption">錄音內容</span></summary>
     <label for="recording-mode">演唱錄音儲存</label><select id="recording-mode"><option value="voice">歌唱者</option><option value="mix" selected>歌唱者＋配樂／和音（預設）</option><option value="off">不保存錄音</option></select>
     <p class="help">新錄音使用同步無損 WAV，保留原始歌聲供後製，檔案會比壓縮錄音大；每輪最多 30 分鐘。</p>
     <p class="help">按「從頭開始唱」，影片開始播放時同步錄音；停止收音、結束並結算或影片播完時保存。暫停／緩衝時暫停錄音。依已載入版本自動選軌：兩軌版本加入伴奏；四軌版本加入伴奏＋和音，不加入原唱主唱或全部人聲。超過音軌長度後只錄歌唱者。請戴耳機，避免原唱從喇叭漏入麥克風。</p>
-    <label for="recording-delay">錄音歌聲延時校正（毫秒）</label><input id="recording-delay" type="number" min="-2000" max="2000" step="1" value="300">
-    <p class="help">預設＋300 ms：停止錄音後，成品中的歌聲往前移 300 ms，配樂與和音不移動。填入總校正量，不會累加。原始歌聲保留供後處理；即時評分仍使用上方時間補償設定。</p>
+    <p class="help">錄音成品的歌聲校正使用「延遲校正」裡的收音延遲（預設＋300 ms）：停止錄音後歌聲往前移，配樂與和音不移動。原始歌聲保留，可在錄音後處理逐筆調整。</p>
     </details>
     <p class="footnote">暫停與緩衝不計分。漏唱與跳過的段落會降低分數；「整首歌曲」模式也會計入提前結束的剩餘段落。可在中途按「結束並結算」，或等影片播完自動結算。進拍分數依旋律起音估計，不是專業聲樂評鑑。</p>
     <details id="history-panel"><summary>分數紀錄 · 勾選清除</summary><label class="check-option"><input id="history-select-all" type="checkbox">全選</label><ul id="score-history" class="score-history"></ul><div class="button-row history-actions"><button id="delete-history-selected" class="secondary" type="button" disabled>清除勾選紀錄</button><button id="clear-history" class="secondary" type="button">全部清除</button></div><p id="history-status" class="help" role="status">只清除分數，不刪除演唱錄音或歌曲。</p></details>
