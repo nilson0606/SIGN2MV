@@ -113,10 +113,11 @@ class ManagedProcess:
     """A child process whose whole tree can be killed reliably."""
 
     def __init__(self, args: Sequence[str], *, env: dict[str, str] | None = None,
-                 cwd: str | None = None, stdin_data: bytes | None = None):
+                 cwd: str | None = None, stdin_data: bytes | None = None, keep_stdin: bool = False):
+        # keep_stdin: a long-lived worker that is fed line by line (sing & record live pitch)
         self._job = None
         kwargs: dict = dict(stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            stdin=subprocess.PIPE if stdin_data is not None else subprocess.DEVNULL,
+                            stdin=subprocess.PIPE if stdin_data is not None or keep_stdin else subprocess.DEVNULL,
                             env=env, cwd=cwd)
         if IS_WINDOWS:
             kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
@@ -137,7 +138,7 @@ class ManagedProcess:
                     _kernel32.CloseHandle(job)
             except OSError:
                 self._job = None
-        if stdin_data is not None and self.popen.stdin:
+        if stdin_data is not None and not keep_stdin and self.popen.stdin:
             try:
                 self.popen.stdin.write(stdin_data)
                 self.popen.stdin.close()

@@ -8,6 +8,7 @@ import { recordingScenes, initialRecordingEffects, matchingRecordingScene, recor
 import { PITCH_DETECTOR_VERSION } from './audio.mjs';
 import { softeningProfile, recordingSofteningSuffix, recordingEffectsSuffix, vocalEffects, reverbProfile, reverbSpacePresets } from './recording-soften.mjs';
 import { scoringProfile } from './scoring.mjs';
+import { analyseRecordingRmvpe, rescoreRecordingRmvpe } from './rmvpe-score.mjs';
 import { recordingVolume } from './recording-mix.mjs';
 import {repairSettings} from './recording-repair.mjs';
 import { rescoreRecording, remixRecording, wavBlob, delaySeconds, referenceForRescore, recordingDelaySuffix, recordingEdit } from './recording-process.mjs';
@@ -177,7 +178,7 @@ export function createRecordingPost({store,stop,pause,download,onDelete,referenc
     audition?.reset(selected,{preserve:preserveComparison});
     showScore();controls();
   }
-  function showScore(){const r=selected?.postResult;$('post-score').textContent=r?`${r.source==='decoded-voice-v1'?'音檔重評':'舊版即時資料重評'} · ${r.referenceSource==='current'?'改用已載入基準':'錄音當時基準'} ${(r.reference?.pitchMethod||selected.post?.reference?.pitchMethod||'yin').toUpperCase()} · ${scoringProfile(r.scoring?.difficulty??selected.post?.scoring?.difficulty).label} · 校正 ${r.delayMs} ms · 總分 ${r.score??'—'} · 音準 ${r.pitch} · 進拍 ${r.rhythm} · 完整度 ${r.coverage} · 可計分旋律 ${r.referenceSeconds} 秒${r.baseline ? ` · 同音檔 0 ms 進拍 ${r.baseline.rhythm}` : ''}`:'';}
+  function showScore(){const r=selected?.postResult;$('post-score').textContent=r?`${r.source==='rmvpe-v1'?'音檔重評（RMVPE）':r.source==='decoded-voice-v1'?'音檔重評':'舊版即時資料重評'} · ${r.referenceSource==='current'?'改用已載入基準':'錄音當時基準'} ${(r.reference?.pitchMethod||selected.post?.reference?.pitchMethod||'yin').toUpperCase()} · ${scoringProfile(r.scoring?.difficulty??selected.post?.scoring?.difficulty).label} · 校正 ${r.delayMs} ms · 總分 ${r.score??'—'} · 音準 ${r.pitch} · 進拍 ${r.rhythm} · 完整度 ${r.coverage} · 可計分旋律 ${r.referenceSeconds} 秒${r.baseline ? ` · 同音檔 0 ms 進拍 ${r.baseline.rhythm}` : ''}`:'';}
   function refresh(value){rows=value.filter(isPostRecording);const old=$('post-recording').value;const options=rows.map(row=>{const o=document.createElement('option');o.value=row.id;o.textContent=`${row.title}${recordingEffectsSuffix(row)}${recordingSofteningSuffix(row)}${recordingTuningSuffix(row)}${recordingDelaySuffix(row)?" "+recordingDelaySuffix(row):""} · ${new Date(row.created).toLocaleString()}`;return o;});$('post-recording').replaceChildren(...options);$('score-recording').replaceChildren(...options.map(o=>o.cloneNode(true)));if(rows.some(r=>r.id===old))$('post-recording').value=old;if(selected?.id===old&&rows.some(r=>r.id===old)){selected=rows.find(r=>r.id===old);$('score-recording').value=old;controls();}else if(!busy)choose();}
   function select(id,{scroll=true}={}){if(!rows.some(row=>row.id===id))return;$('post-recording').value=id;choose();if(scroll)$('recording-post').scrollIntoView({block:'start'});}
   async function run(action,target='post-status'){if(busy||!selected)return;statusTarget=target;busy=true;controls();try{const row=selected;await stop();pause();if(row)await action(row);}catch(error){status(error.message);}finally{busy=false;controls();statusTarget='post-status';}}
@@ -295,13 +296,25 @@ export function createRecordingPost({store,stop,pause,download,onDelete,referenc
     const referenceSource=$('post-reference-source').value;
     const scoringReference=referenceSource==='current'?referenceForRescore(row.post,reference()):structuredClone(row.post.reference);
     status(`正在以 ${referenceName(scoringReference)} 重新評分…`);
+    const scoring={...row.post.scoring,difficulty:scoringProfile($('post-difficulty').value).id};
+    const scoringPost={...row.post,reference:scoringReference,scoring};
+    // [SIGN2MV] RMVPE on the saved vocal, the same model as the song reference (kept with the take,
+    // so changing the delay does not analyse again); the browser detector only if the server cannot
+    let rmvpeError='';
+    if(row.post.rmvpeAnalysis?.source!=='rmvpe-v1'){
+      status('正在用 RMVPE 分析保存的乾淨歌聲…');
+      try{row.post.rmvpeAnalysis=await analyseRecordingRmvpe(await store.blob(row,'voice'),percent=>status(`正在用 RMVPE 分析乾淨歌聲 ${percent}%…`));}
+      catch(error){rmvpeError=error.message;}
+    }
+    if(row.post.rmvpeAnalysis?.source==='rmvpe-v1'){
+      row.postResult={...rescoreRecordingRmvpe(scoringPost,row.post.rmvpeAnalysis,delayMs),delayMs,scoring,source:'rmvpe-v1',referenceSource,reference:scoringReference,baseline:rescoreRecordingRmvpe(scoringPost,row.post.rmvpeAnalysis,0)};
+    } else {
     if(row.post.audioAnalysis?.source!=='decoded-voice-v1'||row.post.audioAnalysis.detectorVersion!==PITCH_DETECTOR_VERSION||(row.post.audioAnalysis.pitchShift||0)!==(row.post.reference.pitchShift||0)) {
       status('正在從保存的乾淨歌聲重新擷取音高…');
       row.post.audioAnalysis=await recordedAnalysis(await store.blob(row,'voice'),percent=>status(`正在分析乾淨歌聲 ${percent}%…`),row.post.reference.pitchShift || 0);
     }
-    const scoring={...row.post.scoring,difficulty:scoringProfile($('post-difficulty').value).id};
-    const scoringPost={...row.post,reference:scoringReference,scoring};
-    row.postResult={...rescoreRecording(scoringPost,delayMs),delayMs,scoring,source:'decoded-voice-v1',referenceSource,reference:scoringReference,baseline:rescoreRecording(scoringPost,0)};await store.save(row);showScore();status('重評完成：直接分析保存的歌聲，使用與重混相同的時間軸；結果、難度與所用基準已保存，錄音原始基準及成績紀錄保留。');
+    row.postResult={...rescoreRecording(scoringPost,delayMs),delayMs,scoring,source:'decoded-voice-v1',referenceSource,reference:scoringReference,baseline:rescoreRecording(scoringPost,0)};
+    }await store.save(row);showScore();status('重評完成：直接分析保存的歌聲，使用與重混相同的時間軸；結果、難度與所用基準已保存，錄音原始基準及成績紀錄保留。');
   },'rescore-status'));
   $('post-remix').addEventListener('click',()=>run(async row=>{
     const delayMs=Number($('remix-delay').value);delaySeconds(delayMs);

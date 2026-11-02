@@ -11,6 +11,7 @@ import { createSingerRecorder } from './recording.mjs';
 import { createSegmentRecording } from './recording-segment-ui.mjs';
 import { createMaskEditor } from './mask-editor.mjs';
 import { ScoringTake, validateReference, savedResult, pitchDifference, scoringProfile, applyMasks, maskedCells } from './scoring.mjs';
+import { createRmvpeScoring, warmRmvpe } from './rmvpe-score.mjs';
 const $ = id => document.getElementById(id);
 const BASE = '/sr';
 const HISTORY = 'karaoke.scores.v1';
@@ -118,9 +119,20 @@ export function createKaraokeSession(options) {
     $('difficulty-help').textContent = `${profile.label}：音高誤差 ${profile.pitchFull} 音分內、進拍誤差 ${Math.round(profile.rhythmFull * 1000)} 毫秒內給滿分，超過逐步扣分。100 音分＝1 個半音；難度與八度、評分範圍分開設定。`;
   }
   $('score-difficulty').addEventListener('change', difficultyHelp); difficultyHelp();
+  // [SIGN2MV] the score comes from RMVPE on the recorded vocal (same model as the reference);
+  // YIN keeps drawing the live pitch line. Without a recording (or if the server cannot help)
+  // the browser's own score is used and labelled as an estimate.
+  const rmvpe = createRmvpeScoring({ onUpdate: () => {
+    if (!take || phase !== 'singing') return;
+    const r = rmvpe.result(take); if (!r || r.score === null) return;
+    $('total-score').textContent = String(r.score); $('pitch-score').textContent = r.pitch; $('rhythm-score').textContent = r.rhythm; $('coverage-score').textContent = r.coverage;
+  } });
+  let warmedFor = '';
+  function startRmvpe() { if (take && reference) rmvpe.start(reference, { allowOctave: take.allowOctave, rangeMode: take.rangeMode, difficulty: take.difficulty }, recording.live()); }
   function showTakeDifficulty() { $('take-difficulty').textContent = `本輪評分難度：${take.profile.label}（本輪固定）`; }
 
   function controls() {
+    if (reference && warmedFor !== reference.cacheId) { warmedFor = reference.cacheId; void warmRmvpe(); }
     $('preparation-fields').disabled=!!take||segmented?.busy()||['preparing','finishing','restarting'].includes(phase);
     $('preparation-summary').textContent=['clip-seconds','separation-model','separation-method','vocal-mode','pitch-method'].map(id=>originalText($(id).selectedOptions[0])).join(' · ')+($('keep-preview').checked?' · 保留音軌':' · 不保留音軌');
     $('preparation-reset').disabled=!!take||['preparing','finishing','restarting'].includes(phase);
@@ -188,6 +200,7 @@ export function createKaraokeSession(options) {
     [...$('beats').children].forEach(dot => dot.classList.remove('active'));
   }
   async function clear(text = '已取消／卸載本次工作；已保存的歌曲仍在本機歌曲庫。', finishing = false) {
+    rmvpe.cancel();
     generation++; restartToken++; clearTimeout(timer); stopPreview(); stopGuide(); keyPlayback.clear();
     const recordingEnd = segmented?.enabled() ? segmented.stop() : recording.stop();
     const id = jobId; jobId = null; reference = null; updateMaskView(); maskEditor.render();
@@ -426,8 +439,15 @@ export function createKaraokeSession(options) {
     restartToken++; stopGuide(); phase = 'finishing'; controls();
     if (options.micReady() && options.player()?.getPlayerState?.() === 1) take.advance(options.player().getCurrentTime());
     // [SIGN2MV] a 「測試原唱分數」 take is labelled as such in the score history
-    const result = take.result(), title = window.sign2mvTakeTitle?.(reference.title) ?? reference.title;
+    const title = window.sign2mvTakeTitle?.(reference.title) ?? reference.title;
+    let result = take.result(), scoredBy = '即時估計（瀏覽器偵測）';
+    if (rmvpe.running()) {
+      $('total-score').textContent = '…'; message('正在用 RMVPE 結算最後幾秒…');
+      const official = await rmvpe.finish(take);
+      if (official) { result = official; scoredBy = 'RMVPE'; }
+    } else rmvpe.cancel();
     $('take-difficulty').textContent = `本輪已結算 · 評分難度：${take.profile.label}`;
+    $('take-difficulty').append(` · ${scoredBy}`);
     $('total-score').textContent = result.score === null ? '—' : String(result.score);
     $('pitch-score').textContent = String(result.pitch); $('rhythm-score').textContent = String(result.rhythm); $('coverage-score').textContent = String(result.coverage);
     $('result-title').replaceChildren(userText(title));
@@ -568,7 +588,7 @@ export function createKaraokeSession(options) {
       await seekPlayerToStart(p, () => request !== restartToken || !reference || !options.micReady());
       if (request !== restartToken || !reference || !options.micReady()) return;
       take?.clear(); take = new ScoringTake(reference, { allowOctave: $('pitch-mode').value === 'octave', rangeMode: $('score-range').value, difficulty: $('score-difficulty').value });
-      showTakeDifficulty(); take.begin(0); lastProgress = 0; rangeComplete = false; phase = 'paused';
+      showTakeDifficulty(); take.begin(0); lastProgress = 0; rangeComplete = false; phase = 'paused'; startRmvpe();
       $('total-score').textContent = '…'; $('pitch-score').textContent = '—'; $('rhythm-score').textContent = '—'; $('coverage-score').textContent = '—';
       message('影片已回到開頭，等待播放開始。'); controls();
       revealPlayerVideo();
@@ -596,7 +616,7 @@ export function createKaraokeSession(options) {
     if (!reference || ['finishing','result','restarting'].includes(phase)) return;
     if (state === 1 && options.micReady() && phase !== 'preparing' && phase !== 'result') {
       if (!take && options.player()?.getCurrentTime?.() >= reference.duration) { message('目前播放位置超出分析範圍，請按「從頭開始唱」。'); controls(); return; }
-      if (!take) { take = new ScoringTake(reference, { allowOctave: $('pitch-mode').value === 'octave', rangeMode: $('score-range').value, difficulty: $('score-difficulty').value }); showTakeDifficulty(); take.begin(options.player()?.getCurrentTime?.() || 0); $('total-score').textContent = '…'; }
+      if (!take) { take = new ScoringTake(reference, { allowOctave: $('pitch-mode').value === 'octave', rangeMode: $('score-range').value, difficulty: $('score-difficulty').value }); showTakeDifficulty(); take.begin(options.player()?.getCurrentTime?.() || 0); $('total-score').textContent = '…'; startRmvpe(); }
       take.advance(options.player()?.getCurrentTime?.() || 0); phase = 'singing'; message('演唱中。跳過的段落會計入漏唱，重播不會重複加分。');
     } else if ([2, 3, -1].includes(state) && take) { if (phase === 'singing' && options.micReady()) take.advance(options.player()?.getCurrentTime?.() || 0); phase = 'paused'; message(state === 3 ? '影片緩衝中，評分暫停。' : '播放已暫停，評分同步暫停。'); }
     else if (state === 0 && take && options.micReady()) { take.advance(options.player()?.getCurrentTime?.() || 0); finish(); }
@@ -619,7 +639,7 @@ export function createKaraokeSession(options) {
     if (excluded[cell]) { $('target-note').textContent = '休息'; $('live-feedback').textContent = '遮罩區間，不計分'; }
     else if (expected && hz) { const cents = Math.round(pitchDifference(hz, expected, take.allowOctave)); $('live-feedback').textContent = Math.abs(cents) <= take.profile.pitchFull ? (take.allowOctave ? '音準吻合（允許八度差）' : '音準吻合') : `${cents > 0 ? '偏高' : '偏低'} ${Math.abs(cents)} cents`; }
     else $('live-feedback').textContent = expected ? '等待歌聲' : '前奏／間奏，不計分';
-    if (performance.now() - lastProgress > 500) {
+    if (!rmvpe.running() && performance.now() - lastProgress > 500) {
       lastProgress = performance.now(); const result = take.result(false);
       $('pitch-score').textContent = result.pitch; $('coverage-score').textContent = result.coverage;
     }
@@ -649,7 +669,7 @@ export function createKaraokeSession(options) {
   window.addEventListener('pagehide', () => {
     generation++; restartToken++; clearTimeout(timer); stopPreview(); stopGuide(); keyPlayback.clear(); clearInterval(heartbeat); clearInterval(keepalive);
     if (jobId && token) fetch(BASE + `/jobs/${jobId}`, { method: 'DELETE', headers: { 'X-Karaoke-Token': token }, keepalive: true, credentials: 'omit' }).catch(() => {});
-    reference = null; take?.clear(); take = null;
+    rmvpe.cancel(); reference = null; take?.clear(); take = null;
   });
   renderHistory(); controls();
   return {

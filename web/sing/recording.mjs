@@ -270,5 +270,10 @@ export function createSingerRecorder(options) {
   controls();
   window.addEventListener('pagehide',()=>{stop();clearInterval(timer);clearPreview();});
   render().catch(error=>status('瀏覽器錄音儲存不可用：'+error.message));
-  return { prepare, stop, playerState, clearPreview, sample, referenceChanged(){post.controls();review.referenceChanged();}, store, refresh:render, balanceSettings, setBalanceSettings };
+  // [SIGN2MV] the dry vocal of the take being recorded, for RMVPE scoring (rmvpe-score.mjs)
+  function live(){
+    const a=active;if(!a||a.meta.segmentTake)return null;
+    return {observe:fn=>a.recorder.observeSamples(fn),segments:a.meta.post.segments,sampleRate:a.context.sampleRate,delayMs:a.meta.recordingDelayMs};
+  }
+  return { prepare, stop, playerState, clearPreview, sample, live, referenceChanged(){post.controls();review.referenceChanged();}, store, refresh:render, balanceSettings, setBalanceSettings };
 }

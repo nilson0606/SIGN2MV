@@ -34,6 +34,7 @@ from starlette.concurrency import run_in_threadpool
 
 from . import stems as stems_mod
 from .context import Context
+from .sing_live import LivePitch
 
 TOKEN = secrets.token_hex(32)
 FEATURES = ['local-media', 'local-audio', 'library', 'stem-preview', 'library-location', 'separation-progress',
@@ -732,6 +733,29 @@ def router(ctx: Context) -> APIRouter:
     from .native_mic import NativeMicrophone
     native = NativeMicrophone(ctx)
     native_state = native.state
+
+    # ---------- RMVPE pitch for scoring (the reference is RMVPE; score the take with it too) ----------
+    live_pitch = LivePitch(ctx)
+
+    @r.post("/sr/live-pitch/warm")
+    def live_pitch_warm(request: Request):
+        if not auth(request):
+            return json_err(403, "Session token required")
+        return live_pitch.warm()
+
+    @r.post("/sr/live-pitch")
+    async def live_pitch_run(request: Request, rate: int = 16000):
+        if not auth(request):
+            return json_err(403, "Session token required")
+        if not 8000 <= rate <= 192000:
+            return json_err(400, "Invalid sample rate")
+        body = await request.body()
+        if not body or len(body) % 2 or len(body) > 8 * 1024 * 1024:
+            return json_err(400, "Invalid audio piece")
+        result = await run_in_threadpool(live_pitch.pitch, body, rate)
+        if result.get("error"):
+            return JSONResponse({"error": result["error"]}, status_code=503)
+        return result
 
     @r.get("/sr/microphone/devices")
     def mic_devices(request: Request):
