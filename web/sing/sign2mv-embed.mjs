@@ -191,7 +191,13 @@ rescoreLabel.append('評分延遲',rescoreDelay,'ms');
 const rescoreButton=document.createElement('button');
 rescoreButton.type='button';rescoreButton.id='sign2mv-rescore';rescoreButton.className='secondary';rescoreButton.textContent='重新評分';
 rescoreButton.title=rescoreLabel.title;
-testDelayLabel.after(rescoreButton);rescoreButton.after(rescoreLabel);
+// what to rescore: the take just sung (kept in memory), or a saved whole-song recording of this song and
+// key, so a reload does not mean singing again
+const rescoreTake=document.createElement('select');rescoreTake.id='sign2mv-rescore-take';
+const rescoreTakeLabel=document.createElement('label');rescoreTakeLabel.className='sign2mv-rescore-take';
+rescoreTakeLabel.title='剛唱完的這次，或這首歌、這個 Key 已存的整首錄音（待確認與已存到錄音後處理的都列）；已存的錄音第一次重新評分要先用 RMVPE 分析幾秒，結果存回那筆錄音，之後不用再分析';
+rescoreTakeLabel.append('評分對象',rescoreTake);
+testDelayLabel.after(rescoreTakeLabel);rescoreTakeLabel.after(rescoreButton);rescoreButton.after(rescoreLabel);
 const rescoreStatus=document.createElement('p');
 rescoreStatus.id='sign2mv-rescore-status';rescoreStatus.className='status';rescoreStatus.setAttribute('role','status');rescoreStatus.hidden=true;
 testStatus.after(rescoreStatus);
@@ -215,21 +221,66 @@ new MutationObserver(()=>{if(tempSong!==null&&(workflow().mediaId||'')!==tempSon
   .observe($('player-section'),{attributes:true,attributeFilter:['data-workflow']});
 // moving the slider by hand sets the default again (app.mjs saves it)
 $('offset').addEventListener('input',()=>{tempSong=null;});
+let savedTakes=[],takeListing=0,rescoreBusy=false;
+const takeOption=row=>new Option([row.title,new Date(row.created).toLocaleString(),translateMessage(`${Math.round(row.seconds)} 秒`),
+  ...(row.delayMs!==null?[translateMessage(`錄音時 ${row.delayMs} ms`)]:[]),...(row.pending?[translateMessage('待確認')]:[])].join(' · '),row.id);
+async function refreshTakes(pick=null){
+  const serial=++takeListing;let rows=[];
+  try{rows=await window.sign2mvRescore?.saved?.()||[];}catch{rows=[];}
+  if(serial!==takeListing)return;
+  savedTakes=rows;const keep=pick??rescoreTake.value;
+  const options=[...(window.sign2mvRescore?.delayMs?.()!=null?[new Option(translateMessage('剛唱完的這次'),'last')]:[]),...rows.map(takeOption)];
+  rescoreTake.replaceChildren(...options);
+  if(options.some(o=>o.value===keep))rescoreTake.value=keep;
+  if(rescoreTake.value!==keep)takeChosen();
+  rescoreControls();
+}
+function chosenSaved(){return savedTakes.find(row=>row.id===rescoreTake.value)||null;}
+// the delay field starts from the delay that take was recorded with
+function takeChosen(){
+  const row=chosenSaved();
+  if(row){lastTakeTest=row.originalTest;if(row.delayMs!==null)rescoreDelay.value=String(row.delayMs);}
+  else if(rescoreTake.value==='last'){lastTakeTest=lastSungTest;const last=window.sign2mvRescore?.delayMs?.()??null;if(last!==null)rescoreDelay.value=String(last);}
+  rescoreSay();
+}
 function rescoreControls(){
   const last=window.sign2mvRescore?.delayMs?.()??null;
-  rescoreButton.disabled=rescoreDelay.disabled=last===null;
+  const ready=rescoreTake.value==='last'?last!==null:!!chosenSaved();
+  // not while a take runs: the live score uses the same RMVPE process
+  const w=workflow(),working=rescoreBusy||['preparing','singing','finishing','restarting'].includes(w.phase)||!!w.busy;
+  rescoreButton.disabled=rescoreDelay.disabled=working||!ready;rescoreTake.disabled=working||!rescoreTake.options.length;
   return last;
 }
-window.addEventListener('sign2mv-rescore',()=>{lastTakeTest=originalTest.active;const last=rescoreControls();if(last!==null)rescoreDelay.value=String(last);rescoreSay();});
+let lastSungTest=false;
+window.addEventListener('sign2mv-rescore',()=>{lastSungTest=lastTakeTest=originalTest.active;const last=rescoreControls();if(last!==null)rescoreDelay.value=String(last);rescoreSay();
+  void refreshTakes(last!==null?'last':null);setTimeout(()=>{void refreshTakes();},3000);});   // the take is archived a moment later
+rescoreTake.addEventListener('change',()=>{takeChosen();rescoreControls();});
+window.addEventListener('karaoke-recording-saved',()=>{void refreshTakes();});
+new MutationObserver(()=>{const w=workflow(),key=`${w.reference||''}|${w.mediaId||''}`;if(key!==takesFor){takesFor=key;void refreshTakes();}else rescoreControls();})
+  .observe($('player-section'),{attributes:true,attributeFilter:['data-workflow']});
+let takesFor='';
 rescoreDelay.addEventListener('change',()=>{if(rescoreDelay.disabled)return;const ms=Math.max(-1000,Math.min(2000,Math.round(+rescoreDelay.value||0)));rescoreDelay.value=String(ms);rescoreSay(syncLatency(ms));});
-rescoreButton.addEventListener('click',()=>{
+rescoreButton.addEventListener('click',async()=>{
   const ms=Math.max(-1000,Math.min(2000,Math.round(+rescoreDelay.value||0)));rescoreDelay.value=String(ms);
+  const row=chosenSaved();
+  if(row){
+    rescoreBusy=true;rescoreControls();rescoreSay('正在讀取這筆錄音…');
+    try{
+      const r=await window.sign2mvRescore.runSaved(row.id,ms,percent=>rescoreSay(`正在用 RMVPE 分析這筆錄音的乾淨歌聲 ${percent}%…`));
+      const kept=r.kept?'':'分析結果沒能存回這筆錄音，下次重新評分要再分析一次。';
+      if(r.score===null)rescoreSay(`評分延遲 ${ms} ms 時沒有可評分的旋律。`,kept);
+      else rescoreSay(`重新評分（評分延遲 ${ms} ms）：總分 ${r.score}（音準 ${r.pitch}、節奏 ${r.rhythm}、完整度 ${r.coverage}）。${r.saved?'已另存一筆分數紀錄。':'瀏覽器不允許儲存紀錄，分數只顯示在這裡。'}`,
+        `評分難度：${translateMessage(({standard:'標準',strict:'嚴格',relaxed:'寬鬆'})[r.difficulty]||'標準')}。`,kept,syncLatency(ms));
+    }catch(error){rescoreSay(`無法重新評分這筆錄音：${translateMessage(error.message)}`);void refreshTakes();}
+    finally{rescoreBusy=false;rescoreControls();}
+    return;
+  }
   const r=window.sign2mvRescore?.run?.(ms);
   if(!r){rescoreSay('沒有可以重新評分的演唱：請先唱完一次，並用 RMVPE 結算。');rescoreControls();return;}
   if(r.score===null){rescoreSay(`評分延遲 ${ms} ms 時沒有可評分的旋律。`);return;}
   rescoreSay(`重新評分（評分延遲 ${ms} ms）：總分 ${r.score}（音準 ${r.pitch}、節奏 ${r.rhythm}、完整度 ${r.coverage}）。${r.saved?'已另存一筆分數紀錄。':'瀏覽器不允許儲存紀錄，分數只顯示在這裡。'}`,syncLatency(ms));
 });
-rescoreControls();
+rescoreControls();void refreshTakes();
 function workflow(){try{return JSON.parse($('player-section').dataset.workflow||'{}');}catch{return {};}}
 // the button follows 「從頭開始唱且評分」 (same conditions) and is off while a test runs
 function testControls(){testButton.disabled=originalTest.active||$('sing-start').disabled||!workflow().reference;testDelay.disabled=originalTest.active;}

@@ -60,4 +60,6 @@ html[data-sign2mv] #segment-open:disabled { opacity: .55; }
 /* 「測試原唱分數」: the delay field beside the button */
 .sign2mv-original-delay { display: inline-flex; align-items: center; gap: 6px; font-size: .9em; white-space: nowrap; }
 .sign2mv-original-delay input { width: 5.5em; }
+.sign2mv-rescore-take { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: .9em; min-width: 0; }
+.sign2mv-rescore-take select { flex: 1; min-width: 0; }
 .sign2mv-original-hint { margin: 6px 0 0; font-size: 11px; line-height: 1.6; color: var(--soft); }

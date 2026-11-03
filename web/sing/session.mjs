@@ -11,7 +11,8 @@ import { createSingerRecorder } from './recording.mjs';
 import { createSegmentRecording } from './recording-segment-ui.mjs';
 import { createMaskEditor } from './mask-editor.mjs';
 import { ScoringTake, validateReference, savedResult, pitchDifference, scoringProfile, applyMasks, maskedCells } from './scoring.mjs';
-import { createRmvpeScoring, warmRmvpe } from './rmvpe-score.mjs';
+import { createRmvpeScoring, warmRmvpe, analyseRecordingRmvpe, rescoreRecordingRmvpe } from './rmvpe-score.mjs';
+import { referenceForRescore } from './recording-process.mjs';
 const $ = id => document.getElementById(id);
 const BASE = '/sr';
 const HISTORY = 'karaoke.scores.v1';
@@ -145,7 +146,35 @@ export function createKaraokeSession(options) {
       renderHistory();
       return { ...r, saved };
     },
+    // a saved whole-song recording of the loaded song and key (after a reload, without singing again):
+    // RMVPE on its saved dry vocal, kept with the recording as post-production does, so it is analysed
+    // once; scored on the loaded reference (the take's own masks) with the difficulty chosen now
+    saved: async () => (await savedTakes()).map(row => ({ id: row.id, title: row.title, created: row.created, seconds: row.seconds,
+      delayMs: Number.isFinite(row.recordingDelayMs) ? row.recordingDelayMs : null, originalTest: !!row.originalVocalTest, pending: !!row.postPending })),
+    async runSaved(id, ms, progress = () => {}) {
+      const row = (await savedTakes()).find(r => r.id === id);
+      if (!row) throw new Error('找不到這筆錄音，或它不是目前這首歌、這個 Key 的錄音。');
+      const scoringPost = { ...row.post, reference: referenceForRescore(row.post, reference), scoring: { ...row.post.scoring, difficulty: scoringProfile($('score-difficulty').value).id } };
+      let analysis = savedAnalyses.get(id) || (row.post.rmvpeAnalysis?.source === 'rmvpe-v1' ? row.post.rmvpeAnalysis : null), kept = true;
+      if (!analysis) {
+        analysis = await analyseRecordingRmvpe(await recording.store.blob(row, 'voice'), progress);
+        savedAnalyses.set(id, analysis);
+        try { await recording.store.save({ ...row, post: { ...row.post, rmvpeAnalysis: analysis } }); } catch { kept = false; }
+      }
+      const r = rescoreRecordingRmvpe(scoringPost, analysis, ms);
+      if (r.score === null) return { ...r, kept };
+      let saved = true;
+      try { localStorage.setItem(HISTORY, JSON.stringify([...historyRows(), savedResult(`${row.title} · ${translateMessage('重評')} ${ms} ms`, r.score)].slice(-100))); } catch { saved = false; }
+      renderHistory();
+      return { ...r, saved, kept, difficulty: scoringPost.scoring.difficulty };
+    },
   };
+  const savedAnalyses = new Map();
+  async function savedTakes() {
+    const key = recordingReviewKey(reference);
+    if (!key) return [];
+    return (await recording.store.list()).filter(row => !row.segmentTake && row.complete && row.rawBytes && row.post?.reference && recordingReviewKey(row.post.reference) === key);
+  }
   function showTakeDifficulty() { $('take-difficulty').textContent = `本輪評分難度：${take.profile.label}（本輪固定）`; }
 
   function controls() {

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Sing & record 「重新評分」: new 「評分對象」 menu. Besides the take just sung it lists the saved whole-song
+  recordings of the loaded song and key (pending or saved to post-production), so after a reload a take can be
+  rescored at another delay or difficulty without singing again. The first rescore of a saved recording runs
+  RMVPE on its clean vocal and keeps the result with the recording (as post-production does); it is scored on
+  the loaded reference with the difficulty chosen now. Rescoring is off while a take runs.
 - Sing & record rhythm score: note starts are no longer cut separately in the reference and in the take
   (two independent cuts at the 0.75-semitone line flipped on a few cents, so even the original vocal of
   the song lost up to 10 rhythm points). For every note start of the reference, the cell where the voice
