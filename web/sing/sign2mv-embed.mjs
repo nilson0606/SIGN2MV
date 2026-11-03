@@ -172,19 +172,21 @@ testDelay.type='number';testDelay.id='sign2mv-original-delay';testDelay.min='0';
 try{const v=localStorage.getItem(DELAY_KEY);if(v!==null&&Number.isFinite(+v)&&+v>=0&&+v<=1000)testDelay.value=String(+v);}catch{}
 testDelay.addEventListener('change',()=>{const v=Math.max(0,Math.min(1000,Math.round(+testDelay.value||0)));testDelay.value=String(v);try{localStorage.setItem(DELAY_KEY,String(v));}catch{}});
 const testDelayLabel=document.createElement('label');testDelayLabel.className='sign2mv-original-delay';
-testDelayLabel.title='原唱直接跟著影片，少了「喇叭放出來、聽到再跟唱」那段延遲；這裡補上，讓它跟真人一樣晚到';
+testDelayLabel.title='原唱少了「喇叭放出來、聽到再跟唱」那段延遲；這裡讓它晚這麼多才進來，模擬真人';
 testDelayLabel.append('原唱延後',testDelay,'ms');
 testButton.after(testDelayLabel);
 const testStatus=document.createElement('p');
 testStatus.id='sign2mv-original-test-status';testStatus.className='status';testStatus.setAttribute('role','status');testStatus.hidden=true;
-$('finish-song').parentElement.after(testStatus);
+const testHint=document.createElement('p');testHint.className='sign2mv-original-hint';
+testHint.textContent='原唱延後＝原唱晚多少進來。結算一律用收音延遲往回扣；評分延遲只給「重新評分」用。';
+$('finish-song').parentElement.after(testHint);testHint.after(testStatus);
 function testSay(text){testStatus.textContent=text;testStatus.hidden=!text;}
 // 「重新評分」: score the take just sung again at another delay (no singing again). Uses the RMVPE
 // pitch kept from that take; each rescore is added to the score history as its own row.
 const rescoreDelay=document.createElement('input');
 rescoreDelay.type='number';rescoreDelay.id='sign2mv-rescore-delay';rescoreDelay.min='-1000';rescoreDelay.max='2000';rescoreDelay.step='10';rescoreDelay.value='300';
 const rescoreLabel=document.createElement('label');rescoreLabel.className='sign2mv-original-delay';
-rescoreLabel.title='唱完一次（用 RMVPE 結算）後，用不同的延遲重算剛唱完的那次，不用重唱；每次重算另存一筆分數紀錄';
+rescoreLabel.title='唱完一次（用 RMVPE 結算）後，用不同的延遲重算剛唱完的那次，不用重唱；每次重算另存一筆分數紀錄。正式演唱用的是收音延遲';
 rescoreLabel.append('評分延遲',rescoreDelay,'ms');
 const rescoreButton=document.createElement('button');
 rescoreButton.type='button';rescoreButton.id='sign2mv-rescore';rescoreButton.className='secondary';rescoreButton.textContent='重新評分';
