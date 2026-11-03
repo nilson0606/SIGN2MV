@@ -50,8 +50,12 @@ bus.addEventListener('open-workspace', (e) => {
 bus.addEventListener('songs', () => { if (ready) send({ type: 'sign2mv:refresh-songs' }); });
 onLanguageChange(() => { if (loaded) send({ type: 'sign2mv:lang', lang: langParam() }); });
 
+// a cover version made on the AI cover page shows up in the sing page's 「評分對象」 menu
+bus.addEventListener('renders-changed', () => { if (ready) send({ type: 'sign2mv:takes-changed' }); });
+
 registerPage('sing', {
   onShow() {
+    if (ready) send({ type: 'sign2mv:takes-changed' });
     if (!loaded) {
       load();
       if (state.selectedSongId) pendingSong = state.selectedSongId;

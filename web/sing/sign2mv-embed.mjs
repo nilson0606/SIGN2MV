@@ -103,6 +103,7 @@ window.addEventListener('message',event=>{
   const m=event.data||{};
   if(m.type==='sign2mv:select-song'&&typeof m.songId==='string')void selectSong(m.songId);
   if(m.type==='sign2mv:refresh-songs')kind.dispatchEvent(new Event('change'));
+  if(m.type==='sign2mv:takes-changed')refreshTakesSoon();
   // switch in place: a reload was skipped while a take was pending (almost always), so the page stayed in the old language
   if(m.type==='sign2mv:lang')setLanguage(m.lang==='en'?'en':'zh-Hant');
 });
@@ -270,6 +271,12 @@ window.addEventListener('karaoke-recording-saved',()=>{void refreshTakes();});
 new MutationObserver(()=>{const w=workflow(),key=`${w.reference||''}|${w.mediaId||''}`;if(key!==takesFor){takesFor=key;void refreshTakes();}else rescoreControls();})
   .observe($('player-section'),{attributes:true,attributeFilter:['data-workflow']});
 let takesFor='';
+// also when the page comes back (another app page, another window): a cover or a recording may be new.
+// Never while a take starts or runs (refreshTakes checks), at most every 2 s.
+let takesAt=0;
+function refreshTakesSoon(){const now=Date.now();if(now-takesAt<2000)return;takesAt=now;void refreshTakes();}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshTakesSoon();});
+window.addEventListener('focus',refreshTakesSoon);
 rescoreDelay.addEventListener('change',()=>{if(rescoreDelay.disabled)return;const ms=Math.max(-1000,Math.min(2000,Math.round(+rescoreDelay.value||0)));rescoreDelay.value=String(ms);rescoreSay(chosenCover()?'AI 翻唱的評分延遲不改收音延遲。':syncLatency(ms));});
 rescoreButton.addEventListener('click',async()=>{
   const ms=Math.max(-1000,Math.min(2000,Math.round(+rescoreDelay.value||0)));rescoreDelay.value=String(ms);
