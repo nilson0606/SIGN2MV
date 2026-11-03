@@ -776,6 +776,23 @@ def router(ctx: Context) -> APIRouter:
         data = await read_json_body(request)
         return await native.stream(str(data.get("deviceId") or ""))
 
+    # [SIGN2MV] the page reports why a native capture failed on its side (written to native-capture.jsonl)
+    @r.post("/sr/microphone/log")
+    async def mic_log(request: Request):
+        if not auth(request):
+            return json_err(403, "Session token required")
+        try:
+            data = await read_json_body(request, limit=8192)
+        except ValueError:
+            return json_err(400, "Invalid log entry")
+        capture_id, detail = data.get("captureId"), data.get("detail")
+        if not isinstance(capture_id, str) or len(capture_id) > 64 or not isinstance(detail, dict):
+            return json_err(400, "Invalid log entry")
+        clean = {str(k)[:40]: (v[:300] if isinstance(v, str) else v) for k, v in list(detail.items())[:40]
+                 if isinstance(v, (str, int, float, bool)) or v is None}
+        native._log(capture_id, {"event": "page-failure", **clean})
+        return {"ok": True}
+
     @r.post("/sr/microphone/monitor")
     async def mic_monitor(request: Request):
         if not auth(request):

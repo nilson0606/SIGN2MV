@@ -23,7 +23,8 @@ class LocalMicProcessor extends AudioWorkletProcessor {
  }
  fail(message){
   if(this.failed)return;
-  this.failed=true;this.streamPort?.close();this.port.postMessage({error:message});
+  // [SIGN2MV] the reserve state at the moment of failure, for the native-capture log
+  this.failed=true;this.streamPort?.close();this.port.postMessage({error:message,detail:{bufferedFrames:this.count,prebufferFrames:this.prebufferFrames,started:this.started,renderedSeconds:Math.round(this.rendered/480)/100,rate:Math.round(this.rate*1e5)/1e5}});
  }
  process(inputs,outputs){
   const out=outputs[0]?.[0];if(!out)return true;

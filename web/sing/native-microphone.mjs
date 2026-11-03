@@ -20,27 +20,33 @@ export async function openNativeMicrophone(context,{deviceId='',signal,onError})
  // Recording owns its connections and must flush before releasing them.
  // Stop only this capture's compatibility stream and silent render branch.
  const stop=()=>{if(stopped)return;stopped=true;speaker?.disconnect();clearTimeout(timer);controller.abort();signal.removeEventListener('abort',abort);for(const monitor of [...monitors])monitor.disconnect();worker?.terminate();if(node){node.port.onmessage=null;node.port.close();if(destination)node.disconnect(destination);if(silent)node.disconnect(silent);}silent?.disconnect();destination?.stream.getTracks().forEach(t=>t.stop());};
- const fail=error=>{rejectReady(error);rejectMeta(error);const notify=started&&!stopped;stop();if(notify)onError(error);};
+ let workerStats=null,captureId='',token='',openedAt=performance.now();
+ // [SIGN2MV] why a capture failed on the page side goes to the server's native-capture log
+ const report=(error,detail={})=>{if(!token||error?.name==='AbortError')return;
+  const body={captureId,detail:{message:String(error?.message||error).slice(0,300),secondsSinceOpen:Math.round((performance.now()-openedAt)/10)/100,
+   visibility:document.visibilityState,focused:document.hasFocus(),...detail,...Object.fromEntries(Object.entries(workerStats||{}).map(([k,v])=>['worker'+k[0].toUpperCase()+k.slice(1),v]))}};
+  void fetch(base+'/microphone/log',{method:'POST',headers:{'Content-Type':'application/json','X-Karaoke-Token':token},body:JSON.stringify(body),keepalive:true}).catch(()=>{});};
+ const fail=(error,detail)=>{if(!stopped&&error?.name!=='AbortError')report(error,detail);rejectReady(error);rejectMeta(error);const notify=started&&!stopped;stop();if(notify)onError(error);};
  controller.signal.addEventListener('abort',()=>fail(new DOMException('已取消','AbortError')),{once:true});
  try{
-  const s=await session(controller.signal);
+  const s=await session(controller.signal);token=s.token;
   await context.audioWorklet.addModule(new URL('./native-mic-worklet.mjs',import.meta.url));
   node=new AudioWorkletNode(context,'local-microphone',{numberOfInputs:0,numberOfOutputs:1,outputChannelCount:[1]});
   destination=context.createMediaStreamDestination();node.connect(destination);
   // Keep the worklet on this render clock, even before the analysis/recording
   // consumers attach. The MediaStream is only for legacy track/monitor APIs.
   silent=context.createGain();silent.gain.value=0;node.connect(silent);silent.connect(context.destination);
-  node.port.onmessage=({data})=>{if(data.error)fail(Error(data.error));if(data.ready)resolveReady();};
+  node.port.onmessage=({data})=>{if(data.error)fail(Error(data.error),{source:'worklet',...(data.detail||{})});if(data.ready)resolveReady();};
   node.onprocessorerror=()=>fail(Error('本機收音音訊執行緒中斷，請重新開啟收音。'));
   worker=new Worker(new URL('./native-microphone.mjs',import.meta.url),{type:'module'});
-  worker.onmessage=({data})=>{if(data.meta)resolveMeta(data.meta);if(data.error)fail(Error(data.error));};
+  worker.onmessage=({data})=>{if(data.stats)workerStats=data.stats;if(data.meta)resolveMeta(data.meta);if(data.error)fail(Error(data.error),{source:'transport'});};
   worker.onerror=()=>fail(Error('本機音訊背景傳輸中斷，請重新開啟收音。'));
   const channel=new MessageChannel();node.port.postMessage({streamPort:channel.port2},[channel.port2]);
   worker.postMessage({type:'start',token:s.token,deviceId,port:channel.port1},[channel.port1]);
   const meta=await metadata;
   if(meta.sampleRate!==context.sampleRate||meta.channels!==1)throw Error('本機收音取樣率不相容。');
   if(typeof meta.capturePolicy==='string')node.nativeCapturePolicy=meta.capturePolicy;
-  if(typeof meta.captureId==='string')node.nativeCaptureId=meta.captureId;
+  if(typeof meta.captureId==='string'){node.nativeCaptureId=meta.captureId;captureId=meta.captureId;}
   await ready;clearTimeout(timer);if(controller.signal.aborted)throw new DOMException('已取消','AbortError');started=true;
   async function createMonitorSource(outputContext,onMonitorError){
    if(stopped)throw Error('本機收音已停止。');
@@ -122,12 +128,18 @@ export function installNativeTransport(scope) {
   if(data.type==='detach'){ports.get(data.id)?.close();ports.delete(data.id);return;}
   if(data.type!=='start'||controller)return;
   controller=new AbortController();ports.set('capture',data.port);
+  const stats={bytes:0,reads:0,firstDataMs:null,lastDataAgoMs:null,gapMaxMs:0,gapMaxAtMs:null,slowGaps:0},t0=performance.now();let last=null;
+  const snapshot=()=>({...stats,lastDataAgoMs:last===null?null:Math.round(performance.now()-last)});
+  const ticker=setInterval(()=>scope.postMessage({stats:snapshot()}),1000);controller.signal.addEventListener('abort',()=>clearInterval(ticker),{once:true});
   (async()=>{
    const response=await fetch(base+'/microphone/stream',{method:'POST',headers:{'Content-Type':'application/json','X-Karaoke-Token':data.token},body:JSON.stringify({deviceId:data.deviceId}),signal:controller.signal});
    if(!response.ok){const e=await response.json();throw Error(e.error||'本機收音無法啟動。');}
    const reader=response.body.getReader();let pending=new Uint8Array(0),meta;
    while(true){
     const {done,value}=await reader.read();if(done)throw Error('本機收音連線已中斷。');
+    const now=performance.now();stats.bytes+=value.length;stats.reads++;
+    if(last===null)stats.firstDataMs=Math.round(now-t0);else{const gap=now-last;if(gap>stats.gapMaxMs){stats.gapMaxMs=Math.round(gap);stats.gapMaxAtMs=Math.round(now-t0);}if(gap>100)stats.slowGaps++;}
+    last=now;
     const bytes=new Uint8Array(pending.length+value.length);bytes.set(pending);bytes.set(value,pending.length);pending=bytes;
     if(!meta){
      const newline=pending.indexOf(10);
@@ -144,7 +156,7 @@ export function installNativeTransport(scope) {
      for(let i=0;i<consumers.length;i++){const copy=i===consumers.length-1?pcm:pcm.slice();consumers[i].postMessage(copy,[copy.buffer]);}
     }
    }
-  })().catch(error=>{if(!controller.signal.aborted)scope.postMessage({error:error.message});close();});
+  })().catch(error=>{clearInterval(ticker);if(!controller.signal.aborted)scope.postMessage({stats:snapshot(),error:error.message});close();});
  };
 }
 if(typeof WorkerGlobalScope!=='undefined'&&self instanceof WorkerGlobalScope)installNativeTransport(self);

@@ -129,6 +129,8 @@ class NativeMicrophone:
         self.script = str(ctx.paths.workers / "native" / "native_microphone.py")
         self.log_file = ctx.paths.logs / "native-capture.jsonl"
         self.log_lock = threading.Lock()
+        # every capture process started by this server, to report ones still alive when a new capture opens
+        self.procs: list[dict[str, Any]] = []
 
     def _args(self, *extra: str) -> list[str]:
         return [self.ctx.python("engine"), "-X", "utf8", self.script, *extra]
@@ -186,9 +188,26 @@ class NativeMicrophone:
         except OSError:
             return _json(503, {"error": "本機收音程式無法啟動。"})
         capture_id = str(uuid.uuid4())
+        opened = time.monotonic()
         op: dict[str, Any] = {"id": capture_id, "proc": proc}
         op["monitor"] = MonitorControl(proc, lambda e: self._log(capture_id, e))
         self.state["active"] = op
+        # [SIGN2MV] diagnostics: capture processes of earlier captures that are still running
+        self.procs = [p for p in self.procs if p["proc"].poll() is None]
+        self._log(capture_id, {"event": "stream-open", "pid": proc.pid, "leftover": [
+            {"captureId": p["id"], "pid": p["proc"].pid, "ageSeconds": round(opened - p["opened"], 1)} for p in self.procs]})
+        self.procs.append({"id": capture_id, "proc": proc, "opened": opened})
+        # packet timing on both sides: reading the capture process (pump) and handing data to the page (body).
+        # The page's reserve is 120 ms, so any gap past 100 ms is logged (the first 20 of each side).
+        stats: dict[str, Any] = {"bytes": 0, "reads": 0, "firstData": None, "readGapMax": 0.0, "readGapAt": None,
+                                 "sendGapMax": 0.0, "sendGapAt": None, "queueMax": 0, "slowReads": 0, "slowSends": 0,
+                                 "pumpError": None}
+
+        def slow(side: str, gap: float, at: float) -> None:
+            key = "slowReads" if side == "read" else "slowSends"
+            stats[key] += 1
+            if stats[key] <= 20:
+                self._log(capture_id, {"event": "slow-" + side, "gapMs": round(gap * 1000), "atSeconds": round(at, 2)})
 
         def stop() -> None:
             op["monitor"].close()
@@ -208,14 +227,25 @@ class NativeMicrophone:
         queue: asyncio.Queue = asyncio.Queue(maxsize=256)
 
         def pump() -> None:
+            last = None
             try:
                 while True:
                     chunk = proc.stdout.read1(65536) if hasattr(proc.stdout, "read1") else proc.stdout.read(4096)
                     if not chunk:
                         break
+                    now = time.monotonic()
+                    stats["bytes"] += len(chunk)
+                    stats["reads"] += 1
+                    if stats["firstData"] is None:
+                        stats["firstData"] = round(now - opened, 2)
+                    elif now - last > stats["readGapMax"]:
+                        stats["readGapMax"], stats["readGapAt"] = now - last, round(now - opened, 2)
+                    if last is not None and now - last > .1:
+                        slow("read", now - last, now - opened)
+                    last = now
                     asyncio.run_coroutine_threadsafe(queue.put(chunk), loop).result(timeout=10)
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as exc:  # noqa: BLE001
+                stats["pumpError"] = f"{type(exc).__name__}: {exc}"[:200]
             finally:
                 try:
                     asyncio.run_coroutine_threadsafe(queue.put(None), loop)
@@ -225,6 +255,7 @@ class NativeMicrophone:
         threading.Thread(target=pump, daemon=True).start()
 
         async def body():
+            reason, sent = "client-closed", None
             try:
                 yield (json.dumps({**meta, "captureId": capture_id}) + "\n").encode()
                 if rest:
@@ -233,12 +264,29 @@ class NativeMicrophone:
                     try:
                         chunk = await asyncio.wait_for(queue.get(), timeout=5)
                     except asyncio.TimeoutError:
+                        reason = "stalled-5s"
                         break  # capture stream stalled
                     if chunk is None:
+                        reason = "process-ended"
                         break
+                    stats["queueMax"] = max(stats["queueMax"], queue.qsize() + 1)
+                    now = time.monotonic()
+                    if sent is not None:
+                        if now - sent > stats["sendGapMax"]:
+                            stats["sendGapMax"], stats["sendGapAt"] = now - sent, round(now - opened, 2)
+                        if now - sent > .1:
+                            slow("send", now - sent, now - opened)
+                    sent = now
                     yield chunk
+            except Exception as exc:  # noqa: BLE001
+                reason = f"error {type(exc).__name__}"
+                raise
             finally:
+                exit_code = proc.poll()
                 stop()
+                self._log(capture_id, {"event": "stream-end", "reason": reason, "exitCode": exit_code,
+                                       "seconds": round(time.monotonic() - opened, 2),
+                                       **{k: (round(v, 3) if isinstance(v, float) else v) for k, v in stats.items()}})
 
         return StreamingResponse(body(), media_type="application/octet-stream",
                                  headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"})
