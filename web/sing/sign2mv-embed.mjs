@@ -224,7 +224,7 @@ window.sign2mvTestInput=null;
 function testInput(context){
   const out=context.createGain(),dest=context.createMediaStreamDestination();out.connect(dest);
   originalTest.mic={context,out};
-  return {stream:dest.stream,source:out,label:translateMessage('原唱人聲（測試）'),stop(){stopVoice();try{out.disconnect();}catch{}originalTest.mic=null;originalTest.segment=null;}};
+  return {stream:dest.stream,source:out,label:translateMessage('原唱人聲（測試）'),stop(){stopVoice();try{out.disconnect(dest);}catch{}dest.stream.getTracks().forEach(t=>t.stop());originalTest.mic=null;originalTest.segment=null;}};   // only our own link: the recorder disconnects its own meters from `out` afterwards
 }
 // Place the vocal on the recording's own timeline: while a recorded segment is open, recorded time r
 // is song time segment.songTime + (r - segment.offset); the vocal there is the stem at that song time
