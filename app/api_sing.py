@@ -627,7 +627,12 @@ def router(ctx: Context) -> APIRouter:
             arc = archive()
             check_root(request, arc)
             with archive_lock:
-                return arc.list()
+                listing = arc.list()
+            # [SIGN2MV] serialise here, in the worker thread. Returned as a dict, FastAPI would encode
+            # this (about 1 MB with the saved RMVPE analyses) on the event loop for ~120 ms, which
+            # holds up the native-capture stream; the page's reserve is 120 ms.
+            return Response(json.dumps(listing, ensure_ascii=False, separators=(",", ":")).encode("utf-8"),
+                            media_type="application/json")
         except ArchiveError as exc:
             return json_err(400, str(exc))
 

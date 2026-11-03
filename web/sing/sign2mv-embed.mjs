@@ -228,6 +228,8 @@ const coverOption=v=>new Option([`${translateMessage('AI 翻唱')} ${v.title}`,.
   ...(v.pitch?[translateMessage(`音高 ${v.pitch>0?'+':''}${v.pitch}（評分時補回）`)]:[]),...(v.split?[translateMessage('男女分開轉換')]:[])].join(' · '),'cover:'+v.id);
 function group(label,options){const g=document.createElement('optgroup');g.label=translateMessage(label);g.append(...options);return g;}
 async function refreshTakes(pick=null){
+  // never while a take starts or runs: listing the saved recordings is heavy for the server
+  const w=workflow();if(['restarting','singing'].includes(w.phase)||w.hasTake)return;
   const serial=++takeListing;let rows=[],covers=[];
   try{rows=await window.sign2mvRescore?.saved?.()||[];}catch{rows=[];}
   try{covers=await window.sign2mvRescore?.covers?.()||[];}catch{covers=[];}
@@ -259,7 +261,10 @@ function rescoreControls(){
 }
 let lastSungTest=false;
 window.addEventListener('sign2mv-rescore',()=>{lastSungTest=lastTakeTest=originalTest.active;const last=rescoreControls();if(last!==null)rescoreDelay.value=String(last);rescoreSay();
-  void refreshTakes(last!==null?'last':null);setTimeout(()=>{void refreshTakes();},3000);});   // the take is archived a moment later
+  // a take starting (no last take yet) only drops the 'just sung' entry; the list itself is refreshed after it
+  if(last===null){rescoreTake.querySelector('option[value=last]')?.remove();rescoreControls();return;}
+  void refreshTakes('last');setTimeout(()=>{void refreshTakes();},3000);});   // the take is archived a moment later
+// after the take (result / ready), the list is refreshed once more
 rescoreTake.addEventListener('change',()=>{takeChosen();rescoreControls();});
 window.addEventListener('karaoke-recording-saved',()=>{void refreshTakes();});
 new MutationObserver(()=>{const w=workflow(),key=`${w.reference||''}|${w.mediaId||''}`;if(key!==takesFor){takesFor=key;void refreshTakes();}else rescoreControls();})
