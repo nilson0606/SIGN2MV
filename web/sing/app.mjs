@@ -469,9 +469,37 @@ setInterval(() => {
   if (!player?.getCurrentTime) return; const t = player.getCurrentTime(); if (!Number.isFinite(t)) return;
   $('player-time').textContent = `${t.toFixed(2)} s`; $('aligned-time').textContent = `${alignedTime(t, Number($('offset').value)).toFixed(2)} s`;
 }, 100);
-navigator.mediaDevices?.addEventListener('devicechange', () => { voiceOutput.refreshDevices(); if (stream) stopMic('裝置已變更，請重新開啟收音；收音延遲維持不變。'); });
+// [SIGN2MV] a device appearing or going away elsewhere (Bluetooth headset, HDMI monitor waking, a new
+// Windows default) no longer stops capture. Browser capture stops only when the microphone in use is gone;
+// native capture watches its own device (the capture process and the page's reserve report a real failure).
+navigator.mediaDevices?.addEventListener('devicechange', async () => {
+  voiceOutput.refreshDevices();
+  const current = stream; if (!current || nativeCapture) return;
+  const id = current.getAudioTracks()[0]?.getSettings?.().deviceId;
+  let present = true;
+  try { present = !id || (await navigator.mediaDevices.enumerateDevices()).some(d => d.kind === 'audioinput' && d.deviceId === id); } catch {}
+  if (!present && stream === current) stopMic('使用中的麥克風已拔除，請重新開啟收音；收音延遲維持不變。');
+});
 function cleanup() { probeController?.abort(); stopBeats(); stopMic('頁面已離開前景，收音已停止。請重新開啟。'); }
-document.addEventListener('visibilitychange', () => { if (document.hidden) cleanup(); }); window.addEventListener('pagehide', cleanup);
+// [SIGN2MV] a covered, minimised or background window keeps capturing while a take starts, runs or is
+// being finished (recording and RMVPE scoring do not need the page in front). An idle microphone is
+// released after a minute in the background. Leaving the page (pagehide) still stops everything.
+function workflowState() { try { return JSON.parse($('player-section').dataset.workflow || '{}'); } catch { return {}; } }
+function captureInUse() { const w = workflowState(); return !!w.hasTake || ['restarting', 'singing', 'finishing'].includes(w.phase) || !!w.busy; }
+let hiddenTimer = 0;
+function hiddenCheck() {
+  clearTimeout(hiddenTimer); hiddenTimer = 0;
+  if (!document.hidden || (!stream && !micStartPromise)) return;
+  if (captureInUse()) { hiddenTimer = setTimeout(hiddenCheck, 60000); return; }
+  stopMic('頁面在背景超過 1 分鐘且沒有在演唱，收音已停止。請重新開啟。');
+}
+document.addEventListener('visibilitychange', () => {
+  clearTimeout(hiddenTimer); hiddenTimer = 0;
+  if (!document.hidden) return;
+  probeController?.abort(); stopBeats(); calibration?.cancel();
+  hiddenTimer = setTimeout(hiddenCheck, 60000);
+});
+window.addEventListener('pagehide', cleanup);
 
 let inputRefreshGeneration=0;
 async function refreshInputs() {

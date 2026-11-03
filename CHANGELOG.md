@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Sing & record: capture is no longer stopped when the window is covered, minimised or in the background
+  while a take starts, runs or is being finished (recording and RMVPE scoring do not need the page in front);
+  an idle microphone is released after a minute in the background, and leaving the page still stops
+  everything. A device change elsewhere (Bluetooth headset, HDMI monitor waking, a new Windows default) no
+  longer stops capture: browser capture stops only when the microphone in use is gone, native capture
+  ignores it (the capture process and the page's reserve report real failures).
 - Sing & record 「重新評分」 of a saved recording no longer writes back the whole record it read when the
   button was pressed. Only the RMVPE analysis is stored, merged with the record as it is at that moment
   (new POST /sr/recordings/{id}/patch, merged under the archive lock; browser-held takes in one IndexedDB

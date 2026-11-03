@@ -1255,6 +1255,8 @@ export const messages = {
   "請再按播放，允許變調音軌播放。": "Press play again to allow transposed audio playback.",
   "· 未完整結束": "· Ended incompletely",
   "· 中斷後救回": "· Recovered after an interruption",
+  "使用中的麥克風已拔除，請重新開啟收音；收音延遲維持不變。": "The microphone in use was unplugged. Enable the microphone again; the input latency is unchanged.",
+  "頁面在背景超過 1 分鐘且沒有在演唱，收音已停止。請重新開啟。": "The page was in the background for over a minute with no take running, so input stopped. Enable it again.",
   "找不到這筆錄音。": "This recording was not found.",
   "請重新啟動新版本機工具，才能把分析結果存回錄音。": "Restart the updated local tools to keep the analysis with the recording.",
   "不支援的錄音資料修改。": "This change to the recording data is not supported.",
