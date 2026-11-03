@@ -184,7 +184,7 @@ function testSay(text){testStatus.textContent=text;testStatus.hidden=!text;}
 // 「重新評分」: score the take just sung again at another delay (no singing again). Uses the RMVPE
 // pitch kept from that take; each rescore is added to the score history as its own row.
 const rescoreDelay=document.createElement('input');
-rescoreDelay.type='number';rescoreDelay.id='sign2mv-rescore-delay';rescoreDelay.min='-1000';rescoreDelay.max='2000';rescoreDelay.step='10';rescoreDelay.value='300';
+rescoreDelay.type='number';rescoreDelay.id='sign2mv-rescore-delay';rescoreDelay.min='-1000';rescoreDelay.max='2000';rescoreDelay.step='10';rescoreDelay.value='400';
 const rescoreLabel=document.createElement('label');rescoreLabel.className='sign2mv-original-delay';
 rescoreLabel.title='唱完一次（用 RMVPE 結算）後，用不同的延遲重算剛唱完的那次，不用重唱；每次重算另存一筆分數紀錄。正式演唱用的是收音延遲';
 rescoreLabel.append('評分延遲',rescoreDelay,'ms');
