@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Sing & record rhythm score: note starts are no longer cut separately in the reference and in the take
+  (two independent cuts at the 0.75-semitone line flipped on a few cents, so even the original vocal of
+  the song lost up to 10 rhythm points). For every note start of the reference, the cell where the voice
+  arrives on that note is found the same way in both, and the two are compared. Original-vocal test
+  (童話, standard): rhythm 97 -> 100 in the original key, 90 -> 98 four keys down; rhythm now moves by
+  1-4 points instead of 10-20 when the delay is 10-30 ms off. A take sung on time but up to 150 cents
+  off still gets its rhythm marks; the pitch score marks the pitch.
+- Standard and strict pitch limits +5 cents (standard 30 / 105, strict 20 / 55): the measurement margin
+  at which the original vocal of 童話 (original key, at its own delay) reaches pitch 100. Rhythm limits
+  and relaxed unchanged. Manuals updated.
 - Manuals (Chinese and English) brought up to date: Windows 10/11 only; NVENC needs driver 570+ and the
   installer logs the working encoder; FFmpeg pinned and checksum-checked; Shut down closes the console;
   segment takes are saved before the next part; converted backing vocals get the key in their conversion;

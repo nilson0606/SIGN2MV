@@ -46,12 +46,15 @@ export function pitchDifference(actual, expected, allowOctave = false) {
 // pitchZero; pitchSlack lets a note land a little early or late (phrasing) without losing pitch
 // credit; an onset within rhythmFull is on time, and from rhythmFull + rhythmFade it earns nothing.
 // The reference melody has one cell every 0.1 s, so onset timing resolves to 0.1 s.
+// Measurement margin: the original vocal sung through the app (童話, original key, at its own delay)
+// reached 100 on pitch only from +5 cents (RMVPE on the recorded take vs the reference differs a few
+// cents in glides); standard and strict carry that +5 on both pitch limits. Rhythm needed none.
 //   relaxed : right note within a quarter tone, wrong only past 1.5 semitones; ±0.2 s phrasing
-//   standard: within 25 cents, a full semitone off (a neighbouring note) earns nothing; ±0.1 s
-//   strict  : within 15 cents, a quarter tone off earns nothing; no phrasing slack
+//   standard: within 30 cents, a semitone plus 5 cents off (a neighbouring note) earns nothing; ±0.1 s
+//   strict  : within 20 cents, 55 cents off earns nothing; no phrasing slack
 export const SCORING_PROFILES = Object.freeze({
-  standard: Object.freeze({ id: 'standard', label: '標準', pitchFull: 25, pitchZero: 100, pitchSlack: .1, rhythmFull: .10, rhythmFade: .20, rhythmWindow: .301 }),
-  strict: Object.freeze({ id: 'strict', label: '嚴格', pitchFull: 15, pitchZero: 50, pitchSlack: 0, rhythmFull: .05, rhythmFade: .15, rhythmWindow: .201 }),
+  standard: Object.freeze({ id: 'standard', label: '標準', pitchFull: 30, pitchZero: 105, pitchSlack: .1, rhythmFull: .10, rhythmFade: .20, rhythmWindow: .301 }),
+  strict: Object.freeze({ id: 'strict', label: '嚴格', pitchFull: 20, pitchZero: 55, pitchSlack: 0, rhythmFull: .05, rhythmFade: .15, rhythmWindow: .201 }),
   relaxed: Object.freeze({ id: 'relaxed', label: '寬鬆', pitchFull: 50, pitchZero: 150, pitchSlack: .2, rhythmFull: .20, rhythmFade: .30, rhythmWindow: .501 }),
 });
 export function scoringProfile(difficulty = 'standard') {
@@ -78,20 +81,41 @@ function onsets(frames, step) {
   }
   return notes;
 }
-function rhythmCredit(reference, actual, step, allowOctave, profile, excluded = []) {
-  const expected = onsets(reference, step), sung = onsets(actual, step), used = new Set();
+// Rhythm: every note start of the reference melody, timed the same way on both sides. The sung line is
+// not cut into notes of its own (two independent cuts flip on a few cents near the 0.75-semitone line,
+// and the original vocal itself then lost up to 10 points). Around each reference note start, both the
+// reference and the take are searched for the cell where the voice arrives on that note: closer to it
+// than to the reference note just before it (a one-cell break, a consonant, is not silence), within
+// 150 cents; after silence, where the voice starts within 150 cents. A voice that is already on the note
+// through the lead-in (a small step sung legato) counts as arriving before the window, on both sides
+// alike. The timing error is the difference between the two arrivals.
+export function rhythmCredit(reference, actual, step, allowOctave, profile, excluded = []) {
+  const expected = onsets(reference, step);
   if (!expected.length) return 0;
+  const window = Math.round(profile.rhythmWindow / step - 1e-6);
+  const cents = (a, b) => Math.abs(pitchDifference(a, b, allowOctave));
   let total = 0;
   for (const note of expected) {
-    let chosen = -1, error = profile.rhythmWindow;
-    for (let i = 0; i < sung.length; i++) {
-      const delta = Math.abs(note.time - sung[i].time);
-      if (used.has(i) || delta >= error || Math.abs(pitchDifference(note.hz, sung[i].hz, allowOctave)) > 100) continue;
-      const from = Math.round(Math.min(note.time, sung[i].time) / step), to = Math.round(Math.max(note.time, sung[i].time) / step);
-      const crossesMask = excluded.slice(from, to + 1).some(Boolean);
-      if (!crossesMask) { chosen = i; error = delta; }
-    }
-    if (chosen >= 0) { used.add(chosen); total += Math.max(0, Math.min(1, 1 - (error - profile.rhythmFull) / profile.rhythmFade)); }
+    const c = Math.round(note.time / step), before = reference[c - 1] ?? reference[c - 2] ?? null;
+    const onNote = hz => hz != null && cents(hz, note.hz) <= 150 && (before == null || cents(hz, note.hz) < cents(hz, before));
+    const arrival = frames => {
+      const on = j => j >= 0 && j < frames.length && onNote(frames[j]);
+      let best = null;
+      for (let j = c - window; j <= c + window; j++) {
+        if (!on(j) || on(j - 1) || excluded.slice(Math.min(j, c), Math.max(j, c) + 1).some(Boolean)) continue;
+        if (best === null || Math.abs(j - c) < Math.abs(best - c)) best = j;
+      }
+      if (best === null) {
+        let held = true;
+        for (let j = c - window; j <= c && held; j++) held = on(j);
+        if (held) best = c - window - 1;
+      }
+      return best;
+    };
+    const expectedAt = arrival(reference), sungAt = arrival(actual);
+    if (expectedAt === null || sungAt === null) continue;
+    const error = Math.abs(sungAt - expectedAt) * step;
+    total += Math.max(0, Math.min(1, 1 - (error - profile.rhythmFull) / profile.rhythmFade));
   }
   return total / expected.length;
 }
