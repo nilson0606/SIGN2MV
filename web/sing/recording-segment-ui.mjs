@@ -177,7 +177,7 @@ export function createSegmentRecording(options) {
     followLatency();
     const ref=reference(),locked=busy()||conflict;
     $('open').disabled=!ref||busy();$('open').hidden=enabled;$('whole').hidden=!enabled;$('whole').disabled=busy();$('tools').hidden=!enabled;
-    $('mode-label').textContent=enabled?'分段模式 · 不計整首分數':'整首評分模式';
+    $('mode-label').textContent=enabled?'錄音模式 · 不計整首分數':'整首評分模式';
     const playerSection=document.getElementById('player-section');
     playerSection.classList.toggle('segment-active',enabled);playerSection.parentElement.classList.toggle('segment-layout',enabled);$('side').hidden=$('player-tools').hidden=!enabled;
     // Move controls only; reparenting the YouTube iframe would interrupt playback.
@@ -252,13 +252,13 @@ export function createSegmentRecording(options) {
         if(snapshot.key!==next||Math.abs(snapshot.duration-draft.duration)>.01)throw Error('復原紀錄歌曲不同。');
         return normalizeSegmentNames(snapshot);
       }):[];}catch{history=[];}
-      status(savedText?'已讀取分段草稿。':'可開啟分段模式，邊播放邊加入分界。');refresh().catch(e=>status(e.message));
+      status(savedText?'已讀取分段草稿。':'可開啟錄音模式，邊播放邊加入分界。');refresh().catch(e=>status(e.message));
     }catch(e){draft=null;status('無法開啟草稿：'+e.message);}}
-    else status('載入歌曲後，可開啟分段模式。');render();
+    else status('載入歌曲後，可開啟錄音模式。');render();
   }
   function enter(){
-    if(busy()||!draft)return;if(!options.canEnter()){status('請先結束並結算目前的整首演唱，再使用分段模式。');return;}
-    options.player()?.pauseVideo?.();options.pauseOther();enabled=true;render();options.changed();status('分段模式已開啟。播放中按「在此分段」，稍後可拖曳或精確調整時間。');
+    if(busy()||!draft)return;if(!options.canEnter()){status('請先結束並結算目前的整首演唱，再使用錄音模式。');return;}
+    options.player()?.pauseVideo?.();options.pauseOther();enabled=true;render();options.changed();status('錄音模式已開啟。播放中按「在此分段」，稍後可拖曳或精確調整時間。');
   }
   function leave(){if(busy())return false;clearTakePreview();enabled=false;loop=false;previewEnd=null;$('audio').pause();options.player()?.pauseVideo?.();render();options.changed();return true;}
   async function seek(time,cancelled=()=>false){
