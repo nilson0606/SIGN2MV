@@ -171,7 +171,7 @@ export function createRecordingPost({store,stop,pause,download,onDelete,referenc
     const volume=recordingVolume(selected?.postVolume);
     $('post-voice-level').value=volume.voice;$('post-backing-level').value=volume.backing;
     volumeLabels();
-    $('post-difficulty').value='relaxed';
+    $('post-difficulty').value='standard';
     $('post-delay').value=selected?.postResult?.delayMs??selected?.post?.offsetMs??0;
     $('remix-delay').value=$('post-delay').value;
     $('post-info').textContent=selected?(selected.post&&selected.rawBytes?'已保存乾淨歌聲、播放位置與當次基準，可重評／重合成。':'此錄音未保存後處理來源，可轉 MP3 下載。'): '請先保存一段演唱錄音。';

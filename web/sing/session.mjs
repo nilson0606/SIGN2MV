@@ -116,7 +116,7 @@ export function createKaraokeSession(options) {
   });
   function difficultyHelp() {
     const profile = scoringProfile($('score-difficulty').value);
-    $('difficulty-help').textContent = `${profile.label}：音高誤差 ${profile.pitchFull} 音分內、進拍誤差 ${Math.round(profile.rhythmFull * 1000)} 毫秒內給滿分，超過逐步扣分。100 音分＝1 個半音；難度與八度、評分範圍分開設定。`;
+    $('difficulty-help').textContent = `${profile.label}：音高差 ${profile.pitchFull} 音分內滿分、${profile.pitchZero} 音分以上不給分，早晚 ${Math.round(profile.pitchSlack * 1000)} 毫秒內不扣音準；起音差 ${Math.round(profile.rhythmFull * 1000)} 毫秒內滿分。100 音分＝1 個半音。`;
   }
   $('score-difficulty').addEventListener('change', difficultyHelp); difficultyHelp();
   // [SIGN2MV] the score comes from RMVPE on the recorded vocal (same model as the reference);

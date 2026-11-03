@@ -600,11 +600,9 @@ export const messages = {
   "藍牙、有線、USB 與電腦內建麥克風請分別測試。更換裝置後，補償值會回到預設＋200 ms；這是起始設定，並非裝置實測延遲。": "Test Bluetooth, wired, USB, and built-in microphones separately. Changing devices resets compensation to +200 ms. This is a starting value, not measured device latency.",
   "練習評分": "Practice scoring",
   "評分設定": "Scoring settings",
-  "難度 · 音域比對 · 錄音重評": "Difficulty · Octave matching · Rescore recordings",
+  "音域比對 · 錄音重評": "Octave matching · Rescore recordings",
   "評分難度": "Scoring difficulty",
-  "標準（原有規則）": "Standard (original rules)",
-  "嚴格（精準練習）": "Strict (precision practice)",
-  "寬鬆（輕鬆練唱，預設）": "Relaxed (casual practice, default)",
+  "標準（預設）": "Standard (default)",
   "音域比對": "Octave matching",
   "允許高／低八度（適合不同音域）": "Allow octave differences (for different vocal ranges)",
   "嚴格原調（與原唱相同音高）": "Exact pitch (same pitch as original singer)",
@@ -620,8 +618,7 @@ export const messages = {
   "重新評分難度": "Rescoring difficulty",
   "標準": "Standard",
   "嚴格": "Strict",
-  "寬鬆（預設）": "Relaxed (default)",
-  "選取錄音後預設為寬鬆；可在此調整，按下方「調延時重新評分」。遮罩、八度及評分範圍仍沿用錄音當時設定。": "Defaults to relaxed after selecting a recording. Adjust here, then click “Adjust timing and rescore”. Masks, octave matching, and scoring range use the recording’s original settings.",
+  "選取錄音後預設為標準；可在此調整，按下方「調延時重新評分」。遮罩、八度及評分範圍仍沿用錄音當時設定。": "Defaults to standard after selecting a recording. Adjust here, then click “Adjust timing and rescore”. Masks, octave matching, and scoring range use the recording’s original settings.",
   "調延時重新評分": "Adjust timing and rescore",
   "下載這筆評分診斷": "Download scoring diagnostics",
   "包含這筆原始錄音、乾淨歌聲、時間位置與評分基準；只下載到本機，供檢查對齊問題。": "Includes the original recording, clean vocals, timing, and scoring reference. Downloaded locally to inspect alignment issues.",
@@ -1529,10 +1526,11 @@ export const messages = {
   "評分延遲": "Scoring delay",
   "重新評分": "Rescore",
   "重評": "rescored",
-  "唱完一次（用 RMVPE 結算）後，用不同的延遲重算剛唱完的那次，不用重唱；每次重算另存一筆分數紀錄。正式演唱用的是收音延遲": "After a take is scored with RMVPE, score it again with another delay without singing again; each rescore is saved as its own score history row. Real singing uses the input latency",
+  "唱完一次（用 RMVPE 結算）後，用不同的延遲重算剛唱完的那次，不用重唱；每次重算另存一筆分數紀錄。改了會同步成收音延遲，下次演唱就用新值（原唱測試那次除外）": "After a take is scored with RMVPE, score it again with another delay without singing again; each rescore is saved as its own score history row. A change here also becomes the input latency for the next take (except after an original vocal test)",
+  "這次是原唱測試，收音延遲不跟著改。": "This was an original vocal test, so the input latency stays as it is.",
   "沒有可以重新評分的演唱：請先唱完一次，並用 RMVPE 結算。": "Nothing to rescore: sing once first and let RMVPE score it.",
   "原唱少了「喇叭放出來、聽到再跟唱」那段延遲；這裡讓它晚這麼多才進來，模擬真人": "The original vocal skips the “hear it from the speakers, then sing” part of the delay; it comes in this much later to stand in for a real singer",
-  "原唱延後＝原唱晚多少進來。結算一律用收音延遲往回扣；評分延遲只給「重新評分」用。": "Original delay = how late the original vocal comes in. Scoring always takes back the input latency; the scoring delay is only for Rescore.",
+  "原唱延後＝原唱晚多少進來。結算一律用收音延遲往回扣；改評分延遲會一併改收音延遲，下次演唱就用新值（原唱測試那次除外）。": "Original delay = how late the original vocal comes in. Scoring always takes back the input latency; changing the scoring delay also changes the input latency for the next take (except after an original vocal test).",
   "節拍燈 · 收音延遲 · 五音測試": "Beat light · Input latency · Five-note test",
   "收音延遲": "Input latency",
   "預設＋300 ms：歌手聲音提前 300 ms 對齊，例如 10.300 秒的歌聲對照 10.000 秒的歌曲基準。即時評分和整首錄音的歌聲校正都用這個數字（也會記住），錄音後處理可再逐筆調整；不改變播放器。": "Default +300 ms lines your voice up 300 ms earlier: for example, vocals at 10.300 seconds against the reference at 10.000 seconds. Live scoring and the vocal correction of whole-song recordings both use this number (it is remembered); post-production can adjust each take. The player is not changed.",
@@ -1716,12 +1714,10 @@ export const templates = [
     ]
   ],
   [
-    "{0}：音高誤差 {1} 音分內、進拍誤差 {2} 毫秒內給滿分，超過逐步扣分。100 音分＝1 個半音；難度與八度、評分範圍分開設定。",
-    "{0}: full marks within {1} cents of pitch and {2} ms of timing; larger errors reduce scores. 100 cents = 1 semitone. Difficulty, octave matching, and scoring range are separate settings.",
+    "{0}：音高差 {1} 音分內滿分、{2} 音分以上不給分，早晚 {3} 毫秒內不扣音準；起音差 {4} 毫秒內滿分。100 音分＝1 個半音。",
+    "{0}: full pitch marks within {1} cents, none from {2} cents; notes up to {3} ms early or late keep their pitch marks; onsets within {4} ms are on time. 100 cents = 1 semitone.",
     [
-      0,
-      1,
-      2
+      0
     ]
   ],
   [
@@ -3423,6 +3419,8 @@ export const templates = [
   ["正在用 RMVPE 分析乾淨歌聲 {0}%…", "Analysing the dry vocal with RMVPE {0}%…", []],
   ["原唱測試完成（原唱延後 {0} ms）：總分 {1}（音準 {2}、節奏 {3}、完整度 {4}）。錄音已保存並標成「原唱測試」；存到錄音後處理後按「錄音重新評分」，可看到套用歌聲延時校正後的分數。下次按「從頭開始唱且評分」會改回你的麥克風。", "Original vocal test finished (original vocal delayed {0} ms): total {1} (pitch {2}, timing {3}, completeness {4}). The take is saved and labelled “original vocal test”; save it for post-production and click “Rescore recording” to see the score with the recorded vocal timing correction. The next “Sing from the start and score” uses your microphone again.", []],
   ["評分延遲 {0} ms 時沒有可評分的旋律。", "No scorable melody at a {0} ms scoring delay.", []],
+  ["下次演唱的收音延遲已改成 {0} ms。", "Input latency for the next take is now {0} ms.", []],
+  ["收音延遲只能設 {0}～{1} ms，這次沒有跟著改。", "Input latency must be {0} to {1} ms, so it was not changed.", []],
   ["重新評分（評分延遲 {0} ms）：總分 {1}（音準 {2}、節奏 {3}、完整度 {4}）。已另存一筆分數紀錄。", "Rescored (scoring delay {0} ms): total {1} (pitch {2}, timing {3}, completeness {4}). Saved as a new score history row.", []],
   ["重新評分（評分延遲 {0} ms）：總分 {1}（音準 {2}、節奏 {3}、完整度 {4}）。瀏覽器不允許儲存紀錄，分數只顯示在這裡。", "Rescored (scoring delay {0} ms): total {1} (pitch {2}, timing {3}, completeness {4}). The browser does not allow saving history; the score is shown here only.", []],
 ];

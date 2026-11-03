@@ -42,10 +42,17 @@ export function pitchDifference(actual, expected, allowOctave = false) {
   return allowOctave ? cents - Math.round(cents / 1200) * 1200 : cents;
 }
 
+// Difficulty, in musical terms (100 cents = one semitone). Full credit inside pitchFull, none from
+// pitchZero; pitchSlack lets a note land a little early or late (phrasing) without losing pitch
+// credit; an onset within rhythmFull is on time, and from rhythmFull + rhythmFade it earns nothing.
+// The reference melody has one cell every 0.1 s, so onset timing resolves to 0.1 s.
+//   relaxed : right note within a quarter tone, wrong only past 1.5 semitones; ±0.2 s phrasing
+//   standard: within 25 cents, a full semitone off (a neighbouring note) earns nothing; ±0.1 s
+//   strict  : within 15 cents, a quarter tone off earns nothing; no phrasing slack
 export const SCORING_PROFILES = Object.freeze({
-  standard: Object.freeze({ id: 'standard', label: '標準', pitchFull: 25, pitchZero: 200, rhythmFull: .08, rhythmFade: .27, rhythmWindow: .351 }),
-  strict: Object.freeze({ id: 'strict', label: '嚴格', pitchFull: 15, pitchZero: 100, rhythmFull: .04, rhythmFade: .16, rhythmWindow: .201 }),
-  relaxed: Object.freeze({ id: 'relaxed', label: '寬鬆', pitchFull: 75, pitchZero: 350, rhythmFull: .20, rhythmFade: .50, rhythmWindow: .701 }),
+  standard: Object.freeze({ id: 'standard', label: '標準', pitchFull: 25, pitchZero: 100, pitchSlack: .1, rhythmFull: .10, rhythmFade: .20, rhythmWindow: .301 }),
+  strict: Object.freeze({ id: 'strict', label: '嚴格', pitchFull: 15, pitchZero: 50, pitchSlack: 0, rhythmFull: .05, rhythmFade: .15, rhythmWindow: .201 }),
+  relaxed: Object.freeze({ id: 'relaxed', label: '寬鬆', pitchFull: 50, pitchZero: 150, pitchSlack: .2, rhythmFull: .20, rhythmFade: .30, rhythmWindow: .501 }),
 });
 export function scoringProfile(difficulty = 'standard') {
   return Object.hasOwn(SCORING_PROFILES, difficulty) ? SCORING_PROFILES[difficulty] : SCORING_PROFILES.standard;
@@ -140,7 +147,15 @@ export class ScoringTake {
       if (target === null) continue;
       expected++;
       const actual = this.observations.get(i);
-      if (actual !== null && actual !== undefined) { voiced++; points += pitchCredit(actual/this.pitchFactor, target/this.pitchFactor, this.allowOctave, this.difficulty); }
+      if (actual !== null && actual !== undefined) voiced++;
+      // best credit among the sung frames within the phrasing slack (coverage still counts this cell only)
+      const slack = Math.round(this.profile.pitchSlack / this.reference.step);
+      let best = 0;
+      for (let j = i - slack; j <= i + slack; j++) {
+        const hz = this.observations.get(j);
+        if (hz !== null && hz !== undefined) best = Math.max(best, pitchCredit(hz/this.pitchFactor, target/this.pitchFactor, this.allowOctave, this.difficulty));
+      }
+      points += best;
     }
     if (!expected) return { score: null, pitch: 0, rhythm: 0, coverage: 0, referenceSeconds: 0, sampledSeconds: 0 };
     const actual = frames.map((_, i) => this.observations.get(i + start) ?? null);

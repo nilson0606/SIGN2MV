@@ -178,7 +178,7 @@ testButton.after(testDelayLabel);
 const testStatus=document.createElement('p');
 testStatus.id='sign2mv-original-test-status';testStatus.className='status';testStatus.setAttribute('role','status');testStatus.hidden=true;
 const testHint=document.createElement('p');testHint.className='sign2mv-original-hint';
-testHint.textContent='原唱延後＝原唱晚多少進來。結算一律用收音延遲往回扣；評分延遲只給「重新評分」用。';
+testHint.textContent='原唱延後＝原唱晚多少進來。結算一律用收音延遲往回扣；改評分延遲會一併改收音延遲，下次演唱就用新值（原唱測試那次除外）。';
 $('finish-song').parentElement.after(testHint);testHint.after(testStatus);
 function testSay(text){testStatus.textContent=text;testStatus.hidden=!text;}
 // 「重新評分」: score the take just sung again at another delay (no singing again). Uses the RMVPE
@@ -186,7 +186,7 @@ function testSay(text){testStatus.textContent=text;testStatus.hidden=!text;}
 const rescoreDelay=document.createElement('input');
 rescoreDelay.type='number';rescoreDelay.id='sign2mv-rescore-delay';rescoreDelay.min='-1000';rescoreDelay.max='2000';rescoreDelay.step='10';rescoreDelay.value='400';
 const rescoreLabel=document.createElement('label');rescoreLabel.className='sign2mv-original-delay';
-rescoreLabel.title='唱完一次（用 RMVPE 結算）後，用不同的延遲重算剛唱完的那次，不用重唱；每次重算另存一筆分數紀錄。正式演唱用的是收音延遲';
+rescoreLabel.title='唱完一次（用 RMVPE 結算）後，用不同的延遲重算剛唱完的那次，不用重唱；每次重算另存一筆分數紀錄。改了會同步成收音延遲，下次演唱就用新值（原唱測試那次除外）';
 rescoreLabel.append('評分延遲',rescoreDelay,'ms');
 const rescoreButton=document.createElement('button');
 rescoreButton.type='button';rescoreButton.id='sign2mv-rescore';rescoreButton.className='secondary';rescoreButton.textContent='重新評分';
@@ -195,19 +195,29 @@ testDelayLabel.after(rescoreButton);rescoreButton.after(rescoreLabel);
 const rescoreStatus=document.createElement('p');
 rescoreStatus.id='sign2mv-rescore-status';rescoreStatus.className='status';rescoreStatus.setAttribute('role','status');rescoreStatus.hidden=true;
 testStatus.after(rescoreStatus);
-function rescoreSay(text){rescoreStatus.textContent=text;rescoreStatus.hidden=!text;}
+function rescoreSay(...parts){parts=parts.filter(Boolean);rescoreStatus.replaceChildren(...parts.flatMap((p,i)=>{const s=document.createElement('span');s.textContent=p;return i?[' ',s]:[s];}));rescoreStatus.hidden=!parts.length;}
+// the delay found here becomes the input latency for the next take, except after an original-vocal test
+// (that take has no speaker path, so its best delay is not the singer's)
+let lastTakeTest=false;
+function syncLatency(ms){
+  if(lastTakeTest)return '這次是原唱測試，收音延遲不跟著改。';
+  const offset=$('offset');if(ms<+offset.min||ms>+offset.max)return `收音延遲只能設 ${offset.min}～${offset.max} ms，這次沒有跟著改。`;
+  if(+offset.value!==ms){offset.value=String(ms);offset.dispatchEvent(new Event('input',{bubbles:true}));}
+  return `下次演唱的收音延遲已改成 ${ms} ms。`;
+}
 function rescoreControls(){
   const last=window.sign2mvRescore?.delayMs?.()??null;
   rescoreButton.disabled=rescoreDelay.disabled=last===null;
   return last;
 }
-window.addEventListener('sign2mv-rescore',()=>{const last=rescoreControls();if(last!==null)rescoreDelay.value=String(last);rescoreSay('');});
+window.addEventListener('sign2mv-rescore',()=>{lastTakeTest=originalTest.active;const last=rescoreControls();if(last!==null)rescoreDelay.value=String(last);rescoreSay();});
+rescoreDelay.addEventListener('change',()=>{if(rescoreDelay.disabled)return;const ms=Math.max(-1000,Math.min(2000,Math.round(+rescoreDelay.value||0)));rescoreDelay.value=String(ms);rescoreSay(syncLatency(ms));});
 rescoreButton.addEventListener('click',()=>{
   const ms=Math.max(-1000,Math.min(2000,Math.round(+rescoreDelay.value||0)));rescoreDelay.value=String(ms);
   const r=window.sign2mvRescore?.run?.(ms);
   if(!r){rescoreSay('沒有可以重新評分的演唱：請先唱完一次，並用 RMVPE 結算。');rescoreControls();return;}
   if(r.score===null){rescoreSay(`評分延遲 ${ms} ms 時沒有可評分的旋律。`);return;}
-  rescoreSay(`重新評分（評分延遲 ${ms} ms）：總分 ${r.score}（音準 ${r.pitch}、節奏 ${r.rhythm}、完整度 ${r.coverage}）。${r.saved?'已另存一筆分數紀錄。':'瀏覽器不允許儲存紀錄，分數只顯示在這裡。'}`);
+  rescoreSay(`重新評分（評分延遲 ${ms} ms）：總分 ${r.score}（音準 ${r.pitch}、節奏 ${r.rhythm}、完整度 ${r.coverage}）。${r.saved?'已另存一筆分數紀錄。':'瀏覽器不允許儲存紀錄，分數只顯示在這裡。'}`,syncLatency(ms));
 });
 rescoreControls();
 function workflow(){try{return JSON.parse($('player-section').dataset.workflow||'{}');}catch{return {};}}

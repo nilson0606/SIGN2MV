@@ -92,6 +92,7 @@
       <section id="score-section" class="player-session" tabindex="-1" aria-label="演唱控制與分數">
     <p id="result-title" class="score-title">尚未選定歌曲</p>
     <div class="whole-guide-control"><label for="sing-guide-mode">演唱時帶唱</label><select id="sing-guide-mode"><option value="original" selected>原唱＋伴樂（預設）</option><option value="backing">只有伴樂／和音</option></select><p class="help">開始前選擇，按「從頭開始唱且評分」套用。只有伴樂需已保存分離音軌；請戴耳機，避免原唱被麥克風收進錄音。</p></div>
+    <div class="whole-guide-control"><label for="score-difficulty">評分難度</label><select id="score-difficulty" aria-describedby="difficulty-help"><option value="standard" selected>標準（預設）</option><option value="strict">嚴格</option><option value="relaxed">寬鬆</option></select><p id="difficulty-help" class="help"></p></div>
     <details id="recording-balance" class="whole-guide-control"><summary>人聲／伴樂音量平衡 · 與分段錄音共用</summary>
       <label class="check-option"><input id="recording-manual" type="checkbox">手動設定比例＋自動微調</label>
       <p id="recording-balance-help" class="help">未勾選：自動平衡歌唱者與配樂／和音。勾選後使用你設定的音量，系統只做小幅修正。</p>
@@ -450,9 +451,7 @@
     </details>
   <section id="recording-section" tabindex="-1" class="card score-card">
     <div class="section-top"><h2><span class="step">05</span> 評分與錄音設定</h2><span class="subtle">練習評分</span></div>
-    <details id="score-settings" class="settings-fold" tabindex="-1"><summary>評分設定 <span class="fold-caption">難度 · 音域比對 · 錄音重評</span></summary>
-    <label for="score-difficulty">評分難度</label><select id="score-difficulty" aria-describedby="difficulty-help"><option value="standard">標準（原有規則）</option><option value="strict">嚴格（精準練習）</option><option value="relaxed" selected>寬鬆（輕鬆練唱，預設）</option></select>
-    <p id="difficulty-help" class="help"></p>
+    <details id="score-settings" class="settings-fold" tabindex="-1"><summary>評分設定 <span class="fold-caption">音域比對 · 錄音重評</span></summary>
     <label for="pitch-mode">音域比對</label><select id="pitch-mode"><option value="octave">允許高／低八度（適合不同音域）</option><option value="strict">嚴格原調（與原唱相同音高）</option></select><p class="help">放寬八度差不會改變 YouTube 伴奏。其他音高偏差仍會扣分；演唱開始後固定本次模式。</p>
     <label for="score-range">評分範圍</label><select id="score-range"><option value="performed" selected>只比已演唱範圍（開始到停止，預設）</option><option value="full">整首歌曲（依已載入的分析範圍）</option></select>
     <p class="help">選「已演唱範圍」時，後面尚未唱到的部分不扣分；這段期間的漏唱、跳過仍計入。每輪開始後固定，重唱時可重新選擇。</p>
@@ -460,8 +459,8 @@
     <label for="score-recording">選擇已保存的錄音</label><select id="score-recording"><option value="">尚無錄音</option></select>
     <label for="post-reference-source">重新評分使用的歌曲基準</label><select id="post-reference-source"><option value="original">錄音當時的基準（預設）</option><option value="current">目前已載入的歌曲基準（比較 RMVPE／其他版本）</option></select>
     <p id="post-reference-info" class="help" role="status"></p>
-    <label for="post-difficulty">重新評分難度</label><select id="post-difficulty" disabled><option value="standard">標準</option><option value="strict">嚴格</option><option value="relaxed" selected>寬鬆（預設）</option></select>
-    <p class="help">選取錄音後預設為寬鬆；可在此調整，按下方「調延時重新評分」。遮罩、八度及評分範圍仍沿用錄音當時設定。</p>
+    <label for="post-difficulty">重新評分難度</label><select id="post-difficulty" disabled><option value="standard" selected>標準（預設）</option><option value="strict">嚴格</option><option value="relaxed">寬鬆</option></select>
+    <p class="help">選取錄音後預設為標準；可在此調整，按下方「調延時重新評分」。遮罩、八度及評分範圍仍沿用錄音當時設定。</p>
     <label for="post-delay">歌聲延時校正（毫秒）</label><input id="post-delay" type="number" min="-2000" max="2000" step="10" value="0">
     <p class="help">正值：歌聲晚到，將歌聲提前；負值：歌聲太早，將歌聲延後。填入總校正量，不是累加；配樂與和音不移動。初始值沿用本輪錄音校正值；舊錄音沿用當時保存的時間補償。</p>
     <div class="button-row"><button id="post-rescore" type="button" disabled>調延時重新評分</button></div>
