@@ -169,6 +169,47 @@ export function createKaraokeSession(options) {
       return { ...r, saved, kept, difficulty: scoringPost.scoring.difficulty };
     },
   };
+  Object.assign(window.sign2mvRescore, {
+    // AI cover versions of the loaded song and key: their converted vocal is on the song's own timeline
+    // (delay starts at 0). RMVPE runs once per page and nothing is written into the cover's files. The
+    // version's own transpose (pitch, e.g. -12 for another voice) is taken out first, so the score says
+    // how well the conversion kept the melody. Scored like a whole-song take of the loaded reference.
+    covers: async () => (await coverVersions()).map(v => ({ id: v.id, title: v.title || v.label || v.id, created: (v.created_at || 0) * 1000,
+      pitch: v.params?.pitch || 0, split: !!v.params?.mf })),
+    async runCover(id, ms, progress = () => {}) {
+      const songId = reference?.songId, v = (await coverVersions()).find(c => c.id === id);
+      if (!songId || !v) throw new Error('找不到這個 AI 翻唱版本，或它不是目前這首歌、這個 Key 的版本。');
+      const tracks = await (await fetch(`/api/cover/songs/${encodeURIComponent(songId)}/versions/${encodeURIComponent(id)}/tracks`, { cache: 'no-store' })).json();
+      const path = tracks.tracks?.find(t => t.key === 'ai_vocal')?.path;
+      if (!path) throw new Error('這個 AI 翻唱版本沒有轉換後的人聲檔。');
+      let analysis = coverAnalyses.get(`${id}|${path}`);
+      if (!analysis) {
+        const response = await fetch(`/media/${encodeURIComponent(songId)}/${path.split('/').map(encodeURIComponent).join('/')}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error('這個 AI 翻唱版本沒有轉換後的人聲檔。');
+        analysis = await analyseRecordingRmvpe(await response.blob(), progress);
+        coverAnalyses.set(`${id}|${path}`, analysis);
+      }
+      const back = 2 ** (-(v.params?.pitch || 0) / 12);
+      const f0 = back === 1 ? analysis.f0 : analysis.f0.map(hz => hz > 0 ? hz * back : hz);
+      const difficulty = scoringProfile($('score-difficulty').value).id;
+      const post = { version: 1, reference, segments: [{ offset: 0, songTime: 0, duration: analysis.duration }],
+        scoring: { allowOctave: $('pitch-mode').value === 'octave', rangeMode: 'full', difficulty } };
+      const r = rescoreRecordingRmvpe(post, { ...analysis, f0 }, ms);
+      if (r.score === null) return r;
+      let saved = true;
+      try { localStorage.setItem(HISTORY, JSON.stringify([...historyRows(), savedResult(`${reference.baseTitle || reference.title} · ${translateMessage('AI 翻唱')} ${v.title || v.label || v.id} · ${translateMessage('重評')} ${ms} ms`, r.score)].slice(-100))); } catch { saved = false; }
+      renderHistory();
+      return { ...r, saved, difficulty };
+    },
+  });
+  const coverAnalyses = new Map();
+  async function coverVersions() {
+    if (!reference?.songId) return [];
+    const response = await fetch(`/api/cover/songs/${encodeURIComponent(reference.songId)}`, { cache: 'no-store' });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data.versions || []).filter(v => (v.params?.key || 0) === (reference.pitchShift || 0)).sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+  }
   const savedAnalyses = new Map();
   async function savedTakes() {
     const key = recordingReviewKey(reference);
@@ -539,7 +580,7 @@ export function createKaraokeSession(options) {
       if (state.ready) {
         const data = await api(`/jobs/${id}/reference`);
         if (current !== generation) return;
-        reference = { ...validateReference(data), duration: data.duration, beats: data.beats || [], bpm: data.bpm, cacheId: data.cacheId, pitchShift:data.pitchShift || 0, baseTitle:data.baseTitle || data.title, sourceCacheId:data.sourceCacheId, hasPreview: data.hasPreview, separationModel: data.separationModel || 'demucs', pitchMethod: data.pitchMethod || 'yin', separationMethod: data.separationMethod || 'single', vocalMode: data.vocalMode || 'all', rangeSeconds: data.rangeSeconds ?? Number($('clip-seconds').value) };
+        reference = { ...validateReference(data), duration: data.duration, beats: data.beats || [], bpm: data.bpm, cacheId: data.cacheId, pitchShift:data.pitchShift || 0, baseTitle:data.baseTitle || data.title, songId:data.songId, sourceCacheId:data.sourceCacheId, hasPreview: data.hasPreview, separationModel: data.separationModel || 'demucs', pitchMethod: data.pitchMethod || 'yin', separationMethod: data.separationMethod || 'single', vocalMode: data.vocalMode || 'all', rangeSeconds: data.rangeSeconds ?? Number($('clip-seconds').value) };
         if(reference.pitchShift!==requestedKey)throw Error('本機回傳的 Key 與選定版本不同，請重新載入。');
         if (reference.separationMethod !== requestedMethod || reference.pitchMethod !== requestedPitch || reference.separationModel !== requestedModel || reference.vocalMode !== requestedVocalMode) throw new Error('本機回傳的分離模式與所選模式不符，請更新頁面與本機工具後重試。');
         if (reference.videoId !== loadedVideo) throw new Error('影片已切換，請重新準備歌曲。');

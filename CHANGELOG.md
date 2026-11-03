@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Sing & record 「評分對象」 also lists the AI cover versions of the loaded song and key: the converted vocal
+  (cover/rvc, on the song's own timeline, scoring delay starts at 0 and does not change the input latency) is
+  RMVPE-analysed once per page (nothing written into the cover) and scored as a whole-song take, with the
+  version's own pitch (e.g. -12) taken out. 童話 cover #1 (pitch 0): standard 95 at 0 ms, 96 at -20 ms.
 - Sing & record 「重新評分」: new 「評分對象」 menu. Besides the take just sung it lists the saved whole-song
   recordings of the loaded song and key (pending or saved to post-production), so after a reload a take can be
   rescored at another delay or difficulty without singing again. The first rescore of a saved recording runs

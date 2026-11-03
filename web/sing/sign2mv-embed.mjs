@@ -195,7 +195,7 @@ rescoreButton.title=rescoreLabel.title;
 // key, so a reload does not mean singing again
 const rescoreTake=document.createElement('select');rescoreTake.id='sign2mv-rescore-take';
 const rescoreTakeLabel=document.createElement('label');rescoreTakeLabel.className='sign2mv-rescore-take';
-rescoreTakeLabel.title='剛唱完的這次，或這首歌、這個 Key 已存的整首錄音（待確認與已存到錄音後處理的都列）；已存的錄音第一次重新評分要先用 RMVPE 分析幾秒，結果存回那筆錄音，之後不用再分析';
+rescoreTakeLabel.title='剛唱完的這次、這首歌這個 Key 已存的整首錄音（待確認與已存到錄音後處理的都列），或這首歌這個 Key 的 AI 翻唱版本。已存的錄音第一次重新評分要先用 RMVPE 分析幾秒，結果存回那筆錄音；AI 翻唱每次開啟頁面分析一次，不寫進翻唱檔案，評分延遲從 0 開始，版本自己的音高（例如 −12）評分時補回';
 rescoreTakeLabel.append('評分對象',rescoreTake);
 testDelayLabel.after(rescoreTakeLabel);rescoreTakeLabel.after(rescoreButton);rescoreButton.after(rescoreLabel);
 const rescoreStatus=document.createElement('p');
@@ -221,31 +221,37 @@ new MutationObserver(()=>{if(tempSong!==null&&(workflow().mediaId||'')!==tempSon
   .observe($('player-section'),{attributes:true,attributeFilter:['data-workflow']});
 // moving the slider by hand sets the default again (app.mjs saves it)
 $('offset').addEventListener('input',()=>{tempSong=null;});
-let savedTakes=[],takeListing=0,rescoreBusy=false;
+let savedTakes=[],coverTakes=[],takeListing=0,rescoreBusy=false;
 const takeOption=row=>new Option([row.title,new Date(row.created).toLocaleString(),translateMessage(`${Math.round(row.seconds)} 秒`),
   ...(row.delayMs!==null?[translateMessage(`錄音時 ${row.delayMs} ms`)]:[]),...(row.pending?[translateMessage('待確認')]:[])].join(' · '),row.id);
+const coverOption=v=>new Option([`${translateMessage('AI 翻唱')} ${v.title}`,...(v.created?[new Date(v.created).toLocaleString()]:[]),
+  ...(v.pitch?[translateMessage(`音高 ${v.pitch>0?'+':''}${v.pitch}（評分時補回）`)]:[]),...(v.split?[translateMessage('男女分開轉換')]:[])].join(' · '),'cover:'+v.id);
+function group(label,options){const g=document.createElement('optgroup');g.label=translateMessage(label);g.append(...options);return g;}
 async function refreshTakes(pick=null){
-  const serial=++takeListing;let rows=[];
+  const serial=++takeListing;let rows=[],covers=[];
   try{rows=await window.sign2mvRescore?.saved?.()||[];}catch{rows=[];}
+  try{covers=await window.sign2mvRescore?.covers?.()||[];}catch{covers=[];}
   if(serial!==takeListing)return;
-  savedTakes=rows;const keep=pick??rescoreTake.value;
-  const options=[...(window.sign2mvRescore?.delayMs?.()!=null?[new Option(translateMessage('剛唱完的這次'),'last')]:[]),...rows.map(takeOption)];
-  rescoreTake.replaceChildren(...options);
-  if(options.some(o=>o.value===keep))rescoreTake.value=keep;
+  savedTakes=rows;coverTakes=covers;const keep=pick??rescoreTake.value;
+  const last=window.sign2mvRescore?.delayMs?.()!=null?[new Option(translateMessage('剛唱完的這次'),'last')]:[];
+  rescoreTake.replaceChildren(...last,...(rows.length?[group('已存的錄音',rows.map(takeOption))]:[]),...(covers.length?[group('AI 翻唱',covers.map(coverOption))]:[]));
+  if([...rescoreTake.options].some(o=>o.value===keep))rescoreTake.value=keep;
   if(rescoreTake.value!==keep)takeChosen();
   rescoreControls();
 }
 function chosenSaved(){return savedTakes.find(row=>row.id===rescoreTake.value)||null;}
-// the delay field starts from the delay that take was recorded with
+function chosenCover(){return rescoreTake.value.startsWith('cover:')?coverTakes.find(v=>'cover:'+v.id===rescoreTake.value)||null:null;}
+// the delay field starts from the delay that take was recorded with; an AI cover is on the song's own timeline
 function takeChosen(){
   const row=chosenSaved();
   if(row){lastTakeTest=row.originalTest;if(row.delayMs!==null)rescoreDelay.value=String(row.delayMs);}
+  else if(chosenCover())rescoreDelay.value='0';
   else if(rescoreTake.value==='last'){lastTakeTest=lastSungTest;const last=window.sign2mvRescore?.delayMs?.()??null;if(last!==null)rescoreDelay.value=String(last);}
   rescoreSay();
 }
 function rescoreControls(){
   const last=window.sign2mvRescore?.delayMs?.()??null;
-  const ready=rescoreTake.value==='last'?last!==null:!!chosenSaved();
+  const ready=rescoreTake.value==='last'?last!==null:!!(chosenSaved()||chosenCover());
   // not while a take runs: the live score uses the same RMVPE process
   const w=workflow(),working=rescoreBusy||['preparing','singing','finishing','restarting'].includes(w.phase)||!!w.busy;
   rescoreButton.disabled=rescoreDelay.disabled=working||!ready;rescoreTake.disabled=working||!rescoreTake.options.length;
@@ -259,9 +265,21 @@ window.addEventListener('karaoke-recording-saved',()=>{void refreshTakes();});
 new MutationObserver(()=>{const w=workflow(),key=`${w.reference||''}|${w.mediaId||''}`;if(key!==takesFor){takesFor=key;void refreshTakes();}else rescoreControls();})
   .observe($('player-section'),{attributes:true,attributeFilter:['data-workflow']});
 let takesFor='';
-rescoreDelay.addEventListener('change',()=>{if(rescoreDelay.disabled)return;const ms=Math.max(-1000,Math.min(2000,Math.round(+rescoreDelay.value||0)));rescoreDelay.value=String(ms);rescoreSay(syncLatency(ms));});
+rescoreDelay.addEventListener('change',()=>{if(rescoreDelay.disabled)return;const ms=Math.max(-1000,Math.min(2000,Math.round(+rescoreDelay.value||0)));rescoreDelay.value=String(ms);rescoreSay(chosenCover()?'AI 翻唱的評分延遲不改收音延遲。':syncLatency(ms));});
 rescoreButton.addEventListener('click',async()=>{
   const ms=Math.max(-1000,Math.min(2000,Math.round(+rescoreDelay.value||0)));rescoreDelay.value=String(ms);
+  const cover=chosenCover();
+  if(cover){
+    rescoreBusy=true;rescoreControls();rescoreSay('正在讀取這個 AI 翻唱版本…');
+    try{
+      const r=await window.sign2mvRescore.runCover(cover.id,ms,percent=>rescoreSay(`正在用 RMVPE 分析 AI 翻唱人聲 ${percent}%…`));
+      if(r.score===null)rescoreSay(`評分延遲 ${ms} ms 時沒有可評分的旋律。`);
+      else rescoreSay(`重新評分（評分延遲 ${ms} ms）：總分 ${r.score}（音準 ${r.pitch}、節奏 ${r.rhythm}、完整度 ${r.coverage}）。${r.saved?'已另存一筆分數紀錄。':'瀏覽器不允許儲存紀錄，分數只顯示在這裡。'}`,
+        `評分難度：${translateMessage(({standard:'標準',strict:'嚴格',relaxed:'寬鬆'})[r.difficulty]||'標準')}。`,'AI 翻唱的評分延遲不改收音延遲。');
+    }catch(error){rescoreSay(`無法重新評分這個 AI 翻唱版本：${translateMessage(error.message)}`);void refreshTakes();}
+    finally{rescoreBusy=false;rescoreControls();}
+    return;
+  }
   const row=chosenSaved();
   if(row){
     rescoreBusy=true;rescoreControls();rescoreSay('正在讀取這筆錄音…');
