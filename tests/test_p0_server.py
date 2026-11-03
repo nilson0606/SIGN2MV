@@ -241,3 +241,32 @@ def test_harmless_separator_notices_stay_out_of_the_job_log():
     job.add_log("[lead] CUDA")
     assert [l[9:] for l in job.log] == ["[lead] CUDA"] and job.log_total == 1
     assert "log" in fields and len(HARMLESS_LOG_LINES) == 2
+
+
+def test_recording_patch_merges_with_stored_record(root):
+    """A field patch is merged with the record on disk: a newer change made meanwhile is kept, and only
+    the allowed fields can be changed."""
+    import json
+    import struct
+    import uuid
+    import pytest
+    from app.sing_archive import ArchiveError, RecordingArchive
+    arc = RecordingArchive(root / "library" / "recordings")
+    arc.ready()
+    rid = str(uuid.uuid4())
+    mix = b"RIFF" + b"\0" * 60
+    meta = {"id": rid, "title": "t", "mime": "audio/wav", "created": 1, "seconds": 1, "bytes": len(mix),
+            "complete": True, "postPending": True, "post": {"version": 1, "segments": []}}
+    raw = json.dumps(meta).encode()
+    bundle = root / f"{rid}.bin"
+    bundle.write_bytes(struct.pack("<I", len(raw)) + raw + mix)
+    arc.import_bundle(rid, bundle)
+    stale = arc.get(rid)
+    arc.update(rid, {**stale, "postPending": False})          # saved to post-production meanwhile
+    out = arc.patch(rid, {"post.rmvpeAnalysis": {"source": "rmvpe-v1", "f0": [0, 220.5]}})
+    assert out["postPending"] is False
+    assert out["post"]["rmvpeAnalysis"]["f0"] == [0, 220.5] and out["post"]["segments"] == []
+    for bad in ({"postPending": True}, {"bytes": 1}, {}, [], {"post.rmvpeAnalysis.x": 1}):
+        with pytest.raises(ArchiveError):
+            arc.patch(rid, bad)
+    assert arc.get(rid)["postPending"] is False

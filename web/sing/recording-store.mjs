@@ -84,6 +84,18 @@ export class BrowserRecordingStore {
       }
     });
   }
+  // change named fields ('post.rmvpeAnalysis') of a take kept here, read and written in one transaction;
+  // null when this browser does not hold the take
+  patch(id, changes) {
+    return this.transaction('readwrite', (tx, done) => {
+      const takes = tx.objectStore('takes');
+      takes.get(id).onsuccess = event => {
+        const row = event.target.result; if (!row) { done(null); return; }
+        for (const [path, value] of Object.entries(changes)) { const [head, field] = path.split('.'); row[head] = { ...row[head], [field]: value }; }
+        takes.put(row); done(row);
+      };
+    });
+  }
   delete(id) {
     return this.transaction('readwrite', tx => {
       tx.objectStore('takes').delete(id);
@@ -186,6 +198,17 @@ export class RecordingStore {
     const stored=this.diskRows.find(r=>r.id===meta.id);if(stored)return this.blob(stored,track);
     return local;
   }
+  // [SIGN2MV] change named fields only, merged with the stored record at the moment of writing (a whole
+  // record written back from an older copy could undo newer changes, e.g. 「存到錄音後處理」)
+  patch(id,changes){return this.serial(async()=>{
+    this.listRequest=null;
+    const local=await this.browser.patch(id,changes);if(local)return local;
+    const known=this.diskRows.find(r=>r.id===id);if(!known)throw new Error('找不到這筆錄音。');
+    let response;
+    try{response=await this.request('/recordings/'+id+'/patch',{method:'POST',body:new Blob([JSON.stringify(changes)]),root:known._archiveRoot});}
+    catch(error){if(this.session&&!this.session.features?.includes('recording-patch'))throw new Error('請重新啟動新版本機工具，才能把分析結果存回錄音。');throw error;}
+    const stored=await response.json();this.diskRows=this.diskRows.map(r=>r.id===id?stored:r);return stored;
+  });}
   delete(id){return this.serial(async()=>{
     const known=this.diskRows.find(r=>r.id===id);let info;
     // A listed row already carries its archive root. DELETE validates that root

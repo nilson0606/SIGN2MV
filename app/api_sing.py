@@ -40,6 +40,7 @@ TOKEN = secrets.token_hex(32)
 FEATURES = ['local-media', 'local-audio', 'library', 'stem-preview', 'library-location', 'separation-progress',
             'rebuild-song', 'lead-vocals', 'separation-models', 'score-masks', 'pitch-methods',
             'residual-separation', 'mel-roformer', 'recording-mp3', 'recording-library', 'recording-raw-mime',
+            'recording-patch',
             'playback-trace', 'native-microphone', 'native-speaker-output', 'song-key-versions']
 SEP_MODELS = {"demucs": "demucs", "bs-roformer": "bs_roformer", "mel-roformer": "mel_roformer"}
 CACHE_RE = re.compile(r"^(local_[a-f0-9]{64})_(0|15|30|60)(_lead)?(?:_(bs-roformer|mel-roformer))?(_rmvpe)?(_residual)?_v1"
@@ -710,7 +711,7 @@ def router(ctx: Context) -> APIRouter:
     async def rec_asset(rec_id: str, asset: str, request: Request):
         if not auth(request):
             return json_err(403, "Session token required")
-        if not REC_ID.match(rec_id) or asset not in ("metadata", "mix", "voice", "mp3"):
+        if not REC_ID.match(rec_id) or asset not in ("metadata", "patch", "mix", "voice", "mp3"):
             return json_err(400, "錄音網址無效。")
         tmp = None
         try:
@@ -721,6 +722,16 @@ def router(ctx: Context) -> APIRouter:
                 if len(body) > MAX_META:
                     raise ArchiveError("錄音資料太大。")
                 return await run_in_threadpool(locked, arc.update, rec_id, json.loads(body.decode("utf-8")))
+            if request.method == "POST" and asset == "patch":
+                body = await request.body()
+                if len(body) > MAX_META:
+                    raise ArchiveError("錄音資料太大。")
+
+                def patch() -> bytes:   # parse, merge and encode in the worker thread, not on the event loop
+                    with archive_lock:
+                        stored = arc.patch(rec_id, json.loads(body.decode("utf-8")))
+                    return json.dumps(stored, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+                return Response(await run_in_threadpool(patch), media_type="application/json")
             if request.method == "POST" and asset == "mp3":
                 tmp = await body_to_file(request, MAX_AUDIO)
                 return await run_in_threadpool(locked, arc.save_mp3, rec_id, tmp)

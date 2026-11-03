@@ -159,7 +159,8 @@ export function createKaraokeSession(options) {
       if (!analysis) {
         analysis = await analyseRecordingRmvpe(await recording.store.blob(row, 'voice'), progress);
         savedAnalyses.set(id, analysis);
-        try { await recording.store.save({ ...row, post: { ...row.post, rmvpeAnalysis: analysis } }); } catch { kept = false; }
+        // only this field is written, merged with the stored record (the take may have been saved to post-production meanwhile)
+        try { await recording.store.patch(row.id, { 'post.rmvpeAnalysis': analysis }); } catch { kept = false; }
       }
       const r = rescoreRecordingRmvpe(scoringPost, analysis, ms);
       if (r.score === null) return { ...r, kept };

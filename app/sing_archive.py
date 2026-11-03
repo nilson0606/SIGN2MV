@@ -204,6 +204,22 @@ class RecordingArchive:
         self.atomic(self.dir(rec_id) / "metadata.json", json.dumps({"format": FORMAT, "recording": meta}, ensure_ascii=False))
         return self.get(rec_id)
 
+    # [SIGN2MV] change named fields of the stored metadata only, merged with what is on disk now, so a page
+    # holding an older copy of the record cannot write it back over newer changes (e.g. a take saved to
+    # post-production in the meantime). Called under the archive lock.
+    PATCHABLE = {"post.rmvpeAnalysis"}
+
+    def patch(self, rec_id: str, changes: Any) -> dict[str, Any]:
+        if not isinstance(changes, dict) or not changes or any(k not in self.PATCHABLE for k in changes):
+            raise ArchiveError("不支援的錄音資料修改。")
+        meta = self.get(rec_id)
+        for path, value in changes.items():
+            head, field = path.split(".")
+            if not isinstance(meta.get(head), dict):
+                raise ArchiveError("錄音資料沒有可修改的欄位。")
+            meta[head] = {**meta[head], field: value}
+        return self.update(rec_id, meta)
+
     def audio(self, rec_id: str, track: str) -> tuple[Path, str]:
         meta = self.get(rec_id)
         if track not in ("mix", "voice", "mp3"):

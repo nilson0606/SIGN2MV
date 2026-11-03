@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Sing & record 「重新評分」 of a saved recording no longer writes back the whole record it read when the
+  button was pressed. Only the RMVPE analysis is stored, merged with the record as it is at that moment
+  (new POST /sr/recordings/{id}/patch, merged under the archive lock; browser-held takes in one IndexedDB
+  transaction). Before, saving the take to post-production while it was being analysed was undone and the
+  take went back to 「待確認」. Needs the local tools restarted.
 - Sing & record: a whole-song take that did not end normally (page reloaded or closed, capture cut off) no
   longer stays stuck in the browser where it could only be previewed or deleted. The next time the page lists
   recordings it writes the WAV headers from the audio actually stored, marks the take complete and 「中斷後救回」
