@@ -21,7 +21,9 @@ function int16(samples) {
   for (let i = 0; i < samples.length; i++) { const x = Math.max(-1, Math.min(1, samples[i])); out[i] = Math.round(x * (x < 0 ? 32768 : 32767)); }
   return out;
 }
-async function pitchPiece(samples, rate, signal) {
+// every request has its own time limit: a server that never answers must not hold up the take's end
+async function pitchPiece(samples, rate, signal, timeoutMs = 30000) {
+  signal = AbortSignal.any([AbortSignal.timeout(timeoutMs), ...(signal ? [signal] : [])]);
   const r = await fetch(`/sr/live-pitch?rate=${Math.round(rate)}`, { method: 'POST', body: int16(samples).buffer, signal,
     headers: { 'X-Karaoke-Token': await token(), 'Content-Type': 'application/octet-stream' } });
   const v = await r.json().catch(() => ({}));
@@ -163,13 +165,16 @@ export function createRmvpeScoring({ onUpdate = () => {} } = {}) {
     async finish(liveTake, timeoutMs = 20000) {
       const s = session; if (!s) return null;
       clearInterval(s.timer);
-      const until = Date.now() + timeoutMs;
-      while (!s.failed && !s.stopped && Date.now() < until) {
-        if (!s.busy) {
-          if (s.settledAll) break;
-          await pump(s, true);
-        } else await new Promise(r => setTimeout(r, 50));
-      }
+      // the deadline holds even while a request is still waiting for the server (it is then aborted below)
+      let timer = 0;
+      const late = new Promise(r => { timer = setTimeout(() => r('late'), timeoutMs); });
+      try {
+        while (!s.failed && !s.stopped) {
+          const step = s.busy ? new Promise(r => setTimeout(r, 50)) : s.settledAll ? null : pump(s, true);
+          if (!step) break;
+          if (await Promise.race([step, late]) === 'late') { s.error = 'RMVPE 結算逾時'; break; }
+        }
+      } finally { clearTimeout(timer); }
       const ok = s.settledAll && !s.failed;
       const r = ok ? resultIn(s.take, liveTake.startIndex, liveTake.endIndex) : null;
       if (ok) {
@@ -208,7 +213,7 @@ export async function analyseRecordingRmvpe(blob, progress = () => {}) {
   const duration = n / rate, f0 = [];
   for (let core = 0; core < duration; core += 8) {
     const end = Math.min(duration, core + 8), from = Math.max(0, core - 1), to = Math.min(duration, end + 1);
-    const v = await pitchPiece(mono.subarray(Math.round(from * rate), Math.round(to * rate)), rate);
+    const v = await pitchPiece(mono.subarray(Math.round(from * rate), Math.round(to * rate)), rate, null, 120000);
     const first = Math.round(from / HOP);
     for (let j = 0; j < v.f0.length; j++) { const t = from + j * HOP; if (t >= core - 1e-9 && t < end) f0[first + j] = v.f0[j]; }
     progress(Math.round(end / duration * 100));

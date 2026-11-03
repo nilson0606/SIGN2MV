@@ -245,7 +245,7 @@ export function createKaraokeSession(options) {
     $('cancel-song').disabled = maskBusy || phase === 'finishing' || (!jobId && phase !== 'preparing' && !reference);
     $('song-key').disabled=!!take||segmented?.busy()||['preparing','finishing','restarting'].includes(phase);
     $('song-key-apply').disabled=!reference||!!take||segmented?.busy()||['preparing','finishing','restarting'].includes(phase);
-    $('sing-start').disabled = maskBusy || !reference || (reference.pitchShift&&!keyPlayback.ready()) || ['finishing','restarting'].includes(phase);
+    $('sing-start').disabled = maskBusy || !reference || (reference.pitchShift&&!keyPlayback.ready()) || phase === 'finishing';
     $('sing-guide-mode').disabled = !!wholeGuide || ['preparing','finishing','restarting'].includes(phase);
     $('finish-song').disabled = !take || ['result', 'finishing', 'restarting'].includes(phase);
     $('song-form').querySelector('button').disabled = maskBusy || ['preparing', 'finishing', 'restarting'].includes(phase);
@@ -521,10 +521,23 @@ export function createKaraokeSession(options) {
     } catch { $('history-status').textContent = '無法清除瀏覽器紀錄。'; }
   });
   window.addEventListener('storage',event=>{if(event.key===HISTORY || event.key===null)renderHistory();});
+  // [SIGN2MV] a failure while scoring must not leave the page in 'finishing' (that disables 「從頭開始唱且評分」)
   async function finish() {
+    try { await finishTake(); }
+    catch (error) {
+      if (phase !== 'finishing') return;
+      rmvpe.cancel(); options.player()?.pauseVideo?.();
+      try { await recording.stop(); } catch {}
+      take?.clear(); take = null; rangeComplete = false; phase = 'result'; $('mic-start').disabled = false;
+      message(`結算時發生錯誤：${error.message}。錄音已保留，可直接按「從頭開始唱且評分」重新開始。`); controls();
+    }
+  }
+  async function finishTake() {
     if (!take || !reference || ['result', 'finishing'].includes(phase)) return;
     restartToken++; stopGuide(); phase = 'finishing'; controls();
     if (options.micReady() && options.player()?.getPlayerState?.() === 1) take.advance(options.player().getCurrentTime());
+    // the song stops now, not after the last seconds are scored (the recording ends here too)
+    options.player()?.pauseVideo?.();
     // [SIGN2MV] a 「測試原唱分數」 take is labelled as such in the score history
     const title = window.sign2mvTakeTitle?.(reference.title) ?? reference.title;
     let result = take.result(), scoredBy = '即時估計（瀏覽器偵測）';
@@ -654,26 +667,55 @@ export function createKaraokeSession(options) {
   $('prepare-song').addEventListener('click', () => prepareSong());
   $('cancel-song').addEventListener('click', () => { options.player()?.pauseVideo?.(); clear(); });
   $('sing-start').addEventListener('click', async () => {
-    if (!reference || maskBusy || phase === 'restarting') return;
+    if (!reference || maskBusy || phase === 'finishing') return;
     if(segmented?.busy()||!segmented?.leave())return;
+    // [SIGN2MV] 「從頭開始唱且評分」 always starts over. A start still in progress is cancelled, and a take
+    // still running is stopped first: what it recorded stays as a pending take, it is not scored.
+    if (phase === 'restarting' || take) {
+      restartToken++; rmvpe.cancel(); options.player()?.pauseVideo?.();
+      take?.clear(); take = null; rangeComplete = false;
+      try { await recording.stop(); } catch { /* the new take starts anyway */ }
+      if (!reference) return;
+    }
     stopPreview(); stopGuide(); options.cancelCalibration?.();
     const request = ++restartToken, p = options.player();
+    // a step that ends the start (microphone closed, song unloaded) says so and leaves the button usable
+    // each step has its own deadline (a safety net: pressing the button again also starts over)
+    let step = '', watchdog = 0;
+    const at = (name, seconds) => {
+      step = name; clearTimeout(watchdog);
+      watchdog = setTimeout(() => { if (request === restartToken && phase === 'restarting') void abandon(`開始唱停在「${name}」超過 ${seconds} 秒，已取消。請再按一次「從頭開始唱且評分」。`); }, seconds * 1000);
+    };
+    const abandon = async why => {
+      clearTimeout(watchdog);
+      if (request !== restartToken) return;
+      restartToken++; stopGuide(); try { await recording.stop(); } catch {}
+      phase = take ? 'paused' : 'ready'; message(why); controls();
+    };
+    const stuck = () => abandon(!reference ? '未開始演唱：歌曲已卸載。' : `未開始演唱：麥克風在「${step}」時關閉了（例如視窗被蓋住或縮小）。請再按一次「從頭開始唱且評分」，會重新開啟麥克風。`);
+    at('開啟收音', 120);   // the browser's permission prompt waits for the user; native capture has its own 30 s limit
     phase = 'restarting'; message(options.micReady() ? '正在同步影片到 0 秒…' : '正在開啟麥克風，請允許瀏覽器的收音授權…'); controls();
     try {
       if (!options.micReady()) await options.startMic();
-      if (request !== restartToken || !reference || !options.micReady()) { if (request === restartToken) { phase = take ? 'paused' : 'ready'; message('未開始演唱：麥克風尚未就緒，請查看「收音」區的狀態，再按「從頭開始唱且評分」。'); controls(); } return; }
+      if (request !== restartToken) return;
+      if (!reference || !options.micReady()) { await abandon(!reference ? '未開始演唱：歌曲已卸載。' : '未開始演唱：麥克風尚未就緒，請查看「收音」區的狀態，再按「從頭開始唱且評分」。'); return; }
+      at('準備錄音', 90);   // up to two stems at 30 s each, then decoding
       await recording.prepare(reference, async stem => {
         const response = await fetch(BASE + `/library/${reference.cacheId}/${stem}`, {headers: {'X-Karaoke-Token':token}, credentials:'omit', cache:'no-store', signal:AbortSignal.timeout(30000)});
         if (!response.ok) throw new Error('無法取得錄音所需的配樂／和音，請補建試聽音軌或改選歌唱者。');
         return response.arrayBuffer();
       }, {allowOctave:$('pitch-mode').value==='octave',rangeMode:$('score-range').value,difficulty:$('score-difficulty').value});
-      if (request !== restartToken || !reference || !options.micReady()) { await recording.stop(); return; }
-      message('正在準備演唱時帶唱…');
+      if (request !== restartToken) return;
+      if (!reference || !options.micReady()) { await stuck(); return; }
+      at('準備演唱時帶唱', 60); message('正在準備演唱時帶唱…');
       await prepareGuide(reference, p, $('sing-guide-mode').value, () => request !== restartToken || !reference || !options.micReady());
-      if (request !== restartToken || !reference || !options.micReady()) return;
-      message('正在同步影片到 0 秒…');
+      if (request !== restartToken) return;
+      if (!reference || !options.micReady()) { await stuck(); return; }
+      at('同步影片到 0 秒', 45); message('正在同步影片到 0 秒…');
       await seekPlayerToStart(p, () => request !== restartToken || !reference || !options.micReady());
-      if (request !== restartToken || !reference || !options.micReady()) return;
+      if (request !== restartToken) return;
+      if (!reference || !options.micReady()) { await stuck(); return; }
+      clearTimeout(watchdog);
       take?.clear(); take = new ScoringTake(reference, { allowOctave: $('pitch-mode').value === 'octave', rangeMode: $('score-range').value, difficulty: $('score-difficulty').value });
       showTakeDifficulty(); take.begin(0); lastProgress = 0; rangeComplete = false; phase = 'paused'; startRmvpe();
       $('total-score').textContent = '…'; $('pitch-score').textContent = '—'; $('rhythm-score').textContent = '—'; $('coverage-score').textContent = '—';
@@ -683,8 +725,10 @@ export function createKaraokeSession(options) {
       p.playVideo();
       if (p.getPlayerState() === 1) playerState(1);
     } catch (error) {
+      clearTimeout(watchdog);
       if (request !== restartToken) return;
-      stopGuide(); await recording.stop(); phase = 'paused'; p?.pauseVideo?.(); message(error.message); controls();
+      // no take was started: back to 'ready' (a 'paused' page without a take would start one mid-song on play)
+      stopGuide(); await recording.stop(); phase = take ? 'paused' : 'ready'; p?.pauseVideo?.(); message(error.message); controls();
     }
   });
   $('finish-song').addEventListener('click', finish);

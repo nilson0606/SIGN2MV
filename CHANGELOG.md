@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Sing & record: 「從頭開始唱且評分」 can no longer stay greyed out. It works at any time, also during a take
+  or while a start is in progress: the running take is ended first (its recording kept as a pending take, not
+  scored), then a new take starts. A start that loses the microphone, or a step that takes too long (each step
+  has its own limit: microphone 120 s, recording 90 s, sing-along track 60 s, seek 45 s), ends with a message
+  naming the step. A failed start goes back to ready instead of a paused state without a take.
+- Sing & record: 「結束並結算」 can no longer hang in 「結算中」. The video pauses at once; every RMVPE request
+  has its own time limit (30 s live, 120 s for saved recordings and AI covers) and the final RMVPE settle stops
+  after 20 s even if the server never answers, falling back to the browser estimate. An error while scoring
+  ends the take instead of leaving the page in 「結算中」.
 - Sing & record 「評分對象」 also lists the AI cover versions of the loaded song and key: the converted vocal
   (cover/rvc, on the song's own timeline, scoring delay starts at 0 and does not change the input latency) is
   RMVPE-analysed once per page (nothing written into the cover) and scored as a whole-song take, with the
