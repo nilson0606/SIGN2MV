@@ -1,5 +1,7 @@
 // Audio stays in IndexedDB on this browser; each chunk commits separately.
+import {pcmHeader} from './recording-pcm.mjs';
 export const isPostRecording=row=>!row.segmentTake&&!row.postPending;
+export const recordingLock=id=>'sign2mv-recording:'+id;
 export class BrowserRecordingStore {
   constructor() { this.db = null; }
   async open() {
@@ -54,6 +56,34 @@ export class BrowserRecordingStore {
       tx.objectStore('chunks').getAll(IDBKeyRange.bound([id,0],[id,Number.MAX_SAFE_INTEGER])).onsuccess = event => done(new Blob(event.target.result.map(x => x.blob), { type: track==='voice'?(meta.rawMime||meta.mime):meta.mime }));
     });
   }
+  // A whole-song take whose page went away (F5, window closed, capture cut off) before it was finished:
+  // write each WAV header from the audio actually stored and mark it complete, so it can be saved,
+  // downloaded and moved to the library like any other take. The audio itself is not changed.
+  finalize(meta) {
+    const rate = meta.captureClock?.sampleRate || 48000, wav = meta.mime === 'audio/wav';
+    return this.transaction('readwrite', (tx, done) => {
+      const chunks = tx.objectStore('chunks'), tracks = [[meta.id, 2, 'bytes'], [meta.id + ':voice', 1, 'rawBytes']], next = { ...meta };
+      let pending = tracks.length, frames = null;
+      for (const [id, channels, field] of tracks) {
+        chunks.getAll(IDBKeyRange.bound([id, 0], [id, Number.MAX_SAFE_INTEGER])).onsuccess = event => {
+          const rows = event.target.result;
+          let total = rows.reduce((n, r) => n + r.blob.size, 0);
+          // index 0 is the 44-byte header written when the take started; a corrected take keeps a whole file there
+          if (wav && rows[0]?.index === 0 && rows[0].blob.size === 44 && rows.length > 1) {
+            const data = total - 44, count = Math.floor(data / (2 * channels));
+            chunks.put({ id, index: 0, blob: pcmHeader(count, channels, rate) });
+            if (channels === 2) frames = count;
+          }
+          next[field] = total;
+          if (--pending) return;
+          if (frames !== null) { next.seconds = frames / rate; next.captureClock = { ...next.captureClock, frames }; }
+          Object.assign(next, { complete: true, recovered: true });
+          next.captureError ||= '錄音沒有正常結束（頁面重新整理、關閉或收音中斷），已用保存下來的部分完成這一版。';
+          if (next.bytes > 0) { tx.objectStore('takes').put(next); done(next); } else done(null);
+        };
+      }
+    });
+  }
   delete(id) {
     return this.transaction('readwrite', tx => {
       tx.objectStore('takes').delete(id);
@@ -66,7 +96,11 @@ export class BrowserRecordingStore {
 
 // IndexedDB buffers an active take. Completed recordings move to the local helper.
 export class RecordingStore {
-  constructor({status=()=>{}}={}){this.browser=new BrowserRecordingStore();this.status=status;this.pending=Promise.resolve();this.diskRows=[];this.session=null;this.listRequest=null;}
+  constructor({status=()=>{}}={}){
+    this.browser=new BrowserRecordingStore();this.status=status;this.pending=Promise.resolve();this.diskRows=[];this.session=null;this.listRequest=null;
+    // takes waiting here for the library must not be evicted when the browser runs short of space
+    try{navigator.storage?.persist?.().catch(()=>{});}catch{}
+  }
   open(){return this.browser.open();}
   serial(work){this.listRequest=null;const result=this.pending.then(work);this.pending=result.catch(()=>{});return result;}
   async request(route,{method='GET',body,root}={}){
@@ -78,6 +112,12 @@ export class RecordingStore {
     if(!r.ok){if(r.status===403)this.session=null;const value=await r.json().catch(()=>({}));throw new Error(value.error||'錄音資料夾操作失敗。');}return r;
   }
   replaceMix(meta,blob){return this.serial(()=>this.browser.replaceMix(meta,blob));}
+  // A take being recorded or finished holds the lock 'sign2mv-recording:<id>' (this tab or another one);
+  // only a take nobody holds is finalized. Returns the finished row, or null.
+  async finalizeUnheld(row){
+    if(!navigator.locks)return null;
+    return navigator.locks.request(recordingLock(row.id),{ifAvailable:true},lock=>lock?this.browser.finalize(row):null);
+  }
   async info(){return (await this.request('/recordings')).json();}
   async move(meta,info){
     if(info.deleted.includes(meta.id)){await this.browser.delete(meta.id);return null;}
@@ -120,9 +160,13 @@ export class RecordingStore {
     // so a subsequent reader still waits for the write and gets a fresh inventory.
     if(this.listRequest)return this.listRequest;
     const request=this.serial(async()=>{
-    const local=await this.browser.list();let info;
+    const local=await this.browser.list();let info;const errors=[];
+    for(const [i,row] of local.entries()){
+      if(row.complete||row.segmentTake)continue;
+      try{const done=await this.finalizeUnheld(row);if(done)local[i]=done;}catch(error){errors.push(error.message);}
+    }
     try{info=await this.info();}catch(error){this.status('本機錄音目錄未連線；瀏覽器待搬存資料仍保留。'+error.message);return [...local,...this.diskRows.filter(r=>!local.some(l=>l.id===r.id))].sort((a,b)=>b.created-a.created);}
-    const records=new Map(info.records.map(row=>[row.id,row]));let moved=0;const errors=[];
+    const records=new Map(info.records.map(row=>[row.id,row]));let moved=0;
     for(const row of local){
       if(info.deleted.includes(row.id)){await this.browser.delete(row.id);continue;}
       if(row.complete){try{this.status(`正在搬存錄音 ${moved+1}：${row.title}…`);const stored=await this.move(row,info);if(stored)records.set(row.id,stored);moved++;continue;}catch(error){errors.push(error.message);}}

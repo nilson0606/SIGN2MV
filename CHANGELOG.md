@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Sing & record: a whole-song take that did not end normally (page reloaded or closed, capture cut off) no
+  longer stays stuck in the browser where it could only be previewed or deleted. The next time the page lists
+  recordings it writes the WAV headers from the audio actually stored, marks the take complete and 「中斷後救回」
+  and moves it to the library as a pending take. A take still being recorded or saved (this tab or another one)
+  holds a Web Lock and is never touched. The pending-take panel gets 「下載這一版」, the page asks the browser for
+  persistent storage, and leaving the page while a take is being finished and saved asks first.
 - Sing & record: 「從頭開始唱且評分」 can no longer stay greyed out. It works at any time, also during a take
   or while a start is in progress: the running take is ended first (its recording kept as a pending take, not
   scored), then a new take starts. A start that loses the microphone, or a step that takes too long (each step

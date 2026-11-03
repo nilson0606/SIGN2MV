@@ -5,7 +5,7 @@ import { recordingSofteningSuffix, recordingEffectsSuffix } from './recording-so
 import {remixRecording,wavBlob,delaySeconds,recordingDelaySuffix} from './recording-process.mjs';
 import { createRecordingPost } from './recording-post.mjs';
 import { createRecordingMix, mixSettings } from './recording-mix.mjs';
-import { RecordingStore, isPostRecording } from './recording-store.mjs';
+import { RecordingStore, isPostRecording, recordingLock } from './recording-store.mjs';
 import {createRecordingReview} from './recording-review.mjs';
 import { createPCMRecorders } from './recording-pcm.mjs';
 import { recordingSceneDefaultsVersion } from './recording-scenes.mjs';
@@ -14,6 +14,9 @@ export function createSingerRecorder(options) {
   const store = new RecordingStore({status:text=>{$('recording-storage-status').textContent=text;}});
   try { const saved = localStorage.getItem('karaoke.recording-mode.v1'); if (['voice','mix','off'].includes(saved)) $('recording-mode').value = saved; } catch {}
   let active = null, operation = 0, stopping = Promise.resolve(), previewURL = null;
+  // [SIGN2MV] while a take is being finished and saved, leaving the page asks first
+  let saving = 0;
+  window.addEventListener('beforeunload', event => { if (saving > 0) { event.preventDefault(); event.returnValue = ''; } });
   try {
     const saved = mixSettings(JSON.parse(localStorage.getItem('karaoke.recording-balance.v1') || '{}'));
     $('recording-manual').checked = saved.manual; $('recording-voice-level').value = saved.voice; $('recording-backing-level').value = saved.backing;
@@ -27,7 +30,7 @@ export function createSingerRecorder(options) {
     window.dispatchEvent(new Event('recording-balance-changed'));
   }
   const post = createRecordingPost({store, stop:()=>stop(), isRecording:()=>!!active, reference:options.reference, pause:()=>{options.pausePlayer();$('recording-audio').pause();}, download, onDelete:async()=>{clearPreview();await render();}});
-  const review=createRecordingReview({store,reference:options.reference,isRecording:()=>!!active,loadStem:options.loadStem,onChanged:render,pause:()=>{options.pausePlayer();post.clearAudio();$('recording-audio').pause();}});
+  const review=createRecordingReview({store,reference:options.reference,isRecording:()=>!!active,download:(blob,row)=>download(blob,row),loadStem:options.loadStem,onChanged:render,pause:()=>{options.pausePlayer();post.clearAudio();$('recording-audio').pause();}});
   const status = text => { $('recording-status').textContent = text; };
   function controls() {
     review.controls();
@@ -141,7 +144,11 @@ export function createSingerRecorder(options) {
     try{diagnostics=await prepareRecordingDiagnostics({context,mic,stream,recorder,meta,native:!!direct});}
     catch(error){recorder.dispose();mix.disconnect();destination.disconnect();throw error;}
     if(request!==operation||options.context()!==context){await diagnostics?.finish();recorder.dispose();mix.disconnect();destination.disconnect();throw new Error('錄音準備已取消。');}
-    const a = { diagnostics, recorder, rawRecorder, rawCount:0, segment:null, context, mic, mix, destination, buffers, meta, chunks: [], queue: Promise.resolve(), count: 0, backing: [], error: null };
+    // [SIGN2MV] held until the take is finished: another page (or a reload of this one) finalizes only a take
+    // nobody holds, so a take still being recorded or saved is never touched
+    let release=()=>{};
+    if(navigator.locks){const held=new Promise(resolve=>{release=resolve;});navigator.locks.request(recordingLock(meta.id),()=>held).catch(()=>{});}
+    const a = { diagnostics, recorder, rawRecorder, rawCount:0, segment:null, context, mic, mix, destination, buffers, meta, chunks: [], queue: Promise.resolve(), count: 0, backing: [], error: null, release: () => release() };
     active = a; controls();
     rawRecorder.ondataavailable = event => {
       if (!event.data.size) return;
@@ -199,6 +206,7 @@ export function createSingerRecorder(options) {
     const ended = Promise.all([a.recorder,a.rawRecorder].map(recorder=>new Promise(resolve=>{
       if(recorder.state==='inactive')resolve();else {recorder.onstop=resolve;recorder.stop();}
     })));
+    saving++;
     stopping = (async () => {
       await ended;
       // PCM observers must drain before finishing diagnostics, and their result
@@ -238,11 +246,12 @@ export function createSingerRecorder(options) {
         link.textContent = `${retained?'下載錄音片段':'下載未保存錄音'}：${a.meta.title}（${new Date(a.meta.created).toLocaleTimeString()}）`; panel.append(link);
         status(retained?'收音中斷，已保留錄音片段，可下載備份：'+error.message:'錄音未完整保存，請先按「下載未保存錄音」備份：'+error.message);
       }
+      a.release();   // finished (or kept as it is): from here a reload may finalize it
       await render(savedId).catch(error=>status('無法讀取錄音清單：'+error.message));
       if(completionStatus)status(completionStatus);
       if(a.meta.segmentTake)window.dispatchEvent(new CustomEvent('segment-capture-stopped',{detail:{captureId:a.meta.segmentTake.captureId,error:a.error?.message||''}})); // [SIGN2MV] pass the capture error on to the segment panel
       return savedId ? a.meta : null;
-    })();
+    })().finally(() => { a.release(); saving--; });
     return stopping;
   }
   const timer = setInterval(() => {

@@ -9,7 +9,7 @@ export function recordingReviewKey(ref){
 const songKey=row=>recordingReviewKey(row?.post?.reference);
 
 // Pending whole-song takes stay durable, but are not offered to post-processing.
-export function createRecordingReview({store,pause,loadStem,onChanged,isRecording,reference=()=>null}) {
+export function createRecordingReview({store,pause,loadStem,onChanged,isRecording,download=()=>{},reference=()=>null}) {
   const $=id=>document.getElementById('recording-review-'+id);
   let allRows=[],rows=[],selected=null,working=false,loading=false,url=null,request=0,scope=null;
   const currentKey=()=>songKey({post:{reference:reference()}});
@@ -24,6 +24,7 @@ export function createRecordingReview({store,pause,loadStem,onChanged,isRecordin
     $('take').disabled=$('mode').disabled=locked;
     $('listen').disabled=locked||loading||!selected?.rawBytes;
     $('save').disabled=locked||!selected?.complete;
+    $('download').disabled=locked||!selected?.bytes;
     $('delete').disabled=locked||!selected;
     $('delete-song').disabled=locked||!songKey(selected);
   }
@@ -34,7 +35,7 @@ export function createRecordingReview({store,pause,loadStem,onChanged,isRecordin
     const id=rows.some(row=>row.id===savedId)?savedId:selected?.id;
     const next=rows.find(row=>row.id===id)||rows[0]||null;
     if(next?.id!==selected?.id){clear();status('');}selected=next;
-    $('take').replaceChildren(...rows.map(row=>new Option(`${row.title} · ${new Date(row.created).toLocaleString()} · ${row.seconds.toFixed(1)} 秒${row.complete?'':' · 未完整結束'}${row.diagnostics?.status==='incomplete'?' · 診斷未完整保存：'+row.diagnostics.error:row.diagnostics?.status==='saved'?' · 診斷已保存':''}`,row.id)));
+    $('take').replaceChildren(...rows.map(row=>new Option(`${row.title} · ${new Date(row.created).toLocaleString()} · ${row.seconds.toFixed(1)} 秒${row.complete?'':' · 未完整結束'}${row.recovered?' · 中斷後救回':''}${row.diagnostics?.status==='incomplete'?' · 診斷未完整保存：'+row.diagnostics.error:row.diagnostics?.status==='saved'?' · 診斷已保存':''}`,row.id)));
     if(selected)$('take').value=selected.id;
     document.getElementById('recording-review').hidden=!rows.length;
     controls();
@@ -76,6 +77,13 @@ export function createRecordingReview({store,pause,loadStem,onChanged,isRecordin
     try{await store.save({...row,postPending:false});await onChanged(row.id);status('已存到錄音後處理。');window.dispatchEvent(new CustomEvent('karaoke-recording-saved',{detail:{cacheId:row.post.reference.cacheId}}));}
     finally{working=false;controls();}
   }
+  // the mixed take as saved (a take recovered after an interruption included)
+  async function save_file(){
+    if(working||isRecording()||!currentSelection())return;
+    const row=selected;status('正在準備下載…');
+    const blob=await store.blob(row);if(!blob.size)throw Error('無法讀取這一版錄音。');
+    download(blob,row);status('已下載這一版錄音。');
+  }
   async function remove(){
     if(working||isRecording()||!currentSelection())return;
     const row=selected;
@@ -106,7 +114,7 @@ export function createRecordingReview({store,pause,loadStem,onChanged,isRecordin
       status(`已刪除這首的 ${removed} 筆待確認錄音。${remaining?`尚有 ${remaining} 筆${failed?'未能刪除，請重試':'因開始錄音而保留'}。`:'清除完成，這首此 Key 的待確認整首錄音已全部清空。'}`);
     }finally{working=false;controls();}
   }
-  for(const [id,fn]of [['listen',listen],['save',save],['delete',remove],['delete-song',removeSong]])$(id).onclick=()=>Promise.resolve().then(fn).catch(e=>status(e.message));
+  for(const [id,fn]of [['listen',listen],['save',save],['download',save_file],['delete',remove],['delete-song',removeSong]])$(id).onclick=()=>Promise.resolve().then(fn).catch(e=>status(e.message));
   $('take').onchange=()=>{clear();selected=rows.find(row=>row.id===$('take').value)||null;controls();status('已選取待確認錄音，可先試聽。');};
   $('mode').onchange=()=>{clear();controls();status('試聽內容已變更，請按「試聽這一版」。');};
   $('audio').onplay=()=>{if(isRecording()||working){clear();controls();return;}pause();for(const media of document.querySelectorAll('audio,video'))if(media!==$('audio'))media.pause();};
