@@ -178,7 +178,7 @@ testButton.after(testDelayLabel);
 const testStatus=document.createElement('p');
 testStatus.id='sign2mv-original-test-status';testStatus.className='status';testStatus.setAttribute('role','status');testStatus.hidden=true;
 const testHint=document.createElement('p');testHint.className='sign2mv-original-hint';
-testHint.textContent='原唱延後＝原唱晚多少進來。結算一律用收音延遲往回扣；改評分延遲會一併改收音延遲，下次演唱就用新值（原唱測試那次除外）。';
+testHint.textContent='原唱延後＝原唱晚多少進來。結算用收音延遲往回扣；改評分延遲後，這首歌接著唱就用新值，換歌或重新整理回到收音延遲的設定（原唱測試那次不改）。';
 $('finish-song').parentElement.after(testHint);testHint.after(testStatus);
 function testSay(text){testStatus.textContent=text;testStatus.hidden=!text;}
 // 「重新評分」: score the take just sung again at another delay (no singing again). Uses the RMVPE
@@ -186,7 +186,7 @@ function testSay(text){testStatus.textContent=text;testStatus.hidden=!text;}
 const rescoreDelay=document.createElement('input');
 rescoreDelay.type='number';rescoreDelay.id='sign2mv-rescore-delay';rescoreDelay.min='-1000';rescoreDelay.max='2000';rescoreDelay.step='10';rescoreDelay.value='400';
 const rescoreLabel=document.createElement('label');rescoreLabel.className='sign2mv-original-delay';
-rescoreLabel.title='唱完一次（用 RMVPE 結算）後，用不同的延遲重算剛唱完的那次，不用重唱；每次重算另存一筆分數紀錄。改了會同步成收音延遲，下次演唱就用新值（原唱測試那次除外）';
+rescoreLabel.title='唱完一次（用 RMVPE 結算）後，用不同的延遲重算剛唱完的那次，不用重唱；每次重算另存一筆分數紀錄。改了之後這首歌接著唱就用新值，換歌或重新整理回到收音延遲的設定（原唱測試那次不改）';
 rescoreLabel.append('評分延遲',rescoreDelay,'ms');
 const rescoreButton=document.createElement('button');
 rescoreButton.type='button';rescoreButton.id='sign2mv-rescore';rescoreButton.className='secondary';rescoreButton.textContent='重新評分';
@@ -196,15 +196,25 @@ const rescoreStatus=document.createElement('p');
 rescoreStatus.id='sign2mv-rescore-status';rescoreStatus.className='status';rescoreStatus.setAttribute('role','status');rescoreStatus.hidden=true;
 testStatus.after(rescoreStatus);
 function rescoreSay(...parts){parts=parts.filter(Boolean);rescoreStatus.replaceChildren(...parts.flatMap((p,i)=>{const s=document.createElement('span');s.textContent=p;return i?[' ',s]:[s];}));rescoreStatus.hidden=!parts.length;}
-// the delay found here becomes the input latency for the next take, except after an original-vocal test
-// (that take has no speaker path, so its best delay is not the singer's)
-let lastTakeTest=false;
+// The delay found here is used for the next takes of this song, except after an original-vocal test
+// (that take has no speaker path, so its best delay is not the singer's). It is temporary: the slider is
+// only moved, not saved, so another song or a reload goes back to the saved input latency (the default).
+let lastTakeTest=false,tempSong=null;
+function savedLatency(){try{const v=localStorage.getItem('karaoke.input-latency.v1');if(v!==null&&Number.isFinite(+v))return +v;}catch{}return +$('offset').defaultValue;}
+function showLatency(ms,temporary){const offset=$('offset');offset.value=String(ms);$('offset-value').textContent=temporary?`${ms} ms（這首歌暫用）`:`${ms} ms`;}
 function syncLatency(ms){
   if(lastTakeTest)return '這次是原唱測試，收音延遲不跟著改。';
   const offset=$('offset');if(ms<+offset.min||ms>+offset.max)return `收音延遲只能設 ${offset.min}～${offset.max} ms，這次沒有跟著改。`;
-  if(+offset.value!==ms){offset.value=String(ms);offset.dispatchEvent(new Event('input',{bubbles:true}));}
-  return `下次演唱的收音延遲已改成 ${ms} ms。`;
+  const saved=savedLatency();
+  if(ms===saved){tempSong=null;showLatency(saved,false);return `下次演唱用收音延遲的設定 ${saved} ms。`;}
+  tempSong=workflow().mediaId||'';showLatency(ms,true);
+  return `這首歌下次演唱的延遲暫時改成 ${ms} ms；換歌或重新整理後回到收音延遲的設定 ${saved} ms。`;
 }
+// another song: back to the saved input latency
+new MutationObserver(()=>{if(tempSong!==null&&(workflow().mediaId||'')!==tempSong){tempSong=null;showLatency(savedLatency(),false);rescoreSay();}})
+  .observe($('player-section'),{attributes:true,attributeFilter:['data-workflow']});
+// moving the slider by hand sets the default again (app.mjs saves it)
+$('offset').addEventListener('input',()=>{tempSong=null;});
 function rescoreControls(){
   const last=window.sign2mvRescore?.delayMs?.()??null;
   rescoreButton.disabled=rescoreDelay.disabled=last===null;

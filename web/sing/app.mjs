@@ -143,6 +143,9 @@ function createVoiceOutput() {
 const LATENCY_KEY = 'karaoke.input-latency.v1';
 function showOffset() { $('offset-value').textContent = `${$('offset').value} ms`; }
 function saveOffset() { try { localStorage.setItem(LATENCY_KEY, $('offset').value); } catch { /* storage may be unavailable */ } }
+// [SIGN2MV] the default is 400 ms (Nilson's real takes line up at 400-440 ms). A saved value still at the
+// old default 300 moves to 400 once; any other saved value is the user's own and stays.
+try { if (localStorage.getItem('sign2mv.latency-400.v1') === null) { if (localStorage.getItem(LATENCY_KEY) === '300') localStorage.setItem(LATENCY_KEY, '400'); localStorage.setItem('sign2mv.latency-400.v1', '1'); } } catch { /* storage may be unavailable */ }
 try { const saved = Number(localStorage.getItem(LATENCY_KEY)); if (localStorage.getItem(LATENCY_KEY) !== null && Number.isFinite(saved) && saved >= -500 && saved <= 1000) { $('offset').value = String(saved); showOffset(); } } catch { /* default */ }
 function loadAPI() {
   if (window.YT?.Player) return Promise.resolve();

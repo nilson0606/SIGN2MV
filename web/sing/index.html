@@ -167,7 +167,7 @@
           <p id="segment-coverage" class="help"></p>
           <details id="segment-output-panel" open><summary>試合完整一版／滿意後保存 · 預設人聲＋伴樂，歌聲校正跟著收音延遲</summary>
           <p class="help">依每個段落目前選用的錄音版本試合；換選版本後，請重新試合。</p>
-          <div class="segment-fields"><label>試合內容<select id="segment-output"><option value="mix" selected>人聲＋伴樂／和音</option><option value="voice">純人聲</option></select></label><label title="預設跟著「收音延遲」；在這裡改過就記住這裡的數字，不再跟著">歌聲校正（ms）<input id="segment-delay" type="number" min="-2000" max="2000" step="10" value="300"></label></div>
+          <div class="segment-fields"><label>試合內容<select id="segment-output"><option value="mix" selected>人聲＋伴樂／和音</option><option value="voice">純人聲</option></select></label><label title="預設跟著「收音延遲」；在這裡改過就記住這裡的數字，不再跟著">歌聲校正（ms）<input id="segment-delay" type="number" min="-2000" max="2000" step="10" value="400"></label></div>
           <details id="segment-original-panel"><summary>原唱加入區間 <span id="segment-original-count">（未設定）</span></summary>
           <p class="help">用歌曲時間設定多個區間，每段可選一起唱或只用原唱。區間外保留你的錄音，伴奏照常；僅套用「人聲＋伴樂／和音」的完整試合，純人聲仍保留你的收音。</p>
           <div id="segment-original-ranges" class="original-vocal-ranges"></div>
@@ -180,7 +180,7 @@
           <div class="button-row"><button id="segment-compose" type="button">試合完整一版</button><button id="segment-join" type="button" class="secondary">試合並聽本段接合</button></div>
           <audio id="segment-audio" controls hidden preload="metadata"></audio>
           <div class="button-row"><button id="segment-export" type="button" class="secondary" disabled>存到錄音後處理</button><button id="segment-download" type="button" class="secondary" disabled>下載試合 WAV</button></div>
-          <p class="help">單段錄音保存在分段區，試合只供暫存試聽，兩者都不加入錄音後處理。滿意後按「存到錄音後處理」，才保存完整成品供後製及 A/B。試合可加伴樂，校正預設 300 ms；原始分段錄音保留。</p>
+          <p class="help">單段錄音保存在分段區，試合只供暫存試聽，兩者都不加入錄音後處理。滿意後按「存到錄音後處理」，才保存完整成品供後製及 A/B。試合可加伴樂，校正預設 400 ms；原始分段錄音保留。</p>
           <div class="segment-clear"><button id="segment-delete-song-takes" type="button" class="secondary" disabled>清除此歌曲的所有分段錄音</button><p id="segment-clear-result" class="status recording-action-result" role="status" hidden></p><p class="help">只刪除目前歌曲的各段錄音版本。段落分界、其他歌曲、整首錄音與錄音後處理中的已存成品都保留。</p></div>
           </details>
     </aside>
@@ -344,7 +344,7 @@
     <p id="post-status" class="status" role="status">請選擇一筆錄音。</p>
     <p id="post-info" class="help"></p><p id="recording-storage-status" class="help" role="status">連接本機錄音目錄中…</p>
     <div id="post-ab-editor" class="audition-slot-b" data-slot="b" aria-labelledby="post-ab-editor-heading">
-      <div class="ab-editor-heading"><div><h3 id="post-ab-editor-heading">正在調整 B 組</h3><p class="help">另存保留 A／B 各自設定。還原只重設目前組：原音、大廳殘響 20%、回聲 10%、音量 100%、校正 300 ms；剪輯保留。</p></div><div class="ab-editor-switch" role="group" aria-label="切換正在編輯的設定"><button id="post-audition-a-edit" class="audition-slot-a" type="button" aria-pressed="false" disabled>A 設定</button><button id="post-audition-b-edit" class="audition-slot-b" type="button" aria-pressed="true" disabled>B 設定</button><button id="post-audition-reset" class="secondary" type="button" disabled title="還原目前組別的系統預設音量、延時與效果；另一組、剪輯與已保存錄音保留">還原 B 預設設定</button></div></div>
+      <div class="ab-editor-heading"><div><h3 id="post-ab-editor-heading">正在調整 B 組</h3><p class="help">另存保留 A／B 各自設定。還原只重設目前組：原音、大廳殘響 20%、回聲 10%、音量 100%、校正回到這筆錄音當時的收音延遲；剪輯保留。</p></div><div class="ab-editor-switch" role="group" aria-label="切換正在編輯的設定"><button id="post-audition-a-edit" class="audition-slot-a" type="button" aria-pressed="false" disabled>A 設定</button><button id="post-audition-b-edit" class="audition-slot-b" type="button" aria-pressed="true" disabled>B 設定</button><button id="post-audition-reset" class="secondary" type="button" disabled title="還原目前組別的系統預設音量、延時與效果；另一組、剪輯與已保存錄音保留">還原 B 預設設定</button></div></div>
     <div class="recording-levels">
       <div><label for="post-voice-level">歌唱者音量 <output id="post-voice-value" for="post-voice-level">100%</output></label><input id="post-voice-level" type="range" min="0" max="200" step="5" value="100" disabled aria-describedby="post-volume-help"></div>
       <div><label for="post-backing-level">配樂／和音音量 <output id="post-backing-value" for="post-backing-level">100%</output></label><input id="post-backing-level" type="range" min="0" max="200" step="5" value="100" disabled aria-describedby="post-volume-help"></div>
@@ -436,7 +436,7 @@
       <summary><span class="step">04</span> 看節拍，調延遲 <span class="fold-caption">節拍燈 · 收音延遲 · 五音測試</span></summary>
       <div class="fold-body">
       <div class="timing-grid"><div><label for="bpm">手動節拍速度</label><div class="bpm-row"><input id="bpm" type="number" min="40" max="220" step="1" value="90"><span>BPM</span><button id="beat-toggle" class="secondary" type="button">啟動節拍燈</button></div><div id="beats" class="beats" aria-label="四拍節拍燈"><i></i><i></i><i></i><i></i></div><p id="beat-note" class="help">手動節拍燈；基準建立後，若能辨識節奏，改用自動估計拍點。</p></div>
-      <div><label for="offset">收音延遲 <output id="offset-value">300 ms</output></label><input id="offset" type="range" min="-500" max="1000" step="10" value="300"><div class="range-label"><span>−500 ms</span><span>+1000 ms</span></div><p class="help">預設＋300 ms：歌手聲音提前 300 ms 對齊，例如 10.300 秒的歌聲對照 10.000 秒的歌曲基準。即時評分和整首錄音的歌聲校正都用這個數字（也會記住），錄音後處理可再逐筆調整；不改變播放器。</p></div></div>
+      <div><label for="offset">收音延遲 <output id="offset-value">400 ms</output></label><input id="offset" type="range" min="-500" max="1000" step="10" value="400"><div class="range-label"><span>−500 ms</span><span>+1000 ms</span></div><p class="help">預設＋400 ms：歌手聲音提前 400 ms 對齊，例如 10.400 秒的歌聲對照 10.000 秒的歌曲基準。即時評分和整首錄音的歌聲校正都用這個數字（也會記住），錄音後處理可再逐筆調整；不改變播放器。</p></div></div>
       <details id="calibration-panel"><summary>Do Re Mi Fa Sol 五音延遲測試（選用）</summary>
         <p class="help">先開啟麥克風。測試會播放五個音，畫面同步提示；完成後可選擇套用建議值。</p>
         <label for="cal-mode">測試方式</label><select id="cal-mode"><option value="sing">跟著五音唱（包含人的反應時間）</option><option value="loopback">耳機／喇叭靠近麥克風（不用唱）</option></select>
@@ -472,7 +472,7 @@
     <label for="recording-mode">演唱錄音儲存</label><select id="recording-mode"><option value="voice">歌唱者</option><option value="mix" selected>歌唱者＋配樂／和音（預設）</option><option value="off">不保存錄音</option></select>
     <p class="help">新錄音使用同步無損 WAV，保留原始歌聲供後製，檔案會比壓縮錄音大；每輪最多 30 分鐘。</p>
     <p class="help">按「從頭開始唱且評分」，影片開始播放時同步錄音；停止收音、結束並結算或影片播完時保存。暫停／緩衝時暫停錄音。依已載入版本自動選軌：兩軌版本加入伴奏；四軌版本加入伴奏＋和音，不加入原唱主唱或全部人聲。超過音軌長度後只錄歌唱者。請戴耳機，避免原唱從喇叭漏入麥克風。</p>
-    <p class="help">錄音成品的歌聲校正使用「延遲校正」裡的收音延遲（預設＋300 ms）：停止錄音後歌聲往前移，配樂與和音不移動。原始歌聲保留，可在錄音後處理逐筆調整。</p>
+    <p class="help">錄音成品的歌聲校正使用「延遲校正」裡的收音延遲（預設＋400 ms）：停止錄音後歌聲往前移，配樂與和音不移動。原始歌聲保留，可在錄音後處理逐筆調整。</p>
     </details>
     <p class="footnote">暫停與緩衝不計分。漏唱與跳過的段落會降低分數；「整首歌曲」模式也會計入提前結束的剩餘段落。可在中途按「結束並結算」，或等影片播完自動結算。進拍分數依旋律起音估計，不是專業聲樂評鑑。</p>
     <details id="history-panel"><summary>分數紀錄 · 勾選清除</summary><label class="check-option"><input id="history-select-all" type="checkbox">全選</label><ul id="score-history" class="score-history"></ul><div class="button-row history-actions"><button id="delete-history-selected" class="secondary" type="button" disabled>清除勾選紀錄</button><button id="clear-history" class="secondary" type="button">全部清除</button></div><p id="history-status" class="help" role="status">只清除分數，不刪除演唱錄音或歌曲。</p></details>
