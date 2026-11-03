@@ -385,7 +385,7 @@ async function activateMic() {
     track.onmute = () => { $('mic-status').textContent = '收音暫時中斷，目前音高不可用。'; };
     track.onunmute = () => { $('mic-status').textContent = '收音已恢復。'; };
     context.onstatechange = () => { if (context?.state !== 'running') $('mic-status').textContent = '音訊處理暫停，請停止後重新開啟。'; };
-    $('mic-badge').textContent = '● 收音中'; $('mic-status').textContent = '持續唱「啊」試試。單獨測試麥克風不保存；按「從頭開始唱」依錄音選項保存。';
+    $('mic-badge').textContent = '● 收音中'; $('mic-status').textContent = '持續唱「啊」試試。單獨測試麥克風不保存；按「從頭開始唱且評分」依錄音選項保存。';
     voiceOutput.attach(stream,nativeCapture);
     micTimer = setInterval(readMic, 65); tracePlayback('mic-before-session'); singing.micStarted(); tracePlayback('mic-after-session');
     setTimeout(()=>{if(token===generation)tracePlayback('mic-after-1s');},1000); return true;

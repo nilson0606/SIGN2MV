@@ -91,14 +91,14 @@
       </div>
       <section id="score-section" class="player-session" tabindex="-1" aria-label="演唱控制與分數">
     <p id="result-title" class="score-title">尚未選定歌曲</p>
-    <div class="whole-guide-control"><label for="sing-guide-mode">演唱時帶唱</label><select id="sing-guide-mode"><option value="original" selected>原唱＋伴樂（預設）</option><option value="backing">只有伴樂／和音</option></select><p class="help">開始前選擇，按「從頭開始唱」套用。只有伴樂需已保存分離音軌；請戴耳機，避免原唱被麥克風收進錄音。</p></div>
+    <div class="whole-guide-control"><label for="sing-guide-mode">演唱時帶唱</label><select id="sing-guide-mode"><option value="original" selected>原唱＋伴樂（預設）</option><option value="backing">只有伴樂／和音</option></select><p class="help">開始前選擇，按「從頭開始唱且評分」套用。只有伴樂需已保存分離音軌；請戴耳機，避免原唱被麥克風收進錄音。</p></div>
     <details id="recording-balance" class="whole-guide-control"><summary>人聲／伴樂音量平衡 · 與分段錄音共用</summary>
       <label class="check-option"><input id="recording-manual" type="checkbox">手動設定比例＋自動微調</label>
       <p id="recording-balance-help" class="help">未勾選：自動平衡歌唱者與配樂／和音。勾選後使用你設定的音量，系統只做小幅修正。</p>
       <div class="recording-levels"><div><label for="recording-voice-level">歌唱者音量 <output id="recording-voice-value">70%</output></label><input id="recording-voice-level" type="range" min="0" max="200" value="70" disabled></div><div><label for="recording-backing-level">配樂／和音音量 <output id="recording-backing-value">30%</output></label><input id="recording-backing-level" type="range" min="0" max="200" value="30" disabled></div></div>
       <p id="recording-balance-status" class="help" role="status">自動平衡 · 平滑調整音量，低音量或未偵測到穩定歌聲時不自動增強麥克風。只影響錄音，不影響評分；每輪開始前設定。</p>
     </details>
-    <div class="button-row score-actions"><button id="sing-start" disabled type="button">從頭開始唱</button><button id="finish-song" disabled type="button" class="secondary">結束並結算</button></div>
+    <div class="button-row score-actions"><button id="sing-start" disabled type="button">從頭開始唱且評分</button><button id="finish-song" disabled type="button" class="secondary">結束並結算</button></div>
     <p id="recording-status" class="status" role="status">錄音停止後存入本機歌曲庫的「錄音」目錄；不會上傳雲端。</p>
     <div id="recording-rescue" hidden></div>
     <section id="recording-review" hidden aria-labelledby="recording-review-heading">
@@ -118,9 +118,9 @@
     <p id="score-status" class="status" role="status">準備歌曲並開啟麥克風後，按播放就開始評分。</p>
       </section>
       <section id="segment-section" class="segment-section" aria-labelledby="segment-heading">
-        <div class="section-top"><h3 id="segment-heading">分段錄音／補唱</h3><span id="segment-mode-label" class="badge">整首評分模式</span></div>
+        <div class="section-top"><h3 id="segment-heading">正式錄音（可以分段錄）</h3><span id="segment-mode-label" class="badge">整首評分模式</span></div>
         <div class="button-row"><button id="segment-open" type="button" class="secondary" disabled>開啟分段模式</button><button id="segment-whole" type="button" class="secondary" hidden>回整首評分</button></div>
-        <p class="help">「從頭開始唱」保留原本錄音與整首評分。分段模式可邊播放邊加分界，不寫入整首分數。</p>
+        <p class="help">「從頭開始唱且評分」保留原本錄音與整首評分。分段模式可邊播放邊加分界，不寫入整首分數。</p>
         <div id="segment-tools" hidden>
           <p id="segment-song" class="preview-source"></p>
           <div class="button-row"><button id="segment-merge-all" type="button" class="secondary">合併為一段</button></div>
@@ -147,7 +147,7 @@
     <aside id="segment-side" class="card segment-section" aria-labelledby="segment-side-heading" hidden>
           <div class="section-top"><h2 id="segment-side-heading">挑選版本與試合</h2><span class="badge">分段成品</span></div>
           <p id="segment-selected-summary" class="preview-source" aria-live="polite"></p>
-          <details id="segment-balance-panel"><summary>人聲／伴樂音量平衡 · 與從頭開始唱共用</summary>
+          <details id="segment-balance-panel"><summary>人聲／伴樂音量平衡 · 與從頭開始唱且評分共用</summary>
           <label class="check-option"><input id="segment-manual" type="checkbox">手動設定比例＋自動微調</label>
           <p id="segment-balance-help" class="help"></p>
           <div class="recording-levels"><div><label for="segment-voice-level">歌唱者音量 <output id="segment-voice-value">70%</output></label><input id="segment-voice-level" type="range" min="0" max="200" value="70" disabled></div><div><label for="segment-backing-level">配樂／和音音量 <output id="segment-backing-value">30%</output></label><input id="segment-backing-level" type="range" min="0" max="200" value="30" disabled></div></div>
@@ -429,7 +429,7 @@
     </details>
     <div class="button-row"><button id="post-audition-quick" type="button" class="secondary" disabled>片段試聽目前設定</button><button id="post-remix" type="button" disabled>重新合成（音量／延時／音色／剪輯）</button><button id="post-mp3" type="button" class="secondary" disabled>轉 MP3 並下載</button></div>
     <p class="help">重新合成會另存一筆，並保存獨立的原始歌聲與後製資料，可再次編輯或轉 MP3；原錄音保留。配樂／和音需歌曲庫中的同版本音軌。舊成品或單獨匯出的 WAV／MP3 若沒有原始歌聲及時間資料，無法直接分軌後製。選「不保存錄音」時不保留後處理資料。</p>
-    <details id="recordings-panel"><summary>整首演唱與已保存成品</summary><p class="help">此清單顯示整首演唱與明確保存的完整成品；分段錄音請在分段區挑選、試聽或刪除。停止錄音後自動保存於歌曲庫下的「錄音」目錄；Chrome 與 Edge 連到同一本機工具即可共用。既有瀏覽器錄音會自動搬存，成功確認後才清除舊副本；未搬存成功仍保留在瀏覽器。直接按 YouTube 播放只評分；要錄音請按「從頭開始唱」。</p><div class="button-row"><button id="recording-refresh" class="secondary" type="button">重新整理／搬存錄音</button><button id="recording-delete-all" class="secondary" type="button">刪除此清單錄音</button></div><audio id="recording-audio" controls hidden></audio><ul id="recording-list" class="library-list"></ul></details>
+    <details id="recordings-panel"><summary>整首演唱與已保存成品</summary><p class="help">此清單顯示整首演唱與明確保存的完整成品；分段錄音請在分段區挑選、試聽或刪除。停止錄音後自動保存於歌曲庫下的「錄音」目錄；Chrome 與 Edge 連到同一本機工具即可共用。既有瀏覽器錄音會自動搬存，成功確認後才清除舊副本；未搬存成功仍保留在瀏覽器。直接按 YouTube 播放只評分；要錄音請按「從頭開始唱且評分」。</p><div class="button-row"><button id="recording-refresh" class="secondary" type="button">重新整理／搬存錄音</button><button id="recording-delete-all" class="secondary" type="button">刪除此清單錄音</button></div><audio id="recording-audio" controls hidden></audio><ul id="recording-list" class="library-list"></ul></details>
   </section>
     <details id="timing-section" tabindex="-1" class="card timing-card section-fold">
       <summary><span class="step">04</span> 看節拍，調延遲 <span class="fold-caption">節拍燈 · 收音延遲 · 五音測試</span></summary>
@@ -472,7 +472,7 @@
     <details id="recording-settings" class="settings-fold" tabindex="-1"><summary>錄音設定 <span class="fold-caption">錄音內容</span></summary>
     <label for="recording-mode">演唱錄音儲存</label><select id="recording-mode"><option value="voice">歌唱者</option><option value="mix" selected>歌唱者＋配樂／和音（預設）</option><option value="off">不保存錄音</option></select>
     <p class="help">新錄音使用同步無損 WAV，保留原始歌聲供後製，檔案會比壓縮錄音大；每輪最多 30 分鐘。</p>
-    <p class="help">按「從頭開始唱」，影片開始播放時同步錄音；停止收音、結束並結算或影片播完時保存。暫停／緩衝時暫停錄音。依已載入版本自動選軌：兩軌版本加入伴奏；四軌版本加入伴奏＋和音，不加入原唱主唱或全部人聲。超過音軌長度後只錄歌唱者。請戴耳機，避免原唱從喇叭漏入麥克風。</p>
+    <p class="help">按「從頭開始唱且評分」，影片開始播放時同步錄音；停止收音、結束並結算或影片播完時保存。暫停／緩衝時暫停錄音。依已載入版本自動選軌：兩軌版本加入伴奏；四軌版本加入伴奏＋和音，不加入原唱主唱或全部人聲。超過音軌長度後只錄歌唱者。請戴耳機，避免原唱從喇叭漏入麥克風。</p>
     <p class="help">錄音成品的歌聲校正使用「延遲校正」裡的收音延遲（預設＋300 ms）：停止錄音後歌聲往前移，配樂與和音不移動。原始歌聲保留，可在錄音後處理逐筆調整。</p>
     </details>
     <p class="footnote">暫停與緩衝不計分。漏唱與跳過的段落會降低分數；「整首歌曲」模式也會計入提前結束的剩餘段落。可在中途按「結束並結算」，或等影片播完自動結算。進拍分數依旋律起音估計，不是專業聲樂評鑑。</p>

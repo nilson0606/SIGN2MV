@@ -152,7 +152,7 @@ if(segStatus)new MutationObserver(()=>{
 }).observe(segStatus,{childList:true,characterData:true,subtree:true});
 
 // ---- [SIGN2MV] 「測試原唱分數」: one whole-song take where the separated original vocal stands in for
-// the microphone. Everything after the input is the user's own path: 「從頭開始唱」, live pitch
+// the microphone. Everything after the input is the user's own path: 「從頭開始唱且評分」, live pitch
 // detection with the time compensation, scoring, the recording with its delay correction, the
 // score history. The vocal is played inside the recording's own audio context, placed on the
 // recording timeline (see followRecording), and never reaches the speakers.
@@ -211,7 +211,7 @@ rescoreButton.addEventListener('click',()=>{
 });
 rescoreControls();
 function workflow(){try{return JSON.parse($('player-section').dataset.workflow||'{}');}catch{return {};}}
-// the button follows 「從頭開始唱」 (same conditions) and is off while a test runs
+// the button follows 「從頭開始唱且評分」 (same conditions) and is off while a test runs
 function testControls(){testButton.disabled=originalTest.active||$('sing-start').disabled||!workflow().reference;testDelay.disabled=originalTest.active;}
 new MutationObserver(testControls).observe($('sing-start'),{attributes:true,attributeFilter:['disabled']});
 new MutationObserver(testControls).observe($('player-section'),{attributes:true,attributeFilter:['data-workflow']});
@@ -263,8 +263,8 @@ async function endOriginalTest(finished){
   const total=$('total-score').textContent.trim();
   Object.assign(originalTest,{active:false,ending:false,buffer:null,mic:null,segment:null});
   testSay(finished&&/^\d+$/.test(total)
-    ?`原唱測試完成（原唱延後 ${Math.round(originalTest.delay*1000)} ms）：總分 ${total}（音準 ${$('pitch-score').textContent}、節奏 ${$('rhythm-score').textContent}、完整度 ${$('coverage-score').textContent}）。錄音已保存並標成「原唱測試」；存到錄音後處理後按「錄音重新評分」，可看到套用歌聲延時校正後的分數。下次按「從頭開始唱」會改回你的麥克風。`
-    :'原唱測試沒有完成，下次按「從頭開始唱」會使用你的麥克風。');
+    ?`原唱測試完成（原唱延後 ${Math.round(originalTest.delay*1000)} ms）：總分 ${total}（音準 ${$('pitch-score').textContent}、節奏 ${$('rhythm-score').textContent}、完整度 ${$('coverage-score').textContent}）。錄音已保存並標成「原唱測試」；存到錄音後處理後按「錄音重新評分」，可看到套用歌聲延時校正後的分數。下次按「從頭開始唱且評分」會改回你的麥克風。`
+    :'原唱測試沒有完成，下次按「從頭開始唱且評分」會使用你的麥克風。');
   testControls();
 }
 testButton.addEventListener('click',async()=>{
@@ -282,7 +282,7 @@ testButton.addEventListener('click',async()=>{
     if(!r.ok)throw Error('這首歌沒有保留原唱人聲音軌，請先在「歌曲準備」按「補建試聽音軌」。');
     ctx=new AudioContext({latencyHint:'interactive',sinkId:{type:'none'}});   // only to decode; the buffer is played in the recording context
     const buffer=await ctx.decodeAudioData(await r.arrayBuffer());await ctx.close().catch(()=>{});ctx=null;
-    // a microphone that is already open is closed first, so 「從頭開始唱」 opens this one
+    // a microphone that is already open is closed first, so 「從頭開始唱且評分」 opens this one
     if(!$('mic-stop').disabled){$('mic-stop').click();if(!await waitFor(()=>$('mic-stop').disabled,5000))throw Error('麥克風沒有關閉，請先按「停止收音」再試。');}
     Object.assign(originalTest,{active:true,cacheId,seen:false,ending:false,began:Date.now(),buffer,mic:null,segment:null,
       source:null,resyncs:0,captureMode:$('capture-mode').value,delay:Math.max(0,Math.min(1000,+testDelay.value||0))/1000});

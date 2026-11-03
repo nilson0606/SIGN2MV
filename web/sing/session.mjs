@@ -25,7 +25,7 @@ export async function seekPlayerToStart(player, cancelled = () => false, timeout
     if (requested && player.getCurrentTime() <= .05) return;
     await new Promise(resolve => setTimeout(resolve, 50));
   }
-  throw new Error('播放器尚未確認回到開頭，請重試「從頭開始唱」。');
+  throw new Error('播放器尚未確認回到開頭，請重試「從頭開始唱且評分」。');
 }
 
 export function createKaraokeSession(options) {
@@ -380,7 +380,7 @@ export function createKaraokeSession(options) {
             $('pitch-method').value = reference.pitchMethod;
             $('separation-method').value = reference.separationMethod;
             controls(); $('prepare-status').textContent = `已就緒：${reference.title} · ${modelName(reference.separationModel)} · ${methodName(reference.separationMethod)} · ${reference.pitchMethod.toUpperCase()} 音高。`;
-            message('這首歌已載入，可直接試聽或按「從頭開始唱」。'); return;
+            message('這首歌已載入，可直接試聽或按「從頭開始唱且評分」。'); return;
           }
           selectMediaSource(song.videoId,document,undefined,song.pitchShift||0);
           $('separation-model').value = song.separationModel || 'demucs';
@@ -474,9 +474,9 @@ export function createKaraokeSession(options) {
     await options.stopMic();
     take.clear(); take = null; rangeComplete = false;
     $('live-feedback').textContent = '本輪已結束，歌曲已保留'; $('target-note').textContent = '—';
-    $('prepare-status').textContent = `已就緒：${reference.title} · 基準已保留，直接按「從頭開始唱」即可再唱。`;
+    $('prepare-status').textContent = `已就緒：${reference.title} · 基準已保留，直接按「從頭開始唱且評分」即可再唱。`;
     phase = 'result'; $('mic-start').disabled = false;
-    message(result.score === null ? '這段沒有可評分的原唱人聲（休息或已遮罩），未保存分數。歌曲已保留，可直接重新開始。' : saved ? '已結算，分數紀錄已保存；錄音結果請看錄音狀態。歌曲已保留，可直接按「從頭開始唱」。' : '已結算，但瀏覽器不允許儲存紀錄；分數仍顯示在這裡。');
+    message(result.score === null ? '這段沒有可評分的原唱人聲（休息或已遮罩），未保存分數。歌曲已保留，可直接重新開始。' : saved ? '已結算，分數紀錄已保存；錄音結果請看錄音狀態。歌曲已保留，可直接按「從頭開始唱且評分」。' : '已結算，但瀏覽器不允許儲存紀錄；分數仍顯示在這裡。');
     renderHistory(); controls(); rescoreChanged();
   }
   function renderPreparation(state) {
@@ -526,7 +526,7 @@ export function createKaraokeSession(options) {
           options.stopBeats(); $('bpm').value = reference.bpm; $('bpm').disabled = true; $('beat-toggle').disabled = true;
           $('beat-note').textContent = `自動估計約 ${reference.bpm} BPM；播放時顯示拍點，可能出現半速／倍速誤差。`;
         }
-        message('基準就緒。開啟麥克風後，按「從頭開始唱」或影片播放按鈕。'); controls();
+        message('基準就緒。開啟麥克風後，按「從頭開始唱且評分」或影片播放按鈕。'); controls();
         if (options.player()?.getPlayerState?.() === 1) playerState(1);
         refreshLibrary().catch(() => {});
         return;
@@ -591,7 +591,7 @@ export function createKaraokeSession(options) {
     phase = 'restarting'; message(options.micReady() ? '正在同步影片到 0 秒…' : '正在開啟麥克風，請允許瀏覽器的收音授權…'); controls();
     try {
       if (!options.micReady()) await options.startMic();
-      if (request !== restartToken || !reference || !options.micReady()) { if (request === restartToken) { phase = take ? 'paused' : 'ready'; message('未開始演唱：麥克風尚未就緒，請查看「收音」區的狀態，再按「從頭開始唱」。'); controls(); } return; }
+      if (request !== restartToken || !reference || !options.micReady()) { if (request === restartToken) { phase = take ? 'paused' : 'ready'; message('未開始演唱：麥克風尚未就緒，請查看「收音」區的狀態，再按「從頭開始唱且評分」。'); controls(); } return; }
       await recording.prepare(reference, async stem => {
         const response = await fetch(BASE + `/library/${reference.cacheId}/${stem}`, {headers: {'X-Karaoke-Token':token}, credentials:'omit', cache:'no-store', signal:AbortSignal.timeout(30000)});
         if (!response.ok) throw new Error('無法取得錄音所需的配樂／和音，請補建試聽音軌或改選歌唱者。');
@@ -632,12 +632,12 @@ export function createKaraokeSession(options) {
     if (state === 1) { stopPreview(); options.cancelCalibration?.(); }
     if (!reference || ['finishing','result','restarting'].includes(phase)) return;
     if (state === 1 && options.micReady() && phase !== 'preparing' && phase !== 'result') {
-      if (!take && options.player()?.getCurrentTime?.() >= reference.duration) { message('目前播放位置超出分析範圍，請按「從頭開始唱」。'); controls(); return; }
+      if (!take && options.player()?.getCurrentTime?.() >= reference.duration) { message('目前播放位置超出分析範圍，請按「從頭開始唱且評分」。'); controls(); return; }
       if (!take) { take = new ScoringTake(reference, { allowOctave: $('pitch-mode').value === 'octave', rangeMode: $('score-range').value, difficulty: $('score-difficulty').value }); showTakeDifficulty(); take.begin(options.player()?.getCurrentTime?.() || 0); $('total-score').textContent = '…'; startRmvpe(); }
       take.advance(options.player()?.getCurrentTime?.() || 0); phase = 'singing'; message('演唱中。跳過的段落會計入漏唱，重播不會重複加分。');
     } else if ([2, 3, -1].includes(state) && take) { if (phase === 'singing' && options.micReady()) take.advance(options.player()?.getCurrentTime?.() || 0); phase = 'paused'; message(state === 3 ? '影片緩衝中，評分暫停。' : '播放已暫停，評分同步暫停。'); }
     else if (state === 0 && take && options.micReady()) { take.advance(options.player()?.getCurrentTime?.() || 0); finish(); }
-    else if (state === 1 && !options.micReady()) message('影片可以播放，但麥克風尚未開啟。請先開啟收音，再從頭開始唱。');
+    else if (state === 1 && !options.micReady()) message('影片可以播放，但麥克風尚未開啟。請先開啟收音，再按「從頭開始唱且評分」。');
     controls();
   }
   function sample(time, hz) {
@@ -702,11 +702,11 @@ export function createKaraokeSession(options) {
       const interruptedRestart = phase === 'restarting';
       if (interruptedRestart) { restartToken++; phase = take ? 'paused' : 'ready'; message(`未開始演唱：${reason}${take ? ' 上次演唱資料已保留，可先結算。' : ''}`); }
       if (phase === 'singing') { take?.advance(options.player()?.getCurrentTime?.() || 0); phase = 'paused'; options.player()?.pauseVideo?.(); }
-      if (take && phase === 'paused' && !interruptedRestart) message('收音已停止，本次演唱資料已保留。可按「結束並結算」，或「從頭開始唱」重新計分。');
+      if (take && phase === 'paused' && !interruptedRestart) message('收音已停止，本次演唱資料已保留。可按「結束並結算」，或「從頭開始唱且評分」重新計分。');
       if (rewind && options.player()?.seekTo && !['preparing','finishing','result'].includes(phase)) {
         const request = ++restartToken;
         seekPlayerToStart(options.player(), () => request !== restartToken).then(() => {
-          if (request === restartToken && take) message('收音已停止，播放器已回到 0 秒。可結算本次演唱，或按「從頭開始唱」重新計分。');
+          if (request === restartToken && take) message('收音已停止，播放器已回到 0 秒。可結算本次演唱，或按「從頭開始唱且評分」重新計分。');
         }).catch(error => { if (request === restartToken) message(error.message + ' 本次演唱資料仍保留，可先結算。'); });
       }
       controls();

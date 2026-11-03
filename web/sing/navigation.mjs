@@ -110,7 +110,7 @@ function updateGuide() {
   if (!settingsConfirmed) {
     showStep(5,'演唱設定','確認帶唱方式、人聲／伴樂比例；沿用上次設定也可以。',s.segmented?'segment-guide-mode':'sing-guide-mode','player-section','設定已確認',()=>{settingsConfirmed=true;updateGuide();});return;
   }
-  showStep(6,'開始錄唱',s.segmented?'選好段落，按「錄這一段」。循環練唱不會錄音。':'按「從頭開始唱」開始整首錄音；也可切換分段模式。',s.segmented?'segment-record':'sing-start','player-section');
+  showStep(6,'開始錄唱',s.segmented?'選好段落，按「錄這一段」。循環練唱不會錄音。':'按「從頭開始唱且評分」開始整首錄音；也可切換分段模式。',s.segmented?'segment-record':'sing-start','player-section');
 }
 function scheduleGuide() {if (!guideFrame) guideFrame=requestAnimationFrame(updateGuide);}
 $('workflow-confirm').addEventListener('click',()=>confirmAction?.());

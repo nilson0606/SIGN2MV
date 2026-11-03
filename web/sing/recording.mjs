@@ -262,7 +262,7 @@ export function createSingerRecorder(options) {
     try{await stop();options.pausePlayer();clearPreview();post.clearAudio();const rows=(await store.list()).filter(isPostRecording);let deleted=0;for(const row of rows){await store.delete(row.id);status(`正在清除後處理錄音：${++deleted}／${rows.length} 筆…`);}await render();status(`已刪除 ${rows.length} 筆錄音及其後處理資料；待確認錄音與分段素材保留。`);}catch(error){status('未全部刪除：'+error.message);}finally{button.disabled=false;}
   });
   $('recording-refresh').addEventListener('click',()=>render().catch(error=>status(error.message)));
-  $('recording-mode').addEventListener('change',()=>{ controls(); try { localStorage.setItem('karaoke.recording-mode.v1',$('recording-mode').value); } catch {} status($('recording-mode').value === 'off' ? '不保存錄音；從頭開始唱只收音評分。' : '按「從頭開始唱」後自動錄製；停止收音、結算或播完時保存。'); });
+  $('recording-mode').addEventListener('change',()=>{ controls(); try { localStorage.setItem('karaoke.recording-mode.v1',$('recording-mode').value); } catch {} status($('recording-mode').value === 'off' ? '不保存錄音；「從頭開始唱且評分」只評分不錄音。' : '按「從頭開始唱且評分」後自動錄製；停止收音、結算或播完時保存。'); });
   for(const id of ['recording-manual','recording-voice-level','recording-backing-level']) $(id).addEventListener('input',()=>{
     setBalanceSettings(balanceSettings());
     $('recording-balance-status').textContent = $('recording-manual').checked ? '下一輪使用手動比例＋自動微調；只影響錄音。' : '下一輪使用自動平衡；只影響錄音。';
