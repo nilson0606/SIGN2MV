@@ -15,6 +15,7 @@ Everything runs locally; nothing is uploaded.
 
 1. **Code → Download ZIP** on this page, then extract it to a folder whose path has only English letters
    and digits, e.g. `D:\SIGN2MV` (rename `SIGN2MV-main`). Nothing needs to be installed first.
+   Double-click `MANUAL.html` in that folder to read the full manual before installing.
 2. Double-click `install.bat`. It downloads Python, the AI programs and models (about 10 GB the first
    time) into the folder; run it again if it stops. If Windows shows *Windows protected your PC*, press
    *More info* → *Run anyway*.
@@ -28,7 +29,8 @@ own voice or import one you have the right to use.
 Everything (Python, models, caches, temp files) is installed inside the folder, not on C:.
 
 The full manual, with a step-by-step getting-started chapter, is in `web/manual/` (English master,
-Traditional Chinese translation) and opens from **Manual ↗** in the app. Problems and questions:
+Traditional Chinese translation). Open it with `MANUAL.html` in the folder, even before installing, or
+with **Manual ↗** in the app. Problems and questions:
 [GitHub Issues](https://github.com/nilson0606/SIGN2MV/issues).
 
 ## Requirements and limits

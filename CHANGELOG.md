@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Docs: `MANUAL.html` next to `install.bat` opens the manual in the browser's language (Chinese or English,
+  with links to both), so the manual can be read right after extracting the ZIP, before installing.
 - Sing & record: the RMVPE scoring worker is stopped when one piece gets no answer within 120 s (the page
   has given up by then). Before, a worker that stopped answering kept the lock: every later scoring
   request waited behind it and the idle clean-up never ran, until SIGN2MV was closed. The next piece now

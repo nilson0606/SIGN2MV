@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIGN2MV 操作手冊 / Manual</title>
+<style>
+:root { --bg:#0f1317; --panel:#1b232b; --text:#dbe6ee; --muted:#8a9aa8; --accent:#3dd9f5; }
+body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--text);
+       font:16px/1.6 "Segoe UI","Microsoft JhengHei",system-ui,sans-serif; }
+main { background:var(--panel); border-radius:10px; padding:24px 28px; margin:16px; max-width:520px; }
+h1 { margin:0 0 .4em; letter-spacing:.08em; } h1 span { color:var(--accent); }
+a { display:block; margin:.5em 0; font-size:1.1em; color:var(--accent); }
+p { color:var(--muted); margin:.4em 0 0; }
+</style>
+</head>
+<body>
+<main>
+<h1>SIGN<span>2</span>MV</h1>
+<!-- Opens the manual in web/manual (the same file the program opens); nothing needs to be installed. -->
+<a href="web/manual/manual.zh-TW.html">繁體中文操作手冊</a>
+<a href="web/manual/manual.en.html">English manual</a>
+<p>第一次使用請從手冊的「2. 新手入門」開始。<br>New here? Start with “2. Getting started”.</p>
+</main>
+<script>
+// follow the browser language; the links above stay for choosing the other one
+(function () {
+  var lang = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+  location.replace(/^zh/i.test(lang) ? 'web/manual/manual.zh-TW.html' : 'web/manual/manual.en.html');
+})();
+</script>
+</body>
+</html>

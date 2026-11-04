@@ -15,6 +15,7 @@
 
 1. 在本頁按綠色的 **Code → Download ZIP**，解壓縮到路徑只有英文和數字的資料夾，例如 `D:\SIGN2MV`
    （把 `SIGN2MV-main` 改名）。電腦不需要先裝任何東西。
+   解壓縮後雙擊資料夾裡的 `MANUAL.html`，安裝前就能先看完整手冊。
 2. 雙擊 `install.bat`。它會把 Python、AI 程式和模型下載到這個資料夾裡（第一次約 10 GB）；中斷了就再執行一次。
    如果 Windows 跳出「Windows 已保護您的電腦」，按「其他資訊」→「仍要執行」。
 3. 雙擊 `start.bat`，程式會用獨立視窗開在 `http://127.0.0.1:9700`。
@@ -24,8 +25,8 @@
 
 Python、模型、快取、暫存檔全部裝在這個資料夾裡，不會裝到 C 槽。
 
-完整手冊（含一步一步的新手入門）在 `web/manual/`（英文為主版本，另有繁體中文翻譯），程式上方的
-**操作手冊 ↗** 就能打開。有問題請到 [GitHub Issues](https://github.com/nilson0606/SIGN2MV/issues) 回報。
+完整手冊（含一步一步的新手入門）在 `web/manual/`（英文為主版本，另有繁體中文翻譯）。還沒安裝時雙擊資料夾裡的
+`MANUAL.html` 打開，裝好後按程式上方的 **操作手冊 ↗** 也能打開。有問題請到 [GitHub Issues](https://github.com/nilson0606/SIGN2MV/issues) 回報。
 
 ## 系統需求與限制
 
