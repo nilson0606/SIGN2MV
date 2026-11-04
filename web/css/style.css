@@ -203,6 +203,11 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .cv-field > .muted { grid-column: 2; }
 .cv-label { color: var(--muted); }
 .cv-field select { max-width: 100%; }
+.cv-file-list { margin: 0; padding-left: 1.2em; }
+.cv-file-list:empty { display: none; }
+/* training files: after an upload the box is cleared for adding more; hide its "no file chosen" text, keep the button */
+input[type=file].has-files { font-size: 0; }
+input[type=file].has-files::file-selector-button { font-size: 13.3333px; }   /* the browser default for the box */
 @media (max-width: 560px) { .cv-field { grid-template-columns: 1fr; } .cv-field > .muted { grid-column: 1; } }
 .cv-details { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
 .cv-details > summary { cursor: pointer; color: var(--accent); }

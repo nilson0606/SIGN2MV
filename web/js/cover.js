@@ -1293,6 +1293,11 @@ function sectionModels() {
 const trName = el('input', { type: 'text', value: 'My_Voice_Ver1', placeholder: 'My_Voice_Ver1', style: 'width:180px' });
 const trFiles = el('input', { type: 'file', multiple: true, accept: 'audio/*,video/*' });
 const trFileInfo = el('span', { class: 'muted small' });
+const trFileList = el('ul', { class: 'muted small cv-file-list' });   // the uploaded files by name; the file box itself is cleared after each upload
+function showTrainFiles(files) {
+  trFileList.replaceChildren(...(files || []).map((f) => el('li', {}, `${f.name.replace(/^\d{3}_/, '')} · ${fmtBytes(f.size)}`)));
+  trFiles.classList.toggle('has-files', !!(files && files.length));   // hide the browser's own 「沒有選擇檔案」 once files are in
+}
 const trPaths = el('textarea', { placeholder: 'D:\\recordings\\my_voice', style: 'min-height:54px' });
 const trEpochs = el('input', { type: 'number', value: 100, min: 1, max: 2000, style: 'width:90px' });
 const trBatch = el('select', {}, ...[4, 8, 16].map((b) => el('option', { value: b, selected: b === 8 }, String(b))));
@@ -1343,6 +1348,7 @@ trFiles.addEventListener('change', async () => {
     const res = await api.upload('/api/cover/train/files', fd);
     trToken = res.token;
     trFileInfo.textContent = t('cover.train_files_n', res.files.length, fmtBytes(res.files.reduce((a, f) => a + f.size, 0)));
+    showTrainFiles(res.files);
   } catch (err) { trFileInfo.textContent = ''; toast(errorText(err), true); }
   trFiles.value = '';
 });
@@ -1364,7 +1370,7 @@ async function followTraining(job, name) {
   delete trName.dataset.training;
   await loadStatus();
   if (fin.status === 'succeeded') {
-    toast(t('cover.train_done', name)); trToken = ''; trFileInfo.textContent = '';
+    toast(t('cover.train_done', name)); trToken = ''; trFileInfo.textContent = ''; showTrainFiles([]);
     showLoss(name);
     useEpoch(name, 0);   // the new model is selected for the next cover
   }
@@ -1391,7 +1397,7 @@ function sectionTrain() {
   return foldPanel('train', t('cover.train'), null,
     el('p', { class: 'muted small' }, t('cover.train_hint')),
     field(t('cover.train_name'), trName, t('cover.train_name_hint')),
-    field(t('cover.train_files'), el('span', { class: 'row' }, trFiles, trFileInfo)),
+    (() => { const f = field(t('cover.train_files'), el('span', { class: 'row' }, trFiles, trFileInfo)); f.append(trFileList); return f; })(),
     field(t('cover.train_paths'), trPaths),
     el('div', { class: 'row' }, el('button', { class: 'btn small', onclick: async () => {
       if (!songId) { toast(t('cover.pick_song'), true); return; }
