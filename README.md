@@ -13,7 +13,8 @@ Everything runs locally; nothing is uploaded.
 
 ## Quick start (Windows 10/11)
 
-1. **Code → Download ZIP** on this page, then extract it to a folder whose path has only English letters
+1. **Code → Download ZIP** on this page. Before extracting, right-click the ZIP → *Properties*; if there is an
+   *Unblock* box at the bottom, tick it and press *OK*. Then extract it to a folder whose path has only English letters
    and digits, e.g. `D:\SIGN2MV` (rename `SIGN2MV-main`). Nothing needs to be installed first.
    Double-click `MANUAL.html` in that folder to read the full manual before installing.
 2. Double-click `install.bat`. It downloads Python, the AI programs and models (about 10 GB the first
