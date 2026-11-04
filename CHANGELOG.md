@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- MV, render lock follow-up (outside review of the previous change, Gemini): the project tabs at the top left can no
+  longer be clicked during a render (they switched project, and the finished MV then showed on the wrong project).
+  After a reload, the end of a render is taken from the job queue: success, failure (with the error), cancel,
+  time-out, or 「渲染已中斷（伺服器已重新啟動）」; it used to report 「✔ 已結束」 at 100% in some of these cases. A
+  refresh held during the render no longer switches the player back to a single frame when the MV finishes.
+  Reloading during a render no longer shows the 「完成前不會切換專案」 note when 「製作 MV」 was not pressed. A
+  render request that breaks (server unreachable) now stops the progress polling.
 - MV: the page stays locked for the whole render. Reloading it (F5) during a render used to unlock every button
   while the render went on, so Whisper could be started and the render dropped off the page's progress and stop
   button (outside review, Gemini P5). The page now asks the server when it opens: a running render locks it

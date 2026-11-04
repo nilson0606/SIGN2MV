@@ -439,6 +439,7 @@
     body.rendering-in-progress select,
     body.rendering-in-progress textarea,
     body.rendering-in-progress .scene-card,
+    body.rendering-in-progress .proj-tab,
     body.rendering-in-progress .audio-deck {
       pointer-events: none !important;
       opacity: 0.42 !important;
@@ -1503,7 +1504,8 @@
           }
           updateProjSelectionUI();
         });
-        tab.addEventListener('click', () => loadProject(p.slug));
+        // [SIGN2MV] the tabs are divs, which the render lock does not disable: no switching during a render
+        tab.addEventListener('click', () => { if (!isRenderingInProgress) loadProject(p.slug); });
         wrap.appendChild(tab);
       });
       updateProjSelectionUI();
@@ -3735,6 +3737,8 @@
         if (e.name === 'AbortError') {
           showToast('⏹️ 渲染已中止', true);
         } else {
+          // [SIGN2MV] the progress polling (every 250 ms) and its button used to stay on after this
+          stopProgressPolling('❌ 渲染連線中斷', e.message, false);
           showToast('渲染發生錯誤：' + e.message, true);
         }
       } finally {
@@ -3754,6 +3758,7 @@
       if (p.slug && p.slug !== currentSlug && allProjects.some(x => x.slug === p.slug)) await loadProject(p.slug);
       const btn = document.getElementById('btnRenderMV');
       if (btn) btn.textContent = '⏳ NVENC 1080p 60fps 渲染中...';
+      const jobId = p.job_id || '';
       setRenderingUiLocked(true);
       startProgressPolling('🎬 MV 渲染中（重新整理之前就開始的渲染）…');
       const watch = setInterval(async () => {
@@ -3762,12 +3767,24 @@
         if (q && q.active && q.task_type === 'render') return;
         clearInterval(watch);
         if (btn) btn.textContent = '🎬 啟動 1080p 60fps NVENC 極速渲染';
-        if (isRenderingInProgress) {   // not stopped with the stop button meanwhile
-          const ended = q && q.task_type === 'render' && q.stage ? q.stage : '✔ MV 渲染已結束';
-          stopProgressPolling(ended, (q && q.detail) || '', ended.startsWith('🎉') || ended.startsWith('✔'));
-          setRenderingUiLocked(false);
+        const stopped = !isRenderingInProgress;   // stopped with the stop button meanwhile (already unlocked)
+        let ok = false;
+        if (!stopped) {
+          // how this job ended, from the job queue; no such job = the server was restarted meanwhile
+          const job = q && q.last_job && q.last_job.id === jobId ? q.last_job : null;
+          let title = '⚠️ 渲染已中斷（伺服器已重新啟動）', detail = '';
+          if (job && job.status === 'succeeded') { title = '🎉 MV 渲染完成'; ok = true; }
+          else if (job && job.status === 'cancelled') title = '⏹️ 已取消 MV 合成';
+          else if (job && job.status === 'timeout') title = '⏱️ MV 渲染逾時';
+          else if (job) { title = '❌ MV 合成失敗'; detail = job.error || ''; }
+          document.getElementById('progDetailText').textContent = detail;   // not the start's 「正在連線…」
+          stopProgressPolling(title, detail, ok);
         }
-        if (currentSlug) await loadProject(currentSlug);
+        // one reload: the refresh held during the render (it reloads the project too) or the project itself
+        const held = typeof sign2mvTakeHeldRefresh === 'function' && sign2mvTakeHeldRefresh();
+        if (!stopped) setRenderingUiLocked(false);
+        if (held) await initStudio(); else if (currentSlug) await loadProject(currentSlug);
+        if (ok && currentProject && currentProject.output_mv) switchPreviewMode('video');
       }, 1000);
     }
 

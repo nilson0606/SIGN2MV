@@ -191,13 +191,21 @@ def router(ctx: Context) -> APIRouter:
                 stage = f"⏳ 排隊中：GPU 正在處理其他工作（第 {job.get('position') or 1} 個）"
                 return {"active": True, "task_type": current["kind"], "percent": 0, "stage": stage,
                         "detail": "可以到「工作佇列」查看", "started_at": started,
-                        "elapsed_sec": round(time.time() - current["started"], 1), "slug": current["slug"]}
+                        "elapsed_sec": round(time.time() - current["started"], 1), "slug": current["slug"],
+                        "job_id": job["id"]}
             return {"active": True, "task_type": current["kind"], "percent": int(job.get("percent") or 0),
                     "stage": job.get("stage") or "處理中…", "detail": job.get("message") or "",
-                    "started_at": started, "elapsed_sec": round(time.time() - started, 1), "slug": current["slug"]}
+                    "started_at": started, "elapsed_sec": round(time.time() - started, 1), "slug": current["slug"],
+                    "job_id": job["id"]}
         if local_progress["active"] and local_progress["started_at"] > 0:
             local_progress["elapsed_sec"] = round(time.time() - local_progress["started_at"], 1)
-        return local_progress
+        # [SIGN2MV] how the last MV job ended, straight from the job queue: local_progress is written by the
+        # request that started the job, a moment later (or not at all when the page was reloaded meanwhile)
+        last = ctx.jobs.get(current["job"]) if current["job"] else None
+        last_job = ({"id": last["id"], "kind": current["kind"], "status": last["status"], "slug": current["slug"],
+                     "error": last.get("error_message") or last.get("error_code") or ""}
+                    if last and last["status"] not in ("queued", "running") else None)
+        return {**local_progress, "last_job": last_job}
 
     @r.post("/api/mv/cancel_task")
     def api_cancel_task():

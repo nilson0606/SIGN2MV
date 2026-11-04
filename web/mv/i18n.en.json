@@ -599,7 +599,10 @@
   "尚未渲染成品 MV": "No finished MV yet",
   "⏳ MV 正在渲染，完成前不會切換專案。渲染完成後請再按一次「製作 MV」。": "⏳ An MV is rendering; the project will not switch until it ends. Press the MV button again after the render.",
   "🎬 MV 渲染中（重新整理之前就開始的渲染）…": "🎬 Rendering the MV (a render started before the page was reloaded)…",
-  "✔ MV 渲染已結束": "✔ The MV render has ended"
+  "❌ 渲染連線中斷": "❌ Render connection lost",
+  "⚠️ 渲染已中斷（伺服器已重新啟動）": "⚠️ Render interrupted (the server was restarted)",
+  "🎉 MV 渲染完成": "🎉 MV render finished",
+  "⏱️ MV 渲染逾時": "⏱️ MV render timed out"
  },
  "patterns": [
   {

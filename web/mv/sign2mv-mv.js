@@ -113,10 +113,21 @@ let sign2mvRefreshAfterRender = false;
 function sign2mvRendering() {
   return typeof isRenderingInProgress !== 'undefined' && isRenderingInProgress;
 }
+// the refresh reloads the project, which ends on a single frame: keep showing the MV that just finished
 function sign2mvAfterRender() {
   if (!sign2mvRefreshAfterRender) return;
   sign2mvRefreshAfterRender = false;
-  initStudio();
+  const vid = document.getElementById('mvVideoPlayer');
+  const watching = !!(vid && vid.style.display !== 'none' && vid.getAttribute('src'));
+  initStudio().then(() => {
+    if (watching && currentProject && currentProject.output_mv) switchPreviewMode('video');
+  });
+}
+// resumeRunningRender reloads once itself: it takes the held refresh instead of letting the unlock run it
+function sign2mvTakeHeldRefresh() {
+  const held = sign2mvRefreshAfterRender;
+  sign2mvRefreshAfterRender = false;
+  return held;
 }
 
 window.addEventListener('message', (event) => {
@@ -124,7 +135,7 @@ window.addEventListener('message', (event) => {
   const m = event.data || {};
   if (m.type === 'sign2mv:mv-open' && typeof m.songId === 'string') {
     if (sign2mvRendering()) {
-      showToast('⏳ MV 正在渲染，完成前不會切換專案。渲染完成後請再按一次「製作 MV」。', true);
+      if (m.explicit !== false) showToast('⏳ MV 正在渲染，完成前不會切換專案。渲染完成後請再按一次「製作 MV」。', true);
       return;
     }
     sign2mvOpenForSong(m.songId, m.renderId || '', m.explicit !== false).catch(e => showToast(`❌ ${e.message}`, true));
