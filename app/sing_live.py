@@ -17,6 +17,10 @@ from .proc import ManagedProcess
 
 IDLE_S = 5 * 60   # release the graphics card soon after singing (covers and separation need it)
 LOAD_TIMEOUT_S = 180
+# [SIGN2MV] longest wait for one piece: the page gives up after 30 s (live) or 120 s (a saved take), so a
+# worker that has not answered by then is stuck. It is stopped, which ends the blocked write / readline and
+# frees the lock; the next piece starts a new worker (an outside review, Gemini P2).
+PIECE_TIMEOUT_S = 120
 
 
 class LivePitch:
@@ -110,6 +114,10 @@ class LivePitch:
             seq = self._seq
             self._last_used = time.monotonic()
             req = {"id": seq, "rate": rate, "pcm": base64.b64encode(pcm).decode("ascii")}
+            stuck = threading.Event()
+            watchdog = threading.Timer(PIECE_TIMEOUT_S, self._stop_stuck, args=(proc, stuck))
+            watchdog.daemon = True
+            watchdog.start()
             try:
                 proc.popen.stdin.write((json.dumps(req) + "\n").encode("utf-8"))
                 proc.popen.stdin.flush()
@@ -117,11 +125,21 @@ class LivePitch:
                     line = proc.popen.stdout.readline()
                     if not line:
                         self.stop()
-                        return {"error": "live_pitch_stopped"}
+                        return {"error": "live_pitch_timeout" if stuck.is_set() else "live_pitch_stopped"}
                     msg = json.loads(line.decode("utf-8", "replace"))
                     if msg.get("id") == seq:
                         self._last_used = time.monotonic()
                         return msg
             except (OSError, ValueError) as exc:
                 self.stop()
-                return {"error": f"live_pitch_failed: {exc}"}
+                return {"error": "live_pitch_timeout" if stuck.is_set() else f"live_pitch_failed: {exc}"}
+            finally:
+                watchdog.cancel()
+
+    def _stop_stuck(self, proc: ManagedProcess, stuck: threading.Event) -> None:
+        """A piece got no answer within PIECE_TIMEOUT_S: stop that worker (only if it is still the current one)."""
+        with self._state_lock:
+            if proc is not self._proc:
+                return
+        stuck.set()
+        self.stop()

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Sing & record: the RMVPE scoring worker is stopped when one piece gets no answer within 120 s (the page
+  has given up by then). Before, a worker that stopped answering kept the lock: every later scoring
+  request waited behind it and the idle clean-up never ran, until SIGN2MV was closed. The next piece now
+  starts a new worker. Found by an outside review (Gemini, P2); no such hang had been seen.
 - MV: photos 37 to 99 are counted again when lyrics are pasted and when a render builds its own timeline.
   The photo count still stopped at the old limit of 36 (`count_existing_scene_images`), so a project with
   more photos was treated as having 36 there. Found by an outside review (Gemini, P1).
