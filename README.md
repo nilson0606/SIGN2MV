@@ -1,5 +1,7 @@
 # SIGN2MV
 
+[中文說明](README.zh-TW.md)
+
 Sing & record, AI cover and lyric music videos in one local Windows program.
 
 - **Library** — import a song once (YouTube or file); separated stems are cached and shared.
@@ -9,16 +11,25 @@ Sing & record, AI cover and lyric music videos in one local Windows program.
 
 Everything runs locally; nothing is uploaded.
 
-## Install and start (Windows 10/11)
+## Quick start (Windows 10/11)
 
-1. Put the folder where it should live, e.g. `D:\AI_SIGN2MV`.
-2. Double-click `install.bat` (about 10 GB of downloads the first time; run it again if it stops).
+1. **Code → Download ZIP** on this page, then extract it to a folder whose path has only English letters
+   and digits, e.g. `D:\SIGN2MV` (rename `SIGN2MV-main`). Nothing needs to be installed first.
+2. Double-click `install.bat`. It downloads Python, the AI programs and models (about 10 GB the first
+   time) into the folder; run it again if it stops. If Windows shows *Windows protected your PC*, press
+   *More info* → *Run anyway*.
 3. Double-click `start.bat`. The app opens in its own window at `http://127.0.0.1:9700`.
+4. In the app: **Library** → add a song → import it from YouTube or a file, then sing it, make an AI
+   cover or a video.
+
+No songs and no voice models are included: you import your own songs, and train a voice model with your
+own voice or import one you have the right to use.
 
 Everything (Python, models, caches, temp files) is installed inside the folder, not on C:.
 
-The manual is in `web/manual/` (English master, Traditional Chinese translation) and
-is linked from the app.
+The full manual, with a step-by-step getting-started chapter, is in `web/manual/` (English master,
+Traditional Chinese translation) and opens from **Manual ↗** in the app. Problems and questions:
+[GitHub Issues](https://github.com/nilson0606/SIGN2MV/issues).
 
 ## Requirements and limits
 

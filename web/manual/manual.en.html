@@ -23,63 +23,158 @@ a { color:var(--accent); }
 </style>
 </head>
 <body>
-<header><h1>SIGN<span>2</span>MV</h1><p>Sing &amp; record, AI cover and lyric music videos in one program. This is the master (English) manual; the Chinese manual is a translation of it.</p></header>
+<header><h1>SIGN<span>2</span>MV</h1><p>Sing &amp; record, AI cover and lyric music videos in one program. This is the master (English) manual; the Chinese manual is a translation of it. New here? Start with “2. Getting started”.</p></header>
 <div class="wrap">
 <nav>
 <a href="#overview">1. Overview</a>
-<a href="#install">2. Install</a>
-<a href="#start">3. Start and shut down</a>
-<a href="#library">4. Song library</a>
-<a href="#sing">5. Sing &amp; record</a>
-<a href="#cover">6. AI cover</a>
-<a href="#models">7. Voice models and training</a>
-<a href="#mv">8. MV</a>
-<a href="#jobs">9. Job queue</a>
-<a href="#settings">10. Settings</a>
-<a href="#data">11. Where things are stored</a>
-<a href="#trouble">12. Troubleshooting</a>
-<a href="#licences">13. Licences</a>
+<a href="#quickstart">2. Getting started, step by step</a>
+<a href="#install">3. Installation details</a>
+<a href="#start">4. Start and shut down</a>
+<a href="#library">5. Song library</a>
+<a href="#sing">6. Sing &amp; record</a>
+<a href="#cover">7. AI cover</a>
+<a href="#models">8. Voice models and training</a>
+<a href="#mv">9. MV</a>
+<a href="#jobs">10. Job queue</a>
+<a href="#settings">11. Settings</a>
+<a href="#data">12. Where things are stored</a>
+<a href="#trouble">13. Troubleshooting and reporting problems</a>
+<a href="#licences">14. Licences and responsible use</a>
 </nav>
 <main>
 
 <section id="overview">
 <h2>1. Overview</h2>
-<p>SIGN2MV replaces three older programs (the sing &amp; record app, the AI cover studio and the MV studio) with one program and one song library:</p>
+<p>SIGN2MV puts singing and recording, AI covers and lyric music videos in one program with one song library:</p>
 <ul>
 <li><b>Library</b> — import a song once (YouTube or a file). Its separated stems are computed once and shared by every workspace.</li>
-<li><b>Sing &amp; record</b> — sing along with pitch guidance and scoring, record whole songs or segments, mix and save takes.</li>
+<li><b>Sing &amp; record</b> — sing along with pitch guidance and scoring, record whole songs or segments, then edit and save the takes.</li>
 <li><b>AI cover</b> — convert the song's vocal with an RVC voice model, mix it, keep versions, fix sections, train your own voice models.</li>
-<li><b>MV</b> — build a 1080p 60 fps lyric video from photos and lyrics, with Whisper lyric alignment and karaoke colouring. The audio can be the original, any of your recordings or any cover version.</li>
+<li><b>MV</b> — a video straight from the audio (quick MV), or a 1080p 60 fps lyric video from photos and lyrics with Whisper lyric alignment and karaoke colouring. The audio can be the original, any of your recordings or any cover version.</li>
 </ul>
 <p>Everything runs on this computer. Nothing is uploaded. The heavy work (separation, voice conversion, Whisper, video rendering, training) runs one job at a time on the graphics card; lighter jobs run beside it.</p>
-<p class="note">SIGN2MV does not read, change or stop the old programs. It uses its own folder and port 9700, so the old programs can stay installed.</p>
+<p class="note">No songs and no voice models come with the program. You import your own songs; a voice model is one you train yourself or import because you have the right to use it (chapter 8).</p>
+</section>
+
+<section id="quickstart">
+<h2>2. Getting started, step by step</h2>
+<p>The first time, follow these steps in order. Each step says what to do and what you see when it worked; go on only when you see it.</p>
+
+<h3>Step 1: Check the computer</h3>
+<ul>
+<li>Windows 10 or 11 (64-bit). macOS and Linux are not supported yet.</li>
+<li>Internet: the first installation downloads about 10 GB. Importing from YouTube needs it too.</li>
+<li>Disk: besides those 10 GB, your songs, stems, recordings and videos are kept in the same folder, so leave room.</li>
+<li>An NVIDIA graphics card is recommended. Without one everything works, but separation, covers and training are much slower.</li>
+<li>For singing: a microphone and headphones.</li>
+</ul>
+
+<h3>Step 2: Download</h3>
+<ol>
+<li>Open <a href="https://github.com/nilson0606/SIGN2MV" target="_blank" rel="noopener">https://github.com/nilson0606/SIGN2MV</a> in a browser.</li>
+<li>Press the green <b>Code</b> button near the top right, then <b>Download ZIP</b> at the bottom of its menu.</li>
+</ol>
+<p><b>It worked when:</b> <code>SIGN2MV-main.zip</code> is in the browser's downloads.</p>
+
+<h3>Step 3: Extract it to a folder with an English path</h3>
+<ol>
+<li>In File Explorer, right-click <code>SIGN2MV-main.zip</code> → <i>Properties</i>. If there is an <b>Unblock</b> box at the bottom, tick it and press <i>OK</i>. (No box: skip this.)</li>
+<li>Right-click it again → <i>Extract All…</i>, choose <code>D:\</code> (or another drive) and press <i>Extract</i>.</li>
+<li>Rename the extracted folder <code>SIGN2MV-main</code> to <code>SIGN2MV</code>.</li>
+</ol>
+<p><b>It worked when:</b> <code>D:\SIGN2MV</code> directly contains <code>install.bat</code> and <code>start.bat</code>. If you see another <code>SIGN2MV-main</code> folder inside, it was wrapped once more: move its contents up.</p>
+<p class="note">Use only English letters and digits in the folder's full path (<code>D:\SIGN2MV</code> is fine; a path with Chinese characters is not). With such a path the voice model index cannot be read.</p>
+
+<h3>Step 4: Install</h3>
+<ol>
+<li>In <code>D:\SIGN2MV</code>, double-click <code>install.bat</code>. A black window opens and starts downloading and installing.</li>
+<li>If Windows shows a blue <i>Windows protected your PC</i> box, press <i>More info</i>, then <i>Run anyway</i>.</li>
+<li>It asks <code>Download the Sucial model? [y/N]</code>: an optional model for male/female duets, for non-commercial use only. If you accept that, type <code>y</code> and press Enter; otherwise just press Enter (duets then use another model and still work).</li>
+<li>Wait until it finishes; the first time takes a while, depending on the connection. If it stops, double-click <code>install.bat</code> again: finished steps are skipped.</li>
+</ol>
+<p><b>It worked when:</b> the black window ends with <code>Done. Double-click start.bat to open SIGN2MV.</code> Press any key to close it.</p>
+
+<h3>Step 5: Start the program</h3>
+<ol>
+<li>Double-click <code>start.bat</code>. A black console window (the server) opens, then the SIGN2MV window.</li>
+<li>Keep the black window open while you work (it can be minimised).</li>
+</ol>
+<p><b>It worked when:</b> the SIGN2MV window shows <b>Home</b>; under <i>System status</i>, <b>Installation</b> says <i>Complete</i> and <b>Compute device</b> names your graphics card (or the CPU without an NVIDIA card). The interface language follows Windows and can be changed at the top.</p>
+
+<h3>Step 6: Import your first song</h3>
+<ol>
+<li>Press <b>Library</b> at the top.</li>
+<li>Type the song's title in the box at the top left and press <b>Add song</b>.</li>
+<li>Under <i>Import music</i> on the right (the new song is selected), paste a YouTube link and press <b>Import from YouTube</b> (or drop an audio or video file from your computer on the dashed box).</li>
+</ol>
+<p><b>It worked when:</b> it says <i>Import finished</i> and the song shows its original player and three buttons: <b>Sing this song</b>, <b>Make an MV</b>, <b>AI cover</b>.</p>
+
+<h3>Step 7: Sing once and get a score</h3>
+<ol>
+<li>Press <b>Sing this song</b>: the Sing &amp; Record page opens with the song.</li>
+<li>The first time, the page asks you to press <b>Prepare song reference</b>. Press it and wait (it separates the vocal and extracts its pitch; a few minutes the first time) until the status says ready.</li>
+<li>Put on headphones. Press <b>Enable microphone</b> and allow the microphone when the browser asks. Speak: the <i>Input level</i> should move.</li>
+<li>Press <b>Sing from the start and score</b>; the video starts from the beginning. Sing along.</li>
+<li>At the end (or whenever you want to stop) press <b>Finish and score</b>.</li>
+</ol>
+<p><b>It worked when:</b> the total score and the pitch, timing and completeness scores appear; the take waits under <i>Whole-song recordings · Pending review</i>, where you can listen to it and press <b>Save for post-production</b> if you like it.</p>
+<p class="note">A low score, or a pitch line that is always a little behind the original, usually means the input latency is off (400 ms by default; it differs per computer). Measure it with the latency test on the sing page, or try a few values with <i>Rescore</i> (chapter 6) without singing again.</p>
+
+<h3>Step 8: Get a voice model</h3>
+<p>An AI cover needs a voice model, and none comes with the program. Press <b>AI Cover</b> at the top and, under <b>Voice models</b> on the right, either:</p>
+<ul>
+<li><b>Train your own voice</b>: collect clean solo singing or speech, about 10 minutes or more in total, add the files under <i>Train a voice model</i> and press <b>🚀 Start training</b>. Training runs on the graphics card for a while.</li>
+<li><b>Import a model</b>: an RVC model you have the right to use (<code>.pth</code>, usually with an <code>.index</code>), with <b>Import from a folder</b> or <b>Upload a model</b>.</li>
+</ul>
+<p><b>It worked when:</b> the model's name is in the model list and can be chosen under <i>Voice model</i> on the left.</p>
+
+<h3>Step 9: Make your first cover</h3>
+<ol>
+<li>On the AI cover page, choose the song at the top.</li>
+<li>On the left, choose your <i>Voice model</i> and set <i>Pitch</i> if needed (about −12 for a female song sung by a male voice, +12 the other way round, usually 0 for the same gender).</li>
+<li>Press <b>🎤 Make cover (new version)</b>. The first time it separates the song first; the progress shows under the button.</li>
+</ol>
+<p><b>It worked when:</b> version <b>#1</b> appears under <i>Versions</i> on the right and plays.</p>
+
+<h3>Step 10: Make your first video</h3>
+<ol>
+<li>On version #1 press <b>Quick MV</b> (the Quick MV tab of the MV page opens with that audio chosen).</li>
+<li>Check the title and singer and press <b>Make quick MV</b>.</li>
+</ol>
+<p><b>It worked when:</b> the video is in the list below and plays; it can be downloaded as MP4. For a lyric video with photos, see chapter 9.</p>
+
+<h3>Step 11: Shut down</h3>
+<p>Press <b>Shut down</b> at the top right. <b>It worked when:</b> the SIGN2MV window says it has shut down and the black console window closes by itself within a few seconds. Next time, start at step 5.</p>
 </section>
 
 <section id="install">
-<h2>2. Install</h2>
-<ol>
-<li>Windows 10 or 11 (64-bit) is required; macOS and Linux are not supported yet. Put the SIGN2MV folder where it should live (for example <code>D:\AI_SIGN2MV</code>). Everything — Python, AI models, caches, temporary files — is installed inside this folder, not on C:.</li>
-<li>Double-click <code>install.bat</code>. The first run downloads about 10 GB and can take a long time.</li>
-<li>When asked about the <b>Sucial</b> male/female separation model, answer yes only if you accept its non-commercial licence. Without it, duet mode uses the aufr33 model.</li>
-<li>Wait for <code>Done. Double-click start.bat to open SIGN2MV.</code></li>
-</ol>
-<p>If installation stops (network drop, full disk), run <code>install.bat</code> again: finished steps are skipped. The log is in <code>logs\install.log</code>. On the Home page, <i>Installation</i> and the checks list show what is ready.</p>
-<p>An NVIDIA graphics card is used automatically when present. Without one everything still works on the CPU, only slower (training on the CPU is very slow). MV encoding tries the NVIDIA (NVENC, driver 570 or newer), AMD and Intel graphics card encoders in turn and uses the CPU only if none works; the installer writes which one works to <code>logs\install.log</code>. FFmpeg is a fixed version checked against its checksum, so every PC gets the same file. The last installation step compiles every environment's Python files once, so separation, covers and Whisper start faster.</p>
+<h2>3. Installation details</h2>
+<p>The steps are in chapter 2. What the installer does:</p>
+<ul>
+<li>Nothing needs to be installed first, not even Python. <code>install.bat</code> downloads the uv Python manager (checked against its checksum), Python 3.12, the packages of each environment, ffmpeg, Applio (voice conversion) and the AI models.</li>
+<li>Everything goes inside the SIGN2MV folder (<code>runtime\</code>, <code>models\</code>), caches and temporary files included, not on C:. The change in free space on C: during installation is shown on the Home page.</li>
+<li>If installation stops (network drop, full disk), run <code>install.bat</code> again: finished steps are skipped. The log is in <code>logs\install.log</code>. On the Home page, <i>Installation</i> and the checks list show what is ready.</li>
+<li>An NVIDIA graphics card is used automatically when present. Without one everything still works on the CPU, only slower (training on the CPU is very slow).</li>
+<li>MV encoding tries the NVIDIA (NVENC, driver 570 or newer), AMD and Intel graphics card encoders in turn and uses the CPU only if none works; the installer writes which one works to <code>logs\install.log</code>.</li>
+<li>FFmpeg is a fixed version checked against its checksum, so every PC gets the same file.</li>
+<li>The last step compiles every environment's Python files once, so separation, covers and Whisper start faster.</li>
+</ul>
+<p>To update: download the new ZIP, copy its files over the same folder (<code>library</code>, <code>models</code>, <code>runtime</code> and <code>config</code> are not in the ZIP, so they are not overwritten) and run <code>install.bat</code> again.</p>
 </section>
 
 <section id="start">
-<h2>3. Start and shut down</h2>
+<h2>4. Start and shut down</h2>
 <ol>
-<li>Double-click <code>start.bat</code>. A console window (the server) and a SIGN2MV window open. Keep the console window open while you work.</li>
+<li>Double-click <code>start.bat</code>. A console window (the server) and a SIGN2MV window open (an app window of Microsoft Edge, which comes with Windows, at <code>http://127.0.0.1:9700</code>). Keep the console window open while you work.</li>
 <li>To finish, press <b>Shut down</b> at the top right. If jobs are running or a workspace is busy (recording, converting, rendering), SIGN2MV lists them and asks before cancelling them. The console window then closes by itself within a few seconds.</li>
 </ol>
-<p>The interface language follows Windows; change it with the language menu at the top. The <b>Manual</b> link opens this page.</p>
+<p>The interface language follows Windows; change it with the language menu at the top. <b>Manual ↗</b> at the top opens this page. The program only accepts connections from this computer; other computers on the network cannot reach it.</p>
 </section>
 
 <section id="library">
-<h2>4. Song library</h2>
+<h2>5. Song library</h2>
 <ol>
-<li>Open <b>Library</b>, type a title and press <b>Add song</b>.</li>
+<li>Open <b>Library</b>, type a title in the box at the top left and press <b>Add song</b>.</li>
 <li>Import the music: paste a YouTube URL (or press <b>📋</b> to paste it) and press <b>Import from YouTube</b> (the video is downloaded too, up to 1080p). As soon as a link is pasted a preview card shows the thumbnail, title, length and video ID, with <b>Open the original page</b> and <b>▶ Preview</b> to watch it before importing. Or choose an audio/video file and press <b>Upload a file</b>, or drop the file on the dashed box (it uploads at once, with a progress bar; up to 2 GB and 15 minutes). The original is kept unchanged.</li>
 <li>When the import finishes, the song shows its original player and three buttons: <b>Sing this song</b>, <b>Make an MV</b>, <b>AI cover</b>.</li>
 </ol>
@@ -99,7 +194,7 @@ a { color:var(--accent); }
 <h3>Finished folder</h3>
 <p>The song folders in the library are named by id, which is hard to find your way around in Explorer. SIGN2MV keeps a <code>Finished</code> folder in the library (the same English name in every UI language): one folder per song, named by its title, with shortcuts you can double-click. Nothing is copied, so it takes no extra space.</p>
 <ul>
-<li>Cover versions: <code>Cover #1 My_Voice_Ver8 -12 · Key -2</code></li>
+<li>Cover versions: <code>Cover #1 MyVoice -12 · Key -2</code></li>
 <li>Saved sing &amp; record versions: <code>Sing 10-31 09.05</code></li>
 <li>Quick MVs: <code>Quick MV Studio 1080p · Cover #1 · 10-31 09.20</code></li>
 <li>Full MVs (once rendered): <code>MV project title</code></li>
@@ -110,26 +205,59 @@ a { color:var(--accent); }
 </section>
 
 <section id="sing">
-<h2>5. Sing &amp; record</h2>
-<p>This is the former sing &amp; record app, with the song chosen from the library. Pick the song at the top of the page (or press <b>Sing this song</b> in the library). Key versions that already have a singing reference are listed separately (e.g. “Song · Down 4 semitones”); <i>Load song</i> loads an existing reference right away, otherwise it selects the key and asks you to press <i>Prepare song reference</i>.</p>
+<h2>6. Sing &amp; record</h2>
+<p>Songs come from the library: choose one under <b>Song (SIGN2MV library)</b> at the top of the Sing &amp; Record page and press <b>Load song</b> (or press <b>Sing this song</b> in the library). Keys that already have a singing reference are listed separately (e.g. “Song · Down 4 semitones”); those load right away, otherwise the page selects the key and asks you to press <b>Prepare song reference</b>. <b>Help ↗</b> at the top of the page explains every control in detail.</p>
+<h3>Prepare the song</h3>
+<ul>
+<li><b>Key</b>: below the player, the original key or −12 to +12 semitones (tempo unchanged). With a song loaded, press <b>Create / Load this key</b> after choosing.</li>
+<li>Press <b>Prepare song reference</b> and wait until the status says ready. The default is the full song (up to 15 minutes), Demucs separation and RMVPE pitch. <i>Separation and pitch settings</i> can change the analysis range (try only the first 15, 30 or 60 seconds, separated on their own without touching the whole-song stems), the separator and a lead/backing split.</li>
+<li>Untick <b>Keep separated stems</b> to keep only the pitch reference: the stems this preparation made are removed afterwards (previews and backing-only playback then need them rebuilt).</li>
+</ul>
+<h3>Input and latency</h3>
+<ul>
+<li><b>Input mode</b>: <b>Browser capture</b> by default. If enabling the microphone makes the backing audio quieter, choose <b>Native capture</b> (Python on this computer records the microphone; the first time Windows asks to allow Python to use it).</li>
+<li>Press <b>Enable microphone</b> and check that the <i>Input level</i> moves. Wear headphones so the original vocal does not leak from the speakers into the microphone.</li>
+<li><b>Input latency</b> (under <i>Watch the beat, adjust timing</i>): 400 ms by default, meaning your voice arrives 400 ms after the song. It differs per computer and microphone; measure it with the <b>Do Re Mi Fa Sol latency test</b> and press <b>Apply suggested compensation</b>.</li>
+</ul>
+<h3>Sing the whole song and get a score</h3>
 <ol>
-<li><b>Prepare the song</b>: choose the key (−12 to +12, tempo unchanged) and press <i>Prepare song reference</i>. Wait until the status says ready. The default is full-song analysis with RMVPE pitch. <i>Analysis range</i> can instead try only the first 15, 30 or 60 seconds (separated on its own, the whole-song stems are not touched). Untick <i>Keep separated tracks</i> to keep only the pitch reference: the stems this preparation made are removed afterwards (previews and backing-only playback then need them rebuilt).</li>
-<li><b>Microphone</b>: choose browser capture, or native capture if enabling the microphone lowers your backing audio; enable the microphone and check the input. (Voice to the speakers and recording diagnostics were removed: the live speaker output sounded poor and diagnostics could affect recording timing.)</li>
-<li><b>Sing</b>: choose what you hear (original vocals + backing, or backing/harmonies only) and what is recorded (singer only, mixed, or nothing), then <i>Sing from the start</i>. Stop, or let the song end; the take waits under <i>Pending review</i>. Save it for post-production when satisfied.</li>
-<li><b>Segments</b>: press the bright pink-orange <i>Enable recording mode</i> button, split the song while it plays, record each segment as many times as you like, choose a take per segment and assemble the full mix. A finished take is saved first (“Saving this part's take…”); the next part can be recorded once it is saved, and pressing Record meanwhile says so. Original-vocal regions can be added to the assembled mix.</li>
-<li><b>Post-production</b>: levels, timing correction, smoothing, EQ, compression, reverb/delay, noise and breath reduction, pitch correction; compare A/B on the same phrase; render again (the original vocal is always kept).</li>
-<li><b>Make an MV</b> from a finished recording: the recording is saved as an MV audio of the song and the MV workspace opens with it.</li>
+<li>Scoring settings: <b>Octave matching</b> (octave differences are allowed by default, for voices in another range than the original), <b>Scoring range</b> (the performed range only by default) and <b>Scoring difficulty</b> (standard, strict or relaxed).</li>
+<li>Choose what you hear, <b>Original vocals + backing</b> or <b>Backing / harmonies only</b>, and what is recorded: <b>Singer</b>, <b>Singer + backing / harmonies</b> (default) or <b>Do not save recordings</b>.</li>
+<li>Press <b>Sing from the start and score</b>. Press <b>Finish and score</b> at the end (it also finishes when the video ends).</li>
+<li>The total score is pitch 60%, timing 25% and completeness 15%. The take waits under <b>Whole-song recordings · Pending review</b>: listen, download or delete it, and press <b>Save for post-production</b> if you like it.</li>
 </ol>
-<p>Masks in <i>Exclude incorrect reference regions</i> stop wrong reference notes (instrumental passages) from counting in the score.</p>
-<p>Deleting a prepared song in the library list also deletes the stems only it used and tells you how much was freed. The sing &amp; record manual (button in the page) explains every control in detail.</p>
+<h3>Rescore without singing again</h3>
+<p>Next to <b>Finish and score</b> are <b>Take to rescore</b>, <b>Rescore</b> and <b>Scoring delay</b>:</p>
+<ul>
+<li>The take can be the one just sung, a saved recording of this song and key (whole-song takes and segment mixes), or an AI cover version of this song and key.</li>
+<li>Change the scoring delay and press <b>Rescore</b> to see the same performance scored at another delay, to find the delay that suits your computer. Every rescore is added to the score history.</li>
+<li>After a change, the next takes of this song use the new delay for now; another song or a reload goes back to the <i>Input latency</i> setting.</li>
+<li>A saved recording is analysed with RMVPE for a few seconds the first time; the result is kept with the recording. For an AI cover version the delay starts at 0 and the version's own pitch shift (for example −12) is taken out, so the score says how well the conversion kept the melody.</li>
+<li>Octave matching is saved with each recording; for older segment mixes saved without it, the current <i>Octave matching</i> setting is used.</li>
+</ul>
+<h3>Score the original vocal</h3>
+<p><b>🧪 Score the original vocal</b> uses the separated original vocal instead of the microphone and runs exactly the same scoring and recording as your own take. It shows what the song's reference and scoring give the original singer, so a low score can be traced to the reference or to the singing. The original vocal skips the “hear it from the speakers, then sing” delay a singer has, so <b>Delay the original vocal</b> (200 ms by default) brings it in that much later. The take is labelled “original vocal test” and does not change your input latency.</p>
+<h3>Segment recording</h3>
+<ol>
+<li>Press the bright <b>Enable recording mode</b> button. While the song plays, press <b>Split here</b> where you want a boundary (splits can be undone, merged and fine-tuned).</li>
+<li>Choose a segment and press <b>Record this segment</b>: the guide starts a little before the segment and the take is saved automatically after the tail (or press <b>Stop / Save segment</b>). Record each segment as often as you like.</li>
+<li>Once a segment is saved, the microphone is closed; <b>Record this segment</b> opens it again. While a take is being saved (“Saving this part's take…”) the next one cannot start.</li>
+<li>Choose one take per segment and press <b>Assemble full mix</b>. Tick <b>Allow silence in unrecorded regions</b> for parts not recorded yet, or use <b>Add original vocal region</b> to let the original singer take some parts.</li>
+<li>When you like it, press <b>Save for post-production</b> or download the WAV. A segment mix can be rescored too.</li>
+</ol>
+<h3>Recording post-production</h3>
+<p>Levels, vocal timing correction, softening, EQ, compression, reverb/echo, noise, sibilance and breath reduction, pitch correction, trimming and fades; A/B comparison on the same phrase; render again (the original vocal is always kept). <b>Rescore recording</b> scores a saved recording again with another delay or difficulty. A finished recording can be turned into an MV with <b>Create music video</b>: it is saved as MV audio of the song and the MV workspace opens with it.</p>
+<h3>Other</h3>
+<p><b>Unscored region masks</b> (in <i>Separation and pitch settings</i>) keep misdetected passages, such as an instrument taken for a voice, out of the score.</p>
+<p>Deleting a prepared song in the list also deletes the stems only it used and tells you how much was freed.</p>
 </section>
 
 <section id="cover">
-<h2>6. AI cover</h2>
+<h2>7. AI cover</h2>
 <p>Open <b>AI cover</b> (or press <b>AI cover</b> on a song in the library) and pick the song at the top. The left side is the form; the right side holds the versions, voice models and training.</p>
 <h3>Make a cover</h3>
 <ol>
-<li><b>Voice model</b>: choose a model (and, if it has them, one of its kept training epochs). The last model you used is selected for new songs. If the list is empty, import or train a model first (chapter 7).</li>
+<li><b>Voice model</b>: choose a model (and, if it has them, one of its kept training epochs). The last model you used is selected for new songs. If the list is empty, import or train a model first (chapter 8).</li>
 <li><b>Pitch</b>: semitones for the voice (about −12 for female→male, +12 for male→female). The buttons <i>0</i>, <i>−12</i> and <i>+12</i> set it in one click.</li>
 <li><b>Key (whole song)</b>: −8 to +8. The accompaniment and original backing vocals are shifted with Rubber Band (tempo unchanged) and the voice conversion gets the same shift (converted backing vocals get it in their conversion as well). <i>▶ Preview this key</i> plays the original in that key; the original button continues from the same second, so you can switch back and forth. <i>Reset</i> returns to the original key. If Rubber Band is missing the page says so and the key cannot be changed.</li>
 <li>Optional <b>Conversion fine-tuning</b>: consonant/breath protect (0.33), index rate (0.75), volume envelope (0 = follow the original singer's loudness), pitch detection (rmvpe), auto-tune, noise clean-up.</li>
@@ -145,7 +273,8 @@ a { color:var(--accent); }
 <tr><td><b>Load settings</b></td><td>puts that version's settings back into the form.</td></tr>
 <tr><td><b>🎛️ Quick remix</b></td><td>applies the form's mix, vocal sections, volume sections, backing-vocal choice and duet volumes to this version and replaces its audio. Model, pitch, key and separation stay as they were.</td></tr>
 <tr><td><b>Remix as new version</b></td><td>the same, but keeps the old version and adds a new one.</td></tr>
-<tr><td><b>🎬 Make MV</b></td><td>opens the MV workspace with this version as the audio.</td></tr>
+<tr><td><b>Quick MV</b></td><td>a video straight from this version (title and moving spectrum): opens the Quick MV tab of the MV page.</td></tr>
+<tr><td><b>🎬 Make MV</b></td><td>opens the full MV workspace with this version as the audio.</td></tr>
 <tr><td><b>Download</b> / <b>Stems</b></td><td>download the MP3; listen to the original, separated tracks and the converted vocal used by this version.</td></tr>
 <tr><td><b>Rename</b> / <b>Delete</b></td><td>deleting also deletes the version's audio; cached files no other version uses are cleaned up. If an MV project uses the version as its music, the confirmation names it (exported MV videos are kept).</td></tr>
 <tr><td><b>📂</b></td><td>shows the MP3 in Windows Explorer.</td></tr>
@@ -168,17 +297,18 @@ a { color:var(--accent); }
 </section>
 
 <section id="models">
-<h2>7. Voice models and training</h2>
-<h3>Bring your existing models</h3>
+<h2>8. Voice models and training</h2>
+<p>No voice model comes with the program. Import an RVC model you have the right to use, or train one with your own voice.</p>
+<h3>Import models</h3>
 <ol>
-<li>In <b>AI cover</b> → <i>Voice models</i> → <i>Import from a folder</i>, type a folder of model folders, for example <code>D:\voice-models</code> (an older AI cover install's <code>models</code> folder works too) and press <b>Import (copy)</b>. Every model folder with a <code>.pth</code> is copied with its <code>.index</code>, notes and kept epochs. The source is not changed.</li>
+<li>In <b>AI cover</b> → <i>Voice models</i> → <i>Import from a folder</i>, type a folder of model folders, for example <code>D:\voice-models</code>, and press <b>Import (copy)</b>. Every model folder with a <code>.pth</code> is copied with its <code>.index</code>, notes and kept epochs. The source is not changed.</li>
 <li>A single model folder or a single <code>.pth</code> file works too, and <i>Upload a model</i> accepts a <code>.pth</code> and an optional <code>.index</code>.</li>
 </ol>
 <p>Model names use English letters, digits and <code>_ . -</code>. A folder whose name has other characters is skipped; import it on its own and type a name.</p>
 <p>The <b>convergence</b> panel shows a model's training: mel loss per epoch with a 5-epoch average, grid values and the value under the mouse, and a verdict (still improving / levelled off / rising again, compare an earlier version). The list below it has the kept epoch versions with their size: <b>Use this version</b> selects it in the model list, 🗑 deletes it (the final version stays). While a model trains, the curve updates live.</p>
 <h3>Train a voice model</h3>
 <ol>
-<li>Type a model name (default <code>My_Voice_Ver1</code>), add recordings (upload files, or type folders/files on this computer, one per line), or press <b>⚡ Use this song's separated vocals</b>. Clean solo singing or speech, about 10 minutes or more in total, works best.</li>
+<li>Type a model name (default <code>My_Voice_Ver1</code>), add recordings (upload files, or type folders/files on this computer, one per line), or press <b>⚡ Use this song's separated vocals</b>. Clean solo singing or speech, about 10 minutes or more in total, works best. Use only your own voice, or a voice whose owner agreed.</li>
 <li>Defaults: 100 epochs (buttons 30 / 100 / 200), batch 8, a version saved every 10 epochs, 40 kHz.</li>
 <li>Press <b>🚀 Start training</b>. The six steps run automatically: import, slicing, feature extraction (RMVPE + ContentVec), training, index, installing. The dashboard shows the step, a status light and cards for epoch, step, best loss and progress; <b>Log</b> shows the training output.</li>
 <li>When it finishes, the model is in the list with its last four epoch versions and loss curve. The training scratch folder is deleted.</li>
@@ -187,23 +317,23 @@ a { color:var(--accent); }
 </section>
 
 <section id="mv">
-<h2>8. MV</h2>
+<h2>9. MV</h2>
 <p>The MV page has two tabs.</p>
 <h3>Quick MV</h3>
 <p>A video made straight from the audio, no lyrics, no photos. Two looks:</p>
 <ul>
-<li><b>Card</b> (default) — sing &amp; record's picture: dark card, “COVER SESSION”, the title, “Cover｜singer” and frequency bars that move with the music (30 fps).</li>
-<li><b>Studio</b> — the old AI cover MV: gradient background, title, subtitle, credits line, a badge at the top right, a record in the middle and spectrum bars along the bottom (60 fps). Subtitle, badge and credits are filled in from the chosen audio (voice model, pitch, key) and can be changed; leave subtitle or credits empty to leave that line out.</li>
+<li><b>Card</b> (default) — dark card, “COVER SESSION”, the title, “Cover｜singer” and frequency bars that move with the music (30 fps).</li>
+<li><b>Studio</b> — gradient background, title, subtitle, credits line, a badge at the top right, a record in the middle and spectrum bars along the bottom (60 fps). Subtitle, badge and credits are filled in from the chosen audio (voice model, pitch, key) and can be changed; leave subtitle or credits empty to leave that line out.</li>
 </ul>
 <p>Both come in 1080p or 720p (faster, smaller file). The page remembers the look and size.</p>
-<p><b>Lyric subtitles</b> (studio look, optional — the old AI cover lyric MV): paste the lyrics, one line each, or an LRC with <code>[mm:ss.xx]</code> times, and press <b>🎙️ Time the lines</b>. LRC times are used as they are; plain lines are matched to the singing by Whisper, which listens to the song's separated vocals once (a cover version or a take keeps the song's timing, so its times start from the original's). <b>Spread evenly</b> places the lines without Whisper. Then tune each line: <b>▶</b> plays it, −0.5 / +0.5 move it, 📍 sets its start to the player time, the times and text can be typed, 🗑 deletes it and <b>➕ Add a line at the player time</b> adds one. The lines are saved per audio and burnt into the video as white text with an outline above the spectrum.</p>
+<p><b>Lyric subtitles</b> (studio look, optional): paste the lyrics, one line each, or an LRC with <code>[mm:ss.xx]</code> times, and press <b>🎙️ Time the lines</b>. LRC times are used as they are; plain lines are matched to the singing by Whisper, which listens to the song's separated vocals once (a cover version or a take keeps the song's timing, so its times start from the original's). <b>Spread evenly</b> places the lines without Whisper. Then tune each line: <b>▶</b> plays it, −0.5 / +0.5 move it, 📍 sets its start to the player time, the times and text can be typed, 🗑 deletes it and <b>➕ Add a line at the player time</b> adds one. The lines are saved per audio and burnt into the video as white text with an outline above the spectrum.</p>
 <ol>
 <li>Press <b>Quick MV</b> on a cover version or on a sing &amp; record take, or open the <b>Quick MV</b> tab and choose the song and the audio (original, a cover version or a take).</li>
 <li>Check the <b>title</b> and the <b>singer</b> (filled in from Settings → Cover singer name) and press <b>Make quick MV</b>. A 4-minute song takes about a minute with an NVIDIA graphics card.</li>
 <li>The list below plays, downloads (MP4), shows in Explorer (📂) or deletes the song's quick MVs. <i>All songs</i> lists every song's quick MVs with a search box, select all, delete selected and delete all. They are stored with the song and counted under MV in its storage overview.</li>
 </ol>
 <h3>Full MV</h3>
-<p>This is the former MV studio. A project belongs to a song; open it from the library (<b>Make an MV</b>), from a recording or from a cover version.</p>
+<p>A lyric video made from photos and lyrics. A project belongs to a song; open it from the library (<b>Make an MV</b>), from a recording or from a cover version.</p>
 <ol>
 <li><b>Create a project</b>: choose the song, a project name, the title and credits. The cover singer and studio names on the title cards come from <b>Settings</b>.</li>
 <li><b>Audio</b>: the song's original, a sing &amp; record take, a cover version, or an uploaded file (any format; one the browser cannot play is converted to FLAC). If the chosen audio was deleted later (for example its cover version), the page says so.</li>
@@ -211,26 +341,26 @@ a { color:var(--accent); }
 <li><b>Lyrics</b>: paste the lyrics (or press <b>📋 Paste clipboard</b>) with <code>[Scene 01]</code> markers and press the Whisper alignment button. Whisper listens to the separated vocals (from the song's stem cache) and times every line; you can adjust lines, interludes and karaoke timing afterwards.</li>
 <li><b>Preview</b> single frames, then <b>render</b>: a 1080p 60 fps MP4 with karaoke colouring. Rendering is a GPU job; the previous MV is kept until the new one is finished. Verification frames are checked automatically.</li>
 </ol>
-<p><b>📂 Open folder</b> shows the finished MV in Explorer. <b>📤 Import project</b> reads a project JSON exported here or by the old MV studio: photos, the Whisper result, the finished MV and audio outside the library found at the paths in the JSON are copied into the project. If the song already has a project with that name you are asked whether to overwrite it or keep both.</p>
+<p><b>📂 Open folder</b> shows the finished MV in Explorer. <b>📤 Import project</b> reads an exported project JSON: photos, the Whisper result, the finished MV and audio outside the library found at the paths in the JSON are copied into the project. If the song already has a project with that name you are asked whether to overwrite it or keep both.</p>
 <p>The MV never shows the word “AI”: credits use the cover singer name from Settings.</p>
 </section>
 
 <section id="jobs">
-<h2>9. Job queue</h2>
+<h2>10. Job queue</h2>
 <p><b>Jobs</b> lists every job with its progress and elapsed time. GPU jobs (separation, conversion, Whisper, training) run one at a time; the others wait with their position. Full MV renders have their own lane, so a long render does not hold up a cover. General jobs (imports, key changes, quick remixes, quick MVs) run beside them. <b>Cancel</b> stops a job and its helper programs. <b>Log</b> shows a job's output (coloured, follows the end, copy and clear), also while it runs. Cover progress and logs name what is being converted, e.g. “1/2 Lead”, “2/2 Backing”, “✔ Converted Backing (35 s)”. Separation notices that look like warnings but are harmless (such as ONNX Runtime having no CUDA; our separation models use CUDA through PyTorch) are left out.</p>
 </section>
 
 <section id="settings">
-<h2>10. Settings</h2>
+<h2>11. Settings</h2>
 <ul>
 <li><b>Library folder</b> — where songs are stored (default <code>library</code> inside the SIGN2MV folder). <b>Choose folder…</b> opens a folder dialog. The folder must be a full path, not a drive root or a program folder, and writable; it cannot be changed while work is running.</li>
 <li><b>Cover singer name</b> and <b>Studio name</b> — shown on the MV title cards.</li>
-<li><b>🎛️ Look</b> (top bar) — switches the colours: console → classic (the old AI cover green) → day (light). Only the look changes; the sing &amp; record and full MV pages keep their own look. The choice is remembered.</li>
+<li><b>🎛️ Look</b> (top bar) — switches the colours: console → classic (green) → day (light). Only the look changes; the sing &amp; record and full MV pages keep their own look. The choice is remembered.</li>
 </ul>
 </section>
 
 <section id="data">
-<h2>11. Where things are stored</h2>
+<h2>12. Where things are stored</h2>
 <p>Everything a song uses is one of three kinds:</p>
 <ul>
 <li><b>Original</b> (<code>source</code>): kept as long as the song exists.</li>
@@ -242,7 +372,7 @@ a { color:var(--accent); }
 <tr><th>Folder (inside SIGN2MV)</th><th>Contents</th></tr>
 <tr><td><code>library\songs\&lt;song&gt;\</code></td><td><code>source</code> (original), <code>stems</code>, <code>keys</code>, <code>sing</code>, <code>renders</code> (takes and cover versions used as MV audio), <code>cover</code> (cover versions and caches), <code>mv</code> (MV projects)</td></tr>
 <tr><td><code>library\Finished\</code></td><td>shortcuts to each song's finished work (see "Finished folder"); only shortcuts, deleting them loses nothing</td></tr>
-<tr><td><code>library\recordings\</code></td><td>sing &amp; record takes of all songs (the format sign_record uses)</td></tr>
+<tr><td><code>library\recordings\</code></td><td>sing &amp; record takes of all songs (one folder per take: vocal, mix, settings)</td></tr>
 <tr><td><code>models\</code></td><td>AI models; <code>models\voices</code> = your RVC voice models</td></tr>
 <tr><td><code>runtime\</code></td><td>Python environments, Applio, ffmpeg, caches, temporary files, training scratch</td></tr>
 <tr><td><code>config\</code>, <code>logs\</code></td><td>settings, logs</td></tr>
@@ -251,25 +381,35 @@ a { color:var(--accent); }
 </section>
 
 <section id="trouble">
-<h2>12. Troubleshooting</h2>
+<h2>13. Troubleshooting and reporting problems</h2>
 <table>
+<tr><td><i>Windows protected your PC</i> when opening install.bat or start.bat</td><td>Press <i>More info</i> → <i>Run anyway</i>. Next time, tick <i>Unblock</i> in the ZIP's properties before extracting (chapter 2, step 3).</td></tr>
 <tr><td>“Cannot reach the server”</td><td>The console window was closed. Run <code>start.bat</code> again.</td></tr>
-<tr><td>The page says to reload or restart</td><td>Press F5, or Shut down and run <code>start.bat</code> again.</td></tr>
+<tr><td>The page says to reload or restart</td><td>Press F5, or <b>Shut down</b> and run <code>start.bat</code> again.</td></tr>
 <tr><td>A model / component is missing</td><td>Run <code>install.bat</code> again; the Home page lists the checks.</td></tr>
 <tr><td>Voice conversion is not installed</td><td>The Applio part of the installation is incomplete: run <code>install.bat</code> again.</td></tr>
 <tr><td>Key change fails</td><td>ffmpeg without Rubber Band: run <code>install.bat</code> again.</td></tr>
-<tr><td>A job is slow</td><td>Check whether another GPU job (for example a training) is running in <b>Jobs</b>.</td></tr>
+<tr><td>A job is slow</td><td>Check in <b>Jobs</b> whether another GPU job (for example a training) is running.</td></tr>
 <tr><td>MVs are slow and encoded on the CPU</td><td>The MV status line or the quick MV list gives the graphics card encoder's reason (also kept in <code>encoder_errors.log</code> next to the MV). NVIDIA needs driver 570 or newer; after a driver update nothing needs reinstalling.</td></tr>
-<tr><td>Segment recording says the capture broke off</td><td>Record the part again. If it happens often, note the time and report it; capture records are in <code>logs\native-capture.jsonl</code>.</td></tr>
+<tr><td>Sing &amp; record scores stay low</td><td>Check that <i>Octave matching</i> allows octave differences (when your range differs from the original), then try a few scoring delays with <i>Rescore</i>. <i>🧪 Score the original vocal</i> shows whether the song's reference is sound.</td></tr>
+<tr><td>“Native capture interrupted” or “Segment input interrupted” while recording</td><td>Input has stopped; what was recorded is kept. Enable the input again (in segment mode just press <b>Record this segment</b> again). If it happens often, please report it (see below); capture records are in <code>logs\native-capture.jsonl</code>.</td></tr>
 <tr><td>The black window stays after Shut down</td><td>Close it with its X button; nothing is lost (the jobs have already stopped).</td></tr>
-<tr><td>The voice index seems ignored</td><td>Keep the SIGN2MV folder path in English letters (for example <code>D:\AI_SIGN2MV</code>): the index library cannot open paths with Chinese characters.</td></tr>
+<tr><td>The voice index seems ignored</td><td>Keep the SIGN2MV folder path in English letters (for example <code>D:\SIGN2MV</code>): the index library cannot open paths with Chinese characters.</td></tr>
 </table>
-<p>Server details are in <code>logs\server.log</code>.</p>
+<p>Server details are in <code>logs\server.log</code>, installation details in <code>logs\install.log</code>.</p>
+<h3>Reporting a problem</h3>
+<p>Open a new issue on <a href="https://github.com/nilson0606/SIGN2MV/issues" target="_blank" rel="noopener">GitHub Issues</a> with:</p>
+<ul>
+<li>what you did, what you expected and what happened (copy the error message or add a screenshot);</li>
+<li>when it happened, the Windows version and the graphics card;</li>
+<li>the relevant part of the logs: <code>logs\server.log</code>, <code>logs\install.log</code> for installation problems, <code>logs\native-capture.jsonl</code> for input problems. Look through it first: leave out any file names or paths you do not want to make public.</li>
+</ul>
 </section>
 
 <section id="licences">
-<h2>13. Licences</h2>
-<p>SIGN2MV itself is released under the MIT licence (see <code>LICENSE</code>). The open-source components and models it uses have their own licences, listed in <code>THIRD_PARTY.md</code>; all are downloaded by the installer. Notably: Applio (MIT), RMVPE (downloaded from lj1995/VoiceConversionWebUI, MIT), basic-pitch (Apache-2.0), GeneralUser GS sound font (GeneralUser GS licence v2.0), the Sucial male/female model (CC BY-NC-SA 4.0, non-commercial, optional). Import only songs and recordings you have the right to use (YouTube import uses yt-dlp; follow YouTube's terms where you live), use voice models only for voices you have the right to use, and do not present a converted voice as someone else's real performance.</p>
+<h2>14. Licences and responsible use</h2>
+<p>SIGN2MV itself is released under the MIT licence (see <code>LICENSE</code>). The open-source components and models it uses have their own licences, listed in <code>THIRD_PARTY.md</code>; all are downloaded by the installer and none is part of this program. Notably: Applio (MIT), RMVPE (downloaded from lj1995/VoiceConversionWebUI, MIT), basic-pitch (Apache-2.0), GeneralUser GS sound font (GeneralUser GS licence v2.0), the Sucial male/female model (CC BY-NC-SA 4.0, non-commercial, optional). Some separation models state no licence; <code>THIRD_PARTY.md</code> lists their sources, so check them before any commercial use.</p>
+<p>Import only songs and recordings you have the right to use (YouTube import uses yt-dlp; follow YouTube's terms where you live), use voice models only for voices you have the right to use, and do not present a converted voice as someone else's real performance.</p>
 </section>
 
 </main>

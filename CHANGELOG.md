@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Docs, for open-sourcing: the manual (English and Chinese) has a new step-by-step getting-started chapter
+  (download, extract to an English path, install, start, import a song, sing, get a voice model, first
+  cover, first video, shut down), button names that match the screen, rescoring, the original-vocal test
+  and segment takes closing the input, and a section on reporting problems through GitHub Issues. Wording
+  about the older programs this replaced is gone. The Sing & Record guide (「說明 ↗」) no longer describes
+  the stand-alone sign_record (local tools, GitHub Pages, YouTube player, library folder, diagnostics,
+  the 「vedio」 folder) and no longer says "non-commercial use only", which contradicted the MIT licence.
+  New README.zh-TW.md; the README has a quick start. Three interface hints no longer mention the old
+  AI cover program.
 - Sing & record, segment mode: a saved 分段合成 rescored far too low (for example total 14, pitch 0, rhythm 0)
   because it was saved without the scoring choices, so 「允許高／低八度」 was off and an octave-down voice
   scored as off-key. A segment mix now stores 音域比對, 評分範圍 and 評分難度 like a whole-song take; segment

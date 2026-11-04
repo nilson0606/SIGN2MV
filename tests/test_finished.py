@@ -67,15 +67,15 @@ def test_names_duplicates_rename_and_delete(tmp_path):
     lib = tmp_path / "lib"
     tmp = tmp_path / "tmp"
     a = _song(lib, "s000000000a", "童話", _ts("10-29 10:00"))
-    cover = _cover(a, "v0000000001", "r000000000001", 1, "My_Voice_Ver8 -12 · Key -2", _ts("10-30 08:00"))
+    cover = _cover(a, "v0000000001", "r000000000001", 1, "MyVoice -12 · Key -2", _ts("10-30 08:00"))
     sing = _sing(a, "r000000000002", _ts("10-31 09:05"))
     quick = _quick(a, "q000000000001", _ts("10-31 09:20"), style="studio", resolution="1080p",
-                   source_kind="cover", source_title="#1 My_Voice_Ver8 -12 · Key -2")
+                   source_kind="cover", source_title="#1 MyVoice -12 · Key -2")
     mv = _mv(a, "main", "童話")
     res = finished.sync(lib, "zh-TW", tmp)
     assert res["created"] == 4 and not res["errors"]
     links = _links(lib / "Finished" / "童話")
-    assert links == {"翻唱 #1 My_Voice_Ver8 -12 · Key -2": str(cover), "唱錄 10-31 09：05": str(sing),
+    assert links == {"翻唱 #1 MyVoice -12 · Key -2": str(cover), "唱錄 10-31 09：05": str(sing),
                      "快速MV 錄音室 1080p · 翻唱 #1 · 10-31 09：20": str(quick), "MV 童話": str(mv)}
     # nothing changed: nothing is made again
     assert finished.sync(lib, "zh-TW", tmp)["created"] == 0
@@ -102,7 +102,7 @@ def test_names_duplicates_rename_and_delete(tmp_path):
     shutil.rmtree(a / "renders" / "r000000000001")
     shutil.rmtree(a / "cover" / "versions" / "v0000000001")
     finished.sync(lib, "zh-TW", tmp)
-    assert "翻唱 #1 My_Voice_Ver8 -12 · Key -2" not in _links(lib / "Finished" / "童話 (live)")
+    assert "翻唱 #1 MyVoice -12 · Key -2" not in _links(lib / "Finished" / "童話 (live)")
     assert len(_links(lib / "Finished" / "童話 (live)")) == 3
 
     # delete the songs: shortcuts go; a folder with the user's file stays, an empty one goes

@@ -5,7 +5,7 @@ find in Explorer. This module keeps <library>/Finished (always English; 成品 i
 library: one folder per song, named by its title, holding a shortcut to each cover version,
 sing & record take, quick MV and full MV. Nothing is copied; the shortcuts point at the real files.
 
-  Finished/童話/翻唱 #1 My_Voice_Ver8 -12 · Key -2.lnk
+  Finished/童話/翻唱 #1 MyVoice -12 · Key -2.lnk
   Finished/童話/唱錄 10-31 09：05.lnk
   Finished/童話/快速MV 錄音室 1080p · 翻唱 #1 · 10-31 09：20.lnk
   Finished/童話/MV 童話.lnk
