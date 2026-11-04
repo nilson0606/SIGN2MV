@@ -92,7 +92,7 @@ export function createKaraokeSession(options) {
     if(!response.ok)throw Error('無法讀取已保存的伴樂／和音，請確認本機工具與歌曲庫。');return response.arrayBuffer();
   }
   const recording = createSingerRecorder({reference:()=>phase==='preparing'?null:reference, voiced: options.voiced, context: options.context, stream: options.stream, inputSource:options.inputSource, player: options.player, loadStem:loadRecordingStem, onInventoryChanged:recordingInventoryChanged, pausePlayer: () => { options.player()?.pauseVideo?.(); stopPreview(); }});
-  segmented = createSegmentRecording({recording, reference:()=>reference, player:options.player, micReady:options.micReady, startMic:options.startMic,
+  segmented = createSegmentRecording({recording, reference:()=>reference, player:options.player, micReady:options.micReady, startMic:options.startMic, stopMic:options.stopMic,
     canEnter:()=>!take&&!maskBusy&&!['preparing','finishing','restarting'].includes(phase), changed:()=>controls(),
     pauseOther:()=>{stopPreview();recording.clearPreview();options.cancelCalibration?.();},
     loadStem:loadRecordingStem,

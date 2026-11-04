@@ -1580,7 +1580,8 @@ export const messages = {
   "這首歌沒有保留原唱人聲音軌，請先在「歌曲準備」按「補建試聽音軌」。": "This song has no original vocal track saved; under Song preparation click “Rebuild preview stems” first.",
   "麥克風沒有關閉，請先按「停止收音」再試。": "The microphone did not close; click “Stop input” and try again.",
   "原唱測試進行中：用原唱人聲代替麥克風，從頭唱完整首（跟你演唱時一樣，約一首歌的時間）。可按「結束並結算」提早結束。": "Original vocal test running: the original vocal stands in for the microphone for the whole song (as long as the song, just like when you sing). Click “Finish and score” to stop early.",
-  "原唱測試沒有完成，下次按「從頭開始唱且評分」會使用你的麥克風。": "The original vocal test did not finish; the next “Sing from the start and score” uses your microphone."
+  "原唱測試沒有完成，下次按「從頭開始唱且評分」會使用你的麥克風。": "The original vocal test did not finish; the next “Sing from the start and score” uses your microphone.",
+  "本段已錄完，收音已關閉；按「錄這一段」會自動重新開啟。": "This segment is recorded and the input is closed; Record this segment opens it again."
 };
 
 export const templates = [

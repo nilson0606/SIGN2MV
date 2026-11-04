@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Sing & record, segment mode: 「試合完整一版」 no longer gets stuck on 「正在讀取各段乾淨人聲並試合…」. The input
+  stayed open after a segment was recorded; when it stopped during the trial (native capture interrupted while
+  the trial loaded the computer, or 「停止收音」) the running trial was dropped without a message. Each segment
+  now closes the input once it is saved, like a whole-song take (「錄這一段」 opens it again), and the input
+  stopping no longer cancels a trial.
 - Sing & record: capture is no longer stopped when the window is covered, minimised or in the background
   while a take starts, runs or is being finished (recording and RMVPE scoring do not need the page in front);
   an idle microphone is released after a minute in the background, and leaving the page still stops

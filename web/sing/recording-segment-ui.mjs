@@ -273,7 +273,10 @@ export function createSegmentRecording(options) {
     for(const buffer of c.buffers){if(time>=buffer.duration)continue;const n=c.monitor.createBufferSource();n.buffer=buffer;n.connect(c.monitor.destination);n.start(c.anchorClock,Math.max(0,time));c.nodes.push(n);}
   }
   async function stop(error=null){
-    serial++;loop=false;previewEnd=null;const c=capture;if(!c)return ending;
+    // [SIGN2MV] only a segment capture is ended here. The microphone stopping (「停止收音」, native capture
+    // interrupted) also calls this; bumping the request number with no capture silently dropped a running
+    // 試合 and left 「正在讀取各段乾淨人聲並試合…」 on screen.
+    loop=false;previewEnd=null;const c=capture;if(!c)return ending;serial++;
     capture=null;c.armed=false;work=true;stopMonitor(c);options.player()?.pauseVideo?.();
     status('正在保存本段錄音…保存完成前不能錄下一段。');render(); // [SIGN2MV] the record button used to stay silent meanwhile
     const stopped=options.recording.stop(error); // Drain PCM before microphone/context is released.
@@ -281,7 +284,11 @@ export function createSegmentRecording(options) {
       try{const row=await stopped;if(row?.segmentTake?.captureId===c.captureId&&draft?.key===c.key){rows=[row,...rows.filter(r=>r.id!==row.id)];const p=draft.parts.find(p=>p.id===c.partId);if(p)p.takeId=row.id;persist();invalidate();status(row.diagnostics?.status==='incomplete'?`本段錄音已保留，但診斷未完整保存：${row.diagnostics.error}。`:'本段已保存，可按「試聽本段錄音」立即聽這一版，也可切換演唱版本；原先錄音保留。'+(row.diagnostics?.status==='saved'?' 診斷已確認保存。':''));}else status(error?(error.message?`本段收音中斷：${error.message} 請再按「錄這一段」重錄。`:'本段收音中斷，請查看錄音狀態中的保留片段。'):'沒有完成新的錄音；既有版本保留。');} // [SIGN2MV] say why the take was not kept
       catch(e){status('錄音已停止；草稿／保存狀態請確認：'+e.message);}
       finally{if(c.monitor)await c.monitor.close().catch(()=>{});if(c.wasMuted)c.player.mute?.();else c.player.unMute?.();work=false;render();options.changed();}
-    })();return ending;
+    })();
+    // [SIGN2MV] like a whole-song take: once this segment is saved the microphone is closed; 「錄這一段」 opens it
+    // again. Left open, the idle input could be cut off while 試合 loaded the computer.
+    ending.then(()=>{if(!capture&&options.micReady())return options.stopMic?.('本段已錄完，收音已關閉；按「錄這一段」會自動重新開啟。');}).catch(()=>{});
+    return ending;
   }
   async function record(){
     // [SIGN2MV] a press while the last take is still being saved did nothing at all
