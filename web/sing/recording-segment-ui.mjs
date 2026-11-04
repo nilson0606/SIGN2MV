@@ -293,7 +293,7 @@ export function createSegmentRecording(options) {
   async function record(){
     // [SIGN2MV] a press while the last take is still being saved did nothing at all
     if(capture)throw Error('正在錄製這一段；要重錄請先按「停止」。');
-    if(work)throw Error('上一個動作還在處理（保存錄音或試合），完成後再按「錄製」。');
+    if(work)throw Error('上一個動作還在處理（保存錄音或試合），完成後再按一次錄音按鈕。');
     if(!enabled||!draft)return;if(!options.canEnter())throw Error('請先結束整首演唱。');
     if(!$('preroll').checkValidity()){$('record-settings').open=true;$('preroll').reportValidity();throw Error('提前播放請輸入 0～60 的整數秒數。');}
     // Capture the visible choice before callbacks can refresh controls. Browser
