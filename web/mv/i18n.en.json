@@ -595,7 +595,8 @@
   "和聲": "Backing",
   "和聲 2": "Backing 2",
   "男聲": "Male",
-  "女聲": "Female"
+  "女聲": "Female",
+  "尚未渲染成品 MV": "No finished MV yet"
  },
  "patterns": [
   {

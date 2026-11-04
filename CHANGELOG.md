@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- MV: 「🎬 播放成品 MV (.mp4)」 can only be pressed once the project has a finished MV (greyed out, with
+  「尚未渲染成品 MV」 on hover, until then). It used to switch to an empty player. It follows the same rule as
+  the download and open-folder buttons, so it turns on when a project with an MV is opened or a render ends.
 - Docs: `MANUAL.html` next to `install.bat` opens the manual in the browser's language (Chinese or English,
   with links to both), so the manual can be read right after extracting the ZIP, before installing.
 - Sing & record: the RMVPE scoring worker is stopped when one piece gets no answer within 120 s (the page

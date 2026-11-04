@@ -835,6 +835,8 @@
     .btn { transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.15s, color 0.15s, background 0.15s; }
     .btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 4px 0 rgba(0,0,0,0.55), 0 10px 18px rgba(0,0,0,0.5), 0 0 12px rgba(245, 215, 135, 0.18); }
     .btn:not(:disabled):active { transform: translateY(2px); box-shadow: inset 0 2px 5px rgba(0,0,0,0.55); }
+    /* [SIGN2MV] 「播放成品 MV」 is off until a finished MV exists */
+    #btnPlayMv:disabled { opacity: 0.4; cursor: not-allowed; }
     @media (prefers-reduced-motion: reduce) {
       .panel, .btn { transition: none; }
       .panel:focus-within, .btn:not(:disabled):hover { transform: none; }
@@ -1002,7 +1004,7 @@
           <div style="display:flex; gap:8px; align-items:center;">
             <button class="btn btn-sm" id="btnLiveSync" onclick="switchPreviewMode('live')" title="播放音檔時即時顯示當下的分鏡圖與字幕（時間點照成品規則：換段前 0.4 秒淡入），不用出影片就能對字幕">🎵 即時對字幕</button>
             <button class="btn btn-sm" onclick="switchPreviewMode('frame')">🖼️ 合成單幀預覽</button>
-            <button class="btn btn-sm btn-gold" onclick="switchPreviewMode('video')">🎬 播放成品 MV (.mp4)</button>
+            <button class="btn btn-sm btn-gold" id="btnPlayMv" disabled title="尚未渲染成品 MV" onclick="switchPreviewMode('video')">🎬 播放成品 MV (.mp4)</button>
             <button class="btn btn-sm" id="btnDownloadMvVideo" style="border-color:#22c55e; color:#86efac; display:none;" onclick="downloadRenderedMv()" title="將已渲染完成的 1080p 60fps MP4 影片下載至本機">⬇️ 匯出/下載 MV 影片</button>
             <button class="btn btn-sm" id="btnOpenMvFolder" style="display:none;" onclick="openMvFolder()" title="在檔案總管顯示已輸出的 MV 檔案">📂 開啟資料夾</button>
           </div>
@@ -3578,6 +3580,9 @@
     }
 
     function updateMvDownloadButtons(exists) {
+      // [SIGN2MV] 「播放成品 MV」 follows the same rule: without a finished MV it only showed an empty player
+      const btnPlay = document.getElementById('btnPlayMv');
+      if (btnPlay) { btnPlay.disabled = !exists; btnPlay.title = exists ? '' : '尚未渲染成品 MV'; }
       const btnVid = document.getElementById('btnDownloadMvVideo');
       const btnTop = document.getElementById('btnDownloadMvTop');
       if (btnVid) btnVid.style.display = exists ? 'inline-flex' : 'none';
