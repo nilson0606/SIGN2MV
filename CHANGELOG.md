@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Sing & record, segment mode: a saved 分段合成 rescored far too low (for example total 14, pitch 0, rhythm 0)
+  because it was saved without the scoring choices, so 「允許高／低八度」 was off and an octave-down voice
+  scored as off-key. A segment mix now stores 音域比對, 評分範圍 and 評分難度 like a whole-song take; segment
+  mixes saved earlier take the octave choice from the 音域比對 setting shown when they are rescored (both
+  「重新評分」 on the sing page and 錄音重新評分 in post-production). Checked on a real 哭沙 segment mix: 14 → 81.
 - Sing & record, segment mode: 「試合完整一版」 no longer gets stuck on 「正在讀取各段乾淨人聲並試合…」. The input
   stayed open after a segment was recorded; when it stopped during the trial (native capture interrupted while
   the trial loaded the computer, or 「停止收音」) the running trial was dropped without a message. Each segment

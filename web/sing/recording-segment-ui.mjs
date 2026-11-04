@@ -321,6 +321,9 @@ export function createSegmentRecording(options) {
     }catch(e){if(!cancelled()){await stop(e);status('無法完成本段錄音：'+e.message);}}
   }
   function playerState(state){if(state===1){clearTakePreview();$('audio').pause();options.recording.clearPreview();render();}const c=capture;if(!c?.armed)return;if(state===0){stop().catch(e=>status(e.message));return;}options.recording.playerState(state,currentTime());if(state===1)syncMonitor(c,currentTime());else stopMonitor(c);}
+  // [SIGN2MV] the scoring choices a whole-song take stores (音域比對, 評分範圍, 評分難度), so a rescore of the
+  // segment mix does not fall back to strict pitch
+  function composeScoring(){const v=id=>document.getElementById(id)?.value;return {allowOctave:(v('pitch-mode')??'octave')==='octave',rangeMode:v('score-range')==='full'?'full':'performed',difficulty:v('score-difficulty')||'standard'};}
   async function compose(join=false){
     if(busy()||!draft||!enabled)return;const delay=Number($('delay').value);delaySeconds(delay);persist();
     const ref=structuredClone(reference()),plan=structuredClone(draft),mode=$('output').value,balance=options.recording.balanceSettings(),request=++serial;
@@ -335,7 +338,7 @@ export function createSegmentRecording(options) {
       const raw=composeSegmentVoice(plan,sources,{sampleRate:decoder.sampleRate,delayMs:delay}),voice=wavBlob(raw),tracks=[],stems=[];
       const ranges=originalVocalRanges(plan.originalVocalRanges,plan.duration),original=mode==='mix'&&ranges.length?{version:1,stem:ref.vocalMode==='lead'?'lead':'vocals',ranges}:null;
       if(mode==='mix'){if(!ref.hasPreview)throw Error('加入伴樂或原唱需要已保存的分離音軌。');stems.push('accompaniment');if(ref.vocalMode==='lead')stems.push('backing');if(original)stems.push(original.stem);for(const stem of stems){const b=await decoder.decodeAudioData(await options.loadStem(ref,stem));if(b.duration<plan.duration-.15)throw Error('分離音軌長度不足，請補建完整音軌。');tracks.push(b);}}
-      const meta=await segmentMixMetadata(raw,{id:crypto.randomUUID(),title:ref.title+' · 分段合成',videoId:ref.videoId,created:Date.now(),mime:'audio/wav',rawMime:'audio/wav',rawBytes:voice.size,mode,stems,seconds:plan.duration,sourceSeconds:plan.duration,complete:true,appliedDelayMs:delay,recordingDelayMs:delay,postDefaults:recordingSceneDefaultsVersion,postEdit:{version:1,start:0,end:plan.duration,fadeIn:0,fadeOut:0},segmentComposition:{version:1,draft:plan,delayMs:delay,crossfadeSeconds:.012},post:{version:1,reference:ref,scoring:{},offsetMs:delay,segments:[{offset:0,songTime:0,duration:plan.duration}],samples:[]}},balance);if(request!==serial||key!==plan.key)return;
+      const meta=await segmentMixMetadata(raw,{id:crypto.randomUUID(),title:ref.title+' · 分段合成',videoId:ref.videoId,created:Date.now(),mime:'audio/wav',rawMime:'audio/wav',rawBytes:voice.size,mode,stems,seconds:plan.duration,sourceSeconds:plan.duration,complete:true,appliedDelayMs:delay,recordingDelayMs:delay,postDefaults:recordingSceneDefaultsVersion,postEdit:{version:1,start:0,end:plan.duration,fadeIn:0,fadeOut:0},segmentComposition:{version:1,draft:plan,delayMs:delay,crossfadeSeconds:.012},post:{version:1,reference:ref,scoring:composeScoring(),offsetMs:delay,segments:[{offset:0,songTime:0,duration:plan.duration}],samples:[]}},balance);if(request!==serial||key!==plan.key)return;
       if(original)meta.post.originalVocals=original;
       const mix=wavBlob(await remixRecording(raw,tracks,meta,delay,{edit:meta.postEdit}));meta.bytes=mix.size;if(request!==serial||key!==plan.key)return;
       trial={meta,mix,voice,raw,tracks,dirty:false};trialPreview.set({raw,tracks,meta,ms:delay});trialURL=URL.createObjectURL(mix);$('audio').src=trialURL;$('audio').hidden=false;$('audio').load();

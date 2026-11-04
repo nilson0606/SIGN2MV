@@ -39,6 +39,14 @@ export function recordedSongTime(segments, offset) {
   const segment=segments.find(s=>offset>=s.offset&&offset<s.offset+s.duration);
   return segment ? segment.songTime+offset-segment.offset : null;
 }
+// [SIGN2MV] segment mixes saved before 2026-11-04 stored no scoring settings (scoring:{}), so a rescore ran
+// without 「允許高／低八度」 and an octave-down voice scored 0 for pitch and rhythm. A missing octave choice is
+// taken from the 音域比對 setting shown now; everything else the take stored is kept.
+export function scoringForRescore(scoring) {
+  const result={...(scoring||{})};
+  if(typeof result.allowOctave!=='boolean'){const mode=globalThis.document?.getElementById('pitch-mode')?.value;result.allowOctave=mode?mode==='octave':true;}
+  return result;
+}
 export function referenceForRescore(post, current) {
   if (!current) throw new Error('請先載入這首歌的新基準；只更改音高選項還不算載入。');
   const original=post.reference;

@@ -11,7 +11,7 @@ import { scoringProfile } from './scoring.mjs';
 import { analyseRecordingRmvpe, rescoreRecordingRmvpe } from './rmvpe-score.mjs';
 import { recordingVolume } from './recording-mix.mjs';
 import {repairSettings} from './recording-repair.mjs';
-import { rescoreRecording, remixRecording, wavBlob, delaySeconds, referenceForRescore, recordingDelaySuffix, recordingEdit } from './recording-process.mjs';
+import { rescoreRecording, remixRecording, wavBlob, delaySeconds, referenceForRescore, scoringForRescore, recordingDelaySuffix, recordingEdit } from './recording-process.mjs';
 const $=id=>document.getElementById(id), BASE='/sr';
 async function localRequest(path,body) {
   let response;
@@ -296,7 +296,7 @@ export function createRecordingPost({store,stop,pause,download,onDelete,referenc
     const referenceSource=$('post-reference-source').value;
     const scoringReference=referenceSource==='current'?referenceForRescore(row.post,reference()):structuredClone(row.post.reference);
     status(`正在以 ${referenceName(scoringReference)} 重新評分…`);
-    const scoring={...row.post.scoring,difficulty:scoringProfile($('post-difficulty').value).id};
+    const scoring={...scoringForRescore(row.post.scoring),difficulty:scoringProfile($('post-difficulty').value).id};
     const scoringPost={...row.post,reference:scoringReference,scoring};
     // [SIGN2MV] RMVPE on the saved vocal, the same model as the song reference (kept with the take,
     // so changing the delay does not analyse again); the browser detector only if the server cannot

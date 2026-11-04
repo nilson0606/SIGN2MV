@@ -12,7 +12,7 @@ import { createSegmentRecording } from './recording-segment-ui.mjs';
 import { createMaskEditor } from './mask-editor.mjs';
 import { ScoringTake, validateReference, savedResult, pitchDifference, scoringProfile, applyMasks, maskedCells } from './scoring.mjs';
 import { createRmvpeScoring, warmRmvpe, analyseRecordingRmvpe, rescoreRecordingRmvpe } from './rmvpe-score.mjs';
-import { referenceForRescore } from './recording-process.mjs';
+import { referenceForRescore, scoringForRescore } from './recording-process.mjs';
 const $ = id => document.getElementById(id);
 const BASE = '/sr';
 const HISTORY = 'karaoke.scores.v1';
@@ -154,7 +154,7 @@ export function createKaraokeSession(options) {
     async runSaved(id, ms, progress = () => {}) {
       const row = (await savedTakes()).find(r => r.id === id);
       if (!row) throw new Error('找不到這筆錄音，或它不是目前這首歌、這個 Key 的錄音。');
-      const scoringPost = { ...row.post, reference: referenceForRescore(row.post, reference), scoring: { ...row.post.scoring, difficulty: scoringProfile($('score-difficulty').value).id } };
+      const scoringPost = { ...row.post, reference: referenceForRescore(row.post, reference), scoring: { ...scoringForRescore(row.post.scoring), difficulty: scoringProfile($('score-difficulty').value).id } };
       let analysis = savedAnalyses.get(id) || (row.post.rmvpeAnalysis?.source === 'rmvpe-v1' ? row.post.rmvpeAnalysis : null), kept = true;
       if (!analysis) {
         analysis = await analyseRecordingRmvpe(await recording.store.blob(row, 'voice'), progress);
