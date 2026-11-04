@@ -1233,6 +1233,11 @@ function renderModels() {
           try { await api.del(`/api/cover/models/${encodeURIComponent(m.name)}/epochs/${e.epoch}`); await loadStatus(); } catch (err) { toast(errorText(err), true); }
         } }, '✕')))) : null))
     : [el('div', { class: 'empty' }, t('cover.no_models_hint'))]));
+  // keep the curve panel in step with the model list: a deleted model leaves it, a deleted epoch leaves its list
+  if (lossSel.value) {
+    if (lossModels().includes(lossSel.value)) { fillLossSelect(); renderEpochs(lossSel.value); }
+    else loadLoss();   // the model shown was deleted: show the next one, or "no models"
+  }
 }
 
 // management panels fold away; whether each one is open is remembered in this browser
