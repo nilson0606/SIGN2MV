@@ -599,7 +599,7 @@ export default {
   "lib.yt_no_info": "Could not read the title (the import may still work).",
   "lib.drop_hint": "You can also drop an audio or video file here; it is uploaded right away.",
   "err.youtube_info_failed": "Could not read this link.",
-  "cover.cleanup": "🧹 Clean up unused files",
+  "cover.cleanup": "🧹 Clean up this song's unused files",
   "cover.cleanup_nothing": "Nothing to clean up: every cached file is still used by a version.",
   "cover.cleanup_confirm": "These files are not used by any version or by the settings form ({0} in total). Delete them? Versions and stems are not touched.",
   "cover.n_files": "{0} files",
