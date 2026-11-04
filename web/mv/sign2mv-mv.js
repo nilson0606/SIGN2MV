@@ -105,12 +105,31 @@ async function sign2mvOpenForSong(songId, renderId, explicit) {
   if (explicit) openNewProjectModal();
 }
 
+// [SIGN2MV] while a render runs the page is locked (Nilson's rule). Opening another song's project from another
+// page, or the refresh that reloads the project, would rebuild parts of the page unlocked and the finished MV
+// would then be shown on the wrong project. During a render: 「製作 MV」 does not switch (a note says so) and a
+// refresh waits until the render has ended (setRenderingUiLocked(false) calls sign2mvAfterRender).
+let sign2mvRefreshAfterRender = false;
+function sign2mvRendering() {
+  return typeof isRenderingInProgress !== 'undefined' && isRenderingInProgress;
+}
+function sign2mvAfterRender() {
+  if (!sign2mvRefreshAfterRender) return;
+  sign2mvRefreshAfterRender = false;
+  initStudio();
+}
+
 window.addEventListener('message', (event) => {
   if (event.origin !== location.origin || event.source !== window.parent) return;
   const m = event.data || {};
   if (m.type === 'sign2mv:mv-open' && typeof m.songId === 'string') {
+    if (sign2mvRendering()) {
+      showToast('⏳ MV 正在渲染，完成前不會切換專案。渲染完成後請再按一次「製作 MV」。', true);
+      return;
+    }
     sign2mvOpenForSong(m.songId, m.renderId || '', m.explicit !== false).catch(e => showToast(`❌ ${e.message}`, true));
   } else if (m.type === 'sign2mv:refresh') {
+    if (sign2mvRendering()) { sign2mvRefreshAfterRender = true; return; }
     initStudio();
   }
 });

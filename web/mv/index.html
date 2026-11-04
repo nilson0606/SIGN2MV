@@ -3660,6 +3660,8 @@
           }
           delete el.dataset.preRenderDisabled;
         });
+        // [SIGN2MV] what arrived from other pages during the render (see sign2mv-mv.js)
+        if (typeof sign2mvAfterRender === 'function') sign2mvAfterRender();
       }
     }
 
@@ -3740,6 +3742,33 @@
         setRenderingUiLocked(false);
         btn.textContent = '🎬 啟動 1080p 60fps NVENC 極速渲染';
       }
+    }
+
+    // [SIGN2MV] A render keeps running when the page is reloaded (F5), but the lock lived only in the page.
+    // On opening, ask the server: a render still running locks the page again, shows its progress (the stop
+    // button works as usual) and, once it ends, unlocks and reopens the project so a new MV shows.
+    async function resumeRunningRender() {
+      let p = null;
+      try { p = await (await fetch('/api/mv/progress')).json(); } catch (e) { return; }
+      if (!p || !p.active || p.task_type !== 'render' || isRenderingInProgress) return;
+      if (p.slug && p.slug !== currentSlug && allProjects.some(x => x.slug === p.slug)) await loadProject(p.slug);
+      const btn = document.getElementById('btnRenderMV');
+      if (btn) btn.textContent = '⏳ NVENC 1080p 60fps 渲染中...';
+      setRenderingUiLocked(true);
+      startProgressPolling('🎬 MV 渲染中（重新整理之前就開始的渲染）…');
+      const watch = setInterval(async () => {
+        let q = null;
+        try { q = await (await fetch('/api/mv/progress')).json(); } catch (e) { return; }
+        if (q && q.active && q.task_type === 'render') return;
+        clearInterval(watch);
+        if (btn) btn.textContent = '🎬 啟動 1080p 60fps NVENC 極速渲染';
+        if (isRenderingInProgress) {   // not stopped with the stop button meanwhile
+          const ended = q && q.task_type === 'render' && q.stage ? q.stage : '✔ MV 渲染已結束';
+          stopProgressPolling(ended, (q && q.detail) || '', ended.startsWith('🎉') || ended.startsWith('✔'));
+          setRenderingUiLocked(false);
+        }
+        if (currentSlug) await loadProject(currentSlug);
+      }, 1000);
     }
 
     async function loadOrRunWhisper(forceRerun = false) {
@@ -4215,7 +4244,7 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => { initStudio().then(() => window.sign2mvReady && window.sign2mvReady()); });
+    window.addEventListener('DOMContentLoaded', () => { initStudio().then(resumeRunningRender).then(() => window.sign2mvReady && window.sign2mvReady()); });
   </script>
 </body>
 </html>

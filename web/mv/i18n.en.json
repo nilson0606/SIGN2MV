@@ -596,7 +596,10 @@
   "和聲 2": "Backing 2",
   "男聲": "Male",
   "女聲": "Female",
-  "尚未渲染成品 MV": "No finished MV yet"
+  "尚未渲染成品 MV": "No finished MV yet",
+  "⏳ MV 正在渲染，完成前不會切換專案。渲染完成後請再按一次「製作 MV」。": "⏳ An MV is rendering; the project will not switch until it ends. Press the MV button again after the render.",
+  "🎬 MV 渲染中（重新整理之前就開始的渲染）…": "🎬 Rendering the MV (a render started before the page was reloaded)…",
+  "✔ MV 渲染已結束": "✔ The MV render has ended"
  },
  "patterns": [
   {

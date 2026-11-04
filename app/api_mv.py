@@ -65,7 +65,7 @@ def router(ctx: Context) -> APIRouter:
     r = APIRouter()
     local_progress: Dict[str, Any] = {"active": False, "task_type": "idle", "percent": 0, "stage": "待命中",
                                       "detail": "", "started_at": 0.0, "elapsed_sec": 0.0}
-    current: Dict[str, Any] = {"job": None, "kind": "idle", "started": 0.0}
+    current: Dict[str, Any] = {"job": None, "kind": "idle", "started": 0.0, "slug": ""}
 
     def local_update(active: bool, task_type: str, percent: int, stage: str, detail: str = ""):
         now = time.time()
@@ -123,8 +123,9 @@ def router(ctx: Context) -> APIRouter:
         lane = "mv" if kind == "mv_render" else "gpu"   # renders do not wait behind training (old MV studio)
         job = ctx.submit(kind=kind, lane=lane, script=script, input=payload, title=title, song_id=song_id,
                          timeout_s=timeout, dedupe=f"{kind}:{payload.get('slug') or payload.get('w_json')}")
+        # [SIGN2MV] slug: a page opened (or reloaded) during a render finds the project and locks again
         current.update({"job": job["id"], "kind": "render" if kind == "mv_render" else "whisper",
-                        "started": time.time()})
+                        "started": time.time(), "slug": str(payload.get("slug") or "")})
         return job["id"]
 
     def whisper_payload(proj: Dict[str, Any], lead_only: bool) -> Dict[str, Any]:
@@ -190,10 +191,10 @@ def router(ctx: Context) -> APIRouter:
                 stage = f"⏳ 排隊中：GPU 正在處理其他工作（第 {job.get('position') or 1} 個）"
                 return {"active": True, "task_type": current["kind"], "percent": 0, "stage": stage,
                         "detail": "可以到「工作佇列」查看", "started_at": started,
-                        "elapsed_sec": round(time.time() - current["started"], 1)}
+                        "elapsed_sec": round(time.time() - current["started"], 1), "slug": current["slug"]}
             return {"active": True, "task_type": current["kind"], "percent": int(job.get("percent") or 0),
                     "stage": job.get("stage") or "處理中…", "detail": job.get("message") or "",
-                    "started_at": started, "elapsed_sec": round(time.time() - started, 1)}
+                    "started_at": started, "elapsed_sec": round(time.time() - started, 1), "slug": current["slug"]}
         if local_progress["active"] and local_progress["started_at"] > 0:
             local_progress["elapsed_sec"] = round(time.time() - local_progress["started_at"], 1)
         return local_progress

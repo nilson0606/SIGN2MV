@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- MV: the page stays locked for the whole render. Reloading it (F5) during a render used to unlock every button
+  while the render went on, so Whisper could be started and the render dropped off the page's progress and stop
+  button (outside review, Gemini P5). The page now asks the server when it opens: a running render locks it
+  again, shows the progress and the stop button, and when the render ends the page unlocks and reopens the
+  project with the new MV. During a render, 「製作 MV」 from another page no longer switches project (a note
+  says so; the finished MV used to show on the wrong project), and a refresh from the other pages waits until
+  the render has ended.
 - MV: 「🎬 播放成品 MV (.mp4)」 can only be pressed once the project has a finished MV (greyed out, with
   「尚未渲染成品 MV」 on hover, until then). It used to switch to an empty player. It follows the same rule as
   the download and open-folder buttons, so it turns on when a project with an MV is opened or a render ends.
