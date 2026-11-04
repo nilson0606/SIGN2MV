@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- MV: photos 37 to 99 are counted again when lyrics are pasted and when a render builds its own timeline.
+  The photo count still stopped at the old limit of 36 (`count_existing_scene_images`), so a project with
+  more photos was treated as having 36 there. Found by an outside review (Gemini, P1).
 - Docs, for open-sourcing: the manual (English and Chinese) has a new step-by-step getting-started chapter
   (download, extract to an English path, install, start, import a song, sing, get a voice model, first
   cover, first video, shut down), button names that match the screen, rescoring, the original-vocal test

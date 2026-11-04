@@ -379,7 +379,9 @@ def count_existing_scene_images(illust_dir: str) -> int:
     if not illust_dir or not os.path.exists(illust_dir):
         return 0
     max_sid = 0
-    for sid in range(1, 37):
+    # [SIGN2MV] every slot up to MAX_SCENES (99, defined further down); this was still the old 36, so
+    # photos 37-99 were not counted when lyrics were pasted or a render built its own timeline
+    for sid in range(1, MAX_SCENES + 1):
         if resolve_scene_image_path(illust_dir, sid):
             max_sid = sid
     return max_sid
