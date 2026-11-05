@@ -70,9 +70,13 @@ def main() -> None:
         ref_file = base_dir / "reference.json"
         if data.get("force_reference") or not ref_file.is_file():
             report = StageProgress("reference", device)
-            protocol.progress(0, "reference", device.upper())
+            protocol.progress(None, "reference:load", device.upper())     # reading the vocals, loading the pitch model
+
+            def ref_phase(sub: str) -> None:
+                protocol.progress(None, f"reference:{sub}", device.upper())
+                report.last = -1.0
             ref = sing_reference.build(Path(base["pitch_input"]), Path(base["beat_input"]),
-                                       base["meta"]["pitchMethod"], device, report)
+                                       base["meta"]["pitchMethod"], device, report, on_phase=ref_phase)
             value = {"version": 1, **base["meta"], **ref, "cacheVersion": 1, "hasPreview": True,
                      "stems": base["stems_rel"], "savedAt": now_iso(),
                      "quality": "experimental-lead-vocals" if base["meta"].get("vocalMode") == "lead"
@@ -137,6 +141,10 @@ class _Adapter:
     def __call__(self, pct: float) -> None:
         self.report.device = self.device
         self.report(pct)
+
+    def phase(self, sub: str) -> None:
+        protocol.progress(None, f"{self.report.stage}:{sub}", self.device.upper())
+        self.report.last = -1.0
 
 
 if __name__ == "__main__":

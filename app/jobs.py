@@ -19,6 +19,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable
 
 from .proc import ManagedProcess
@@ -80,7 +81,7 @@ class Job:
         del self.log[:-LOG_LINES]
     process: ManagedProcess | None = None
 
-    def public(self, position: int | None) -> dict[str, Any]:
+    def public(self, position: int | None, waiting_for: str = "") -> dict[str, Any]:
         return {
             "id": self.id,
             "kind": self.spec.kind,
@@ -88,6 +89,7 @@ class Job:
             "title": self.spec.title,
             "status": self.status,
             "position": position,
+            "waiting_for": waiting_for,          # queued: title of the job running in this lane now
             "percent": self.percent,
             "stage": self.stage,
             "message": self.message,
@@ -110,6 +112,9 @@ class JobQueue:
         self._cv = threading.Condition()
         self._stopping = False
         self._on_change = on_change
+        # a file that keeps what happened to every job (created, started, steps, cancelled, ended),
+        # so a slow or odd run can be looked at after the program was closed; set by the server
+        self.event_log: Path | None = None
         # called (without the lock, on a helper thread) after a job ends; e.g. the finished-outputs folder
         self.finished_listeners: list[Callable[[], None]] = []
         self._threads: list[threading.Thread] = []
@@ -129,6 +134,8 @@ class JobQueue:
                 raise RuntimeError("shutting_down")
             job = Job(id=uuid.uuid4().hex[:12], spec=spec, seq=next(self._seq))
             self._jobs[job.id] = job
+            ahead = self._waiting_for_locked(job)
+            self._event(job, f"queued in lane {spec.lane}" + (f" behind \"{ahead}\"" if ahead else ""))
             self._prune_locked()
             self._cv.notify_all()
         return job
@@ -136,7 +143,7 @@ class JobQueue:
     def get(self, job_id: str) -> dict[str, Any] | None:
         with self._cv:
             job = self._jobs.get(job_id)
-            return job.public(self._position_locked(job)) if job else None
+            return job.public(self._position_locked(job), self._waiting_for_locked(job)) if job else None
 
     def log(self, job_id: str, after: int = 0) -> dict[str, Any] | None:
         """Log lines after the first `after` ones: {"lines", "next", "status"}."""
@@ -152,7 +159,7 @@ class JobQueue:
     def list(self) -> list[dict[str, Any]]:
         with self._cv:
             jobs = sorted(self._jobs.values(), key=lambda j: j.seq)
-            return [j.public(self._position_locked(j)) for j in jobs]
+            return [j.public(self._position_locked(j), self._waiting_for_locked(j)) for j in jobs]
 
     def active(self) -> list[dict[str, Any]]:
         return [j for j in self.list() if j["status"] in ("queued", "running")]
@@ -163,6 +170,7 @@ class JobQueue:
             if job is None or job.status in FINISHED:
                 return False
             job.cancel_requested = True
+            self._event(job, f"cancel requested while {job.status}")
             if job.status == "queued":
                 self._finish_locked(job, "cancelled")
             proc = job.process
@@ -201,6 +209,25 @@ class JobQueue:
                  if j.spec.lane == job.spec.lane and j.status == "queued" and j.seq < job.seq]
         return len(ahead) + 1
 
+    def _waiting_for_locked(self, job: Job | None) -> str:
+        if job is None or job.status != "queued":
+            return ""
+        running = [j for j in self._jobs.values() if j.spec.lane == job.spec.lane and j.status == "running"]
+        return running[0].spec.title if running else ""
+
+    def _event(self, job: Job, text: str) -> None:
+        """One line in logs/jobs.log; never lets a disk problem disturb the jobs."""
+        path = self.event_log
+        if path is None:
+            return
+        try:
+            if path.is_file() and path.stat().st_size > 2_000_000:
+                path.replace(path.with_suffix(".previous.log"))
+            with open(path, "a", encoding="utf-8") as fh:
+                fh.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {job.id} [{job.spec.kind}] {job.spec.title}: {text}\n")
+        except OSError:
+            pass
+
     def _prune_locked(self) -> None:
         finished = sorted((j for j in self._jobs.values() if j.status in FINISHED),
                           key=lambda j: j.seq)
@@ -223,6 +250,7 @@ class JobQueue:
             job.error_message = message
         took = f" ({job.finished_at - job.started_at:.0f} s)" if job.started_at else ""
         job.add_log(("✔ " if status == "succeeded" else "■ ") + status + took + (f" — {code}" if code else ""))
+        self._event(job, status + took + (f" — {code}: {message[:300]}" if code else ""))
         self._cv.notify_all()
         for fn in list(self.finished_listeners):
             try:
@@ -246,6 +274,7 @@ class JobQueue:
                 job.status = "running"
                 job.started_at = time.time()
                 job.add_log(f"▶ {job.spec.title}")
+                self._event(job, f"started (waited {job.started_at - job.created_at:.0f} s)")
             self._changed()
             try:
                 self._run(job)
@@ -324,6 +353,7 @@ class JobQueue:
                     stage = str(msg.get("stage", job.stage))[:80]
                     if stage and stage != job.stage:
                         job.add_log(f"▶ [{stage}] {str(msg.get('message', ''))[:200]}".rstrip())
+                        self._event(job, f"step {stage} after {time.time() - (job.started_at or time.time()):.0f} s")
                     job.stage = stage
                     job.message = str(msg.get("message", ""))[:300]
                 elif mtype == "result":

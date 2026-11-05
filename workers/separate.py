@@ -60,6 +60,18 @@ class Progress:
             self.last = val
             protocol.progress(round(val, 1), self.stage, self.device.upper())
 
+    def phase(self, sub: str) -> None:
+        """A step without a percentage ("read" the audio, "load" the model): the page names it and shows a
+        moving bar instead of a still 0 %."""
+        protocol.progress(None, f"{self.stage}:{sub}", self.device.upper())
+        self.last = -1.0          # the next percentage is shown at once (and names the step again)
+
+
+def phase(report, sub: str) -> None:
+    fn = getattr(report, "phase", None)
+    if fn:
+        fn(sub)
+
 
 def patch_tqdm(module, report: Progress) -> None:
     """Route the library's tqdm progress bars into our progress messages."""
@@ -92,8 +104,10 @@ def demucs_separate(src: Path, out: Path, device: str, report: Progress) -> None
     from demucs.pretrained import get_model
 
     patch_tqdm(dapply, report)
+    phase(report, "load")
     model = get_model("htdemucs")
     model.eval()
+    report(0)
     wav_np, sr = sf.read(str(src), dtype="float32", always_2d=True)
     if sr != model.samplerate:
         raise RuntimeError(f"unexpected sample rate {sr}")
@@ -130,11 +144,15 @@ def roformer_separate(model_key: str, src: Path, out: Path, device: str, report:
     if device == "cpu":
         os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
     out.mkdir(parents=True, exist_ok=True)
+    phase(report, "load")
+    t0 = time.time()
     sep = Separator(model_file_dir=str(model_dir), output_dir=str(out), output_format="WAV",
                     use_soundfile=True, log_level=logging.WARNING,
                     mdxc_params={"batch_size": 1, "segment_size": 256, "override_model_segment_size": True,
                                  "overlap": 4, "pitch_shift": 0})
     sep.load_model(model_filename=filename)
+    protocol.log(f"{filename}: model loaded in {time.time() - t0:.1f} s")
+    report(0)
     # Keep original gain: no independent peak normalisation per stem.
     sep.model_instance.normalization_threshold = float("inf")
     sep.model_instance.amplification_threshold = 0.0
@@ -241,6 +259,7 @@ def run_layer(layer: dict, song_dir: Path, device: str, report: Progress) -> str
 
     def attempt(dev: str) -> None:
         report(0)
+        phase(report, "read")
         if kind in ("mix", "second_pass"):
             if model == "demucs":
                 demucs_separate(src, tmp, dev, report)
