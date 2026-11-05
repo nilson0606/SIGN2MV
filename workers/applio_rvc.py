@@ -60,9 +60,21 @@ def main() -> None:
     data = protocol.read_input()
     tasks = data.get("tasks") or []
     sys.path.insert(0, os.getcwd())
+    # Measure the load in parts, and if it takes long, write where it is every 30 s (Python's own
+    # stack dump), so a slow start shows in the log which line it waits in instead of being guessed at.
+    import faulthandler
+    faulthandler.dump_traceback_later(30, repeat=True, file=sys.stderr)
+    protocol.log(f"worker started {time.time() - T0:.1f} s after launch")
     with protocol.Heartbeat(0, "rvc_load"), contextlib.redirect_stdout(sys.stderr):
+        last = time.time()
+        for label, mod in (("torch", "torch"), ("librosa", "librosa"), ("Applio inference code", "rvc.infer.infer")):
+            __import__(mod)
+            protocol.log(f"load {label}: {time.time() - last:.1f} s")
+            last = time.time()
         from rvc.infer.infer import VoiceConverter
         vc = VoiceConverter()
+        protocol.log(f"load create converter: {time.time() - last:.1f} s")
+    faulthandler.cancel_dump_traceback_later()
     load_s = round(time.time() - T0, 1)
     protocol.log(f"Applio loaded in {load_s} s")
     dev = str(getattr(vc.config, "device", "") or "")
