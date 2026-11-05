@@ -30,6 +30,12 @@ if os.environ.get("SIGN2MV_FORCE_CPU"):
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
+# Applio's feature models and the folders it keeps them in (rvc/lib/utils.py load_embedding)
+EMBEDDER_DIRS = {"contentvec": "contentvec", "chinese-hubert-base": "chinese_hubert_base", "spin": "spin",
+                 "spin-v2": "spin-v2", "japanese-hubert-base": "japanese_hubert_base",
+                 "korean-hubert-base": "korean_hubert_base"}
+
+
 def ffmpeg() -> str:
     import shutil
     return shutil.which("ffmpeg") or "ffmpeg"
@@ -75,6 +81,15 @@ def main() -> None:
         if t.get("clean"):
             kwargs.update(cleanup_mode="light", cleanup_stage="output",
                           cleanup_strength=cleanup_db(t.get("clean_strength", 0.5)))
+        # the feature model this voice model was trained with (Applio stores it in the .pth); converting with
+        # another one gives a wrong voice without any error, so a model that needs one we cannot load stops here
+        embedder = str(t.get("embedder") or "contentvec")
+        if embedder not in EMBEDDER_DIRS:
+            protocol.fail("rvc_failed", f"{t.get('label', '')}: this model needs the feature model "
+                                        f"'{embedder}', which SIGN2MV cannot load")
+        if not (Path("rvc/models/embedders") / EMBEDDER_DIRS[embedder] / "pytorch_model.bin").is_file():
+            protocol.log(f"Downloading the {embedder} feature model (first use only)...")
+        kwargs["embedder_model"] = embedder
         started = time.time()
         index = str(t.get("index") or "")
         tmp_index = None

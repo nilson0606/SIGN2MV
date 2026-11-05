@@ -74,10 +74,16 @@ function trackAudio(a) { a.addEventListener('play', () => { lastAudio = a; }); r
 function audioEl(src) { return trackAudio(el('audio', { src, controls: true, preload: 'none' })); }
 
 // model choices: every model and its kept epoch versions
+// models trained with a feature model other than the usual contentvec get a short label (conversion follows it anyway)
+function embedderTag(m) {
+  if (!m || !m.embedder || m.embedder === 'contentvec') return '';
+  return m.embedder === 'chinese-hubert-base' ? t('cover.emb_zh') : t('cover.emb_other', m.embedder);
+}
 function modelOptions() {
   const out = [];
   for (const m of (status && status.models) || []) {
-    out.push([m.name, m.name + (m.epochs.length ? ` (${t('cover.final')})` : '')]);
+    const tag = embedderTag(m);
+    out.push([m.name, m.name + (tag ? ` · ${tag}` : '') + (m.epochs.length ? ` (${t('cover.final')})` : '')]);
     for (const e of [...m.epochs].reverse()) out.push([`${m.name}__e${e.epoch}`, `  ↳ ${m.name} · ${t('cover.epoch_n', e.epoch)}`]);
   }
   return out;
@@ -598,6 +604,7 @@ function translateOptions() {
   [refineSel.el, mr.bgm_refine.el].forEach((s) => lab(s, 'cover.refine.'));
   lab(rvc.f0.el, 'cover.f0.');
   lab(mfSep.el, 'cover.mfsep.');
+  lab(trEmb, 'cover.train_emb.');
   lab(mMode.el, 'cover.mask.');
   lab(mf_.target.el, 'cover.mask_target.');
   lab(vTrack.el, 'cover.vseg.');
@@ -1219,6 +1226,7 @@ function renderModels() {
   modelsList.replaceChildren(...(ms.length ? ms.map((m) => el('div', { class: 'cv-model' },
     el('div', { class: 'row' },
       el('b', { class: 'grow' }, m.name),
+      embedderTag(m) ? el('span', { class: 'tag' }, embedderTag(m)) : null,
       el('span', { class: 'muted small' }, `${fmtBytes(m.size)}${m.index ? '' : ' · ' + t('cover.no_index')}`),
       m.has_loss ? el('button', { class: 'btn small', onclick: () => showLoss(m.name) }, t('cover.loss')) : null,
       el('button', { class: 'btn small danger', onclick: async () => {
@@ -1308,6 +1316,7 @@ const trEpochs = el('input', { type: 'number', value: 100, min: 1, max: 2000, st
 const trBatch = el('select', {}, ...[4, 8, 16].map((b) => el('option', { value: b, selected: b === 8 }, String(b))));
 const trSave = el('input', { type: 'number', value: 10, min: 1, max: 500, style: 'width:80px' });
 const trRate = el('select', {}, ...[32000, 40000, 48000].map((r) => el('option', { value: r, selected: r === 40000 }, `${r / 1000} kHz`)));
+const trEmb = el('select', {}, ...['contentvec', 'chinese-hubert-base'].map((v) => el('option', { value: v }, t(`cover.train_emb.${v}`))));
 // the old training dashboard: 6-step pipeline, status light, Epoch / Step / best loss / progress cards
 const TR_STEPS = ['train_import', 'train_slice', 'train_features', 'train_epochs', 'train_index', 'train_install'];
 const trNodes = TR_STEPS.map((st, i) => el('div', { class: 'cv-step' }, el('span', { class: 'cv-step-n' }, String(i + 1)), el('span', { 'data-i18n': `cover.tstep.${i + 1}` })));
@@ -1385,7 +1394,8 @@ trStart.addEventListener('click', async () => {
   const name = trName.value.trim();
   if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,59}$/.test(name)) { toast(t('err.invalid_model_name'), true); return; }
   const body = { name, token: trToken, paths: trPaths.value.split('\n').map((s) => s.trim()).filter(Boolean),
-    epochs: Number(trEpochs.value), batch_size: Number(trBatch.value), save_every: Number(trSave.value), sample_rate: Number(trRate.value) };
+    epochs: Number(trEpochs.value), batch_size: Number(trBatch.value), save_every: Number(trSave.value), sample_rate: Number(trRate.value),
+    embedder: trEmb.value };
   if (((status && status.models) || []).some((m) => m.name.toLowerCase() === name.toLowerCase())) {
     if (!(await confirmDialog(t('cover.train_overwrite', name), t('cover.train_start')))) return;
     body.overwrite = true;
@@ -1418,6 +1428,8 @@ function sectionTrain() {
       ...[30, 100, 200].map((n) => el('button', { class: 'btn small', onclick: () => { trEpochs.value = n; } }, String(n))),
       el('span', {}, t('cover.train_batch')), trBatch,
       el('span', {}, t('cover.train_save')), trSave, el('span', {}, t('cover.train_rate')), trRate),
+    el('div', { class: 'row' }, el('span', {}, t('cover.train_embedder')), trEmb,
+      el('span', { class: 'muted small' }, t('cover.train_embedder_hint'))),
     el('div', { class: 'row', style: 'margin-top:10px' }, trStart, trStop,
       el('button', { class: 'btn small', onclick: async () => {
         try {

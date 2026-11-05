@@ -13,7 +13,8 @@ Training scratch lives in runtime/applio-logs (APPLIO_LOGS_DIR), never in the
 user profile. Only the latest G/D checkpoint is kept while training.
 
 Input JSON: {"name", "inputs": [abs paths], "epochs", "batch_size", "save_every",
-             "sample_rate", "logs_dir", "voices_dir", "upload_dir"?, "overwrite"}
+             "sample_rate", "logs_dir", "voices_dir", "upload_dir"?, "overwrite", "embedder"?}
+embedder: "contentvec" (default) or "chinese-hubert-base"; Applio stores it in the .pth.
 """
 from __future__ import annotations
 
@@ -103,6 +104,8 @@ def main() -> None:
     epochs = int(data.get("epochs") or 100)
     save_every = max(1, int(data.get("save_every") or 10))
     batch = int(data.get("batch_size") or 8)
+    # feature model ("embedder"): Applio writes it into the trained .pth, and conversion reads it back
+    embedder = data.get("embedder") if data.get("embedder") in ("contentvec", "chinese-hubert-base") else "contentvec"
     logs_dir = Path(data["logs_dir"])
     voices = Path(data["voices_dir"])
     exp_dir = logs_dir / name
@@ -141,7 +144,11 @@ def main() -> None:
         protocol.log(f"{slices} slices")
         # 3
         say(15, "train_features", str(slices))
-        run_step([py, "rvc/train/extract/extract.py", exp_dir, "rmvpe", cores, gpu, sr, "contentvec", "None", 2],
+        if not (Path("rvc/models/embedders") / embedder.replace("-hubert-base", "_hubert_base")
+                / "pytorch_model.bin").is_file():
+            protocol.log(f"Downloading the {embedder} feature model (first use only)...")
+        protocol.log(f"feature model: {embedder}")
+        run_step([py, "rvc/train/extract/extract.py", exp_dir, "rmvpe", cores, gpu, sr, embedder, "None", 2],
                  "features", 15, 30)
         # 4
         real_batch = batch if slices >= batch * 3 else max(1, slices // 3)

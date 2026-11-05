@@ -490,7 +490,8 @@ def router(ctx: Context) -> APIRouter:
         payload = {"name": name, "inputs": inputs, "epochs": num("epochs", 100, 1, 2000),
                    "batch_size": num("batch_size", 8, 1, 64), "save_every": num("save_every", 10, 1, 500),
                    "sample_rate": sr, "logs_dir": str(paths.runtime / "applio-logs"), "voices_dir": str(voices()),
-                   "upload_dir": str(upload_dir) if upload_dir else ""}
+                   "upload_dir": str(upload_dir) if upload_dir else "",
+                   "embedder": body.get("embedder") if body.get("embedder") in cover.TRAIN_EMBEDDERS else "contentvec"}
         py = applio_python()
         job = ctx.submit(kind="cover_train", lane="gpu", script="cover_train.py", input=payload,
                          title=f"train: {name}", timeout_s=TRAIN_TIMEOUT, env_name="applio", cwd=paths.applio,

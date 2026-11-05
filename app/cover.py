@@ -18,10 +18,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import pickletools
 import re
 import shutil
 import time
 import uuid
+import zipfile
 from pathlib import Path
 from typing import Any, Callable
 
@@ -40,6 +42,10 @@ PATCH_PAD = 1.0          # seconds of context on each side when a section is re-
 VERSION_ID = re.compile(r"^v[a-f0-9]{10}$")
 MODEL_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]{0,59}$")
 EPOCH_FILE = re.compile(r"_(\d+)e_(\d+)s\.pth$")
+# Feature models ("embedders") Applio knows. A model converts correctly only with the one it was trained
+# with, which Applio writes into the .pth as embedder_model. Training offers the first two.
+EMBEDDERS = ("contentvec", "chinese-hubert-base", "spin", "spin-v2", "japanese-hubert-base", "korean-hubert-base")
+TRAIN_EMBEDDERS = ("contentvec", "chinese-hubert-base")
 PATCH_FILE = re.compile(r"^up_[a-f0-9]{12}\.wav$")
 
 RVC_DEFAULTS = {"protect": 0.33, "index_rate": 0.75, "f0": "rmvpe", "envelope": 0.0, "autotune": False,
@@ -238,6 +244,42 @@ def model_files(d: Path) -> tuple[Path | None, Path | None]:
     return (pths[0] if pths else None), (idx[0] if idx else None)
 
 
+_EMB_CACHE: dict[tuple, str] = {}
+
+
+def pth_embedder(p: Path | str | None) -> str:
+    """The feature model a .pth was trained with (its embedder_model), read from the pickle without torch.
+    "contentvec" when the file does not say (older models); "custom" or another name is passed through."""
+    if not p:
+        return "contentvec"
+    p = Path(p)
+    try:
+        st = p.stat()
+    except OSError:
+        return "contentvec"
+    key = (str(p), st.st_size, int(st.st_mtime))
+    if key in _EMB_CACHE:
+        return _EMB_CACHE[key]
+    found = ""
+    try:
+        with zipfile.ZipFile(p) as z:
+            pkl = next((n for n in z.namelist() if n.endswith("data.pkl")), None)
+            data = z.read(pkl) if pkl else b""
+        want = False
+        for op, arg, _pos in pickletools.genops(data):
+            if not isinstance(arg, str):
+                continue
+            if want:
+                found = arg
+                break
+            want = arg == "embedder_model"
+    except Exception:  # noqa: BLE001 - an old or odd file: treat it as contentvec, like Applio's default
+        found = ""
+    out = found if re.fullmatch(r"[A-Za-z0-9_.\-]{1,40}", found or "") else "contentvec"
+    _EMB_CACHE[key] = out
+    return out
+
+
 def epoch_files(d: Path) -> list[dict]:
     out = []
     for f in (d / "epochs").glob("*.pth") if (d / "epochs").is_dir() else []:
@@ -275,7 +317,7 @@ def list_models(voices: Path) -> list[dict]:
                 pass
             break
         out.append({"name": d.name, "pth": pth.name, "index": idx.name if idx else None, "size": pth.stat().st_size,
-                    "mtime": pth.stat().st_mtime, "epochs": epoch_files(d),
+                    "mtime": pth.stat().st_mtime, "epochs": epoch_files(d), "embedder": pth_embedder(pth),
                     "has_loss": (d / "epochs" / "loss.json").is_file(), "description": desc})
     return out
 
@@ -300,7 +342,8 @@ def resolve_model(voices: Path, name: str) -> dict:
             return ""
         st = p.stat()
         return f"{p.name}|{st.st_size}|{int(st.st_mtime)}"
-    return {"name": name, "pth": str(pth), "index": str(idx) if idx else "", "sig": sig(pth) + "#" + sig(idx)}
+    return {"name": name, "pth": str(pth), "index": str(idx) if idx else "", "sig": sig(pth) + "#" + sig(idx),
+            "embedder": pth_embedder(pth)}
 
 
 # ------------------------------------------------------------------ planning
@@ -373,6 +416,7 @@ def plan(song_dir: Path, song: dict, p: dict, resolve: Callable[[str], dict],
         out = f"cover/rvc/{h}.wav"
         if not any(t["output"] == out for t in rvc_tasks):
             rvc_tasks.append({"input": input_rel, "output": out, "pth": m["pth"], "index": m["index"], "pitch": pitch,
+                              "embedder": m.get("embedder") or "contentvec",
                               "label": label, "title": title or titles.get(label, label), "sig": m["sig"],
                               **{k: r[k] for k in RVC_DEFAULTS}})
         return out
