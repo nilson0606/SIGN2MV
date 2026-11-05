@@ -450,18 +450,33 @@ def router(ctx: Context) -> APIRouter:
         st = job["status"]
         device = "cuda" if (job.get("message") or "").upper() == "CUDA" else ("cpu" if (job.get("message") or "").upper() == "CPU" else None)
         if st == "queued":
-            return {**base, "stage": "download", "message": f"排隊中：前面還有工作（第 {job['position']} 個）。", "progress": None,
+            ahead = job.get("waiting_for") or ""
+            message = (f"排隊中：等待「{ahead}」完成（第 {job['position']} 個）。" if ahead
+                       else f"排隊中：前面還有工作（第 {job['position']} 個）。")
+            return {**base, "stage": "download", "message": message, "progress": None,
                     "ready": False, "device": None, "deviceName": None}
         if st == "running":
-            stage = job.get("stage") or "separating"
+            # a stage may name a step without a percentage: "lead_separating:load", "reference:beats"
+            stage, _, sub = (job.get("stage") or "separating").partition(":")
             stage = "reference" if stage == "ready" else stage
             msgs = {"separating": "人聲與伴奏", "accompaniment_separating": "第二輪伴奏中的殘留人聲", "lead_separating": "主唱與和音"}
+            pitch = info['p']['pitchMethod'].upper()
             if stage in msgs:
                 message = f"使用 {'GPU' if device == 'cuda' else 'CPU'} 在本機分離{msgs[stage]}…"
+                if sub == "read":
+                    message += "讀取音檔中"
+                elif sub == "load":
+                    message += "載入分離模型中"
+                elif sub == "save":
+                    message += "寫入音軌中"
             elif stage == "transposing":
                 message = "重用原調音軌，建立 Key 版本（速度不變）…"
+            elif sub == "load":
+                message = f"載入 {pitch} 音高模型並讀取人聲…"
+            elif sub == "beats":
+                message = "分析節拍…"
             else:
-                message = f"建立 {info['p']['pitchMethod'].upper()} 音高與節拍基準…"
+                message = f"建立 {pitch} 音高與節拍基準…"
             return {**base, "stage": stage, "progressStage": stage, "message": message, "progress": job.get("percent"),
                     "ready": False, "device": device, "deviceName": "NVIDIA CUDA" if device == "cuda" else ("CPU" if device else None)}
         if st == "succeeded":

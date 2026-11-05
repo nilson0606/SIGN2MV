@@ -40,6 +40,9 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
                queue: JobQueue | None = None) -> FastAPI:
     app = FastAPI(title=APP_NAME, docs_url=None, redoc_url=None, openapi_url=None)
     jobs = queue or JobQueue()
+    if jobs.event_log is None:
+        paths.logs.mkdir(parents=True, exist_ok=True)
+        jobs.event_log = paths.logs / "jobs.log"
     ctx = Context(paths, jobs)
     ctx.finished = FinishedSync(ctx)
     jobs.finished_listeners.append(ctx.finished.request)

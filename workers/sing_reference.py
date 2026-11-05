@@ -133,7 +133,8 @@ def rmvpe_frames(audio: np.ndarray, device: str, progress=lambda v: None) -> lis
         return run("cpu")
 
 
-def build(vocals: Path, accompaniment: Path, pitch_method: str, device: str, progress=lambda v: None) -> dict:
+def build(vocals: Path, accompaniment: Path, pitch_method: str, device: str, progress=lambda v: None,
+          on_phase=lambda sub: None) -> dict:
     audio = pcm(vocals)
     step, window = .1, 2048
     if pitch_method == "rmvpe":
@@ -156,6 +157,7 @@ def build(vocals: Path, accompaniment: Path, pitch_method: str, device: str, pro
     voiced = sum(f is not None for f in frames) * step
     if voiced < 3:
         raise ValueError("melody_too_short")
+    on_phase("beats")
     bpm, beats = beat_grid(pcm(accompaniment))
     return {"step": step, "frames": frames, "duration": round(len(audio) / 16000, 3), "bpm": bpm, "beats": beats,
             "pitchMethod": pitch_method, "voicedSeconds": round(voiced, 1)}

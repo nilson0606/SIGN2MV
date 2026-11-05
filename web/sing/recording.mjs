@@ -243,7 +243,15 @@ export function createSingerRecorder(options) {
         const panel = $('recording-rescue'); panel.hidden = false;
         const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob(a.chunks,{type:a.recorder.mimeType})); link.download = '演唱錄音.wav';
         const retained=partialSaved&&!a.storageFailed&&captureError instanceof Error&&a.error===captureError;
-        link.textContent = `${retained?'下載錄音片段':'下載未保存錄音'}：${a.meta.title}（${new Date(a.meta.created).toLocaleTimeString()}）`; panel.append(link);
+        link.textContent = `${retained?'下載錄音片段':'下載未保存錄音'}：${a.meta.title}（${new Date(a.meta.created).toLocaleTimeString()}）`;
+        // [SIGN2MV] a way to drop the backup without reloading the page (it is only kept in memory)
+        const row = document.createElement('div'), drop = document.createElement('button');
+        drop.type = 'button'; drop.className = 'secondary'; drop.textContent = '✕ 不需要了';
+        drop.onclick = () => {
+          if (!localizedConfirm('不下載這段錄音就關閉？關閉後無法再取回。')) return;
+          URL.revokeObjectURL(link.href); row.remove(); if (!panel.children.length) panel.hidden = true;
+        };
+        row.className = 'rescue-row'; row.append(link, drop); panel.append(row);
         status(retained?'收音中斷，已保留錄音片段，可下載備份：'+error.message:'錄音未完整保存，請先按「下載未保存錄音」備份：'+error.message);
       }
       a.release();   // finished (or kept as it is): from here a reload may finalize it

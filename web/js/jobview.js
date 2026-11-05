@@ -6,8 +6,23 @@ import { api } from './api.js';
 import { logView, logOpenByDefault } from './joblog.js';
 import { srvText } from './srvtext.js';
 
-// workers that report their own words as the stage (MV Whisper) show them as they are
-function stageText(stage) { const k = `stage.${stage}`; const v = t(k); return v === k ? srvText(stage) : v; }
+// workers that report their own words as the stage (MV Whisper) show them as they are;
+// "lead:load" = the step "load" of the stage "lead" (a step without a percentage)
+export function stageText(stage) {
+  const [base, sub] = String(stage || '').split(':');
+  const k = `stage.${base}`; const v = t(k);
+  const name = v === k ? srvText(base) : v;
+  return sub ? `${name} · ${t(`stage.sub.${sub}`)}` : name;
+}
+// a queued job says which job it is waiting for
+export function queuedText(job) {
+  return t('jobs.queued_pos', job.position || 1) + (job.waiting_for ? ' · ' + t('jobs.waiting_for', srvText(job.waiting_for)) : '');
+}
+export function elapsedText(job) {
+  if (!job.started_at) return '';
+  const took = Math.max(0, Math.round(Date.now() / 1000 - job.started_at));
+  return took >= 60 ? `${Math.floor(took / 60)}:${String(took % 60).padStart(2, '0')}` : t('jobs.seconds', took);
+}
 
 export function jobBox({ cancel = true, onUpdate = null } = {}) {
   const label = el('div', { class: 'small grow' });
@@ -35,12 +50,13 @@ export function jobBox({ cancel = true, onUpdate = null } = {}) {
     stop.classList.toggle('hidden', !cancel || !['queued', 'running'].includes(job.status));
     const pct = job.percent;
     let text;
-    if (job.status === 'queued') text = t('jobs.queued_pos', job.position || 1);
+    if (job.status === 'queued') text = queuedText(job);
     else if (job.status === 'running') {
-      const took = job.started_at ? Math.max(0, Math.round(Date.now() / 1000 - job.started_at)) : null;   // old progress showed the seconds
-      text = `${t('jobs.status.running')}${job.stage ? ' · ' + stageText(job.stage) : ''}${pct != null ? ` ${pct.toFixed(0)}%` : ''}${job.message ? ' · ' + srvText(job.message) : ''}${took != null ? ` （${took >= 60 ? `${Math.floor(took / 60)}:${String(took % 60).padStart(2, '0')}` : t('jobs.seconds', took)}）` : ''}`;
+      const took = elapsedText(job);   // old progress showed the seconds
+      text = `${t('jobs.status.running')}${job.stage ? ' · ' + stageText(job.stage) : ''}${pct != null ? ` ${pct.toFixed(0)}%` : ''}${job.message ? ' · ' + srvText(job.message) : ''}${took ? ` （${took}）` : ''}`;
     }
     else if (job.status === 'succeeded') text = t('jobs.status.succeeded');
+    else if (job.status === 'cancelled' && !job.error_code) text = t('jobs.status.cancelled');   // was "cancelled: error [object Object]"
     else text = `${t(`jobs.status.${job.status}`)}: ${errorText({ code: job.error_code })}${job.error_message ? ' — ' + srvText(job.error_message.slice(-300)) : ''}`;
     label.textContent = text;
     bar.classList.toggle('indet', job.status === 'running' && pct == null);

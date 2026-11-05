@@ -100,7 +100,7 @@ header{gap:18px;flex-wrap:wrap}
 
 .score-history .check-option{margin:0;flex:1;min-width:0;color:var(--text)}.score-history .check-option span{overflow-wrap:anywhere}.score-history .check-option input{flex-shrink:0}.history-actions{flex-wrap:wrap}#recordings-panel summary{font-size:18px;color:var(--accent);font-weight:700}#recording-rescue{color:var(--accent);display:block;margin:12px 0}#recording-rescue[hidden]{display:none}
 
-#recording-rescue a{display:block;color:var(--accent);margin:8px 0;overflow-wrap:anywhere}
+#recording-rescue a{display:block;color:var(--accent);margin:8px 0;overflow-wrap:anywhere}#recording-rescue .rescue-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}#recording-rescue .rescue-row a{flex:1 1 auto;min-width:0}#recording-rescue .rescue-row button{flex:none}
 
 #recording-balance{border:1px solid var(--line);border-radius:10px;padding:14px;margin:16px 0;min-width:0}#recording-balance legend{color:var(--accent);font-size:14px}.recording-levels{display:grid;grid-template-columns:1fr 1fr;gap:20px}.recording-levels output{float:right}.recording-levels input:disabled{opacity:.4}@media(max-width:500px){.recording-levels{grid-template-columns:1fr;gap:8px}}
 #recording-post{margin:18px 0;grid-column:1/-1;scroll-margin-top:88px}#recording-post select{width:100%;min-width:0;max-width:100%}#recording-post .button-row,#recording-list .button-row{flex-wrap:wrap}#recording-post .button-row button{flex:1 1 220px}#post-audio{width:100%;max-width:100%}#post-score,#post-status{overflow-wrap:anywhere}

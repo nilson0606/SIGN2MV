@@ -53,7 +53,8 @@ def test_queue_order_cancel_timeout(client):
     b = client.post("/api/jobs", json={"kind": "demo", "lane": "gpu", "seconds": 5}).json()
     c = client.post("/api/jobs", json={"kind": "demo", "lane": "cpu", "seconds": 0.5}).json()
     time.sleep(0.4)
-    assert client.get(f"/api/jobs/{b['id']}").json()["position"] == 1  # waits for the GPU lane
+    queued = client.get(f"/api/jobs/{b['id']}").json()
+    assert queued["position"] == 1 and queued["waiting_for"] == (a.get("title") or "demo")  # waits for the GPU lane, says for what
     assert wait_job(client, c["id"], 10)["status"] == "succeeded"  # cpu lane runs in parallel
     assert wait_job(client, a["id"], 10)["status"] == "succeeded"
     client.post(f"/api/jobs/{b['id']}/cancel")
@@ -71,6 +72,13 @@ def test_queue_order_cancel_timeout(client):
     f = client.post("/api/jobs", json={"kind": "demo", "lane": "cpu", "seconds": 0.3, "fail": True}).json()
     done = wait_job(client, f["id"], 10)
     assert done["status"] == "failed" and done["error_code"] == "demo_failure"
+
+    # every job also leaves its story in logs/jobs.log (kept after the program closes)
+    from app.paths import get_paths
+    events = (get_paths().logs / "jobs.log").read_text(encoding="utf-8")
+    assert f"{b['id']} [demo] demo: cancel requested while running" in events and "cancelled (" in events
+    assert f"{a['id']} [demo] demo: started (waited" in events and "succeeded (" in events
+    assert f"{t['id']} [demo] demo: timeout" in events and "demo_failure" in events
 
 
 def test_shutdown_requires_force_when_busy(client):

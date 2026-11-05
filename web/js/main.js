@@ -4,6 +4,7 @@ import { t, setLanguage, language, errorText, onLanguageChange } from './i18n.js
 import { $, $$, el, toast, confirmDialog, fmtBytes } from './ui.js';
 import { bus, pages, registerPage } from './app-state.js';
 import { logView } from './joblog.js';
+import { stageText, queuedText, elapsedText } from './jobview.js';
 import { srvText, onServerTextReady } from './srvtext.js';
 
 let bannerDismissed = '';   // version banner closed for this mismatch
@@ -136,8 +137,11 @@ function jobLine(j) {
   } }, (lv && lv.open ? '▾ ' : '▸ ') + t('joblog.title'));
   const bar = el('div', { class: 'bar' + (j.status === 'running' && (pct === null || pct === undefined) ? ' indet' : '') },
     el('div', { style: `width:${pct || 0}%` }));
-  const statusText = j.status === 'queued' ? t('jobs.queued_pos', j.position) : t(`jobs.status.${j.status}`);
-  const detail = j.error_code ? errorText({ code: j.error_code }) + (j.error_message ? ` (${srvText(j.error_message.slice(0, 160))})` : '') : srvText(j.message || '');
+  const statusText = j.status === 'queued' ? queuedText(j) : t(`jobs.status.${j.status}`);
+  // running: the step, the device and the time it has been running (re-drawn every second)
+  const detail = j.error_code ? errorText({ code: j.error_code }) + (j.error_message ? ` (${srvText(j.error_message.slice(0, 160))})` : '')
+    : j.status === 'running' ? [j.stage ? stageText(j.stage) : '', srvText(j.message || ''), elapsedText(j)].filter(Boolean).join(' · ')
+    : srvText(j.message || '');
   const row = el('div', { class: 'item' },
     el('div', { class: 'grow' },
       el('div', {}, el('span', { class: 'badge gpu' }, t(`jobs.lane_${j.lane}`)), ' ',
