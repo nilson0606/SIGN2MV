@@ -282,7 +282,7 @@ export default {
   "cover.train_rate": "取樣率",
   "cover.train_embedder": "特徵模型",
   "cover.train_emb.contentvec": "contentvec（預設，通用）",
-  "cover.train_emb.chinese-hubert-base": "chinese-hubert-base（中文歌，咬字可能較好）",
+  "cover.train_emb.chinese-hubert-base": "chinese-hubert-base（中文語料訓練的特徵模型）",
   "cover.train_embedder_hint": "模型會記住用哪一個，轉換時自動沿用；換特徵模型要重新訓練。第一次用 chinese-hubert-base 會先下載它。",
   "cover.emb_zh": "中文特徵",
   "cover.emb_other": "特徵：{0}",

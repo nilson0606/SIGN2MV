@@ -282,7 +282,7 @@ export default {
   "cover.train_rate": "Rate",
   "cover.train_embedder": "Feature model",
   "cover.train_emb.contentvec": "contentvec (default, general)",
-  "cover.train_emb.chinese-hubert-base": "chinese-hubert-base (Chinese songs, may articulate better)",
+  "cover.train_emb.chinese-hubert-base": "chinese-hubert-base (feature model trained on Chinese speech)",
   "cover.train_embedder_hint": "The model remembers which one it used and conversion follows it; a different feature model needs a new training. chinese-hubert-base is downloaded the first time it is used.",
   "cover.emb_zh": "Chinese features",
   "cover.emb_other": "Features: {0}",
