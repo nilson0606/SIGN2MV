@@ -73,11 +73,24 @@ def phase(report, sub: str) -> None:
         fn(sub)
 
 
-def patch_tqdm(module, report: Progress) -> None:
-    """Route the library's tqdm progress bars into our progress messages."""
+def _base_tqdm():
+    """tqdm's own class, kept from before any patch (see patch_tqdm)."""
     import tqdm as _tqdm
+    if not hasattr(_base_tqdm, "cls"):
+        _base_tqdm.cls = _tqdm.tqdm
+    return _base_tqdm.cls
 
-    class Reporting(_tqdm.tqdm):
+
+def patch_tqdm(module, report: Progress) -> None:
+    """Route one library's tqdm progress bars into our progress messages, for this layer only.
+
+    Never change the shared tqdm module, and always build on tqdm's own class: demucs.apply does
+    `import tqdm`, and patching tqdm.tqdm there left the first layer's reporter in every later bar, so
+    the lead/backing split (second layer) reported each step twice, as "separate" and as "lead"."""
+    import types
+    base = _base_tqdm()
+
+    class Reporting(base):
         def __init__(self, *a, **k):
             k["disable"] = False
             k["file"] = open(os.devnull, "w")
@@ -92,11 +105,10 @@ def patch_tqdm(module, report: Progress) -> None:
             return r
 
     if hasattr(module, "tqdm"):
-        target = module.tqdm
-        if isinstance(target, type):
-            module.tqdm = Reporting
+        if isinstance(module.tqdm, type):
+            module.tqdm = Reporting                                  # `from tqdm import tqdm`
         else:
-            target.tqdm = Reporting
+            module.tqdm = types.SimpleNamespace(tqdm=Reporting)      # `import tqdm` (demucs.apply)
 
 
 def demucs_separate(src: Path, out: Path, device: str, report: Progress) -> None:
