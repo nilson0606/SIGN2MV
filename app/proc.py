@@ -113,7 +113,8 @@ class ManagedProcess:
     """A child process whose whole tree can be killed reliably."""
 
     def __init__(self, args: Sequence[str], *, env: dict[str, str] | None = None,
-                 cwd: str | None = None, stdin_data: bytes | None = None, keep_stdin: bool = False):
+                 cwd: str | None = None, stdin_data: bytes | None = None, keep_stdin: bool = False,
+                 low_priority: bool = False):
         # keep_stdin: a long-lived worker that is fed line by line (sing & record live pitch)
         self._job = None
         kwargs: dict = dict(stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -121,8 +122,12 @@ class ManagedProcess:
                             env=env, cwd=cwd)
         if IS_WINDOWS:
             kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+            if low_priority:     # background work (file-cache warm-up) never competes with the user's jobs
+                kwargs["creationflags"] |= subprocess.BELOW_NORMAL_PRIORITY_CLASS
         else:
             kwargs["start_new_session"] = True
+            if low_priority:
+                kwargs["preexec_fn"] = lambda: os.nice(10)
         self.popen = subprocess.Popen(list(args), **kwargs)
         if IS_WINDOWS:
             try:

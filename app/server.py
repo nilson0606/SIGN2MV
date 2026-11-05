@@ -43,12 +43,18 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
     if jobs.event_log is None:
         paths.logs.mkdir(parents=True, exist_ok=True)
         jobs.event_log = paths.logs / "jobs.log"
+    # keep Applio and the separation programs in the file cache (a cold load took up to 165 s)
+    from .warmup import Warmup
+    warmup = Warmup(paths, lambda: any(j["lane"] == "gpu" and j["status"] == "running" for j in jobs.list()),
+                    jobs.event_log)
+    warmup.start()
     ctx = Context(paths, jobs)
     ctx.finished = FinishedSync(ctx)
     jobs.finished_listeners.append(ctx.finished.request)
     state = {"shutting_down": False}
     app.state.jobs = jobs
     app.state.ctx = ctx
+    app.state.warmup = warmup
     app.state.paths = paths
 
     @app.middleware("http")
@@ -115,6 +121,7 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
         state["shutting_down"] = True
 
         def later() -> None:
+            warmup.stop()
             jobs.stop(wait_s=5.0)
             if request_shutdown:
                 request_shutdown()

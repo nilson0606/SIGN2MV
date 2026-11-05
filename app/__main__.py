@@ -100,6 +100,7 @@ def main() -> int:
     print(" To quit: press 'Shut down' in the web page (or close this window).")
     print("=" * 60)
     server.run()
+    app.state.warmup.stop()
     app.state.jobs.stop(wait_s=5.0)
     log.info("%s stopped", APP_NAME)
     _exit_now()
