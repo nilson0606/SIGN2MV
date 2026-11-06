@@ -2,6 +2,50 @@
 
 ## Unreleased
 
+- Docs: the installer asks about the optional Sucial model at the very start, before anything is downloaded (the
+  manual said it asks partway through). After an import the original player is inside the folded 「▸ 原曲」
+  section; the manual now says so.
+- Cover, warm-up fix: the Applio warm-up failed every time with `AssertionError: Invalid device id`. It imported
+  Applio's own inference code, which checks the graphics card on import, while the warm-up hides the card. It now
+  loads only the libraries Applio uses (PyTorch, librosa, faiss, transformers and the rest), one by one, and names
+  any that fail in `logs\jobs.log`. The separation warm-up loads its libraries the same way.
+- Job queue: writing `logs\jobs.log` can no longer stop the queue. A song title with a broken character (for
+  example half of an emoji) made the write fail inside the queue: the job stayed 「執行中」 and every later
+  graphics-card job waited until SIGN2MV was restarted. Any error there is now ignored, and such characters are
+  written as escape codes.
+- Cover and separation, warm-up: right after start-up and then every 15 minutes, SIGN2MV loads the Applio and
+  separation libraries in a background process at low priority, without the graphics card and without models.
+  When those files (several GB) have left the Windows file cache, the first cover afterwards spent 89–165 s
+  loading Applio instead of a few seconds. The warm-up reads them back while nobody is waiting, skips while a
+  graphics-card job runs, and logs how long it took to `logs\jobs.log`. Set `SIGN2MV_NO_WARMUP=1` to turn it off.
+- Separation progress: a cover that first separated and then split lead and backing vocals logged 「lead」 and
+  「separate」 in turn for every chunk of the second split. The first split's progress reporter leaked into the
+  second one. Display only; the separation itself was not affected.
+- Cover: the Applio load is timed in parts (PyTorch, librosa, Applio's code, the converter) in the job log, and a
+  load that runs past 30 s writes where it is waiting every 30 s, so a slow load can be explained afterwards.
+- Long graphics-card jobs show every step. Steps without a percentage (reading the audio, loading the model,
+  writing the stems; for the sing reference, loading the pitch model and finding the beat) are named and the bar
+  moves; before, nothing moved for a long time and the job looked hung. A queued job says which job it is waiting
+  for (job boxes, the jobs page and the sing page). The jobs page shows the step and running time of a running
+  job. A cancelled job box shows only 「已取消」.
+- New `logs\jobs.log`: when each job was queued, started, changed step, was cancelled and ended, with the
+  seconds. It is kept after SIGN2MV is closed (about 2 MB, then the older part moves to `jobs.previous.log`).
+- Sing & record: the backup link for an unsaved recording has a 「✕ 不需要了」 button; it could only be removed by
+  reloading the page.
+- Cover training: the feature model can be chosen: contentvec (default) or chinese-hubert-base (trained on
+  Chinese speech, about 361 MB, downloaded the first time). Conversion now uses the feature model the voice model
+  was trained with; Applio stores it in the `.pth`. Before, conversion always used contentvec, so a model trained
+  with another one sounded wrong without any error. A model that needs a feature model Applio cannot load stops
+  with a message. Models that do not use contentvec are labelled in the model list and menus. In one A/B test,
+  chinese-hubert-base did not articulate more clearly; it is kept as an option.
+- README: tick 「解除封鎖」 / *Unblock* in the ZIP's Properties before extracting.
+- Cover training: the curve panel follows deleted models and epochs (it kept showing them). The manual says up to
+  four saved epochs are kept.
+- Cover: the per-song clean-up button is named 「🧹 清理這首歌的中間檔」 / *Clean up this song's unused files*, so it
+  is not taken for the training clean-up.
+- Cover training: the uploaded training files are listed by name (the file box only showed how many).
+- Docs: notes that pitch 0 and Key 0 are left out of version names, and that only Traditional Chinese Windows
+  opens SIGN2MV in Chinese. The record-button hint reads 「完成後再按一次錄音按鈕」.
 - MV, render lock follow-up (outside review of the previous change, Gemini): the project tabs at the top left can no
   longer be clicked during a render (they switched project, and the finished MV then showed on the wrong project).
   After a reload, the end of a render is taken from the job queue: success, failure (with the error), cancel,
