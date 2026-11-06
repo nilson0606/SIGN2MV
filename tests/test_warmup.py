@@ -52,3 +52,20 @@ def test_warmup_skips_while_the_gpu_is_busy_and_can_be_turned_off(tmp_path, monk
     monkeypatch.setenv("SIGN2MV_NO_WARMUP", "1")
     assert not wm.Warmup(paths, lambda: False, log).start()
     assert not wm.Warmup(Paths(tmp_path / "empty"), lambda: False, log).start()   # nothing installed
+
+
+def test_applio_plan_loads_only_libraries_and_names_what_failed(tmp_path):
+    # Applio's own code checks the graphics card on import and stops while the card is hidden (11-05)
+    assert "rvc" not in wm.PLAN["applio"] and "torch" in wm.PLAN["applio"]
+    import subprocess
+    r = subprocess.run([sys.executable, "-c", wm._import_all(("json", "no_such_module_xyz"))],
+                       capture_output=True, text=True, timeout=60)
+    assert r.returncode == 1 and "not loaded: no_such_module_xyz: ModuleNotFoundError" in r.stderr
+    assert "json" not in r.stderr
+
+
+def test_a_log_line_with_a_broken_character_is_still_written(tmp_path):
+    log = tmp_path / "jobs.log"
+    w = wm.Warmup(Paths(tmp_path / "app"), lambda: False, log)
+    w._note("warm-up applio: 1.0 s (exit 1: bad \ud83d)")
+    assert "bad \\ud83d" in log.read_text(encoding="utf-8")

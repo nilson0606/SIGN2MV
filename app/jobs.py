@@ -216,16 +216,18 @@ class JobQueue:
         return running[0].spec.title if running else ""
 
     def _event(self, job: Job, text: str) -> None:
-        """One line in logs/jobs.log; never lets a disk problem disturb the jobs."""
+        """One line in logs/jobs.log. Nothing about it may disturb the jobs: it runs under the queue lock, and
+        an error here (a title with a broken character, a full disk) used to leave a job running forever
+        and its lane stuck."""
         path = self.event_log
         if path is None:
             return
         try:
             if path.is_file() and path.stat().st_size > 2_000_000:
                 path.replace(path.with_suffix(".previous.log"))
-            with open(path, "a", encoding="utf-8") as fh:
+            with open(path, "a", encoding="utf-8", errors="backslashreplace") as fh:
                 fh.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {job.id} [{job.spec.kind}] {job.spec.title}: {text}\n")
-        except OSError:
+        except Exception:  # noqa: BLE001
             pass
 
     def _prune_locked(self) -> None:

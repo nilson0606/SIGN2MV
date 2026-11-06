@@ -25,11 +25,25 @@ INTERVAL_S = 15 * 60
 FIRST_DELAY_S = 3.0
 TIMEOUT_S = 900.0
 
-# what each environment imports when a job starts (the modules that are slow to read from disk)
-PLAN = {
-    "applio": "import torch, librosa\nimport rvc.infer.infer",
-    "engine": "import torch, librosa, demucs.apply\nimport audio_separator.separator",
-}
+# The libraries each environment loads when a job starts (they are what is slow to read from disk).
+# Only third-party libraries: Applio's own code checks the graphics card when it is imported and stops
+# with "Invalid device id" while the card is hidden from the warm-up (11-05: every Applio warm-up failed).
+# A library that is missing or fails is listed in the log; the others are still loaded.
+APPLIO_LIBS = ("torch", "torchaudio", "numpy", "scipy.signal", "librosa", "soxr", "soundfile", "faiss", "torchcrepe",
+               "torchfcpe", "einops", "transformers", "transformers.models.hubert.modeling_hubert")
+ENGINE_LIBS = ("torch", "torchaudio", "numpy", "librosa", "soundfile", "demucs.apply", "demucs.pretrained",
+               "audio_separator.separator", "audio_separator.separator.architectures.mdxc_separator")
+
+
+def _import_all(names) -> str:
+    return ("import importlib, sys\nbad = []\n"
+            f"for m in {tuple(names)!r}:\n"
+            "    try:\n        importlib.import_module(m)\n"
+            "    except Exception as e:\n        bad.append(m + ': ' + type(e).__name__ + ' ' + str(e)[:80])\n"
+            "if bad:\n    sys.stderr.write('not loaded: ' + '; '.join(bad) + '\\n')\n    sys.exit(1)\n")
+
+
+PLAN = {"applio": _import_all(APPLIO_LIBS), "engine": _import_all(ENGINE_LIBS)}
 
 
 class Warmup:
@@ -94,7 +108,7 @@ class Warmup:
         if not self.event_log:
             return
         try:
-            with open(self.event_log, "a", encoding="utf-8") as fh:
+            with open(self.event_log, "a", encoding="utf-8", errors="backslashreplace") as fh:
                 fh.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {text}\n")
-        except OSError:
+        except Exception:  # noqa: BLE001
             pass
