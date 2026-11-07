@@ -82,6 +82,27 @@ class Library:
     def song_dir(self, song_id: str) -> Path:
         return self._song_dir(song_id)
 
+    def recover_interrupted_imports(self) -> int:
+        """At start-up (no import can be running): a re-import that stopped between moving the old source
+        aside and putting the new one in place left source.old without source; put it back. Same rule as
+        workers/import_media.recover_source. Returns how many songs were put back."""
+        n = 0
+        if not self.songs_dir.is_dir():
+            return 0
+        for entry in self.songs_dir.iterdir():
+            old, target = entry / "source.old", entry / "source"
+            try:
+                if not old.is_dir():
+                    continue
+                if target.exists():
+                    shutil.rmtree(old, ignore_errors=True)
+                else:
+                    os.replace(old, target)
+                    n += 1
+            except OSError:
+                continue
+        return n
+
     def list(self) -> list[dict[str, Any]]:
         if not self.songs_dir.is_dir():
             return []

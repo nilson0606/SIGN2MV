@@ -51,6 +51,10 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
                     jobs.event_log)
     warmup.start()
     ctx = Context(paths, jobs)
+    try:   # a re-import interrupted at the wrong moment (power cut, killed) left the old audio aside
+        ctx.library().recover_interrupted_imports()
+    except Exception:  # noqa: BLE001 - never stops the start
+        pass
     ctx.finished = FinishedSync(ctx)
     jobs.finished_listeners.append(ctx.finished.request)
     state = {"shutting_down": False}

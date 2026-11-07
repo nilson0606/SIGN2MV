@@ -251,20 +251,43 @@ def finish(song_dir: Path, work: Path, record: dict, video: Path | None) -> dict
         record["video_size"] = [vinfo.get("width"), vinfo.get("height")]
     record["schema_version"] = 1
     write_json(work / "source.json", record)
-    target = song_dir / "source"
-    if target.exists():
-        old = song_dir / "source.old"
-        shutil.rmtree(old, ignore_errors=True)
-        os.replace(target, old)
-        shutil.rmtree(old, ignore_errors=True)
-    os.replace(work, target)
+    commit_source(song_dir, work)
     return record
+
+
+def recover_source(song_dir: Path) -> None:
+    """An earlier re-import stopped between moving the old source aside and putting the new one in place:
+    put the old one back (if the new one did arrive, the old copy is only left over)."""
+    target, old = song_dir / "source", song_dir / "source.old"
+    if old.is_dir():
+        if target.exists():
+            shutil.rmtree(old, ignore_errors=True)
+        else:
+            os.replace(old, target)
+
+
+def commit_source(song_dir: Path, work: Path) -> None:
+    """Put the new source in place. The old one is only deleted once the new one is there; if putting it in
+    place fails, the old one is put back (re-importing used to delete it first, so a failure lost the song's
+    audio)."""
+    target, old = song_dir / "source", song_dir / "source.old"
+    recover_source(song_dir)
+    if target.exists():
+        os.replace(target, old)
+    try:
+        os.replace(work, target)
+    except BaseException:
+        if old.is_dir() and not target.exists():
+            os.replace(old, target)
+        raise
+    shutil.rmtree(old, ignore_errors=True)
 
 
 def main() -> None:
     data = protocol.read_input()
     song_dir = Path(data["song_dir"])
     try:
+        recover_source(song_dir)
         if data.get("mode") == "youtube":
             record = import_youtube(song_dir, data.get("url", ""))
         else:
