@@ -8,3 +8,4 @@
 *.md text eol=lf
 *.png binary
 *.jpg binary
+app/BUILD.txt export-subst

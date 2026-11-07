@@ -29,6 +29,18 @@ Python、模型、快取、暫存檔全部裝在這個資料夾裡，不會裝�
 完整手冊（含一步一步的新手入門）在 `web/manual/`（英文為主版本，另有繁體中文翻譯）。還沒安裝時雙擊資料夾裡的
 `MANUAL.html` 打開，裝好後按程式上方的 **操作手冊 ↗** 也能打開。有問題請到 [GitHub Issues](https://github.com/nilson0606/SIGN2MV/issues) 回報。
 
+## 更新到新版
+
+更新只要把新版的檔案**覆蓋**到原本的資料夾，你的歌曲、錄音、音色模型和設定都不會被動到。
+
+1. 在 SIGN2MV 右上角按 **全部關閉**，等視窗關掉。
+2. 在本頁按 **Code → Download ZIP**，在 ZIP 上按右鍵 →「內容」→ 勾「解除封鎖」→「確定」（沒有這個勾選框就略過）。
+3. 解壓縮到任何暫存位置，會得到 `SIGN2MV-main` 資料夾。
+4. 打開 `SIGN2MV-main`，全選（Ctrl + A）、複製，貼到原本的安裝資料夾（放 `start.bat` 的那個），跳出詢問時選「**取代目的地中的檔案**」。
+5. 雙擊 `start.bat`。首頁「系統狀態」的 **程式日期** 跟本頁最新一次更新的日期一樣，就是最新版了。
+
+`library`、`models`、`runtime`、`config` 不在 ZIP 裡，不會被蓋掉。只有 [CHANGELOG](CHANGELOG.md) 寫要重跑 `install.bat` 時才需要重跑；不確定時跑一次也沒有壞處，已經裝好的部分會略過。每次改了什麼，都寫在 [CHANGELOG](CHANGELOG.md)。
+
 ## 系統需求與限制
 
 - Windows 10 或 11（64 位元）。目前不支援 macOS 和 Linux。

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Home, system status: new row 「程式日期」 / *Code date*: the date and short commit of the code
+  (`app/BUILD.txt`, filled in by GitHub's Download ZIP), to compare with the latest change on GitHub. The version
+  number alone did not change between updates.
+- Docs: README (both languages) and the manual have an 「更新到新版」 / *Updating* section, step by step: shut down,
+  download, unblock, extract, copy over the old folder, start, check the code date; when `install.bat` is needed.
 - Sing & record, 「人聲保留原唱音色」: now made with Rubber Band's newer R3 engine (already inside SIGN2MV's ffmpeg)
   instead of R2. Measured on a vocal lowered 4 semitones, the spectral centroid moves −3% from the original
   instead of −11% (without the option: −16%), so the voice keeps much more of the singer's timbre. Key versions

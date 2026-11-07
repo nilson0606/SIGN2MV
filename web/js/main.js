@@ -67,6 +67,8 @@ function renderStatus() {
   const ins = status.install || {};
   const rows = [
     [t('home.version'), `${status.version} (API ${status.api_level})`],
+    // date of the code, to compare with the latest change on GitHub (see 「更新到新版」 in the manual)
+    [t('home.build'), status.build && status.build.date ? `${status.build.date} · ${status.build.commit}` : t('home.build_unknown')],
     [t('home.folder'), status.root],
     [t('home.install'), ins.completed ? t('home.install_ok') : t('home.install_missing')],
     [t('home.device'), ins.device === 'cuda' ? `GPU · ${ins.gpu_name || ''}` : (ins.device ? t('home.cpu_mode') : '-')],

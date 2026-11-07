@@ -13,7 +13,7 @@ export default {
   'home.checks': 'Checks',
   'home.card.library': 'Add songs from YouTube or audio files; split vocals and accompaniment, change the key.', 'home.card.sing': 'Sing along with the melody, see your pitch live, record and get a score.',
   'home.card.mv': 'Make an MV from photos and lyrics, or a quick MV straight from the audio.', 'home.card.cover': 'Train your own voice model and turn a song into your voice.',
-  'home.version': 'Version', 'home.folder': 'App folder', 'home.install': 'Installation', 'home.install_ok': 'Complete',
+  'home.version': 'Version', 'home.build': 'Code date', 'home.build_unknown': 'unknown', 'home.folder': 'App folder', 'home.install': 'Installation', 'home.install_ok': 'Complete',
   'home.install_missing': 'Not complete (run install.bat)', 'home.device': 'Compute device', 'home.cpu_mode': 'CPU (no usable NVIDIA GPU; slower)',
   'home.c_delta': 'C: drive change during install',
 

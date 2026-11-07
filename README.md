@@ -34,6 +34,24 @@ Traditional Chinese translation). Open it with `MANUAL.html` in the folder, even
 with **Manual ↗** in the app. Problems and questions:
 [GitHub Issues](https://github.com/nilson0606/SIGN2MV/issues).
 
+## Updating
+
+To update, copy the new files **over** the old folder; your songs, recordings, voice models and settings are not
+touched.
+
+1. Press **Shut down** at the top right of SIGN2MV and wait until the window closes.
+2. **Code → Download ZIP** on this page; right-click the ZIP → *Properties* → tick *Unblock* → *OK* (skip if there is
+   no such box).
+3. Extract it anywhere; you get a `SIGN2MV-main` folder.
+4. Open `SIGN2MV-main`, select everything (Ctrl + A), copy, and paste it into your SIGN2MV folder (the one with
+   `start.bat`); when asked, choose *Replace the files in the destination*.
+5. Double-click `start.bat`. When **Code date** under *System status* on the home page matches the date of the latest
+   change on this page, you are up to date.
+
+`library`, `models`, `runtime` and `config` are not in the ZIP and are never overwritten. Run `install.bat` again
+only when the [CHANGELOG](CHANGELOG.md) says so; running it when unsure does no harm, finished parts are skipped.
+Every change is listed in the [CHANGELOG](CHANGELOG.md).
+
 ## Requirements and limits
 
 - Windows 10 or 11 (64-bit). macOS and Linux are not supported yet.

@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import winaudio
+from .build import build_info
 from . import API_LEVEL, APP_NAME, VERSION, settings as settings_mod
 from .context import Context
 from .finished import FinishedSync
@@ -91,6 +92,7 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
         return {
             "app": APP_NAME,
             "version": VERSION,
+            "build": build_info(),
             "api_level": API_LEVEL,
             "port": port,
             "root": str(paths.root),

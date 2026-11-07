@@ -159,7 +159,16 @@ a { color:var(--accent); }
 <li>ffmpeg 固定用同一個版本，下載後會核對檔案驗證碼，每台電腦裝到的都一樣。</li>
 <li>安裝最後會把各環境的 Python 程式先編譯好，之後每次分離、翻唱、Whisper 啟動都比較快。</li>
 </ul>
-<p>更新程式：下載新版 ZIP，把裡面的檔案覆蓋到同一個資料夾（<code>library</code>、<code>models</code>、<code>runtime</code>、<code>config</code> 不在 ZIP 裡，不會被蓋掉），再執行一次 <code>install.bat</code>。</p>
+<h3>更新到新版</h3>
+<p>更新只要把新版的檔案<b>覆蓋</b>到原本的資料夾，你的歌曲、錄音、音色模型和設定都不會被動到（<code>library</code>、<code>models</code>、<code>runtime</code>、<code>config</code> 不在 ZIP 裡）。</p>
+<ol>
+<li>在 SIGN2MV 右上角按 <b>全部關閉</b>，等視窗關掉。</li>
+<li>到 <a href="https://github.com/nilson0606/SIGN2MV">GitHub 專案頁</a> 按 <b>Code → Download ZIP</b>，在 ZIP 上按右鍵 →「內容」→ 勾「解除封鎖」→「確定」（沒有這個勾選框就略過）。</li>
+<li>解壓縮到任何暫存位置，會得到 <code>SIGN2MV-main</code> 資料夾。</li>
+<li>打開 <code>SIGN2MV-main</code>，全選（Ctrl + A）、複製，貼到原本的安裝資料夾（放 <code>start.bat</code> 的那個），跳出詢問時選「<b>取代目的地中的檔案</b>」。</li>
+<li>雙擊 <code>start.bat</code>。首頁「系統狀態」的 <b>程式日期</b> 跟 GitHub 上最新一次更新的日期一樣，就是最新版了。</li>
+</ol>
+<p>只有 <code>CHANGELOG.md</code> 寫要重跑 <code>install.bat</code> 時才需要重跑；不確定時跑一次也沒有壞處，已經裝好的部分會略過。</p>
 </section>
 
 <section id="start">
