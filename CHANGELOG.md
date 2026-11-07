@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Sing & record, 「人聲保留原唱音色」: now made with Rubber Band's newer R3 engine (already inside SIGN2MV's ffmpeg)
+  instead of R2. Measured on a vocal lowered 4 semitones, the spectral centroid moves −3% from the original
+  instead of −11% (without the option: −16%), so the voice keeps much more of the singer's timbre. Key versions
+  made with the old method (2026-11-07) are not reused: the new ones are separate (`_t`), and the old vocal copies
+  are marked 「舊做法，已不使用，可刪」 in 「已存的分軌」. Without the option nothing changes.
 - Sing & record: 「送出音量」 meters next to the ear switches show what the page really sends to each ear. When
   Windows 「單聲道音訊」 / *Mono audio* is on (read from the registry, never changed), a note under the switches says
   that Windows mixes left and right after SIGN2MV, so the ear switches and headphone mono cannot work. Shutting

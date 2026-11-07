@@ -124,8 +124,9 @@ def key_track(rel: str, semitones: int, formant: bool = False) -> tuple[str, str
 
     One folder per source track and key, shared by the library page, sing & record
     and AI cover: whichever needs it first makes it, the others reuse it.
-    formant: the voice keeps its own timbre (Rubber Band formant=preserved); a separate copy ("f")."""
-    d = f"{_h('keytrack', rel)}_{'m' if semitones < 0 else 'p'}{abs(semitones)}{'f' if formant else ''}"
+    formant: the voice keeps its own timbre (Rubber Band R3 engine, formant=preserved); a separate copy
+    ("t"). Copies ending in "f" were made with the older R2 engine (2026-11-07) and are no longer used."""
+    d = f"{_h('keytrack', rel)}_{'m' if semitones < 0 else 'p'}{abs(semitones)}{'t' if formant else ''}"
     return d, f"keys/{d}/{Path(rel).name}"
 
 
@@ -134,7 +135,7 @@ def key_item(song_dir: Path, rel: str, semitones: int, formant: bool = False) ->
     d, dst = key_track(rel, semitones, formant)
     name = Path(rel).stem
     return {"src": str(song_dir / rel), "dst": str(song_dir / dst), "out_dir": str(song_dir / "keys" / d),
-            "formant": formant, "info": {"tracks": [name], "sources": {name: rel}, **({"formant": True} if formant else {})}}
+            "formant": formant, "info": {"tracks": [name], "sources": {name: rel}, **({"formant": True, "engine": "r3"} if formant else {})}}
 
 
 def recipe_id(recipe: dict[str, Any]) -> str:
@@ -212,7 +213,7 @@ def inventory(song_dir: Path) -> list[dict]:
                              "device": info.get("device"), "parents": [p] if p else []})
             else:
                 src = info.get("sources") or {}
-                item.update({"type": "key", "semitones": info.get("semitones"), "formant": bool(info.get("formant")),
+                item.update({"type": "key", "semitones": info.get("semitones"), "formant": bool(info.get("formant")), "engine": info.get("engine"),
                              "tracks": info.get("tracks") or [],
                              "files": info.get("files") or [], "created_at": info.get("created_at"),
                              "parents": sorted({p for p in (_parent(v) for v in src.values()) if p})})

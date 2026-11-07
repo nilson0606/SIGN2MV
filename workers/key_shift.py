@@ -33,8 +33,11 @@ def shift_files(files: list[dict], semis: int, out_dir: Path, info: dict, report
             sinfo = sf.info(str(src))
             duration = sinfo.frames / sinfo.samplerate
             report(i * 100 / len(files))
-            # formant: keep the singer's timbre (sounds more like the original, can add artefacts)
-            fm = ":formant=preserved" if item.get("formant") else ""
+            # formant: keep the singer's timbre with Rubber Band's R3 ("finer") engine, which keeps the formants far
+            # better than R2 (-4 semitones: spectral centroid -3% instead of -11%). ffmpeg's filter has no engine
+            # option but ORs its option fields into the library flags, so the R3 flag (0x20000000) is passed
+            # through "smoothing" (unused by R3). SIGN2MV's ffmpeg carries Rubber Band 4 (R3 included).
+            fm = ":formant=preserved:smoothing=536870912" if item.get("formant") else ""
             af = (f"rubberband=tempo=1:pitch={ratio:.12f}:channels=together:pitchq=quality{fm},"
                   f"apad,atrim=duration={duration:.9f}")
             run([ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", src, "-af", af, "-ar", str(sinfo.samplerate),

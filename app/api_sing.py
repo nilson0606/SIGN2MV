@@ -44,7 +44,7 @@ FEATURES = ['local-media', 'local-audio', 'library', 'stem-preview', 'library-lo
             'playback-trace', 'native-microphone', 'native-speaker-output', 'song-key-versions']
 SEP_MODELS = {"demucs": "demucs", "bs-roformer": "bs_roformer", "mel-roformer": "mel_roformer"}
 CACHE_RE = re.compile(r"^(local_[a-f0-9]{64})_(0|15|30|60)(_lead)?(?:_(bs-roformer|mel-roformer))?(_rmvpe)?(_residual)?_v1"
-                      r"(?:_key_([mp])([1-9]|1[0-2])(_f)?)?$")
+                      r"(?:_key_([mp])([1-9]|1[0-2])(_t)?)?$")
 REC_ID = re.compile(r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$")
 MAX_AUDIO = 384 * 1024 * 1024
 MAX_META = 16 * 1024 * 1024
@@ -60,7 +60,7 @@ def cache_key(video_id: str, seconds: int, vocal_mode: str, model: str, pitch: s
            f"{'_' + model if model != 'demucs' else ''}{'_rmvpe' if pitch == 'rmvpe' else ''}"
            f"{'_residual' if method == 'residual' else ''}_v1")
     if shift:
-        key += f"_key_{'m' if shift < 0 else 'p'}{abs(shift)}{'_f' if formant else ''}"
+        key += f"_key_{'m' if shift < 0 else 'p'}{abs(shift)}{'_t' if formant else ''}"
     return key
 
 
