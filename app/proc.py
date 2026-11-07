@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 import signal
 import subprocess
+import threading
 import sys
 from typing import Sequence
 
@@ -144,11 +145,18 @@ class ManagedProcess:
             except OSError:
                 self._job = None
         if stdin_data is not None and not keep_stdin and self.popen.stdin:
-            try:
-                self.popen.stdin.write(stdin_data)
-                self.popen.stdin.close()
-            except OSError:
-                pass
+            # Written from a thread: a worker reads its input only after loading its libraries, and an input
+            # larger than the pipe buffer used to block here, before the job queue had the process (so
+            # cancel could not reach it) and before its timeout started.
+            stdin = self.popen.stdin
+
+            def feed() -> None:
+                try:
+                    stdin.write(stdin_data)
+                    stdin.close()
+                except (OSError, ValueError):
+                    pass
+            threading.Thread(target=feed, daemon=True, name="worker-stdin").start()
 
     @property
     def pid(self) -> int:
