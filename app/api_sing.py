@@ -44,7 +44,7 @@ FEATURES = ['local-media', 'local-audio', 'library', 'stem-preview', 'library-lo
             'playback-trace', 'native-microphone', 'native-speaker-output', 'song-key-versions']
 SEP_MODELS = {"demucs": "demucs", "bs-roformer": "bs_roformer", "mel-roformer": "mel_roformer"}
 CACHE_RE = re.compile(r"^(local_[a-f0-9]{64})_(0|15|30|60)(_lead)?(?:_(bs-roformer|mel-roformer))?(_rmvpe)?(_residual)?_v1"
-                      r"(?:_key_([mp])([1-9]|1[0-2])(_t)?)?$")
+                      r"(?:_key_([mp])([1-9]|1[0-2])(_[tf])?)?$")
 REC_ID = re.compile(r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$")
 MAX_AUDIO = 384 * 1024 * 1024
 MAX_META = 16 * 1024 * 1024
@@ -55,12 +55,14 @@ def video_id_for(song_id: str) -> str:
 
 
 def cache_key(video_id: str, seconds: int, vocal_mode: str, model: str, pitch: str, method: str, shift: int = 0,
-              formant: bool = False) -> str:
+              formant: bool = False, legacy: bool = False) -> str:
+    """legacy: a "keep the singer's timbre" version made with the older R2 engine (suffix _f, 2026-11-07);
+    recordings made on it still need it, so it can be loaded but is never made again (new ones are _t)."""
     key = (f"{video_id}_{seconds}{'_lead' if vocal_mode == 'lead' else ''}"
            f"{'_' + model if model != 'demucs' else ''}{'_rmvpe' if pitch == 'rmvpe' else ''}"
            f"{'_residual' if method == 'residual' else ''}_v1")
     if shift:
-        key += f"_key_{'m' if shift < 0 else 'p'}{abs(shift)}{'_t' if formant else ''}"
+        key += f"_key_{'m' if shift < 0 else 'p'}{abs(shift)}{('_f' if legacy else '_t') if formant else ''}"
     return key
 
 
@@ -72,7 +74,8 @@ def parse_cache_key(cache_id: str) -> dict[str, Any] | None:
     shift = 0 if not sign else (int(mag) * (-1 if sign == "m" else 1))
     return {"videoId": vid, "seconds": int(secs), "vocalMode": "lead" if lead else "all",
             "separationModel": model or "demucs", "pitchMethod": "rmvpe" if rmvpe else "yin",
-            "separationMethod": "residual" if residual else "single", "pitchShift": shift, "keyFormant": bool(fmt)}
+            "separationMethod": "residual" if residual else "single", "pitchShift": shift, "keyFormant": bool(fmt),
+            "keyLegacy": fmt == "_f"}
 
 
 def recipe_for(p: dict[str, Any]) -> dict[str, Any]:
@@ -321,7 +324,7 @@ def router(ctx: Context) -> APIRouter:
         has = all((song_dir / rel).is_file() for rel in stems.values()) and bool(stems)
         value.update({"cacheId": cache_id, "hasPreview": has, "title": value.get("title") or s["title"],
                       "masks": shared_masks(s["song_id"], p, float(value.get("duration") or 905)),
-                      "rangeSeconds": p["seconds"], "songId": s["song_id"]})
+                      "rangeSeconds": p["seconds"], "songId": s["song_id"], "keyLegacy": p["keyLegacy"]})
         return value
 
     @r.get("/sr/library")
@@ -344,6 +347,7 @@ def router(ctx: Context) -> APIRouter:
                            if (song_dir / rel).is_file())
                 rows.append({"id": d.name, "videoId": vid, "title": ref["title"], "baseTitle": ref.get("baseTitle") or ref["title"],
                              "pitchShift": ref.get("pitchShift", 0), "keyFormant": bool(ref.get("keyFormant")),
+                             "keyLegacy": d.name.endswith("_f"),
                              "sourceCacheId": ref.get("sourceCacheId"),
                              "seconds": ref["rangeSeconds"], "duration": ref.get("duration"), "hasPreview": ref["hasPreview"],
                              "vocalMode": ref.get("vocalMode", "all"), "separationModel": ref.get("separationModel", "demucs"),
@@ -512,6 +516,7 @@ def router(ctx: Context) -> APIRouter:
         if not isinstance(formant, bool):
             return json_err(400, "影片網址或片段長度無效。")
         formant = formant and bool(shift)   # "keep the singer's timbre" only matters for a key version
+        legacy = data.get("keyLegacy", False) is True and formant   # load an old R2 version (never made again)
         if not isinstance(seconds, int) or seconds not in (0, 15, 30, 60) or not isinstance(shift, int) or not -12 <= shift <= 12:
             return json_err(400, "影片網址或片段長度無效。")
         p = {"videoId": vid, "seconds": seconds, "vocalMode": data.get("vocalMode") or "all",
@@ -531,7 +536,7 @@ def router(ctx: Context) -> APIRouter:
                     return json_err(409, "已有音訊正在處理，請先取消或等待完成。")
         base_key = cache_key(vid, seconds, p["vocalMode"], p["separationModel"], p["pitchMethod"], p["separationMethod"])
         key_id = cache_key(vid, seconds, p["vocalMode"], p["separationModel"], p["pitchMethod"], p["separationMethod"], shift,
-                           formant)
+                           formant, legacy)
         force = bool(data.get("force"))
         job_id = uuid.uuid4().hex
         preview = data.get("preview", True) is not False
@@ -539,6 +544,8 @@ def router(ctx: Context) -> APIRouter:
         if not force and cached_ref and (not preview or cached_ref["hasPreview"]):
             prep_jobs[job_id] = {"cacheId": key_id, "p": p, "cached": True, "updated": time.time()}
             return JSONResponse(summary(job_id), status_code=202)
+        if legacy:
+            return json_err(400, "這是舊做法的「保留原唱音色」版本，只能載入，不能重新建立；請改建立新的版本。")
         lib = ctx.library()
         song_dir = lib.song_dir(sid)
         song = lib.get(sid)

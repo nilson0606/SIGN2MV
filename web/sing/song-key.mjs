@@ -7,9 +7,10 @@ export function keyLabel(value = 0) {
   const shift = keyShift(value);
   return shift ? `${shift > 0 ? '升' : '降'} ${Math.abs(shift)} Key` : '原調';
 }
-// label of a key version; formant: the voice keeps the singer's timbre (a separate version)
-export function keyText(value = 0, formant = false) {
-  return keyLabel(value) + (value && formant ? ' · 保留原唱音色' : '');
+// label of a key version; formant: the voice keeps the singer's timbre (a separate version);
+// legacy: one made with the older method (R2, 2026-11-07), kept for the recordings made on it
+export function keyText(value = 0, formant = false, legacy = false) {
+  return keyLabel(value) + (value && formant ? (legacy ? ' · 保留原唱音色（舊做法）' : ' · 保留原唱音色') : '');
 }
 export function transposeReference(source, value) {
   const shift = keyShift(value), factor = 2 ** (shift / 12);

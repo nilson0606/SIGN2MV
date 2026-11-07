@@ -895,6 +895,7 @@ export const messages = {
   "人聲／伴奏": "Vocals / Instrumental",
   "正在載入變調版本…": "Loading transposed version…",
   "本機回傳的 Key 與選定版本不同，請重新載入。": "Returned key differs from the selected version. Reload it.",
+  "這是舊做法的「保留原唱音色」版本，只能載入，不能重新建立；請改建立新的版本。": "This keep-the-singer's-timbre version was made with the old method: it can be loaded but not made again. Make a new version instead.",
   "本機回傳的分離模式與所選模式不符，請更新頁面與本機工具後重試。": "Returned separation mode differs from your selection. Update the page and local tools, then retry.",
   "影片已切換，請重新準備歌曲。": "Video changed. Prepare the song again.",
   "· 已隨歌曲版本保存。": "· Saved with this song version.",
@@ -1953,6 +1954,13 @@ export const templates = [
     [
       0,
       1
+    ]
+  ],
+  [
+    "{0} · 保留原唱音色（舊做法）",
+    "{0} · singer's timbre kept (old method)",
+    [
+      0
     ]
   ],
   [

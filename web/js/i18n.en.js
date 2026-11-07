@@ -375,7 +375,7 @@ export default {
   "stored.lead": "Lead / backing",
   "stored.lead2": "Lead split again",
   "stored.male_female": "Male / female ({0})",
-  "stored.key": "Key {0}: {1}", "stored.key_formant": " (singer's timbre kept)", "stored.key_formant_old": " (singer's timbre kept, old method, no longer used, can be deleted)",
+  "stored.key": "Key {0}: {1}", "stored.key_formant": " (singer's timbre kept)", "stored.key_formant_old": " (singer's timbre kept, old method; recordings made on it lose their guide vocals if deleted)",
   "stored.incomplete": "Unfinished leftover (safe to delete)",
   "stored.used.cover": "Cover {0}",
   "stored.used.sing": "Sing & record: {0}",

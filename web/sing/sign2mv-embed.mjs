@@ -41,7 +41,8 @@ let refs=[],keyRevision=0,passThrough=false;
 async function library(){
   try{const r=await fetch('/sr/library',{headers:{'X-Karaoke-Token':await token()},cache:'no-store'});return r.ok?((await r.json()).songs||[]):[];}catch{return [];}
 }
-function bestRef(vid,key,fm=false){const c=refs.filter(r=>r.videoId===vid&&(r.pitchShift||0)===key&&!!r.keyFormant===fm);return c.find(r=>!r.seconds)||c[0]||null;}
+// old-method keep-timbre versions (keyLegacy) are only reachable from the library list, never picked here
+function bestRef(vid,key,fm=false){const c=refs.filter(r=>r.videoId===vid&&(r.pitchShift||0)===key&&!!r.keyFormant===fm&&!r.keyLegacy);return c.find(r=>!r.seconds)||c[0]||null;}
 // menu value of a key version: <id>#key<n>, plus "f" when the voice keeps the singer's timbre
 const keyTag=(k,fm)=>`${k}${fm?'f':''}`;
 async function addKeyOptions(){
@@ -51,7 +52,7 @@ async function addKeyOptions(){
   const keep=sel.value;
   for(const o of [...sel.options]){
     if(!o.value||o.value.includes('#key'))continue;
-    const keys=[...new Set(refs.filter(r=>r.videoId===o.value&&r.pitchShift).map(r=>keyTag(r.pitchShift,r.keyFormant)))]
+    const keys=[...new Set(refs.filter(r=>r.videoId===o.value&&r.pitchShift&&!r.keyLegacy).map(r=>keyTag(r.pitchShift,r.keyFormant)))]
       .sort((a,b)=>parseInt(a)-parseInt(b)||a.length-b.length);
     let after=o;
     for(const k of keys){const n=userOption(`${o.textContent} · ${translateMessage(keyText(parseInt(k),k.endsWith('f')))}`,`${o.value}#key${k}`);after.after(n);after=n;}

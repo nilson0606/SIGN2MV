@@ -125,7 +125,8 @@ def key_track(rel: str, semitones: int, formant: bool = False) -> tuple[str, str
     One folder per source track and key, shared by the library page, sing & record
     and AI cover: whichever needs it first makes it, the others reuse it.
     formant: the voice keeps its own timbre (Rubber Band R3 engine, formant=preserved); a separate copy
-    ("t"). Copies ending in "f" were made with the older R2 engine (2026-11-07) and are no longer used."""
+    ("t"). Copies ending in "f" were made with the older R2 engine (2026-11-07): never made again, but kept
+    for the recordings made on those versions (app/api_sing.cache_key, legacy)."""
     d = f"{_h('keytrack', rel)}_{'m' if semitones < 0 else 'p'}{abs(semitones)}{'t' if formant else ''}"
     return d, f"keys/{d}/{Path(rel).name}"
 
