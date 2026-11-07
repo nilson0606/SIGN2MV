@@ -128,9 +128,10 @@ def main() -> None:
         except Exception as exc:  # noqa: BLE001
             raw.unlink(missing_ok=True)
             protocol.fail("rvc_failed", f"{t.get('label', '')}: {str(exc)[-600:]}")
+        finally:   # also when it failed (protocol.fail exits): the index copy used to be left in the temp folder
+            if tmp_index:
+                tmp_index.unlink(missing_ok=True)
         raw.unlink(missing_ok=True)
-        if tmp_index:
-            tmp_index.unlink(missing_ok=True)
         try:
             import soundfile
             audio_s = soundfile.info(str(out)).duration

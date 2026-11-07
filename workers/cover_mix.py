@@ -132,7 +132,9 @@ def apply_acoustic_ambience(audio, target_sr=TARGET_SR, wet=0.10):
             rev_l[d_samp:] += audio[:-d_samp, 0] * g
             rev_r[d_samp:] += audio[:-d_samp, 1] * g
     sos = scipy.signal.butter(2, 3500, btype='lowpass', fs=target_sr, output='sos')
-    rev = np.stack([scipy.signal.sosfilt(sos, rev_l), scipy.signal.sosfilt(sos, rev_r)], axis=1)
+    # sosfilt returns float64: keep the long stereo buffers float32 (half the memory for a long song)
+    rev = np.stack([scipy.signal.sosfilt(sos, rev_l).astype(np.float32),
+                    scipy.signal.sosfilt(sos, rev_r).astype(np.float32)], axis=1)
     mixed = audio * (1.0 - wet) + rev * wet
     peak = np.max(np.abs(mixed))
     if peak > 0.95:

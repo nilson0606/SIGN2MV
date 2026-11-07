@@ -32,6 +32,14 @@ def _port_owner(port: int) -> str | None:
         return "other" if sock.connect_ex(("127.0.0.1", port)) == 0 else None
 
 
+def _quiet_connection_reset(record: logging.LogRecord) -> bool:
+    """Drop asyncio's traceback for a connection the browser closed itself (seeking a video, closing a
+    stream): "[WinError 10054]" in _call_connection_lost on Windows. It is harmless, but filled server.log
+    (354 of 3381 lines on 11-07) and pushed real errors out of the rotated log."""
+    exc = record.exc_info[1] if record.exc_info else None
+    return not (isinstance(exc, ConnectionResetError) and "_call_connection_lost" in record.getMessage())
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="sign2mv")
     parser.add_argument("--port", type=int, default=int(os.environ.get("SIGN2MV_PORT", DEFAULT_PORT)))
@@ -52,6 +60,7 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO, handlers=[handler, logging.StreamHandler(sys.stdout)],
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     log = logging.getLogger("sign2mv")
+    logging.getLogger("asyncio").addFilter(_quiet_connection_reset)
 
     url = f"http://127.0.0.1:{args.port}/"
     owner = _port_owner(args.port)

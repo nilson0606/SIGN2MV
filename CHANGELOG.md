@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+Three outside reviews (Claude, Gemini, Astro) on 11-08, merged and checked against the code:
+
+- Sing & record: key versions made with the old "keep the singer's timbre" method (R2, 11-07) were no longer
+  recognised after the switch to R3, so recordings made on them could not read their reference or backing in
+  post-processing. They are recognised again, listed as 「保留原唱音色（舊做法）」, and load as they are; they
+  are never made again.
+- Library: 「重新匯入（換來源）」 deleted the old source before the new one was in place, so a failure at that
+  moment left the song without audio. The old one is now kept until the new one is in place, put back if that
+  fails, and put back at the next start if the program was stopped in between.
+- Sing & record: after replacing a song's source, its sing references kept the old pitch, beats and backing,
+  and the "first N seconds" clip kept the old audio. References remember the source they were made from; an
+  outdated one is made again (marked 「來源已更換，載入時會重新建立」 in the list), and clips follow the source.
+- Sing & record: a local-microphone capture whose page was reloaded or closed while it was opening kept the
+  microphone; every later request said it was used by another tab until SIGN2MV was restarted. Fixed.
+- Jobs: cancel and the time limit did not reach a worker that was still loading its libraries when its input
+  was large. Fixed.
+- Live pitch (RMVPE scoring): a worker stuck while loading is stopped after 3 minutes.
+- `server.log`: the harmless "[WinError 10054]" tracebacks (a browser closing a connection) are no longer logged.
+- AI cover: the trained model's info names the feature model actually used; a temporary index copy is removed
+  when a conversion fails; versions record the key copies they use; less memory for the room effect.
+- YouTube link lookup ends yt-dlp's helper processes on a timeout; the library-folder picker waits for its
+  process after closing it.
+- `start.bat` returns Python's exit code (it always returned 0).
+- Sing & record: 「保留原唱音色」 is dimmed at the original key, where it does nothing.
+- Docs: check for updates by the 7-character code after the code date, not only the date.
+
 - Home, system status: new row 「程式日期」 / *Code date*: the date and short commit of the code
   (`app/BUILD.txt`, filled in by GitHub's Download ZIP), to compare with the latest change on GitHub. The version
   number alone did not change between updates.

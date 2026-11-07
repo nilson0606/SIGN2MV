@@ -210,7 +210,8 @@ def main() -> None:
             protocol.log(f"loss curve not saved: {exc}")
         (tmp / "model_info.txt").write_text(
             f"Voice model: {name}\nTrained: {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-            f"Recordings: {count} ({slices} slices)\nRVC v2 / HiFi-GAN {sr // 1000}k, RMVPE, ContentVec\n"
+            f"Recordings: {count} ({slices} slices)\nRVC v2 / HiFi-GAN {sr // 1000}k, RMVPE, "
+            f"{'ContentVec' if embedder == 'contentvec' else embedder}\n"
             f"Epochs: {final_epoch}, batch {real_batch}\n", encoding="utf-8")
         if target.exists():
             old = voices / f"_{name}.old"

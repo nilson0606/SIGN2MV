@@ -53,3 +53,21 @@ def test_live_pitch_stuck_worker_is_stopped(tmp_path, monkeypatch):
         assert lp.pitch(b"\0\0" * 160, 16000)["f0"] == [0.0]
     finally:
         lp.stop()
+
+
+def test_worker_stuck_while_loading_is_stopped(tmp_path, monkeypatch):
+    lp = _pitch(tmp_path, monkeypatch, hang=False)
+    (tmp_path / "workers" / "sing_live_pitch.py").write_text("import time\ntime.sleep(60)\n", encoding="utf-8")
+    monkeypatch.setattr(lp, "LOAD_TIMEOUT_S", 0.8)
+    try:
+        lp.warm()
+        stuck = lp._proc
+        before = lp._last_used
+        time.sleep(0.2)
+        lp.warm()                                   # asking again while loading does not reset the idle clock
+        assert lp._last_used == before
+        time.sleep(1.2)
+        assert lp._proc is None and stuck.popen.poll() is not None
+        assert lp.state()["error"] == "live_pitch_load_timeout"
+    finally:
+        lp.stop()

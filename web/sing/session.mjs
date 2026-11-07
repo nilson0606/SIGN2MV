@@ -247,7 +247,7 @@ export function createKaraokeSession(options) {
     $('clip-seconds').disabled = ['preparing', 'finishing', 'restarting'].includes(phase);
     $('cancel-song').disabled = maskBusy || phase === 'finishing' || (!jobId && phase !== 'preparing' && !reference);
     $('song-key').disabled=!!take||segmented?.busy()||['preparing','finishing','restarting'].includes(phase);
-    $('key-formant').disabled=$('song-key').disabled;
+    $('key-formant').disabled=$('song-key').disabled||Number($('song-key').value)===0;   // only for a key version
     $('song-key-apply').disabled=!reference||!!take||segmented?.busy()||['preparing','finishing','restarting'].includes(phase);
     $('sing-start').disabled = maskBusy || !reference || (reference.pitchShift&&!keyPlayback.ready()) || phase === 'finishing';
     $('sing-guide-mode').disabled = !!wholeGuide || ['preparing','finishing','restarting'].includes(phase);
@@ -669,7 +669,7 @@ export function createKaraokeSession(options) {
     }
   }
   const keyChanged=()=>{$('song-key-status').textContent=`已選 ${keyText(Number($('song-key').value),$('key-formant').checked)}，尚未套用。${reference?'目前播放 '+keyText(reference.pitchShift,reference.keyFormant,reference.keyLegacy)+'；請按「建立／載入此 Key」。':'請按「準備歌曲基準」。'}`;};
-  $('song-key').addEventListener('change',keyChanged);
+  $('song-key').addEventListener('change',()=>{keyChanged();controls();});
   $('key-formant').addEventListener('change',keyChanged);
   $('song-key-apply').addEventListener('click',()=>{try{keyShift(Number($('song-key').value));if(reference){selectMediaSource(reference.videoId);prepareSong(false,true);}}catch(error){$('song-key-status').textContent=error.message;}});
   $('prepare-song').addEventListener('click', () => prepareSong());

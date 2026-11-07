@@ -8,5 +8,6 @@ pause
 exit /b 1
 :run
 "runtime\envs\server\Scripts\python.exe" -m app %*
-if errorlevel 1 pause
-exit /b 0
+set "SIGN2MV_EXIT=%errorlevel%"
+if not "%SIGN2MV_EXIT%"=="0" pause
+exit /b %SIGN2MV_EXIT%

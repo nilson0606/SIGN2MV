@@ -436,8 +436,10 @@ def main() -> None:
         render = write_render(song_dir, data["render"], out_mp3,
                               {"cover_version": v["id"], "duration": round(info["duration"], 3)})
         now = time.time()
+        # key_jobs: the shared key copies this version uses, so the library page can show them as its parents
         v.update({"schema_version": 1, "render_id": render["id"], "params": data["params"], "plan": {
-            k: plan[k] for k in ("recipe", "tracks", "voice", "vocal", "bgm", "backings", "orig_vocal", "midi", "files", "key")},
+            **{k: plan[k] for k in ("recipe", "tracks", "voice", "vocal", "bgm", "backings", "orig_vocal", "midi", "files",
+                                    "key")}, "key_jobs": plan.get("key_jobs") or []},
             "duration": round(info["duration"], 3), "instrument_used": info["instrument_used"], "updated_at": now,
             "stats": stats})
         v.setdefault("created_at", now)

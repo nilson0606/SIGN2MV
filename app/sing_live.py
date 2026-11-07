@@ -24,6 +24,8 @@ PIECE_TIMEOUT_S = 120
 
 
 class LivePitch:
+    LOAD_TIMEOUT_S = LOAD_TIMEOUT_S
+
     def __init__(self, ctx):
         self.ctx = ctx
         self._lock = threading.Lock()        # one piece at a time
@@ -45,9 +47,11 @@ class LivePitch:
 
     def warm(self) -> dict[str, Any]:
         with self._state_lock:
-            self._last_used = time.monotonic()
             if self._proc and self._proc.popen.poll() is None:
+                if self._ready.is_set():   # still loading: leave the idle clock alone, the load timeout decides
+                    self._last_used = time.monotonic()
                 return self.state_unlocked()
+            self._last_used = time.monotonic()
             from .childenv import child_env
             args = [self.ctx.python("engine"), "-u", str(self.ctx.paths.workers / "sing_live_pitch.py")]
             self._ready.clear()
@@ -57,8 +61,20 @@ class LivePitch:
                                         keep_stdin=True)
             proc = self._proc
         threading.Thread(target=self._wait_ready, args=(proc,), daemon=True, name="live-pitch-load").start()
+        # a worker that neither answers nor exits while loading would otherwise be kept forever (an outside
+        # review, Gemini R3-3): stop it after LOAD_TIMEOUT_S, the next request starts a new one
+        timer = threading.Timer(self.LOAD_TIMEOUT_S, self._load_timeout, args=(proc,))
+        timer.daemon = True
+        timer.start()
         threading.Thread(target=self._drain_stderr, args=(proc,), daemon=True, name="live-pitch-stderr").start()
         return {"state": "loading"}
+
+    def _load_timeout(self, proc: ManagedProcess) -> None:
+        with self._state_lock:
+            if proc is not self._proc or self._ready.is_set():
+                return
+            self._error = "live_pitch_load_timeout"
+        self.stop()
 
     def state_unlocked(self) -> dict[str, Any]:
         return {"state": "ready" if self._ready.is_set() else "loading", "device": self.device}
@@ -103,7 +119,7 @@ class LivePitch:
         """pcm: int16 little-endian mono at `rate`. Returns {"f0": [...], "hop": 0.01, ...}."""
         if not self._ready.is_set():
             self.warm()
-            if not self._ready.wait(LOAD_TIMEOUT_S):
+            if not self._ready.wait(self.LOAD_TIMEOUT_S):
                 return {"error": self._error or "live_pitch_not_ready"}
         with self._lock:
             proc = self._proc

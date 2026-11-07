@@ -13,6 +13,7 @@ from fastapi import APIRouter, File, Request, UploadFile
 from . import stems as stems_mod
 from .context import Context
 from .library import LibraryError
+from .proc import ManagedProcess
 from .util import body_json, err, media_response
 
 SEPARATION_TIMEOUT = 3600.0
@@ -181,14 +182,23 @@ def router(ctx: Context) -> APIRouter:
         from .childenv import child_env
         cmd = [ctx.python("engine"), "-m", "yt_dlp", "--ignore-config", "--no-playlist", "--no-cache-dir",
                "--js-runtimes", "deno", "--socket-timeout", "15", "--skip-download", "-J", url]
+        def ask() -> tuple[int, str]:
+            # a whole process tree: on a timeout yt-dlp's deno helper is ended too (an outside review, R3-11)
+            proc = ManagedProcess(cmd, env=child_env(ctx.paths))
+            try:
+                out, _ = proc.popen.communicate(timeout=45)
+                return proc.popen.returncode, out.decode("utf-8", "replace")
+            except subprocess.TimeoutExpired:
+                proc.kill_tree()
+                raise
+            finally:
+                proc.close()
         try:
-            res = await run_in_threadpool(subprocess.run, cmd, capture_output=True, text=True, encoding="utf-8",
-                                          errors="replace", timeout=45, env=child_env(ctx.paths),
-                                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            code, stdout = await run_in_threadpool(ask)
         except (OSError, subprocess.TimeoutExpired):
             return err("youtube_info_failed", 502)
         try:
-            data = json.loads(res.stdout) if res.returncode == 0 else None
+            data = json.loads(stdout) if code == 0 else None
         except ValueError:
             data = None
         if not isinstance(data, dict):

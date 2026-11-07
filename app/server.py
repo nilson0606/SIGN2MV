@@ -169,6 +169,7 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
                 out, _ = proc.communicate(timeout=300)
             except subprocess.TimeoutExpired:
                 proc.kill()
+                proc.wait(timeout=5)
                 return {"cancelled": True}
             finally:
                 picker["proc"] = None
