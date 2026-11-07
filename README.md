@@ -45,8 +45,9 @@ touched.
 3. Extract it anywhere; you get a `SIGN2MV-main` folder.
 4. Open `SIGN2MV-main`, select everything (Ctrl + A), copy, and paste it into your SIGN2MV folder (the one with
    `start.bat`); when asked, choose *Replace the files in the destination*.
-5. Double-click `start.bat`. When **Code date** under *System status* on the home page matches the date of the latest
-   change on this page, you are up to date.
+5. Double-click `start.bat`. **Code date** under *System status* on the home page ends with a 7-character code
+   (e.g. `2026-11-08 · 0f0d724`). When it matches the 7-character code at the top right of the file list on this page,
+   you are up to date. Compare the code, not just the date: there can be several changes on one day.
 
 `library`, `models`, `runtime` and `config` are not in the ZIP and are never overwritten. Run `install.bat` again
 only when the [CHANGELOG](CHANGELOG.md) says so; running it when unsure does no harm, finished parts are skipped.
