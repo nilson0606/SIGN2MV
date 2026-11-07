@@ -388,3 +388,7 @@ html[data-theme="day"] { --gold-edge: rgba(180, 132, 20, .55); --gold-edge-hi: r
 .home-card:hover, .home-card:focus-visible { border-color: var(--accent); transform: translateY(-2px); }
 .home-card img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; background: var(--panel-hi); }
 .home-card .hc-title { font-weight: 600; margin-top: 4px; }
+.home-hero { display: block; width: 100%; height: auto; border-radius: 8px; margin: 4px 0 14px; border: 1px solid var(--line); }
+.check-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.check-chip { font-size: 13px; padding: 2px 8px; border-radius: 999px; background: var(--panel-lo); border: 1px solid var(--line); white-space: nowrap; }
+.check-chip.bad { border-color: #e5484d; }

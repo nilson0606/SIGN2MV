@@ -10,11 +10,12 @@ export default {
   'common.select_song': '先選一首歌', 'common.start': '開始', 'common.apply': '套用', 'common.reset': '還原預設',
 
   'home.status': '系統狀態', 'home.start': '開始', 'home.start_hint': '先到「歌曲庫」加入歌曲，再選擇要做的事。',
+  'home.checks': '元件檢查',
   'home.card.library': '從 YouTube 或音檔加入歌曲，分離人聲與伴奏、升降 Key。', 'home.card.sing': '跟著原唱旋律唱，即時看音高，錄音並評分。',
   'home.card.mv': '用照片和歌詞做 MV，或用音檔一鍵做快速 MV。', 'home.card.cover': '訓練自己的音色模型，把歌換成你的聲音。',
   'home.version': '版本', 'home.folder': '程式資料夾', 'home.install': '安裝', 'home.install_ok': '已完成',
   'home.install_missing': '尚未完成（請執行 install.bat）', 'home.device': '運算裝置', 'home.cpu_mode': 'CPU（沒有可用的 NVIDIA 顯示卡，會比較慢）',
-  'home.c_delta': '安裝時 C 槽變化', 'home.check': '檢查：{0}',
+  'home.c_delta': '安裝時 C 槽變化',
 
   'banner.reload_page': '伺服器已更新，請按 F5 重新載入網頁。',
   'banner.restart_server': '網頁比伺服器新：請按「全部關閉」，再雙擊 start.bat 重新啟動。',

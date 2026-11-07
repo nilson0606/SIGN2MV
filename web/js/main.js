@@ -50,6 +50,7 @@ updateThemeButton();
 function updateHomeImages() {
   const lang = language() === 'en' ? 'en' : 'zh-TW';
   $$('[data-home-img]').forEach((img) => { img.src = `/img/home/${lang}/${img.dataset.homeImg}.jpg`; });
+  $$('[data-home-hero]').forEach((img) => { img.src = `/img/home/${lang}/hero.jpg`; });
 }
 updateHomeImages();
 onLanguageChange(() => { updateManualLink(); renderStatus(); renderJobs(); updateThemeButton(); updateHomeImages(); });
@@ -73,11 +74,13 @@ function renderStatus() {
   if (ins.c_drive_delta_bytes !== null && ins.c_drive_delta_bytes !== undefined) {
     rows.push([t('home.c_delta'), fmtBytes(ins.c_drive_delta_bytes)]);
   }
-  const checks = ins.checks || {};
-  for (const [name, ok] of Object.entries(checks)) {
-    rows.push([t('home.check', name), ok ? '✅' : '❌']);
+  const checks = Object.entries(ins.checks || {});
+  const items = rows.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]);
+  if (checks.length) {   // one line of chips instead of a row per check, so the panel stays short
+    items.push(el('dt', {}, t('home.checks')),
+      el('dd', { class: 'check-chips' }, ...checks.map(([name, ok]) => el('span', { class: 'check-chip' + (ok ? '' : ' bad') }, `${ok ? '✅' : '❌'} ${name}`))));
   }
-  kv.replaceChildren(...rows.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]));
+  kv.replaceChildren(...items);
 }
 
 async function loadStatus(first = false) {
