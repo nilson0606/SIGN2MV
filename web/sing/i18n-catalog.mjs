@@ -325,6 +325,7 @@ export const messages = {
   "耳機單聲道（左右耳聽到一樣的聲音，適合只戴一邊耳機；分段錄音也適用）": "Headphone mono (the same sound in both ears, for singing with one earcup off; also in segment recording)",
   "耳機聲音": "Headphone sound",
   "送出音量": "Sent",
+  "⚠ Windows 的「單聲道音訊」目前開著：Windows 會把左右聲道混在一起，所以左右耳開關和「耳機單聲道」都不會有作用。要用的話，按 Win＋A → 協助工具 → 關閉「單聲道音訊」；唱完再打開，關閉 SIGN2MV 時也會提醒你。": "⚠ Windows “Mono audio” is on: Windows mixes left and right, so the ear switches and Headphone mono have no effect. To use them, press Win+A → Accessibility → turn off “Mono audio”; turn it back on after singing (SIGN2MV also reminds you when you shut it down).",
   "左": "L",
   "右": "R",
   "唱錄頁實際送到左右耳的音量": "What this page actually sends to each ear",

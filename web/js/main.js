@@ -112,7 +112,14 @@ async function loadStatus(first = false) {
 // ---------------- shutdown ----------------
 $('#shutdown-btn').addEventListener('click', async () => {
   const busyPages = [...pages.values()].filter((p) => p.busy && p.busy());
-  const message = busyPages.length ? `${busyPages.map((p) => p.busyText()).join('\n')}\n\n${t('shutdown.confirm')}` : t('shutdown.confirm');
+  let message = busyPages.length ? `${busyPages.map((p) => p.busyText()).join('\n')}\n\n${t('shutdown.confirm')}` : t('shutdown.confirm');
+  // Windows "Mono audio" switched since SIGN2MV started (e.g. off for singing with one ear): remind to switch it back
+  try {
+    const wm = (await api.get('/api/system/status')).windows_mono || {};
+    if (typeof wm.now === 'boolean' && typeof wm.at_start === 'boolean' && wm.now !== wm.at_start) {
+      message = `${t(wm.at_start ? 'shutdown.mono_back_on' : 'shutdown.mono_back_off')}\n\n${message}`;
+    }
+  } catch { /* status unavailable: plain question */ }
   if (!(await confirmDialog(message, t('nav.shutdown')))) return;
   let force = false;
   try {

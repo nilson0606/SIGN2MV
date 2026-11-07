@@ -68,7 +68,18 @@ export function setMono(value){
 }
 export function setEar(side,on){if(side in ears){ears[side]=!!on;update();}}
 
+// Windows "Mono audio" mixes both channels after us: say so next to the switches (checked on open and
+// whenever the page comes back into view, e.g. after switching it in Win+A).
+async function checkWindowsMono(){
+  const note=document.getElementById('windows-mono-warning');if(!note)return;
+  try{const r=await fetch('/api/system/status',{cache:'no-store'});const s=await r.json();note.hidden=s.windows_mono?.now!==true;}
+  catch{/* unknown: say nothing */}
+}
+
 export function initMono(checkbox,left,right){
+  void checkWindowsMono();
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void checkWindowsMono();});
+  window.addEventListener('focus',()=>void checkWindowsMono());
   if(changed())mediaElements().forEach(routeMedia);
   if(checkbox){checkbox.checked=mono;checkbox.addEventListener('change',()=>setMono(checkbox.checked));}
   for(const [side,box] of [['left',left],['right',right]]){

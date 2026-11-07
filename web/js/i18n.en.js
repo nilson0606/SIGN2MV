@@ -21,6 +21,8 @@ export default {
   'banner.restart_server': 'This page is newer than the server: press "Shut down", then double-click start.bat again.',
 
   'shutdown.confirm': 'Shut down SIGN2MV? The server and this window will close.',
+  'shutdown.mono_back_on': 'Reminder: Windows “Mono audio” is off now; it was on when SIGN2MV started. To switch it back: Win+A → Accessibility → turn on “Mono audio”.',
+  'shutdown.mono_back_off': 'Reminder: Windows “Mono audio” is on now; it was off when SIGN2MV started. To switch it back: Win+A → Accessibility → turn off “Mono audio”.',
   'shutdown.jobs_running': '{0} job(s) are running or queued. Forcing shutdown cancels them.',
   'shutdown.force': 'Cancel jobs and shut down', 'shutdown.done': 'SIGN2MV has shut down. You can close this window.',
 

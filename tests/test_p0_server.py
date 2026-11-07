@@ -278,3 +278,21 @@ def test_recording_patch_merges_with_stored_record(root):
         with pytest.raises(ArchiveError):
             arc.patch(rid, bad)
     assert arc.get(rid)["postPending"] is False
+
+
+def test_windows_mono_reported_with_its_state_at_start(root, monkeypatch):
+    """Windows "Mono audio" (read only): the sing page warns while it is on, shutdown reminds when it changed."""
+    from fastapi.testclient import TestClient
+    from app import winaudio
+    from app.paths import get_paths
+    from app.server import create_app
+    monkeypatch.setenv("SIGN2MV_FAKE_WINDOWS_MONO", "1")
+    assert winaudio.mono_audio() is True
+    app = create_app(get_paths(), port=9700)
+    try:
+        c = TestClient(app, base_url="http://127.0.0.1:9700")
+        assert c.get("/api/system/status").json()["windows_mono"] == {"now": True, "at_start": True}
+        monkeypatch.setenv("SIGN2MV_FAKE_WINDOWS_MONO", "0")      # switched off for singing
+        assert c.get("/api/system/status").json()["windows_mono"] == {"now": False, "at_start": True}
+    finally:
+        app.state.jobs.stop(wait_s=5)

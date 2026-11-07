@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Sing & record: 「送出音量」 meters next to the ear switches show what the page really sends to each ear. When
+  Windows 「單聲道音訊」 / *Mono audio* is on (read from the registry, never changed), a note under the switches says
+  that Windows mixes left and right after SIGN2MV, so the ear switches and headphone mono cannot work. Shutting
+  SIGN2MV down reminds you to switch Mono audio back if it differs from when SIGN2MV started.
 - Sing & record: 「耳機單聲道」 / *Headphone mono*, off by default (stereo as before). When on, everything you hear
   while singing (the song, backing only, key versions, the segment monitor) plays as the same sound in both ears,
   for singing with one earcup off. The headphone hint says so. The choice is remembered on this computer.

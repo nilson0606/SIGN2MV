@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from . import winaudio
 from . import API_LEVEL, APP_NAME, VERSION, settings as settings_mod
 from .context import Context
 from .finished import FinishedSync
@@ -81,6 +82,8 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
         return response
 
     # ---------------- system ----------------
+    mono_at_start = winaudio.mono_audio()   # to remind on shutdown if it was switched for singing
+
     @app.get("/api/system/status")
     def status() -> dict[str, Any]:
         cfg = settings_mod.load(paths)
@@ -104,6 +107,7 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
             },
             "lanes": jobs.lanes,
             "shutting_down": state["shutting_down"],
+            "windows_mono": {"now": winaudio.mono_audio(), "at_start": mono_at_start},
         }
 
     @app.post("/api/system/shutdown")

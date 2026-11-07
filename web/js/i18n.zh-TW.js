@@ -21,6 +21,8 @@ export default {
   'banner.restart_server': '網頁比伺服器新：請按「全部關閉」，再雙擊 start.bat 重新啟動。',
 
   'shutdown.confirm': '要關閉 SIGN2MV 嗎？伺服器和這個視窗都會關掉。',
+  'shutdown.mono_back_on': '提醒：Windows 的「單聲道音訊」目前是關閉的，開啟 SIGN2MV 時是開著的。要恢復的話，按 Win＋A → 協助工具 → 打開「單聲道音訊」。',
+  'shutdown.mono_back_off': '提醒：Windows 的「單聲道音訊」目前是開著的，開啟 SIGN2MV 時是關閉的。要恢復的話，按 Win＋A → 協助工具 → 關閉「單聲道音訊」。',
   'shutdown.jobs_running': '還有 {0} 個工作在跑或排隊。強制關閉會取消它們。',
   'shutdown.force': '取消工作並關閉', 'shutdown.done': 'SIGN2MV 已關閉，可以關掉這個視窗。',
 
