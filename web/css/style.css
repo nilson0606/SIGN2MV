@@ -378,3 +378,13 @@ html[data-theme="classic"] { --gold-edge: rgba(251, 191, 36, .40); --gold-edge-h
 html[data-theme="day"] { --gold-edge: rgba(180, 132, 20, .55); --gold-edge-hi: rgba(161, 98, 7, .95); }
 .panel { border-color: var(--gold-edge); box-shadow: var(--shadow), inset 0 0 0 1px rgba(245, 200, 76, .06); }
 .panel:focus-within { border-color: var(--gold-edge-hi); }
+
+/* home: one card per page, with a small screenshot */
+.home-cards { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 12px; }
+@media (max-width: 760px) { .home-cards { grid-template-columns: 1fr; } }
+.home-card { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 8px 8px 10px; cursor: pointer;
+  background: var(--panel-lo); color: inherit; font: inherit; border: 1px solid var(--line); border-radius: 10px;
+  transition: border-color .15s ease, transform .15s ease; }
+.home-card:hover, .home-card:focus-visible { border-color: var(--accent); transform: translateY(-2px); }
+.home-card img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; background: var(--panel-hi); }
+.home-card .hc-title { font-weight: 600; margin-top: 4px; }

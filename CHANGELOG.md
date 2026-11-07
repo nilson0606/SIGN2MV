@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Home: 「開始」 shows a card for each page (Library, Sing & Record, MV, AI Cover) with a small screenshot and one
+  line on what it does; a click opens the page. The screenshots follow the interface language. They were taken
+  with an invented demo song (「Morning Light」, generated for this), not with real songs.
 - Docs: the installer asks about the optional Sucial model at the very start, before anything is downloaded (the
   manual said it asks partway through). After an import the original player is inside the folded 「▸ 原曲」
   section; the manual now says so.

@@ -46,7 +46,13 @@ $('#theme-btn').addEventListener('click', () => {
   updateThemeButton();
 });
 updateThemeButton();
-onLanguageChange(() => { updateManualLink(); renderStatus(); renderJobs(); updateThemeButton(); });
+// home cards: a small screenshot of each page, in the interface language
+function updateHomeImages() {
+  const lang = language() === 'en' ? 'en' : 'zh-TW';
+  $$('[data-home-img]').forEach((img) => { img.src = `/img/home/${lang}/${img.dataset.homeImg}.jpg`; });
+}
+updateHomeImages();
+onLanguageChange(() => { updateManualLink(); renderStatus(); renderJobs(); updateThemeButton(); updateHomeImages(); });
 onServerTextReady(() => renderJobs());
 $('#lang-select').addEventListener('change', async (e) => {
   setLanguage(e.target.value);
