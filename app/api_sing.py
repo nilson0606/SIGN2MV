@@ -25,6 +25,7 @@ import shutil
 import threading
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -76,6 +77,36 @@ def parse_cache_key(cache_id: str) -> dict[str, Any] | None:
             "separationModel": model or "demucs", "pitchMethod": "rmvpe" if rmvpe else "yin",
             "separationMethod": "residual" if residual else "single", "pitchShift": shift, "keyFormant": bool(fmt),
             "keyLegacy": fmt == "_f"}
+
+
+def source_mark(song: dict[str, Any], seconds: int) -> str:
+    """Which audio a sing reference was made from: the song's source fingerprint (plus the clip length)."""
+    src = song.get("source") or {}
+    mark = str(src.get("source_hash") or src.get("audio") or "")
+    return f"{mark}#clip{seconds}" if seconds else mark
+
+
+def reference_stale(ref: dict[str, Any], song: dict[str, Any], seconds: int) -> bool:
+    """True when the song's source was replaced ("re-import") after this reference was made: its pitch,
+    beats and backing belong to the old audio. References made before 2026-11-08 carry no fingerprint;
+    for them the save time is compared with the import time."""
+    if ref.get("sourceHash"):
+        return ref["sourceHash"] != source_mark(song, seconds)
+    imported = (song.get("source") or {}).get("imported_at")
+    saved = ref.get("savedAt")
+    if not isinstance(imported, (int, float)) or not isinstance(saved, str):
+        return False
+    try:
+        return datetime.fromisoformat(saved.replace("Z", "+00:00")).timestamp() < imported - 1
+    except ValueError:
+        return False
+
+
+def clip_name(song: dict[str, Any], seconds: int) -> str:
+    """The "first N seconds" clip of the current source; a new source gets a new clip (the clip used to keep
+    its name and was only made when missing, so a re-imported song kept the old clip)."""
+    h = hashlib.sha1(source_mark(song, 0).encode("utf-8")).hexdigest()[:10]
+    return f"sing/clips/clip_{seconds}s_{h}.wav"
 
 
 def recipe_for(p: dict[str, Any]) -> dict[str, Any]:
@@ -347,7 +378,7 @@ def router(ctx: Context) -> APIRouter:
                            if (song_dir / rel).is_file())
                 rows.append({"id": d.name, "videoId": vid, "title": ref["title"], "baseTitle": ref.get("baseTitle") or ref["title"],
                              "pitchShift": ref.get("pitchShift", 0), "keyFormant": bool(ref.get("keyFormant")),
-                             "keyLegacy": d.name.endswith("_f"),
+                             "keyLegacy": d.name.endswith("_f"), "stale": reference_stale(ref, s, ref["rangeSeconds"]),
                              "sourceCacheId": ref.get("sourceCacheId"),
                              "seconds": ref["rangeSeconds"], "duration": ref.get("duration"), "hasPreview": ref["hasPreview"],
                              "vocalMode": ref.get("vocalMode", "all"), "separationModel": ref.get("separationModel", "demucs"),
@@ -541,6 +572,10 @@ def router(ctx: Context) -> APIRouter:
         job_id = uuid.uuid4().hex
         preview = data.get("preview", True) is not False
         cached_ref = load_reference(key_id)
+        base_ref = load_reference(base_key) if shift else cached_ref
+        base_stale = bool(base_ref) and reference_stale(base_ref, s, seconds)
+        if cached_ref and reference_stale(cached_ref, s, seconds):
+            cached_ref = None   # the song's audio was replaced since: make it again from the new audio
         if not force and cached_ref and (not preview or cached_ref["hasPreview"]):
             prep_jobs[job_id] = {"cacheId": key_id, "p": p, "cached": True, "updated": time.time()}
             return JSONResponse(summary(job_id), status_code=202)
@@ -557,7 +592,7 @@ def router(ctx: Context) -> APIRouter:
             src = song.get("source") or {}
             if not src.get("audio"):
                 return json_err(400, "這首歌沒有音訊，請到「歌曲庫」重新匯入。")
-            clip_rel = f"sing/clips/clip_{seconds}s.wav"
+            clip_rel = clip_name(s, seconds)
             clip = {"src": str(song_dir / src["audio"]), "dst": str(song_dir / clip_rel), "seconds": seconds}
             song = {**song, "source": {"audio": clip_rel,
                                        "source_hash": f"{src.get('source_hash') or src['audio']}#clip{seconds}"}}
@@ -578,7 +613,8 @@ def router(ctx: Context) -> APIRouter:
         pitch_rel = base_rel["lead"] if p["vocalMode"] == "lead" else base_rel["vocals"]
         meta = {"videoId": vid, "title": s["title"][:300], "vocalMode": p["vocalMode"],
                 "separationModel": p["separationModel"], "pitchMethod": p["pitchMethod"],
-                "separationMethod": p["separationMethod"], "rangeSeconds": seconds, "cacheId": base_key, "pitchShift": 0}
+                "separationMethod": p["separationMethod"], "rangeSeconds": seconds, "cacheId": base_key, "pitchShift": 0,
+                "sourceHash": source_mark(s, seconds)}
         payload: dict[str, Any] = {
             "song_dir": str(song_dir), "layers": layers, "clip": clip,
             # "keep separated tracks" off: drop the stems this job had to make once the reference is saved
@@ -586,7 +622,7 @@ def router(ctx: Context) -> APIRouter:
             "base": {"dir": str(sing_dir(sid) / base_key), "stems_rel": base_rel,
                      "pitch_input": str(song_dir / pitch_rel), "beat_input": str(song_dir / base_rel["accompaniment"]),
                      "meta": meta},
-            "force_reference": force and not shift, "key": None,
+            "force_reference": (force and not shift) or base_stale, "key": None,
         }
         if shift:
             names = list(base_rel.keys())
