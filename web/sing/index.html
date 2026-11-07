@@ -93,6 +93,7 @@
       <section id="score-section" class="player-session" tabindex="-1" aria-label="演唱控制與分數">
     <p id="result-title" class="score-title">尚未選定歌曲</p>
     <div class="whole-guide-control"><label for="sing-guide-mode">演唱時帶唱</label><select id="sing-guide-mode"><option value="original" selected>原唱＋伴樂（預設）</option><option value="backing">只有伴樂／和音</option></select><p class="help">開始前選擇，按「從頭開始唱且評分」套用。只有伴樂需已保存分離音軌；請戴耳機，避免原唱被麥克風收進錄音。</p></div>
+    <label class="check-option"><input id="guide-mono" type="checkbox"><span>耳機單聲道（左右耳聽到一樣的聲音，適合只戴一邊耳機；分段錄音也適用）</span></label>
     <div class="whole-guide-control"><label for="score-difficulty">評分難度</label><select id="score-difficulty" aria-describedby="difficulty-help"><option value="standard" selected>標準（預設）</option><option value="strict">嚴格</option><option value="relaxed">寬鬆</option></select><p id="difficulty-help" class="help"></p></div>
     <details id="recording-balance" class="whole-guide-control"><summary>人聲／伴樂音量平衡 · 與分段錄音共用</summary>
       <label class="check-option"><input id="recording-manual" type="checkbox">手動設定比例＋自動微調</label>
@@ -200,7 +201,7 @@
         <input id="voice-output-volume" type="range" min="0" max="100" step="1" value="30">
         <p id="voice-output-status" class="help" role="status">請先開啟麥克風，再勾選歌聲輸出。</p>
       </fieldset>
-      <p id="mic-status" class="status" role="status">請先戴耳機，降低伴奏被麥克風收到的機會。</p>
+      <p id="mic-status" class="status" role="status">請先戴耳機，降低伴奏被麥克風收到的機會。只戴一邊、露出一耳會比較好唱：拿下的那邊別對著麥克風，可搭配「耳機單聲道」。</p>
       <details><summary>收音裝置與狀態</summary><pre id="device">授權後才會顯示裝置資訊。</pre></details>
     </section>
     <section id="prepare-section" tabindex="-1" class="card prepare-card">

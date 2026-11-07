@@ -2,6 +2,7 @@ import {originalText,userText,translateMessage} from './i18n.mjs';
 import {revealPlayerVideo} from './player-view.mjs';
 import {selectedMediaId,selectMediaSource,isLocalMediaId,syncMediaMenu} from './media-source.mjs';
 import {keyLabel,keyShift,keyText} from './song-key.mjs';
+import {guideOut} from './mono-output.mjs';
 import {recordingReviewKey} from './recording-review.mjs';
 import {libraryRecordingCounts,updateLibraryRecordingBadges} from './library-recordings.mjs';
 import {createLibrarySearch} from './library-search.mjs';
@@ -84,7 +85,7 @@ export function createKaraokeSession(options) {
     for (const buffer of c.buffers) {
       if (time >= buffer.duration) continue;
       const node = c.context.createBufferSource(); node.buffer = buffer; node.playbackRate.value = rate;
-      node.connect(c.context.destination); node.start(c.anchorClock, Math.max(0, time)); c.nodes.push(node);
+      node.connect(guideOut(c.context)); node.start(c.anchorClock, Math.max(0, time)); c.nodes.push(node);
     }
   }
   async function loadRecordingStem(ref,stem){

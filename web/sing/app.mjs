@@ -2,6 +2,7 @@ import {originalText,userOption} from './i18n.mjs';
 import {nativeInputDevices,openNativeMicrophone} from './native-microphone.mjs';
 import {isLocalMediaId,selectedMediaId,selectMediaSource} from './media-source.mjs';
 import {localVideoPlayer} from './local-video-player.mjs';
+import {initMono} from './mono-output.mjs';
 import {initializeLocalMedia,mediaRequest} from './local-media-client.mjs';
 import { youtubeId, noteOf, detectPitch, playerResponse, alignedTime } from './audio.mjs';
 import { createCalibration } from './calibration.mjs';
@@ -550,6 +551,7 @@ $('local-check').addEventListener('click', async () => {
   } finally { clearTimeout(timer); button.disabled = false; }
 });
 
+initMono(document.getElementById('guide-mono'));
 const singing = createKaraokeSession({ voiced: () => micPitch !== null, context: () => context, stream: () => stream, inputSource: () => nativeCapture?.source, player: () => player, micReady: () => !!stream && context?.state === 'running', stopMic: message => stopMic(message), startMic, stopBeats, loadVideo: () => loadVideo(), cancelCalibration: () => calibration?.cancel() });
 
 calibration = createCalibration({ context: () => context, micReady: () => !!stream && context?.state === 'running', beforeStart: () => singing.pauseForCalibration() });

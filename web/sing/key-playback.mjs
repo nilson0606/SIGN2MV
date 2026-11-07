@@ -1,4 +1,5 @@
 import {guideStems,keyLabel} from './song-key.mjs';
+import {guideOut} from './mono-output.mjs';
 
 // Owns shifted audio for every video transport: native Play, whole-song start,
 // segment preview/loop/recording, pause, buffering and seeking.
@@ -14,7 +15,7 @@ export function createKeyPlayback({player,loadStem,mode,status}) {
     const request=serial,p=player(),c=current={player:p,reference,wasMuted:!!p?.isMuted?.(),nodes:[],buffers:new Map(),ready:false};
     p?.pauseVideo?.();p?.mute?.();
     try{
-      c.context=new AudioContext();c.gain=c.context.createGain();c.gain.connect(c.context.destination);
+      c.context=new AudioContext();c.gain=c.context.createGain();c.gain.connect(guideOut(c.context));
       for(const stem of ['accompaniment','vocals',...(reference.vocalMode==='lead'?['backing']:[])]){
         const bytes=await loadStem(reference,stem);if(request!==serial)return;
         const buffer=await c.context.decodeAudioData(bytes);if(request!==serial)return;

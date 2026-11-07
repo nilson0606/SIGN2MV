@@ -1,4 +1,5 @@
 import {localizedConfirm} from './i18n.mjs';
+import {guideOut} from './mono-output.mjs';
 import {revealPlayerVideo} from './player-view.mjs';
 import {segmentDraft,validateSegmentDraft,normalizeSegmentNames,splitSegment,moveBoundary,mergeBoundary,formatSegmentTime as fmt,parseSegmentTime,missingSegmentRanges,composeSegmentVoice,segmentMixMetadata} from './recording-segments.mjs';
 import {remixRecording,wavBlob,delaySeconds,originalVocalRanges} from './recording-process.mjs';
@@ -270,7 +271,7 @@ export function createSegmentRecording(options) {
   function syncMonitor(c,time){
     if(!c?.monitor||!c.armed)return;if(c.nodes.length&&Math.abs(c.anchorTime+c.monitor.currentTime-c.anchorClock-time)<.12)return;
     stopMonitor(c);c.anchorTime=time;c.anchorClock=c.monitor.currentTime;
-    for(const buffer of c.buffers){if(time>=buffer.duration)continue;const n=c.monitor.createBufferSource();n.buffer=buffer;n.connect(c.monitor.destination);n.start(c.anchorClock,Math.max(0,time));c.nodes.push(n);}
+    for(const buffer of c.buffers){if(time>=buffer.duration)continue;const n=c.monitor.createBufferSource();n.buffer=buffer;n.connect(guideOut(c.monitor));n.start(c.anchorClock,Math.max(0,time));c.nodes.push(n);}
   }
   async function stop(error=null){
     // [SIGN2MV] only a segment capture is ended here. The microphone stopping (「停止收音」, native capture

@@ -321,6 +321,8 @@ export const messages = {
   "歌聲輸出音量": "Vocal output level",
   "請先開啟麥克風，再勾選歌聲輸出。": "Enable the microphone before turning on vocal monitoring.",
   "請先戴耳機，降低伴奏被麥克風收到的機會。": "Wear headphones to reduce backing audio picked up by the microphone.",
+  "請先戴耳機，降低伴奏被麥克風收到的機會。只戴一邊、露出一耳會比較好唱：拿下的那邊別對著麥克風，可搭配「耳機單聲道」。": "Wear headphones to reduce backing audio picked up by the microphone. Singing is easier with one ear uncovered: keep the free earcup away from the microphone, and try “Headphone mono”.",
+  "耳機單聲道（左右耳聽到一樣的聲音，適合只戴一邊耳機；分段錄音也適用）": "Headphone mono (the same sound in both ears, for singing with one earcup off; also in segment recording)",
   "收音裝置與狀態": "Input device and status",
   "授權後才會顯示裝置資訊。": "Device information appears after permission is granted.",
   "聲曲分離與音高旋律擷取": "Stem separation and pitch extraction",
