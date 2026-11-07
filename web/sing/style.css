@@ -559,3 +559,5 @@ footer{border-color:var(--studio-edge)}
 }
 
 .ear-switches{display:flex;flex-wrap:wrap;align-items:center;column-gap:18px;margin:-4px 0 14px}.ear-switches>span{color:var(--soft);font-size:13px}.ear-switches .check-option{margin:6px 0}.ear-switches .help{flex-basis:100%;margin:2px 0 0}
+.ear-meters{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--soft)}.ear-meters i{display:inline-block;width:70px;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--accent) calc(var(--level,0)*100%),var(--line) 0)}
+.ear-meters i.idle{opacity:.35}

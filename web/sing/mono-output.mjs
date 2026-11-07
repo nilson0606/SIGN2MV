@@ -28,7 +28,10 @@ export function guideOut(context){
     two.channelCount=2;two.channelCountMode='explicit';two.channelInterpretation='speakers';
     input.connect(two);two.connect(split);split.connect(left,0);split.connect(right,1);
     left.connect(merge,0,0);right.connect(merge,0,1);merge.connect(context.destination);
-    const o={input,left,right};apply(o);context.__sign2mvGuide=o;outs.add(new WeakRef(o));
+    // meters: what this page really sends to each ear (after the switches)
+    const meterL=context.createAnalyser(),meterR=context.createAnalyser();meterL.fftSize=meterR.fftSize=1024;
+    left.connect(meterL);right.connect(meterR);
+    const o={context,input,left,right,meterL,meterR};apply(o);context.__sign2mvGuide=o;outs.add(new WeakRef(o));
   }
   return context.__sign2mvGuide.input;
 }
@@ -50,6 +53,14 @@ function update(){
   mediaContext?.resume().catch(()=>{});
 }
 
+const peak=a=>{const d=new Float32Array(a.fftSize);a.getFloatTimeDomainData(d);let p=0;for(const v of d)p=Math.max(p,Math.abs(v));return p;};
+// Loudest level now sent to the left and right ear by any running guide output (0..1).
+export function earLevels(){
+  let l=0,r=0,live=false;
+  for(const ref of outs){const o=ref.deref();if(!o||o.context.state!=='running')continue;live=true;l=Math.max(l,peak(o.meterL));r=Math.max(r,peak(o.meterR));}
+  return live?{left:l,right:r}:null;   // null: nothing passes through the switches (all defaults, plain playback)
+}
+
 export function setMono(value){
   mono=!!value;
   try{localStorage.setItem(KEY,mono?'1':'0');}catch{/* this session only */}
@@ -62,5 +73,14 @@ export function initMono(checkbox,left,right){
   if(checkbox){checkbox.checked=mono;checkbox.addEventListener('change',()=>setMono(checkbox.checked));}
   for(const [side,box] of [['left',left],['right',right]]){
     if(!box)continue;box.checked=ears[side];box.addEventListener('change',()=>setEar(side,box.checked));
+  }
+  const bars={left:document.getElementById('ear-meter-left'),right:document.getElementById('ear-meter-right')};
+  if(bars.left&&bars.right){
+    let last=0;
+    const tick=now=>{
+      if(now-last>80){last=now;const v=earLevels();
+        for(const side of ['left','right']){bars[side].style.setProperty('--level',v?Math.min(1,v[side]*1.4).toFixed(3):'0');bars[side].classList.toggle('idle',!v);}}
+      requestAnimationFrame(tick);};
+    requestAnimationFrame(tick);
   }
 }
