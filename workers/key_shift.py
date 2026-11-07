@@ -1,6 +1,6 @@
 """Pitch-only key change of a set of WAV files (Rubber Band via ffmpeg).
 
-Input: {"semitones": -12..12, "items": [{"src", "dst", "out_dir", "info"}]}
+Input: {"semitones": -12..12, "items": [{"src", "dst", "out_dir", "info", "formant"?}]}
   one item per track; each track has its own folder keys/<hash of source>_<p|m><n>/
   (app/stems.key_track) so every workspace shares the same key copies.
 tempo=1 keeps every song-time boundary; the output is padded/trimmed to the
@@ -33,7 +33,9 @@ def shift_files(files: list[dict], semis: int, out_dir: Path, info: dict, report
             sinfo = sf.info(str(src))
             duration = sinfo.frames / sinfo.samplerate
             report(i * 100 / len(files))
-            af = (f"rubberband=tempo=1:pitch={ratio:.12f}:channels=together:pitchq=quality,"
+            # formant: keep the singer's timbre (sounds more like the original, can add artefacts)
+            fm = ":formant=preserved" if item.get("formant") else ""
+            af = (f"rubberband=tempo=1:pitch={ratio:.12f}:channels=together:pitchq=quality{fm},"
                   f"apad,atrim=duration={duration:.9f}")
             run([ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", src, "-af", af, "-ar", str(sinfo.samplerate),
                  "-c:a", "pcm_f32le", tmp / Path(item["dst"]).name], timeout=1800)
@@ -55,7 +57,8 @@ def shift_items(items: list[dict], semis: int, report=lambda pct: None) -> int:
     """Make the key copy of every item that does not exist yet. Returns how many were made."""
     todo = [it for it in items if not (Path(it["out_dir"]) / "info.json").is_file()]
     for i, it in enumerate(todo):
-        shift_files([{"src": it["src"], "dst": it["dst"]}], semis, Path(it["out_dir"]), it.get("info") or {},
+        shift_files([{"src": it["src"], "dst": it["dst"], "formant": bool(it.get("formant"))}], semis,
+                    Path(it["out_dir"]), it.get("info") or {},
                     lambda pct, i=i: report((i + pct / 100) * 100 / len(todo)))
     return len(todo)
 

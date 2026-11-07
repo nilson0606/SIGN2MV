@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Sing & record: new option under the key, 「人聲保留原唱音色」 / *Keep the singer's timbre in the vocals*, off by
+  default. When on, a key version shifts the original vocals (and lead / backing vocals) with Rubber Band's
+  formant preservation, so they sound more like the singer in that key instead of higher / lower-voiced; the
+  accompaniment is shifted as before. It can add some artefacts, which is why it is off by default. On and off are
+  separate key versions (their own vocal copies under `keys/`, marked in 「已存的分軌」), so switching never
+  reuses the other kind. Also: the 「正在準備 …」 message now shows the key in English too.
 - Home: 「開始」 shows a card for each page (Library, Sing & Record, MV, AI Cover) with a small screenshot and one
   line on what it does; a click opens the page. The screenshots follow the interface language. They were taken
   with an invented demo song (「Morning Light」, generated for this), not with real songs.

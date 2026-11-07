@@ -886,6 +886,7 @@ export const messages = {
   "本機回傳的分離模式與所選模式不符，請更新頁面與本機工具後重試。": "Returned separation mode differs from your selection. Update the page and local tools, then retry.",
   "影片已切換，請重新準備歌曲。": "Video changed. Prepare the song again.",
   "· 已隨歌曲版本保存。": "· Saved with this song version.",
+  "人聲保留原唱音色（較像原唱本人，可能多一點雜音；只影響升降 Key 版本）": "Keep the singer's timbre in the vocals (sounds more like the original singer, may add some artefacts; key versions only)",
   "直接載入本機基準": "Loaded local reference directly",
   "已保存到本機": "Saved locally",
   "，可試聽分離結果": ", separated stems available for preview",
@@ -1943,6 +1944,13 @@ export const templates = [
     ]
   ],
   [
+    "{0} · 保留原唱音色",
+    "{0} · singer's timbre kept",
+    [
+      0
+    ]
+  ],
+  [
     "{0} · 已隨歌曲版本保存。",
     "{0} · Saved with this song version.",
     [
@@ -1979,7 +1987,9 @@ export const templates = [
   [
     "正在準備 {0}，完成後會保存到歌曲庫…",
     "Preparing {0}; it will be saved to the library when ready…",
-    []
+    [
+      0
+    ]
   ],
   [
     "播放器未就緒：{0}",

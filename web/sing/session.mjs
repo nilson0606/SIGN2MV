@@ -1,7 +1,7 @@
 import {originalText,userText,translateMessage} from './i18n.mjs';
 import {revealPlayerVideo} from './player-view.mjs';
 import {selectedMediaId,selectMediaSource,isLocalMediaId,syncMediaMenu} from './media-source.mjs';
-import {keyLabel,keyShift} from './song-key.mjs';
+import {keyLabel,keyShift,keyText} from './song-key.mjs';
 import {recordingReviewKey} from './recording-review.mjs';
 import {libraryRecordingCounts,updateLibraryRecordingBadges} from './library-recordings.mjs';
 import {createLibrarySearch} from './library-search.mjs';
@@ -47,7 +47,8 @@ export function createKaraokeSession(options) {
   }
   const segmentLocks=new Map();
   let previewUrl = null, previewRequest = null, previewSerial = 0, restartToken = 0, segmented = null;
-  let wholeGuide = null, requestedKey=0;
+  let wholeGuide = null, requestedKey=0, requestedFormant=false;
+  const formantWanted=()=>Number($('song-key').value)!==0&&$('key-formant').checked;
   function pauseGuide(c = wholeGuide) {
     for (const node of c?.nodes || []) { try { node.stop(); } catch {} node.disconnect(); }
     if (c) c.nodes = [];
@@ -245,6 +246,7 @@ export function createKaraokeSession(options) {
     $('clip-seconds').disabled = ['preparing', 'finishing', 'restarting'].includes(phase);
     $('cancel-song').disabled = maskBusy || phase === 'finishing' || (!jobId && phase !== 'preparing' && !reference);
     $('song-key').disabled=!!take||segmented?.busy()||['preparing','finishing','restarting'].includes(phase);
+    $('key-formant').disabled=$('song-key').disabled;
     $('song-key-apply').disabled=!reference||!!take||segmented?.busy()||['preparing','finishing','restarting'].includes(phase);
     $('sing-start').disabled = maskBusy || !reference || (reference.pitchShift&&!keyPlayback.ready()) || phase === 'finishing';
     $('sing-guide-mode').disabled = !!wholeGuide || ['preparing','finishing','restarting'].includes(phase);
@@ -263,8 +265,8 @@ export function createKaraokeSession(options) {
       $('library-list').querySelectorAll('button').forEach(button=>{button.disabled=true;});
     }
     // Read-only UI snapshot; the navigation never controls capture or playback.
-    const guideState=JSON.stringify({phase,hasTake:!!take&&phase!=='result',pitchShift:reference?.pitchShift||0,mediaId:loadedVideo,reference:reference?.cacheId||'',
-      prepared:!!reference&&reference.videoId===selectedMediaId()&&!previewSelectionChanged()&&Number($('song-key').value)===(reference.pitchShift||0)&&(!reference.pitchShift||keyPlayback.ready()),
+    const guideState=JSON.stringify({phase,hasTake:!!take&&phase!=='result',pitchShift:reference?.pitchShift||0,keyFormant:!!reference?.keyFormant,mediaId:loadedVideo,reference:reference?.cacheId||'',
+      prepared:!!reference&&reference.videoId===selectedMediaId()&&!previewSelectionChanged()&&Number($('song-key').value)===(reference.pitchShift||0)&&formantWanted()===!!reference.keyFormant&&(!reference.pitchShift||keyPlayback.ready()),
       micReady:options.micReady(),segmented:!!segmented?.enabled(),busy:!!segmented?.busy()});
     if($('player-section').dataset.workflow!==guideState)$('player-section').dataset.workflow=guideState;
   }
@@ -379,7 +381,7 @@ export function createKaraokeSession(options) {
     if (!reference || take || ['preparing','finishing','restarting'].includes(phase)) return;
     selectMediaSource(reference.videoId);
     $('clip-seconds').value = String(reference.rangeSeconds);
-    $('song-key').value=String(reference.pitchShift || 0);
+    $('song-key').value=String(reference.pitchShift || 0);$('key-formant').checked=!!reference.keyFormant;
     $('vocal-mode').value=reference.vocalMode||'all';$('separation-model').value=reference.separationModel||'demucs';$('pitch-method').value=reference.pitchMethod||'yin';$('separation-method').value=reference.separationMethod||'single';
     prepareSong(true, true);
   });
@@ -388,7 +390,7 @@ export function createKaraokeSession(options) {
     selectMediaSource(reference.videoId);
     $('clip-seconds').value = String(reference.rangeSeconds);
     $('vocal-mode').value = reference.vocalMode || 'all';
-    $('song-key').value=String(reference.pitchShift || 0);
+    $('song-key').value=String(reference.pitchShift || 0);$('key-formant').checked=!!reference.keyFormant;
     $('separation-model').value = reference.separationModel || 'demucs';
     $('pitch-method').value = reference.pitchMethod || 'yin';
     $('separation-method').value = reference.separationMethod || 'single';
@@ -434,7 +436,7 @@ export function createKaraokeSession(options) {
       for (const song of songs) {
         const li = document.createElement('li'), title = document.createElement('strong'), detail = document.createElement('small');
         title.dataset.i18nUser=''; title.textContent = song.title;
-        detail.textContent = `${keyLabel(song.pitchShift || 0)} · ${modelName(song.separationModel)} · ${methodName(song.separationMethod)} · ${(song.pitchMethod || 'yin').toUpperCase()} 音高 · ${song.seconds ? '前 ' + song.seconds + ' 秒' : '完整歌曲'} · ${song.vocalMode === 'lead' ? '主唱模式' : '一般人聲'} · ${(song.bytes / 1024 / 1024).toFixed(2)} MB · ${song.hasPreview ? (song.vocalMode === 'lead' ? '含主唱／和音等 4 軌試聽' : '含人聲／伴奏試聽') : '只有旋律基準'}`;
+        detail.textContent = `${keyText(song.pitchShift || 0, song.keyFormant)} · ${modelName(song.separationModel)} · ${methodName(song.separationMethod)} · ${(song.pitchMethod || 'yin').toUpperCase()} 音高 · ${song.seconds ? '前 ' + song.seconds + ' 秒' : '完整歌曲'} · ${song.vocalMode === 'lead' ? '主唱模式' : '一般人聲'} · ${(song.bytes / 1024 / 1024).toFixed(2)} MB · ${song.hasPreview ? (song.vocalMode === 'lead' ? '含主唱／和音等 4 軌試聽' : '含人聲／伴奏試聽') : '只有旋律基準'}`;
         const load = document.createElement('button'), remove = document.createElement('button');
         load.type = remove.type = 'button'; load.className = 'song-choice'; remove.className = 'secondary song-delete'; remove.textContent = '刪除';
         load.dataset.songId = song.id; load.setAttribute('aria-label', '載入 ' + song.title); load.append(title, detail);
@@ -444,8 +446,8 @@ export function createKaraokeSession(options) {
           if (['preparing','finishing','restarting'].includes(phase)) return;
           window.dispatchEvent(new CustomEvent('karaoke-library-selected',{detail:{cacheId:song.id,videoId:song.videoId,vocalMode:song.vocalMode}}));
           if (reference?.cacheId === song.id) {
-            syncMediaMenu(reference.videoId,reference.pitchShift||0);
-            $('song-key').value=String(reference.pitchShift || 0);
+            syncMediaMenu(reference.videoId,reference.pitchShift?`${reference.pitchShift}${reference.keyFormant?'f':''}`:0);
+            $('song-key').value=String(reference.pitchShift || 0);$('key-formant').checked=!!reference.keyFormant;
             $('separation-model').value = reference.separationModel;
             $('vocal-mode').value = reference.vocalMode;
             $('pitch-method').value = reference.pitchMethod;
@@ -453,11 +455,11 @@ export function createKaraokeSession(options) {
             controls(); $('prepare-status').textContent = `已就緒：${reference.title} · ${modelName(reference.separationModel)} · ${methodName(reference.separationMethod)} · ${reference.pitchMethod.toUpperCase()} 音高。`;
             message('這首歌已載入，可直接試聽或按「從頭開始唱且評分」。'); return;
           }
-          selectMediaSource(song.videoId,document,undefined,song.pitchShift||0);
+          selectMediaSource(song.videoId,document,undefined,song.pitchShift?`${song.pitchShift}${song.keyFormant?'f':''}`:0);
           $('separation-model').value = song.separationModel || 'demucs';
           $('pitch-method').value = song.pitchMethod || 'yin';
           $('separation-method').value = song.separationMethod || 'single';
-          $('song-key').value=String(song.pitchShift || 0);
+          $('song-key').value=String(song.pitchShift || 0);$('key-formant').checked=!!song.keyFormant;
           $('clip-seconds').value = String(song.seconds); $('vocal-mode').value = song.vocalMode || 'all';
           prepareSong(false, true);
         });
@@ -594,13 +596,13 @@ export function createKaraokeSession(options) {
       if (state.ready) {
         const data = await api(`/jobs/${id}/reference`);
         if (current !== generation) return;
-        reference = { ...validateReference(data), duration: data.duration, beats: data.beats || [], bpm: data.bpm, cacheId: data.cacheId, pitchShift:data.pitchShift || 0, baseTitle:data.baseTitle || data.title, songId:data.songId, sourceCacheId:data.sourceCacheId, hasPreview: data.hasPreview, separationModel: data.separationModel || 'demucs', pitchMethod: data.pitchMethod || 'yin', separationMethod: data.separationMethod || 'single', vocalMode: data.vocalMode || 'all', rangeSeconds: data.rangeSeconds ?? Number($('clip-seconds').value) };
-        if(reference.pitchShift!==requestedKey)throw Error('本機回傳的 Key 與選定版本不同，請重新載入。');
+        reference = { ...validateReference(data), duration: data.duration, beats: data.beats || [], bpm: data.bpm, cacheId: data.cacheId, pitchShift:data.pitchShift || 0, keyFormant:!!data.keyFormant, baseTitle:data.baseTitle || data.title, songId:data.songId, sourceCacheId:data.sourceCacheId, hasPreview: data.hasPreview, separationModel: data.separationModel || 'demucs', pitchMethod: data.pitchMethod || 'yin', separationMethod: data.separationMethod || 'single', vocalMode: data.vocalMode || 'all', rangeSeconds: data.rangeSeconds ?? Number($('clip-seconds').value) };
+        if(reference.pitchShift!==requestedKey||reference.keyFormant!==requestedFormant)throw Error('本機回傳的 Key 與選定版本不同，請重新載入。');
         if (reference.separationMethod !== requestedMethod || reference.pitchMethod !== requestedPitch || reference.separationModel !== requestedModel || reference.vocalMode !== requestedVocalMode) throw new Error('本機回傳的分離模式與所選模式不符，請更新頁面與本機工具後重試。');
         if (reference.videoId !== loadedVideo) throw new Error('影片已切換，請重新準備歌曲。');
         updateMaskView(); maskEditor.render();
-        $('song-key').value=String(reference.pitchShift);
-        $('song-key-status').textContent=keyLabel(reference.pitchShift)+' · 已隨歌曲版本保存。';
+        $('song-key').value=String(reference.pitchShift);$('key-formant').checked=reference.keyFormant;
+        $('song-key-status').textContent=keyText(reference.pitchShift,reference.keyFormant)+' · 已隨歌曲版本保存。';
         await keyPlayback.load(reference);if(current!==generation)return;
         phase = 'ready';
         $('prepare-status').textContent = `已就緒：${reference.title} · ${modelName(reference.separationModel)} · ${methodName(reference.separationMethod)} · ${reference.pitchMethod.toUpperCase()} 音高 · ${reference.vocalMode === 'lead' ? '主唱／和音模式' : '一般人聲模式'} · ${Math.round(reference.duration)} 秒 · ${state.cached ? '直接載入本機基準' : '已保存到本機'}${reference.hasPreview ? '，可試聽分離結果' : '，音檔已清除'}。`;
@@ -630,11 +632,11 @@ export function createKaraokeSession(options) {
     // Normal preparations honor the visible controls; library/rebuild actions
     // supply the saved version and retain audio for preview and backing-only playback.
     if(preserveVersion)$('keep-preview').checked = true;
-    requestedKey=keyShift(Number($('song-key').value));
+    requestedKey=keyShift(Number($('song-key').value));requestedFormant=formantWanted();
     requestedVocalMode = $('vocal-mode').value; requestedModel = $('separation-model').value; requestedPitch = $('pitch-method').value; requestedMethod = $('separation-method').value;
     const clearing = clear('正在連接本機工具…');
     const current = generation; loadedVideo = id;
-    $('song-key-status').textContent='正在準備 '+keyLabel(requestedKey)+'，完成後會保存到歌曲庫…';
+    $('song-key-status').textContent='正在準備 '+keyText(requestedKey,requestedFormant)+'，完成後會保存到歌曲庫…';
     phase = 'preparing'; renderPreparation({ stage: 'starting', message: '正在連接本機工具…' }); controls();
     await clearing;
     if (current !== generation) return;
@@ -654,7 +656,7 @@ export function createKaraokeSession(options) {
       options.player()?.pauseVideo?.();
       await ensureSession();
       if (current !== generation) return;
-      const created = await api('/jobs', { method: 'POST', body: JSON.stringify({ videoId: id, pitchShift:requestedKey, seconds: Number($('clip-seconds').value), preview: $('keep-preview').checked, ...(requestedMethod !== 'single' ? {separationMethod:requestedMethod} : {}), ...(requestedPitch !== 'yin' ? {pitchMethod:requestedPitch} : {}), ...(requestedModel !== 'demucs' ? { separationModel: requestedModel } : {}), ...(requestedVocalMode === 'lead' ? {vocalMode:'lead'} : {}), ...(force ? { force: true } : {}) }) });
+      const created = await api('/jobs', { method: 'POST', body: JSON.stringify({ videoId: id, pitchShift:requestedKey, ...(requestedFormant?{keyFormant:true}:{}), seconds: Number($('clip-seconds').value), preview: $('keep-preview').checked, ...(requestedMethod !== 'single' ? {separationMethod:requestedMethod} : {}), ...(requestedPitch !== 'yin' ? {pitchMethod:requestedPitch} : {}), ...(requestedModel !== 'demucs' ? { separationModel: requestedModel } : {}), ...(requestedVocalMode === 'lead' ? {vocalMode:'lead'} : {}), ...(force ? { force: true } : {}) }) });
       if (current !== generation) { await removeJob(created.id); return; }
       jobId = created.id; controls(); await poll(jobId, current);
     } catch (error) {
@@ -663,7 +665,9 @@ export function createKaraokeSession(options) {
       controls();
     }
   }
-  $('song-key').addEventListener('change',()=>{$('song-key-status').textContent=`已選 ${keyLabel(Number($('song-key').value))}，尚未套用。${reference?'目前播放 '+keyLabel(reference.pitchShift)+'；請按「建立／載入此 Key」。':'請按「準備歌曲基準」。'}`;});
+  const keyChanged=()=>{$('song-key-status').textContent=`已選 ${keyText(Number($('song-key').value),$('key-formant').checked)}，尚未套用。${reference?'目前播放 '+keyText(reference.pitchShift,reference.keyFormant)+'；請按「建立／載入此 Key」。':'請按「準備歌曲基準」。'}`;};
+  $('song-key').addEventListener('change',keyChanged);
+  $('key-formant').addEventListener('change',keyChanged);
   $('song-key-apply').addEventListener('click',()=>{try{keyShift(Number($('song-key').value));if(reference){selectMediaSource(reference.videoId);prepareSong(false,true);}}catch(error){$('song-key-status').textContent=error.message;}});
   $('prepare-song').addEventListener('click', () => prepareSong());
   $('cancel-song').addEventListener('click', () => { options.player()?.pauseVideo?.(); clear(); });

@@ -373,7 +373,7 @@ export default {
   "stored.lead": "主唱／和聲",
   "stored.lead2": "主唱再拆一次",
   "stored.male_female": "男聲／女聲（{0}）",
-  "stored.key": "升降 Key {0}：{1}",
+  "stored.key": "升降 Key {0}：{1}", "stored.key_formant": "（保留原唱音色）",
   "stored.incomplete": "沒做完的殘留（可放心刪）",
   "stored.used.cover": "翻唱 {0}",
   "stored.used.sing": "唱錄：{0}",

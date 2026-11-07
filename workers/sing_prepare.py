@@ -97,8 +97,9 @@ def main() -> None:
             made += [Path(it["out_dir"]) for it in key["items"] if not (Path(it["out_dir"]) / "info.json").is_file()]
             shift_items(key["items"], semis, StageProgress("transposing", device))
             factor = 2 ** (semis / 12)
-            label = f"{'升' if semis > 0 else '降'} {abs(semis)} Key"
-            value = {**source, "pitchShift": semis, "baseTitle": source.get("baseTitle") or source["title"],
+            formant = bool(key["meta"].get("keyFormant"))
+            label = f"{'升' if semis > 0 else '降'} {abs(semis)} Key" + (" · 保留原唱音色" if formant else "")
+            value = {**source, "pitchShift": semis, **({"keyFormant": True} if formant else {}), "baseTitle": source.get("baseTitle") or source["title"],
                      "sourceCacheId": source["cacheId"], "cacheId": key["meta"]["cacheId"],
                      "title": f"{source['title'][:280]} · {label}",
                      "frames": [None if hz is None else hz * factor for hz in source["frames"]],

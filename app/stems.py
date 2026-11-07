@@ -119,21 +119,22 @@ def plan(song_dir: Path, song: dict[str, Any], recipe: dict[str, Any]) -> tuple[
     return layers, tracks
 
 
-def key_track(rel: str, semitones: int) -> tuple[str, str]:
+def key_track(rel: str, semitones: int, formant: bool = False) -> tuple[str, str]:
     """Key copy of one track: (dir name under keys/, relative file path).
 
     One folder per source track and key, shared by the library page, sing & record
-    and AI cover: whichever needs it first makes it, the others reuse it."""
-    d = f"{_h('keytrack', rel)}_{'m' if semitones < 0 else 'p'}{abs(semitones)}"
+    and AI cover: whichever needs it first makes it, the others reuse it.
+    formant: the voice keeps its own timbre (Rubber Band formant=preserved); a separate copy ("f")."""
+    d = f"{_h('keytrack', rel)}_{'m' if semitones < 0 else 'p'}{abs(semitones)}{'f' if formant else ''}"
     return d, f"keys/{d}/{Path(rel).name}"
 
 
-def key_item(song_dir: Path, rel: str, semitones: int) -> dict[str, Any]:
+def key_item(song_dir: Path, rel: str, semitones: int, formant: bool = False) -> dict[str, Any]:
     """Work item for workers/key_shift.py (absolute paths) for one track."""
-    d, dst = key_track(rel, semitones)
+    d, dst = key_track(rel, semitones, formant)
     name = Path(rel).stem
     return {"src": str(song_dir / rel), "dst": str(song_dir / dst), "out_dir": str(song_dir / "keys" / d),
-            "info": {"tracks": [name], "sources": {name: rel}}}
+            "formant": formant, "info": {"tracks": [name], "sources": {name: rel}, **({"formant": True} if formant else {})}}
 
 
 def recipe_id(recipe: dict[str, Any]) -> str:
@@ -211,7 +212,8 @@ def inventory(song_dir: Path) -> list[dict]:
                              "device": info.get("device"), "parents": [p] if p else []})
             else:
                 src = info.get("sources") or {}
-                item.update({"type": "key", "semitones": info.get("semitones"), "tracks": info.get("tracks") or [],
+                item.update({"type": "key", "semitones": info.get("semitones"), "formant": bool(info.get("formant")),
+                             "tracks": info.get("tracks") or [],
                              "files": info.get("files") or [], "created_at": info.get("created_at"),
                              "parents": sorted({p for p in (_parent(v) for v in src.values()) if p})})
             out.append(item)

@@ -84,6 +84,7 @@
       <div class="song-key-control">
         <label for="song-key">歌曲 Key · 每格半音，速度不變</label>
         <div class="input-row"><select id="song-key"><option value="-12">降 12 Key</option><option value="-11">降 11 Key</option><option value="-10">降 10 Key</option><option value="-9">降 9 Key</option><option value="-8">降 8 Key</option><option value="-7">降 7 Key</option><option value="-6">降 6 Key</option><option value="-5">降 5 Key</option><option value="-4">降 4 Key</option><option value="-3">降 3 Key</option><option value="-2">降 2 Key</option><option value="-1">降 1 Key</option><option value="0" selected>原調（0）</option><option value="1">升 1 Key</option><option value="2">升 2 Key</option><option value="3">升 3 Key</option><option value="4">升 4 Key</option><option value="5">升 5 Key</option><option value="6">升 6 Key</option><option value="7">升 7 Key</option><option value="8">升 8 Key</option><option value="9">升 9 Key</option><option value="10">升 10 Key</option><option value="11">升 11 Key</option><option value="12">升 12 Key</option></select><button id="song-key-apply" type="button" class="secondary" disabled>建立／載入此 Key</button></div>
+        <label class="key-formant"><input id="key-formant" type="checkbox"> 人聲保留原唱音色（較像原唱本人，可能多一點雜音；只影響升降 Key 版本）</label>
         <p id="song-key-status" class="help" role="status">預設原調。準備歌曲前可選 Key；不同 Key 版本會一起保存在歌曲庫，錄音與分段草稿各自保留。</p>
       </div>
       <div id="segment-player-tools" hidden>

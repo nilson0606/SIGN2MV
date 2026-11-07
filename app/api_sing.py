@@ -44,7 +44,7 @@ FEATURES = ['local-media', 'local-audio', 'library', 'stem-preview', 'library-lo
             'playback-trace', 'native-microphone', 'native-speaker-output', 'song-key-versions']
 SEP_MODELS = {"demucs": "demucs", "bs-roformer": "bs_roformer", "mel-roformer": "mel_roformer"}
 CACHE_RE = re.compile(r"^(local_[a-f0-9]{64})_(0|15|30|60)(_lead)?(?:_(bs-roformer|mel-roformer))?(_rmvpe)?(_residual)?_v1"
-                      r"(?:_key_([mp])([1-9]|1[0-2]))?$")
+                      r"(?:_key_([mp])([1-9]|1[0-2])(_f)?)?$")
 REC_ID = re.compile(r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$")
 MAX_AUDIO = 384 * 1024 * 1024
 MAX_META = 16 * 1024 * 1024
@@ -54,12 +54,13 @@ def video_id_for(song_id: str) -> str:
     return "local_" + hashlib.sha256(("sign2mv:" + song_id).encode()).hexdigest()
 
 
-def cache_key(video_id: str, seconds: int, vocal_mode: str, model: str, pitch: str, method: str, shift: int = 0) -> str:
+def cache_key(video_id: str, seconds: int, vocal_mode: str, model: str, pitch: str, method: str, shift: int = 0,
+              formant: bool = False) -> str:
     key = (f"{video_id}_{seconds}{'_lead' if vocal_mode == 'lead' else ''}"
            f"{'_' + model if model != 'demucs' else ''}{'_rmvpe' if pitch == 'rmvpe' else ''}"
            f"{'_residual' if method == 'residual' else ''}_v1")
     if shift:
-        key += f"_key_{'m' if shift < 0 else 'p'}{abs(shift)}"
+        key += f"_key_{'m' if shift < 0 else 'p'}{abs(shift)}{'_f' if formant else ''}"
     return key
 
 
@@ -67,11 +68,11 @@ def parse_cache_key(cache_id: str) -> dict[str, Any] | None:
     m = CACHE_RE.match(cache_id or "")
     if not m:
         return None
-    vid, secs, lead, model, rmvpe, residual, sign, mag = m.groups()
+    vid, secs, lead, model, rmvpe, residual, sign, mag, fmt = m.groups()
     shift = 0 if not sign else (int(mag) * (-1 if sign == "m" else 1))
     return {"videoId": vid, "seconds": int(secs), "vocalMode": "lead" if lead else "all",
             "separationModel": model or "demucs", "pitchMethod": "rmvpe" if rmvpe else "yin",
-            "separationMethod": "residual" if residual else "single", "pitchShift": shift}
+            "separationMethod": "residual" if residual else "single", "pitchShift": shift, "keyFormant": bool(fmt)}
 
 
 def recipe_for(p: dict[str, Any]) -> dict[str, Any]:
@@ -342,7 +343,8 @@ def router(ctx: Context) -> APIRouter:
                 size = sum((song_dir / rel).stat().st_size for rel in (ref.get("stems") or {}).values()
                            if (song_dir / rel).is_file())
                 rows.append({"id": d.name, "videoId": vid, "title": ref["title"], "baseTitle": ref.get("baseTitle") or ref["title"],
-                             "pitchShift": ref.get("pitchShift", 0), "sourceCacheId": ref.get("sourceCacheId"),
+                             "pitchShift": ref.get("pitchShift", 0), "keyFormant": bool(ref.get("keyFormant")),
+                             "sourceCacheId": ref.get("sourceCacheId"),
                              "seconds": ref["rangeSeconds"], "duration": ref.get("duration"), "hasPreview": ref["hasPreview"],
                              "vocalMode": ref.get("vocalMode", "all"), "separationModel": ref.get("separationModel", "demucs"),
                              "pitchMethod": ref.get("pitchMethod", "yin"), "separationMethod": ref.get("separationMethod", "single"),
@@ -506,6 +508,10 @@ def router(ctx: Context) -> APIRouter:
         vid = data.get("videoId", "")
         seconds = data.get("seconds", 0)
         shift = data.get("pitchShift", 0) or 0
+        formant = data.get("keyFormant", False)
+        if not isinstance(formant, bool):
+            return json_err(400, "影片網址或片段長度無效。")
+        formant = formant and bool(shift)   # "keep the singer's timbre" only matters for a key version
         if not isinstance(seconds, int) or seconds not in (0, 15, 30, 60) or not isinstance(shift, int) or not -12 <= shift <= 12:
             return json_err(400, "影片網址或片段長度無效。")
         p = {"videoId": vid, "seconds": seconds, "vocalMode": data.get("vocalMode") or "all",
@@ -524,7 +530,8 @@ def router(ctx: Context) -> APIRouter:
                 if j and j["status"] in ("queued", "running"):
                     return json_err(409, "已有音訊正在處理，請先取消或等待完成。")
         base_key = cache_key(vid, seconds, p["vocalMode"], p["separationModel"], p["pitchMethod"], p["separationMethod"])
-        key_id = cache_key(vid, seconds, p["vocalMode"], p["separationModel"], p["pitchMethod"], p["separationMethod"], shift)
+        key_id = cache_key(vid, seconds, p["vocalMode"], p["separationModel"], p["pitchMethod"], p["separationMethod"], shift,
+                           formant)
         force = bool(data.get("force"))
         job_id = uuid.uuid4().hex
         preview = data.get("preview", True) is not False
@@ -576,11 +583,14 @@ def router(ctx: Context) -> APIRouter:
         }
         if shift:
             names = list(base_rel.keys())
-            # one shared key copy per track (also used by the library page and AI cover)
+            # one shared key copy per track (also used by the library page and AI cover); with "keep the
+            # singer's timbre" the vocal tracks get their own copy, the accompaniment is shifted as usual
+            fm = {n: formant and n != "accompaniment" for n in names}
+            items = {(base_rel[n], fm[n]): stems_mod.key_item(song_dir, base_rel[n], shift, fm[n]) for n in names}
             payload["key"] = {"semitones": shift, "dir": str(sing_dir(sid) / key_id),
-                              "items": [stems_mod.key_item(song_dir, rel, shift) for rel in sorted(set(base_rel.values()))],
-                              "stems_rel": {n: stems_mod.key_track(base_rel[n], shift)[1] for n in names},
-                              "meta": {"cacheId": key_id}}
+                              "items": [items[k] for k in sorted(items)],
+                              "stems_rel": {n: stems_mod.key_track(base_rel[n], shift, fm[n])[1] for n in names},
+                              "meta": {"cacheId": key_id, "keyFormant": formant}}
         job = ctx.submit(kind="sing_prepare", lane="gpu", script="sing_prepare.py", input=payload,
                          title=f"準備唱錄：{s['title']}", song_id=sid, timeout_s=3600 * max(1, len(layers) + 1),
                          dedupe="sing:" + key_id)

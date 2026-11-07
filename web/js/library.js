@@ -402,7 +402,7 @@ function copyLabel(it, byDir) {
   if (it.type === 'incomplete') return t('stored.incomplete');
   if (it.type === 'key') {
     const k = Number(it.semitones) || 0;
-    return t('stored.key', `${k > 0 ? '+' : ''}${k}`, (it.tracks || []).map(trackName).join('、'));
+    return t('stored.key', `${k > 0 ? '+' : ''}${k}`, (it.tracks || []).map(trackName).join('、')) + (it.formant ? t('stored.key_formant') : '');
   }
   if (it.kind === 'lead') {
     const parent = byDir[(it.parents || [])[0]];

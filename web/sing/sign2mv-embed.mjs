@@ -1,7 +1,7 @@
 // SIGN2MV glue for the sing & record page (runs inside the SIGN2MV window).
 import {selectMediaSource} from './media-source.mjs';
 import {setLanguage,translateMessage,userOption} from './i18n.mjs';
-import {keyLabel} from './song-key.mjs';
+import {keyText} from './song-key.mjs';
 const $=id=>document.getElementById(id);
 const parentWindow=window.parent!==window?window.parent:null;
 const post=message=>parentWindow?.postMessage(message,location.origin);
@@ -41,7 +41,9 @@ let refs=[],keyRevision=0,passThrough=false;
 async function library(){
   try{const r=await fetch('/sr/library',{headers:{'X-Karaoke-Token':await token()},cache:'no-store'});return r.ok?((await r.json()).songs||[]):[];}catch{return [];}
 }
-function bestRef(vid,key){const c=refs.filter(r=>r.videoId===vid&&(r.pitchShift||0)===key);return c.find(r=>!r.seconds)||c[0]||null;}
+function bestRef(vid,key,fm=false){const c=refs.filter(r=>r.videoId===vid&&(r.pitchShift||0)===key&&!!r.keyFormant===fm);return c.find(r=>!r.seconds)||c[0]||null;}
+// menu value of a key version: <id>#key<n>, plus "f" when the voice keeps the singer's timbre
+const keyTag=(k,fm)=>`${k}${fm?'f':''}`;
 async function addKeyOptions(){
   const sel=$('local-media-saved'),revision=++keyRevision;
   if([...sel.options].some(o=>o.value.includes('#key')))return;
@@ -49,9 +51,10 @@ async function addKeyOptions(){
   const keep=sel.value;
   for(const o of [...sel.options]){
     if(!o.value||o.value.includes('#key'))continue;
-    const keys=[...new Set(refs.filter(r=>r.videoId===o.value&&r.pitchShift).map(r=>r.pitchShift))].sort((a,b)=>a-b);
+    const keys=[...new Set(refs.filter(r=>r.videoId===o.value&&r.pitchShift).map(r=>keyTag(r.pitchShift,r.keyFormant)))]
+      .sort((a,b)=>parseInt(a)-parseInt(b)||a.length-b.length);
     let after=o;
-    for(const k of keys){const n=userOption(`${o.textContent} · ${translateMessage(keyLabel(k))}`,`${o.value}#key${k}`);after.after(n);after=n;}
+    for(const k of keys){const n=userOption(`${o.textContent} · ${translateMessage(keyText(parseInt(k),k.endsWith('f')))}`,`${o.value}#key${k}`);after.after(n);after=n;}
   }
   if(keep)sel.value=keep;
 }
@@ -63,24 +66,24 @@ async function libraryButton(cacheId){
   for(let i=0;i<60&&!find();i++)await new Promise(r=>setTimeout(r,100));
   return find();
 }
-function keyNote(key){
-  return key?`這首歌的「${keyLabel(key)}」還沒有歌唱基準：已幫你選好 Key，請按「準備歌曲基準」建立（會分離人聲並分析音高，需要幾分鐘）。`
+function keyNote(key,fm=false){
+  return key?`這首歌的「${keyText(key,fm)}」還沒有歌唱基準：已幫你選好 Key，請按「準備歌曲基準」建立（會分離人聲並分析音高，需要幾分鐘）。`
     :'這首歌還沒有歌唱基準：請按「準備歌曲基準」建立（會分離人聲並分析音高，需要幾分鐘）。';
 }
 $('local-media-load').addEventListener('click',async e=>{
   if(passThrough)return;
   const value=$('local-media-saved').value;if(!value)return;
   e.stopImmediatePropagation();
-  const [vid,keyPart]=value.split('#key'),key=keyPart?Number(keyPart):0;
+  const [vid,keyPart]=value.split('#key'),key=keyPart?parseInt(keyPart):0,fm=!!keyPart&&keyPart.endsWith('f');
   refs=await library();
-  const ref=bestRef(vid,key);
+  const ref=bestRef(vid,key,fm);
   if(ref){
     const btn=await libraryButton(ref.id);
     if(btn){
-      const note=$('local-media-status');note.textContent=`已有歌唱基準（${keyLabel(key)}），正在載入…`;btn.click();
+      const note=$('local-media-status');note.textContent=`已有歌唱基準（${keyText(key,fm)}），正在載入…`;btn.click();
       // replace the 「正在載入…」 once the reference is in (it used to stay)
       for(let i=0;i<300&&!$('prepare-status').textContent.startsWith('已就緒');i++)await new Promise(r=>setTimeout(r,100));
-      if(note.textContent.startsWith('已有歌唱基準'))note.textContent=$('prepare-status').textContent.startsWith('已就緒')?`已載入歌唱基準（${keyLabel(key)}）。`:'';
+      if(note.textContent.startsWith('已有歌唱基準'))note.textContent=$('prepare-status').textContent.startsWith('已就緒')?`已載入歌唱基準（${keyText(key,fm)}）。`:'';
       return;
     }
   }
@@ -89,9 +92,9 @@ $('local-media-load').addEventListener('click',async e=>{
   const sel=$('local-media-saved');sel.value=vid;
   passThrough=true;try{$('local-media-load').click();}finally{passThrough=false;}
   sel.value=value;
-  $('song-key').value=String(key);$('song-key').dispatchEvent(new Event('change'));
+  $('song-key').value=String(key);$('key-formant').checked=fm;$('song-key').dispatchEvent(new Event('change'));
   for(let i=0;i<100&&!$('player-status').textContent.includes('已載入');i++)await new Promise(r=>setTimeout(r,100));
-  $('prepare-status').textContent=keyNote(key);
+  $('prepare-status').textContent=keyNote(key,fm);
 },true);
 window.addEventListener('karaoke-language-change',()=>{keyRevision++;for(const o of [...$('local-media-saved').options])if(o.value.includes('#key'))o.remove();void addKeyOptions();});
 

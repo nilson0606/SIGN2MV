@@ -7,6 +7,10 @@ export function keyLabel(value = 0) {
   const shift = keyShift(value);
   return shift ? `${shift > 0 ? '升' : '降'} ${Math.abs(shift)} Key` : '原調';
 }
+// label of a key version; formant: the voice keeps the singer's timbre (a separate version)
+export function keyText(value = 0, formant = false) {
+  return keyLabel(value) + (value && formant ? ' · 保留原唱音色' : '');
+}
 export function transposeReference(source, value) {
   const shift = keyShift(value), factor = 2 ** (shift / 12);
   if (source.pitchShift) throw Error('請從原調音軌建立 Key 版本，避免重複變調。');

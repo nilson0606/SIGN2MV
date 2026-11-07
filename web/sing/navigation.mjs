@@ -104,7 +104,8 @@ function updateGuide() {
   if (!localReady) {showStep(2,'本機工具','確認本機工具已啟動、歌曲庫可用，再開始選歌。','local-section','local-section');return;}
   if (!micChecked) {showStep(1,'確認收音','本機工具已就緒，現在開麥試聲，確認收音。','mic-start','voice-settings');return;}
   if (!s.mediaId&&!s.reference) {showStep(3,'選歌','從歌曲庫選歌，或在播放器載入 YouTube／本機 MV。','library-panel','library-panel');return;}
-  if (!s.prepared || Number($('song-key').value)!==s.pitchShift) {
+  const formantOff=Number($('song-key').value)!==0&&$('key-formant').checked!==!!s.keyFormant;
+  if (!s.prepared || Number($('song-key').value)!==s.pitchShift || formantOff) {
     showStep(4,'歌曲準備與 Key',s.phase==='preparing'?'正在準備，完成後會繼續下一步。':'確認歌曲 Key；新版本需建立基準，已有版本可直接載入。','prepare-section','prepare-section');return;
   }
   if (!settingsConfirmed) {
@@ -115,7 +116,7 @@ function updateGuide() {
 function scheduleGuide() {if (!guideFrame) guideFrame=requestAnimationFrame(updateGuide);}
 $('workflow-confirm').addEventListener('click',()=>confirmAction?.());
 for (const id of ['capture-mode','input-device']) $(id).addEventListener('change',()=>{micChecked=false;nativeConfigured=false;scheduleGuide();});
-for (const id of ['sing-guide-mode','segment-guide-mode','recording-manual','recording-voice-level','recording-backing-level','segment-manual','segment-voice-level','segment-backing-level','song-key']) $(id).addEventListener('change',()=>{settingsConfirmed=false;saved=false;scheduleGuide();});
+for (const id of ['sing-guide-mode','segment-guide-mode','recording-manual','recording-voice-level','recording-backing-level','segment-manual','segment-voice-level','segment-backing-level','song-key','key-formant']) $(id).addEventListener('change',()=>{settingsConfirmed=false;saved=false;scheduleGuide();});
 for (const id of ['recording-review-take','segment-take','recording-review-mode','segment-take-mode-selected']) $(id).addEventListener('change',()=>{saved=false;listened='';scheduleGuide();});
 for (const id of ['recording-review-audio','segment-take-audio','segment-audio']) $(id).addEventListener('playing',()=>{listened=reviewKey(state());settingsConfirmed=true;scheduleGuide();});
 window.addEventListener('karaoke-recording-saved',event=>{if(event.detail.cacheId===state().reference){saved=true;scheduleGuide();}});
