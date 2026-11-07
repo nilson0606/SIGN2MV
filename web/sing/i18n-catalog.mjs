@@ -872,6 +872,7 @@ export const messages = {
   "含人聲／伴奏試聽": "Vocal / instrumental preview",
   "只有旋律基準": "Melody reference only",
   "來源已更換，載入時會重新建立": "Source replaced: made again when loaded",
+  "本機收音已由較新的請求接手。": "A newer request took over the local microphone.",
   "保留原唱音色（舊做法）": "singer's timbre kept (old method)",
   "保留原唱音色": "singer's timbre kept",
   "載入": "Load",

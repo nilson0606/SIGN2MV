@@ -123,6 +123,8 @@ class MonitorControl:
 
 
 class NativeMicrophone:
+    OPEN_GRACE_S = 15.0   # a stream nobody started reading this long after it opened is stopped
+
     def __init__(self, ctx: Context):
         self.ctx = ctx
         self.state: dict[str, Any] = {"active": None}
@@ -179,7 +181,12 @@ class NativeMicrophone:
     async def stream(self, device_id: str):
         if len(device_id) > 512:
             return _json(400, {"error": "Invalid microphone"})
-        if self.state["active"]:
+        old = self.state["active"]
+        if old and old.get("phase") == "opening":
+            # [SIGN2MV] a capture that never reached the page (reloaded or closed while it was opening) used to
+            # keep the microphone, and every later request got 409 until SIGN2MV was restarted
+            old["stop"]()
+        elif old:
             return _json(409, {"error": "本機麥克風已被另一個分頁使用，請先停止該頁收音。"})
         args = self._args("--device", device_id)
         try:
@@ -189,7 +196,7 @@ class NativeMicrophone:
             return _json(503, {"error": "本機收音程式無法啟動。"})
         capture_id = str(uuid.uuid4())
         opened = time.monotonic()
-        op: dict[str, Any] = {"id": capture_id, "proc": proc}
+        op: dict[str, Any] = {"id": capture_id, "proc": proc, "phase": "opening"}
         op["monitor"] = MonitorControl(proc, lambda e: self._log(capture_id, e))
         self.state["active"] = op
         # [SIGN2MV] diagnostics: capture processes of earlier captures that are still running
@@ -210,19 +217,28 @@ class NativeMicrophone:
                 self._log(capture_id, {"event": "slow-" + side, "gapMs": round(gap * 1000), "atSeconds": round(at, 2)})
 
         def stop() -> None:
+            op["phase"] = "stopped"
             op["monitor"].close()
             try:
                 proc.kill()
-            except OSError:
+                proc.wait(timeout=1)
+            except (OSError, subprocess.TimeoutExpired):
                 pass
             if self.state["active"] is op:
                 self.state["active"] = None
 
+        op["stop"] = stop
         loop = asyncio.get_running_loop()
-        header = await loop.run_in_executor(None, self._read_header, proc)
+        try:
+            header = await loop.run_in_executor(None, self._read_header, proc)
+        except BaseException:   # the request was cancelled (page reloaded or closed) while the capture opened
+            stop()
+            raise
         if isinstance(header, str):
             stop()
             return _json(503, {"error": header})
+        if op["phase"] != "opening":   # replaced by a newer request meanwhile
+            return _json(409, {"error": "本機收音已由較新的請求接手。"})
         meta, rest = header
         queue: asyncio.Queue = asyncio.Queue(maxsize=256)
 
@@ -253,9 +269,13 @@ class NativeMicrophone:
                     pass
 
         threading.Thread(target=pump, daemon=True).start()
+        # If the page is gone before the stream starts, the body below never runs and its cleanup never
+        # happens: stop the capture when nothing has started reading it shortly after.
+        loop.call_later(self.OPEN_GRACE_S, lambda: op["phase"] == "opening" and stop())
 
         async def body():
             reason, sent = "client-closed", None
+            op["phase"] = "streaming"
             try:
                 yield (json.dumps({**meta, "captureId": capture_id}) + "\n").encode()
                 if rest:
