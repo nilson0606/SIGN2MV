@@ -557,3 +557,5 @@ footer{border-color:var(--studio-edge)}
 @media(prefers-reduced-motion:reduce){
   :where(:root[data-theme="console"]) button:active:not(:disabled){transform:none}
 }
+
+.ear-switches{display:flex;flex-wrap:wrap;align-items:center;column-gap:18px;margin:-4px 0 14px}.ear-switches>span{color:var(--soft);font-size:13px}.ear-switches .check-option{margin:6px 0}.ear-switches .help{flex-basis:100%;margin:2px 0 0}

@@ -5,6 +5,9 @@
 - Sing & record: 「耳機單聲道」 / *Headphone mono*, off by default (stereo as before). When on, everything you hear
   while singing (the song, backing only, key versions, the segment monitor) plays as the same sound in both ears,
   for singing with one earcup off. The headphone hint says so. The choice is remembered on this computer.
+- Sing & record: 「耳機聲音：左耳／右耳」 / *Headphone sound: Left ear / Right ear*, both on by default. Untick one to
+  mute that ear (for the same audio as above), e.g. the earcup you took off, so nothing leaks into the microphone.
+  Not remembered: both ears are on again when the page opens.
 - Sing & record: new option under the key, 「人聲保留原唱音色」 / *Keep the singer's timbre in the vocals*, off by
   default. When on, a key version shifts the original vocals (and lead / backing vocals) with Rubber Band's
   formant preservation, so they sound more like the singer in that key instead of higher / lower-voiced; the

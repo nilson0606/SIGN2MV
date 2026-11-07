@@ -551,7 +551,7 @@ $('local-check').addEventListener('click', async () => {
   } finally { clearTimeout(timer); button.disabled = false; }
 });
 
-initMono(document.getElementById('guide-mono'));
+initMono(document.getElementById('guide-mono'),document.getElementById('guide-ear-left'),document.getElementById('guide-ear-right'));
 const singing = createKaraokeSession({ voiced: () => micPitch !== null, context: () => context, stream: () => stream, inputSource: () => nativeCapture?.source, player: () => player, micReady: () => !!stream && context?.state === 'running', stopMic: message => stopMic(message), startMic, stopBeats, loadVideo: () => loadVideo(), cancelCalibration: () => calibration?.cancel() });
 
 calibration = createCalibration({ context: () => context, micReady: () => !!stream && context?.state === 'running', beforeStart: () => singing.pauseForCalibration() });
