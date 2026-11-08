@@ -288,7 +288,7 @@ export default {
   "cover.train_embedder": "Feature model",
   "cover.train_emb.contentvec": "contentvec (default, general)",
   "cover.train_emb.chinese-hubert-base": "chinese-hubert-base (feature model trained on Chinese speech)",
-  "cover.train_embedder_hint": "The model remembers which one it used and conversion follows it; a different feature model needs a new training. chinese-hubert-base is downloaded the first time it is used.",
+  "cover.train_embedder_hint": "The model remembers which one it used and conversion follows it; a different feature model needs a new training. chinese-hubert-base is downloaded by the installer; an earlier install gets it by running install.bat again, or the first time it is used.",
   "cover.emb_zh": "Chinese features",
   "cover.emb_other": "Features: {0}",
   "cover.train_start": "🚀 Start training",

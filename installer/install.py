@@ -318,6 +318,15 @@ def step_applio(state: dict) -> None:
     run([py, "core.py", "prerequisites", "--pretraineds-hifigan", "--models", "--no-exe"], cwd=target)
 
 
+def step_applio_embedders(state: dict) -> None:
+    """Feature models Applio would otherwise download the first time they are used (needs the internet then):
+    chinese-hubert-base, offered when training a voice. Already-present files with the right checksum are kept."""
+    for name, e in MANIFEST["applio_embedders"].items():
+        log(f"Downloading the feature model {name} (into runtime/applio, not C:)...")
+        for fname, f in e["files"].items():
+            download(f["url"], PATHS.applio / e["dir"] / fname, f["sha256"], f["size"])
+
+
 def step_selfcheck(state: dict) -> None:
     report = {"checks": {}}
     py = PATHS.env_python("engine")
@@ -361,6 +370,7 @@ STEPS = [
         (ROOT / "installer" / "requirements" / "engine.lock.txt").read_text(encoding="utf-8"))),
     ("engine_models", step_engine_models, lambda: step_key(MANIFEST["models"], 2)),
     ("applio", step_applio, lambda: step_key(MANIFEST["applio"], 1)),
+    ("applio_embedders", step_applio_embedders, lambda: step_key(MANIFEST["applio_embedders"])),
     ("bytecode", step_bytecode, lambda: step_key(MANIFEST["torch"], MANIFEST["applio"],
         (ROOT / "installer" / "requirements" / "engine.lock.txt").read_text(encoding="utf-8"), 1)),
     ("selfcheck", step_selfcheck, lambda: step_key(time.strftime("%Y%m%d%H%M%S"))),

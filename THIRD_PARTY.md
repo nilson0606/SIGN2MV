@@ -43,6 +43,7 @@ separation models are widely used with audio-separator and UVR, but before any u
 check the model page. File sizes and SHA-256 hashes are in `installer/manifest.json`.
 | RMVPE (`rmvpe.pt`) | pitch | from huggingface.co/lj1995/VoiceConversionWebUI (MIT) |
 | ContentVec, HiFi-GAN pretrained G/D | Applio conversion and training | downloaded by Applio (see Applio) |
+| chinese-hubert-base (TencentGameMate, via Applio's model repository) | optional feature model for training | MIT |
 | faster-whisper medium / small (Systran) | lyric alignment | MIT (OpenAI Whisper weights) |
 | GeneralUser GS 2.0.3 (S. Christian Collins) | steel guitar / yangqin sounds | GeneralUser GS License v2.0: free use and redistribution |
 

@@ -27,6 +27,9 @@ Three outside reviews (Claude, Gemini, Astro) on 11-08, merged and checked again
 - `start.bat` returns Python's exit code (it always returned 0).
 - Sing & record: 「保留原唱音色」 is dimmed at the original key, where it does nothing.
 - Docs: check for updates by the 7-character code after the code date, not only the date.
+- Installer: also downloads the feature model chinese-hubert-base (about 360 MB, MIT), offered when training a
+  voice, so it works without the internet. Before, Applio downloaded it the first time it was used. An earlier
+  install can get it by running `install.bat` again (optional; only this step runs).
 
 - Home, system status: new row 「程式日期」 / *Code date*: the date and short commit of the code
   (`app/BUILD.txt`, filled in by GitHub's Download ZIP), to compare with the latest change on GitHub. The version

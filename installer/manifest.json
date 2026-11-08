@@ -38,6 +38,24 @@
     "url": "https://github.com/IAHispano/Applio/archive/refs/tags/3.7.1.zip",
     "license": "MIT"
   },
+  "applio_embedders": {
+    "chinese_hubert_base": {
+      "dir": "rvc/models/embedders/chinese_hubert_base",
+      "license": "MIT (TencentGameMate/chinese-hubert-base)",
+      "files": {
+        "config.json": {
+          "url": "https://huggingface.co/IAHispano/Applio/resolve/main/Resources/embedders/chinese_hubert_base/config.json",
+          "size": 1380,
+          "sha256": "f6bd1bdef239518d022edcef31243acf344a2afa33d5428e16f221cac09cbcd0"
+        },
+        "pytorch_model.bin": {
+          "url": "https://huggingface.co/IAHispano/Applio/resolve/main/Resources/embedders/chinese_hubert_base/pytorch_model.bin",
+          "size": 377552987,
+          "sha256": "2fefccd26c2794a583b80f6f7210c721873cb7ebae2c1cde3baf9b27855e24d8"
+        }
+      }
+    }
+  },
   "models": {
     "htdemucs": {
       "file": "torch/hub/checkpoints/955717e8-8726e21a.th",
