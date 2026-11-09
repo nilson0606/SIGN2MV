@@ -76,7 +76,8 @@ def main() -> None:
                 protocol.progress(None, f"reference:{sub}", device.upper())
                 report.last = -1.0
             ref = sing_reference.build(Path(base["pitch_input"]), Path(base["beat_input"]),
-                                       base["meta"]["pitchMethod"], device, report, on_phase=ref_phase)
+                                       base["meta"]["pitchMethod"], device, report, on_phase=ref_phase,
+                                       backing=Path(base["backing_input"]) if base.get("backing_input") else None)
             value = {"version": 1, **base["meta"], **ref, "cacheVersion": 1, "hasPreview": True,
                      "stems": base["stems_rel"], "savedAt": now_iso(),
                      "quality": "experimental-lead-vocals" if base["meta"].get("vocalMode") == "lead"

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Sing & record, lead/backing versions: backing vocals that leaked into the lead track are no longer scored as
+  the melody. When the reference is made, a run of melody where the backing-vocal track is clearly louder
+  (by 6 dB or more, median over the run) or the lead track is nearly silent (below -45 dBFS) becomes a rest.
+  On 〈心所愛的人〉 this removes the intro harmony (10.9–15.9 s) that showed as an E5 melody line. Existing
+  lead/backing references are made again the next time they are loaded (pitch analysis only, about a minute).
 - Sing & record, segment recording: 「試合內容」 has 「人聲＋伴樂（不加和音）」 for versions with separate lead and
   backing vocals: the backing-vocal track is left out of the trial mix and of the saved recording, so
   post-processing leaves it out too. In a plain version the choice reads 「人聲＋伴樂」: its backing vocals are

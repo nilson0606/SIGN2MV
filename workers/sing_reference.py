@@ -133,8 +133,45 @@ def rmvpe_frames(audio: np.ndarray, device: str, progress=lambda v: None) -> lis
         return run("cpu")
 
 
+# Lead/backing versions: a run of melody (voiced frames between rests) is backing vocals that leaked into the lead
+# track when, over the run, the backing track is clearly louder or the lead track is nearly silent. Measured on
+# 心所愛的人 (2026-11-09): the intro harmony left a trace in the lead track (lead -21..-55 dB, backing -17..-28 dB)
+# and became an E5 melody line; a held lead note fading under loud backing vocals (64-66 s) stays, because the run
+# it belongs to is mostly lead.
+LEAK_MARGIN_DB = 6.0
+LEAD_SILENT_DB = -45.0
+
+
+def _frame_db(audio: np.ndarray, count: int, hop: int = 1600) -> np.ndarray:
+    a = np.zeros(count * hop, dtype=np.float32)
+    a[:min(len(audio), len(a))] = audio[:len(a)]
+    return 20 * np.log10(np.sqrt((a.reshape(count, hop).astype(np.float64) ** 2).mean(1)) + 1e-9)
+
+
+def drop_backing_leaks(frames: list, lead: np.ndarray, backing: np.ndarray) -> float:
+    """Turn runs of backing vocals that leaked into the lead track into rests (in place); returns their seconds."""
+    n = len(frames)
+    lead_db, back_db = _frame_db(lead, n), _frame_db(backing, n)
+    dropped, i = 0, 0
+    while i < n:
+        if frames[i] is None:
+            i += 1
+            continue
+        j = i
+        while j < n and frames[j] is not None:
+            j += 1
+        if (np.median(lead_db[i:j] - back_db[i:j]) < -LEAK_MARGIN_DB
+                or np.median(lead_db[i:j]) < LEAD_SILENT_DB):
+            frames[i:j] = [None] * (j - i)
+            dropped += j - i
+        i = j
+    return round(dropped * .1, 1)
+
+
 def build(vocals: Path, accompaniment: Path, pitch_method: str, device: str, progress=lambda v: None,
-          on_phase=lambda sub: None) -> dict:
+          on_phase=lambda sub: None, backing: Path | None = None) -> dict:
+    """backing: the backing-vocal track of a lead/backing version; runs that are mostly backing vocals leaked into
+    the lead track are left out of the melody (they are not what the lead singer sings)."""
     audio = pcm(vocals)
     step, window = .1, 2048
     if pitch_method == "rmvpe":
@@ -154,10 +191,13 @@ def build(vocals: Path, accompaniment: Path, pitch_method: str, device: str, pro
             frames[i] = None
         elif len(neighbors) == 3:
             frames[i] = round(float(np.median(neighbors)), 2)
+    gate = None
+    if backing is not None:
+        gate = {"version": 1, "droppedSeconds": drop_backing_leaks(frames, audio, pcm(backing))}
     voiced = sum(f is not None for f in frames) * step
     if voiced < 3:
         raise ValueError("melody_too_short")
     on_phase("beats")
     bpm, beats = beat_grid(pcm(accompaniment))
     return {"step": step, "frames": frames, "duration": round(len(audio) / 16000, 3), "bpm": bpm, "beats": beats,
-            "pitchMethod": pitch_method, "voicedSeconds": round(voiced, 1)}
+            "pitchMethod": pitch_method, "voicedSeconds": round(voiced, 1), **({"leadGate": gate} if gate else {})}

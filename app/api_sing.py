@@ -102,6 +102,12 @@ def reference_stale(ref: dict[str, Any], song: dict[str, Any], seconds: int) -> 
         return False
 
 
+def needs_lead_gate(ref: dict[str, Any]) -> bool:
+    """A lead/backing reference made before 2026-11-09 still scores backing vocals that leaked into the lead
+    track (workers/sing_reference.drop_backing_leaks); it is made again (pitch analysis only, the tracks stay)."""
+    return ref.get("vocalMode") == "lead" and not ref.get("leadGate")
+
+
 def clip_name(song: dict[str, Any], seconds: int) -> str:
     """The "first N seconds" clip of the current source; a new source gets a new clip (the clip used to keep
     its name and was only made when missing, so a re-imported song kept the old clip)."""
@@ -573,9 +579,9 @@ def router(ctx: Context) -> APIRouter:
         preview = data.get("preview", True) is not False
         cached_ref = load_reference(key_id)
         base_ref = load_reference(base_key) if shift else cached_ref
-        base_stale = bool(base_ref) and reference_stale(base_ref, s, seconds)
-        if cached_ref and reference_stale(cached_ref, s, seconds):
-            cached_ref = None   # the song's audio was replaced since: make it again from the new audio
+        base_stale = bool(base_ref) and (reference_stale(base_ref, s, seconds) or (needs_lead_gate(base_ref) and not legacy))
+        if cached_ref and (reference_stale(cached_ref, s, seconds) or (needs_lead_gate(cached_ref) and not legacy)):
+            cached_ref = None   # the song's audio was replaced since, or the melody still has leaked backing vocals
         if not force and cached_ref and (not preview or cached_ref["hasPreview"]):
             prep_jobs[job_id] = {"cacheId": key_id, "p": p, "cached": True, "updated": time.time()}
             return JSONResponse(summary(job_id), status_code=202)
@@ -621,6 +627,7 @@ def router(ctx: Context) -> APIRouter:
             "drop_new": not preview,
             "base": {"dir": str(sing_dir(sid) / base_key), "stems_rel": base_rel,
                      "pitch_input": str(song_dir / pitch_rel), "beat_input": str(song_dir / base_rel["accompaniment"]),
+                     **({"backing_input": str(song_dir / base_rel["backing"])} if p["vocalMode"] == "lead" else {}),
                      "meta": meta},
             "force_reference": (force and not shift) or base_stale, "key": None,
         }
