@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Home: 「檢查更新」 / *Check for updates* under the system status asks GitHub whether this copy is the latest and
+  how many newer changes there are, with links to the update steps and to GitHub. It only asks: nothing is
+  downloaded or replaced.
 - Sing & record, segment recording: the 「重新讀取錄音版本」 and 「保存草稿」 buttons are gone. Every change already
   saved the draft; the take list is now read again whenever the sing page is shown or gets focus.
 - Sing & record: the guide choice (「演唱時帶唱」 and, for segments, 「錄音時帶唱」) has 「原唱＋伴樂（不含和音）」 for

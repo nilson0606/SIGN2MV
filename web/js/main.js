@@ -85,6 +85,30 @@ function renderStatus() {
   kv.replaceChildren(...items);
 }
 
+// 「檢查更新」: asks the server, which asks GitHub; nothing is downloaded (updating is the manual copy-over)
+async function checkUpdate() {
+  const out = $('#update-result'), btn = $('#update-check');
+  btn.disabled = true; out.className = 'small muted'; out.textContent = t('home.update_checking');
+  try {
+    const r = await api.get('/api/system/update-check');
+    const latest = r.latest ? `${r.latest.date} · ${r.latest.commit}` : '';
+    const how = el('a', { href: `/manual/manual.${language()}.html#updating`, target: '_blank', rel: 'noopener' }, t('home.update_how'));
+    const gh = el('a', { href: r.repo, target: '_blank', rel: 'noopener' }, t('home.update_github'));
+    const text = {
+      latest: () => t('home.update_latest', latest),
+      update: () => t('home.update_available', r.behind, latest),
+      ahead: () => t('home.update_ahead'),
+      unknown: () => t('home.update_unknown', latest),
+      offline: () => t('home.update_offline'),
+    }[r.state] || (() => t('home.update_offline'));
+    out.className = 'small' + (r.state === 'update' ? ' update-new' : ' muted');
+    out.replaceChildren(text(), ...(['update', 'unknown'].includes(r.state) ? [' ', how, ' · ', gh] : []));
+  } catch (e) {
+    out.textContent = errorText(e);
+  } finally { btn.disabled = false; }
+}
+$('#update-check').addEventListener('click', checkUpdate);
+
 async function loadStatus(first = false) {
   try {
     status = await api.get('/api/system/status');

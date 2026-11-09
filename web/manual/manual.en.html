@@ -159,7 +159,7 @@ a { color:var(--accent); }
 <li>FFmpeg is a fixed version checked against its checksum, so every PC gets the same file.</li>
 <li>The last step compiles every environment's Python files once, so separation, covers and Whisper start faster.</li>
 </ul>
-<h3>Updating</h3>
+<h3 id="updating">Updating</h3>
 <p>To update, copy the new files <b>over</b> the old folder; your songs, recordings, voice models and settings are not touched (<code>library</code>, <code>models</code>, <code>runtime</code> and <code>config</code> are not in the ZIP).</p>
 <ol>
 <li>Press <b>Shut down</b> at the top right of SIGN2MV and wait until the window closes.</li>
@@ -168,6 +168,7 @@ a { color:var(--accent); }
 <li>Open <code>SIGN2MV-main</code>, select everything (Ctrl + A), copy, and paste it into your SIGN2MV folder (the one with <code>start.bat</code>); when asked, choose <i>Replace the files in the destination</i>.</li>
 <li>Double-click <code>start.bat</code>. <b>Code date</b> under <i>System status</i> on the home page ends with a 7-character code (e.g. <code>2026-11-08 · 0f0d724</code>). When it matches the 7-character code at the top right of the file list on GitHub, you are up to date. Compare the code, not just the date: there can be several changes on one day.</li>
 </ol>
+<p>To find out whether there is a new version, you can also press <b>Check for updates</b> under <i>System status</i> on the home page: it says whether you are up to date and how many newer changes GitHub has (it only asks; nothing is downloaded or replaced).</p>
 <p>Run <code>install.bat</code> again only when <code>CHANGELOG.md</code> says so; running it when unsure does no harm, finished parts are skipped.</p>
 </section>
 

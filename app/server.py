@@ -89,6 +89,13 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
     # ---------------- system ----------------
     mono_at_start = winaudio.mono_audio()   # to remind on shutdown if it was switched for singing
 
+    @app.get("/api/system/update-check")
+    async def update_check() -> dict[str, Any]:
+        from starlette.concurrency import run_in_threadpool
+
+        from .build import check_update
+        return await run_in_threadpool(check_update)
+
     @app.get("/api/system/status")
     def status() -> dict[str, Any]:
         cfg = settings_mod.load(paths)

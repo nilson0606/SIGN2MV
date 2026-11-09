@@ -49,6 +49,10 @@ touched.
    (e.g. `2026-11-08 · 0f0d724`). When it matches the 7-character code at the top right of the file list on this page,
    you are up to date. Compare the code, not just the date: there can be several changes on one day.
 
+To find out whether there is a new version, you can also press **Check for updates** under *System status* on the
+home page: it says whether you are up to date and how many newer changes GitHub has (it only asks; nothing is
+downloaded or replaced).
+
 `library`, `models`, `runtime` and `config` are not in the ZIP and are never overwritten. Run `install.bat` again
 only when the [CHANGELOG](CHANGELOG.md) says so; running it when unsure does no harm, finished parts are skipped.
 Every change is listed in the [CHANGELOG](CHANGELOG.md).
