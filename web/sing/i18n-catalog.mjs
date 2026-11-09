@@ -223,6 +223,8 @@ export const messages = {
   "待確認版本": "Pending take",
   "試聽內容": "Preview content",
   "人聲＋伴樂／和音": "Vocals + backing / harmonies",
+  "人聲＋伴樂（不加和音）": "Vocals + backing (no harmonies)",
+  "人聲＋伴樂": "Vocals + backing",
   "純人聲": "Vocals only",
   "純人聲直接播放這一版錄到的人聲原檔；加入伴樂時才套用混音比例與歌聲校正。": "Vocals-only preview uses the original vocal file. Mixed preview applies the balance and timing correction.",
   "試聽這一版": "Preview this take",

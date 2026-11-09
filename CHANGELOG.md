@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Sing & record, segment recording: 「試合內容」 has 「人聲＋伴樂（不加和音）」 for versions with separate lead and
+  backing vocals: the backing-vocal track is left out of the trial mix and of the saved recording, so
+  post-processing leaves it out too. In a plain version the choice reads 「人聲＋伴樂」: its backing vocals are
+  part of the vocal track, so the accompaniment never had them.
 Three outside reviews (Claude, Gemini, Astro) on 11-08, merged and checked against the code:
 
 - Sing & record: key versions made with the old "keep the singer's timbre" method (R2, 11-07) were no longer
