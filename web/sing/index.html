@@ -92,7 +92,7 @@
       </div>
       <section id="score-section" class="player-session" tabindex="-1" aria-label="演唱控制與分數">
     <p id="result-title" class="score-title">尚未選定歌曲</p>
-    <div class="whole-guide-control"><label for="sing-guide-mode">演唱時帶唱</label><select id="sing-guide-mode"><option value="original" selected>原唱＋伴樂（預設）</option><option value="backing">只有伴樂／和音</option></select><p class="help">開始前選擇，按「從頭開始唱且評分」套用。只有伴樂需已保存分離音軌；請戴耳機，避免原唱被麥克風收進錄音。</p></div>
+    <div class="whole-guide-control"><label for="sing-guide-mode">演唱時帶唱</label><select id="sing-guide-mode"><option value="original" selected>原唱＋伴樂（預設）</option><option value="lead">原唱＋伴樂（不含和音）</option><option value="backing">只有伴樂／和音</option></select><p class="help">開始前選擇，按「從頭開始唱且評分」套用。只有伴樂需已保存分離音軌；請戴耳機，避免原唱被麥克風收進錄音。</p></div>
     <label class="check-option"><input id="guide-mono" type="checkbox"><span>耳機單聲道（左右耳聽到一樣的聲音，適合只戴一邊耳機；分段錄音也適用）</span></label>
     <div class="ear-switches"><span>耳機聲音</span><label class="check-option"><input id="guide-ear-left" type="checkbox" checked><span>左耳</span></label><label class="check-option"><input id="guide-ear-right" type="checkbox" checked><span>右耳</span></label><span class="ear-meters" title="唱錄頁實際送到左右耳的音量"><span>送出音量</span><span>左</span><i id="ear-meter-left"></i><span>右</span><i id="ear-meter-right"></i></span><p class="help">取消勾選＝那一耳靜音。只戴一邊時，把拿下的那邊靜音，就不會漏音進麥克風；可試左耳或右耳哪邊好唱。每次打開唱錄頁都會回到兩耳都有聲音。右邊的「送出音量」是唱錄頁實際送到左右耳的聲音，靜音的那邊應該不會動。</p><p id="windows-mono-warning" class="windows-mono-warning" role="status" hidden>⚠ Windows 的「單聲道音訊」目前開著：Windows 會把左右聲道混在一起，所以左右耳開關和「耳機單聲道」都不會有作用。要用的話，按 Win＋A → 協助工具 → 關閉「單聲道音訊」；唱完再打開，關閉 SIGN2MV 時也會提醒你。</p></div>
     <div class="whole-guide-control"><label for="score-difficulty">評分難度</label><select id="score-difficulty" aria-describedby="difficulty-help"><option value="standard" selected>標準（預設）</option><option value="strict">嚴格</option><option value="relaxed">寬鬆</option></select><p id="difficulty-help" class="help"></p></div>
@@ -142,7 +142,7 @@
           <div class="segment-fields"><label>提前播放（秒，0～60）<input id="segment-preroll" type="number" min="0" max="60" step="1" value="5" required></label><label>尾音餘量<select id="segment-tail"><option value="1">1 秒</option><option value="2" selected>2 秒</option><option value="3">3 秒</option></select></label></div>
           <p class="help">可輸入較長的準備秒數；若段落前不足指定時間，就從歌曲開頭播放。</p>
           </details>
-          <label for="segment-guide-mode">錄音時帶唱</label><select id="segment-guide-mode"><option value="original" selected>原唱＋伴樂（預設）</option><option value="backing">只有伴樂／和音</option></select>
+          <label for="segment-guide-mode">錄音時帶唱</label><select id="segment-guide-mode"><option value="original" selected>原唱＋伴樂（預設）</option><option value="lead">原唱＋伴樂（不含和音）</option><option value="backing">只有伴樂／和音</option></select>
           <div class="button-row"><button id="segment-loop" type="button" class="secondary" aria-pressed="false">循環練唱本段</button><button id="segment-record" type="button">錄這一段</button><button id="segment-stop" type="button" class="secondary" disabled>停止／保存本段</button></div>
         </div>
         <p id="segment-status" class="status" role="status">載入歌曲後，可開啟錄音模式。</p>

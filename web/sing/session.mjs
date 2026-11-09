@@ -1,7 +1,7 @@
 import {originalText,userText,translateMessage} from './i18n.mjs';
 import {revealPlayerVideo} from './player-view.mjs';
 import {selectedMediaId,selectMediaSource,isLocalMediaId,syncMediaMenu} from './media-source.mjs';
-import {keyLabel,keyShift,keyText} from './song-key.mjs';
+import {keyLabel,keyShift,keyText,guideStems,syncGuideSelect} from './song-key.mjs';
 import {guideOut} from './mono-output.mjs';
 import {recordingReviewKey} from './recording-review.mjs';
 import {libraryRecordingCounts,updateLibraryRecordingBadges} from './library-recordings.mjs';
@@ -63,10 +63,10 @@ export function createKaraokeSession(options) {
   async function prepareGuide(ref, player, mode, cancelled) {
     stopGuide(); player.pauseVideo();
     const c = wholeGuide = { player, mode, wasMuted: !!player.isMuted?.(), armed: false, nodes: [], buffers: [] };
-    if (ref.pitchShift || mode !== 'backing') return;
-    if (!ref.hasPreview) throw Error('只有伴樂需要已保存的分離音軌，請先補建試聽音軌，或改選「原唱＋伴樂」。');
+    if (ref.pitchShift || mode === 'original') return;   // the video's own sound (or the key playback) guides
+    if (!ref.hasPreview) throw Error('這個帶唱方式需要已保存的分離音軌，請先補建試聽音軌，或改選「原唱＋伴樂」。');
     c.context = new AudioContext(); await c.context.resume();
-    for (const stem of ['accompaniment', ...(ref.vocalMode === 'lead' ? ['backing'] : [])]) {
+    for (const stem of guideStems(ref, mode)) {
       const bytes = await loadRecordingStem(ref, stem);
       if (cancelled() || wholeGuide !== c) return;
       const buffer = await c.context.decodeAudioData(bytes);
@@ -251,6 +251,7 @@ export function createKaraokeSession(options) {
     $('song-key-apply').disabled=!reference||!!take||segmented?.busy()||['preparing','finishing','restarting'].includes(phase);
     $('sing-start').disabled = maskBusy || !reference || (reference.pitchShift&&!keyPlayback.ready()) || phase === 'finishing';
     $('sing-guide-mode').disabled = !!wholeGuide || ['preparing','finishing','restarting'].includes(phase);
+    syncGuideSelect($('sing-guide-mode'), reference);
     $('finish-song').disabled = !take || ['result', 'finishing', 'restarting'].includes(phase);
     $('song-form').querySelector('button').disabled = maskBusy || ['preparing', 'finishing', 'restarting'].includes(phase);
     maskEditor.controls(); recording.referenceChanged(); segmented?.referenceChanged();
@@ -729,7 +730,7 @@ export function createKaraokeSession(options) {
       $('total-score').textContent = '…'; $('pitch-score').textContent = '—'; $('rhythm-score').textContent = '—'; $('coverage-score').textContent = '—';
       message('影片已回到開頭，等待播放開始。'); controls();
       revealPlayerVideo();
-      if (wholeGuide) { wholeGuide.armed = true; if (reference.pitchShift || wholeGuide.mode === 'backing') p.mute?.(); else p.unMute?.(); }
+      if (wholeGuide) { wholeGuide.armed = true; if (reference.pitchShift || wholeGuide.mode !== 'original') p.mute?.(); else p.unMute?.(); }
       p.playVideo();
       if (p.getPlayerState() === 1) playerState(1);
     } catch (error) {

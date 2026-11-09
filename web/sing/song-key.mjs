@@ -19,6 +19,23 @@ export function transposeReference(source, value) {
     sourceCacheId:source.cacheId, title:shift ? `${source.title.slice(0,280)} · ${keyLabel(shift)}` : source.title,
     frames:source.frames.map(hz=>hz === null ? null : hz * factor)};
 }
+// guide modes: original = the whole vocals (lead singer and backing vocals) with the accompaniment; lead = the lead
+// singer without the backing vocals (lead/backing versions only); backing = the accompaniment and backing vocals
 export function guideStems(reference, mode) {
-  return mode === 'original' ? ['accompaniment','vocals'] : ['accompaniment',...(reference.vocalMode === 'lead' ? ['backing'] : [])];
+  if (mode === 'lead' && reference.vocalMode === 'lead') return ['accompaniment','lead'];
+  return mode === 'original' || mode === 'lead' ? ['accompaniment','vocals'] : ['accompaniment',...(reference.vocalMode === 'lead' ? ['backing'] : [])];
+}
+// the "how the song guides you" choices for the loaded version: "without backing vocals" only exists when the
+// backing vocals are a separate track; the default's label says the backing vocals are in it when they are
+export function syncGuideSelect(select, reference) {
+  const lead = reference?.vocalMode === 'lead', option = value => select.querySelector(`option[value="${value}"]`);
+  const noBacking = option('lead');
+  if (noBacking) { noBacking.hidden = noBacking.disabled = !lead; }
+  if (!lead && select.value === 'lead') select.value = 'original';
+  option('original').textContent = lead ? '原唱＋和音＋伴樂（預設）' : '原唱＋伴樂（預設）';
+}
+export function guideModeLabel(mode, reference) {
+  if (mode === 'lead') return '原唱＋伴樂（不含和音）';
+  if (mode === 'backing') return '只有伴樂／和音';
+  return reference?.vocalMode === 'lead' ? '原唱＋和音＋伴樂' : '原唱＋伴樂';
 }

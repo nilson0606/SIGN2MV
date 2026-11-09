@@ -16,7 +16,7 @@ export function createKeyPlayback({player,loadStem,mode,status}) {
     p?.pauseVideo?.();p?.mute?.();
     try{
       c.context=new AudioContext();c.gain=c.context.createGain();c.gain.connect(guideOut(c.context));
-      for(const stem of ['accompaniment','vocals',...(reference.vocalMode==='lead'?['backing']:[])]){
+      for(const stem of ['accompaniment','vocals',...(reference.vocalMode==='lead'?['lead','backing']:[])]){
         const bytes=await loadStem(reference,stem);if(request!==serial)return;
         const buffer=await c.context.decodeAudioData(bytes);if(request!==serial)return;
         if(buffer.duration<reference.duration-.15)throw Error('變調音軌長度不足，請重新建立此 Key 版本。');
