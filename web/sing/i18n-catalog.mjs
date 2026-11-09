@@ -280,8 +280,6 @@ export const messages = {
   "人聲／伴樂音量平衡 · 與從頭開始唱且評分共用": "Vocal / backing balance · Shared with “Sing from the start and score”",
   "單段試聽與完整試合都先完成混音，再播放音檔。調整音量後會重新混音，完成後接續目前位置播放。滿意後按「存到錄音後處理」，不必重錄。純人聲原檔試聽不套用音量調整。": "Segment previews and full mixes are rendered completely before playback. Changing levels rebuilds the mix, then resumes at the current position. Save for post-production when satisfied; no need to record again. Raw vocal preview ignores level adjustments.",
   "挑選本段演唱版本": "Choose a take for this segment",
-  "重新讀取錄音版本": "Reload takes",
-  "保存草稿": "Save draft",
   "本段採用的演唱版本": "Selected take for this segment",
   "只列出本段錄音，可重錄多次，沒有三次上限。": "Takes are listed for this segment only. You can record as many as you need.",
   "試聽選用版本": "Preview selected take",

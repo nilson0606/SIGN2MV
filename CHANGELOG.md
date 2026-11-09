@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Sing & record, segment recording: the 「重新讀取錄音版本」 and 「保存草稿」 buttons are gone. Every change already
+  saved the draft; the take list is now read again whenever the sing page is shown or gets focus.
 - Sing & record: the guide choice (「演唱時帶唱」 and, for segments, 「錄音時帶唱」) has 「原唱＋伴樂（不含和音）」 for
   versions with separate lead and backing vocals: the lead singer and the accompaniment, played from the separated
   tracks. The default now reads 「原唱＋和音＋伴樂」 there (it always included the backing vocals); a plain version

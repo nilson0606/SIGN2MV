@@ -379,7 +379,16 @@ export function createSegmentRecording(options) {
     }catch(e){draft=old;render();throw e;}
   });
   action('merge-all',()=>change(()=>{while(draft.parts.length>1)mergeBoundary(draft,1);selected=0;}));
-  action('save',()=>{persist();status('草稿已保存於目前瀏覽器；各次演唱錄音沿用歌曲庫保存。');});action('refresh',refresh);
+  // [SIGN2MV] no "save draft" / "reload takes" buttons: every change already saves the draft, and the take list
+  // is read again whenever the sing page is shown or gets focus (takes changed in another window or page)
+  let autoRefreshAt=0;
+  function autoRefresh(){
+    const now=Date.now();if(now-autoRefreshAt<2000||!enabled||!key||capture||busy())return;
+    autoRefreshAt=now;refresh().catch(()=>{});
+  }
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoRefresh();});
+  window.addEventListener('focus',autoRefresh);
+  window.addEventListener('message',event=>{if(event.origin===location.origin&&event.data?.type==='sign2mv:takes-changed')autoRefresh();});
   action('earlier',()=>change(()=>moveBoundary(draft,boundary,draft.parts[boundary].start-Number($('step').value))));action('later',()=>change(()=>moveBoundary(draft,boundary,draft.parts[boundary].start+Number($('step').value))));
   action('merge',()=>{const different=draft.parts[boundary-1].takeId!==draft.parts[boundary].takeId;change(()=>mergeBoundary(draft,boundary));if(different)status('已移除分界。兩段原先採用的版本不同，合併後請重新挑選版本；原始錄音都保留。');});
   action('play',()=>{loop=false;previewEnd=null;$('audio').pause();options.pauseOther();const p=options.player();if(p.getPlayerState()===1)p.pauseVideo();else p.playVideo();render();});
