@@ -207,6 +207,11 @@ export const messages = {
   "尚未選定歌曲": "No song selected",
   "演唱時帶唱": "Guide vocals while singing",
   "原唱＋伴樂（預設）": "Original vocals + backing (default)",
+  "原唱＋和音＋伴樂（預設）": "Original vocals + harmonies + backing (default)",
+  "原唱＋伴樂（不含和音）": "Original vocals + backing (no harmonies)",
+  "原唱＋和音＋伴樂": "Original vocals + harmonies + backing",
+  "這個帶唱方式需要已保存的分離音軌，請先補建試聽音軌，或改選「原唱＋伴樂」。": "This guide playback needs saved stems. Rebuild preview stems or choose original vocals + backing.",
+  "這個帶唱方式需要已保存的分離音軌，請先補建音軌。": "This guide playback needs saved stems. Rebuild stems first.",
   "只有伴樂／和音": "Backing / harmonies only",
   "開始前選擇，按「從頭開始唱且評分」套用。只有伴樂需已保存分離音軌；請戴耳機，避免原唱被麥克風收進錄音。": "Choose before clicking “Sing from the start and score”. Backing-only mode requires saved stems. Wear headphones to prevent the mic from picking up the original vocals.",
   "人聲／伴樂音量平衡 · 與分段錄音共用": "Vocal / backing balance · Shared with segment recording",
@@ -3227,6 +3232,13 @@ export const templates = [
   [
     "錄音已停止；草稿／保存狀態請確認：{0}",
     "Recording stopped. Check draft / save status: {0}",
+    [
+      0
+    ]
+  ],
+  [
+    "下次分段錄音用「{0}」帶唱。",
+    "Next segment take is guided by \"{0}\".",
     [
       0
     ]

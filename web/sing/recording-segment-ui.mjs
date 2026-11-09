@@ -5,6 +5,7 @@ import {segmentDraft,validateSegmentDraft,normalizeSegmentNames,splitSegment,mov
 import {remixRecording,wavBlob,delaySeconds,originalVocalRanges} from './recording-process.mjs';
 import {recordingSceneDefaultsVersion} from './recording-scenes.mjs';
 import {createRenderedRecordingPreview} from './recording-live-preview.mjs';
+import {guideStems,syncGuideSelect,guideModeLabel} from './song-key.mjs';
 
 const DELAY_KEY='sign2mv.segment-delay.v1';
 
@@ -211,7 +212,7 @@ export function createSegmentRecording(options) {
     $('listen-selected').disabled=locked||takeLoading||!take;
     $('delete-selected').disabled=locked||!take;
     for(const id of takeModeIds){$(id).value=takeMode;$(id).disabled=locked||!draft;}
-    for(const id of guideModeIds){$(id).value=guideMode;$(id).disabled=locked||!draft;}
+    for(const id of guideModeIds){syncGuideSelect($(id),reference());if($(id).value!==guideMode&&guideMode==='lead'&&reference()?.vocalMode!=='lead')guideMode='original';$(id).value=guideMode;$(id).disabled=locked||!draft;}
     $('take-info').textContent=take?`本段錄音：${takeName(take)} · ${new Date(take.created).toLocaleTimeString()} · ${takeModeLabel()} · ${takeMode==='voice'?'直接播放原始收音':`歌聲校正 ${$('delay').value} ms（含起唱與尾音餘量）`}${take.diagnostics?.status==='incomplete'?' · 診斷未完整保存：'+take.diagnostics.error:take.diagnostics?.status==='saved'?' · 診斷已保存':''}`:'本段尚未選用錄音；錄完保存後即可試聽，也可在右側挑選已錄版本。';
     renderOriginal(locked||!draft);
     if(!draft)return;
@@ -241,7 +242,7 @@ export function createSegmentRecording(options) {
     if(p.takeId&&![...$('take').options].some(o=>o.value===p.takeId))option($('take'),p.takeId,inherited?`沿用已選錄音 · ${takeName(inherited)||inherited.title} · ${new Date(inherited.created).toLocaleString()}`:'已選版本未找到');$('take').value=p.takeId||'';
     $('take-count').textContent=`本段共有 ${partTakes.length} 個錄音版本，全部列出；可重錄多次，沒有三次上限。${inherited?'另保留草稿原先選用的錄音，可改選本段版本。':''}`;
     const missing=missingSegmentRanges(draft,eligible,Number($('delay').value)||0,$('output').value!=='voice');$('coverage').textContent=missing.length?`待補錄或涵蓋不足：${missing.join('、')}。可改選本段版本，或明確勾選保留靜音。`:'所有段落都有可用人聲；可試合完整版本。';
-    $('loop').setAttribute('aria-pressed',String(loop));$('loop').textContent=loop?'停止循環練唱':'循環練唱本段';$('record').disabled=!!capture||conflict||!ref||(guideMode==='backing'&&!ref.hasPreview);
+    $('loop').setAttribute('aria-pressed',String(loop));$('loop').textContent=loop?'停止循環練唱':'循環練唱本段';$('record').disabled=!!capture||conflict||!ref||(guideMode!=='original'&&!ref.hasPreview);
   }
   async function refresh(){const request=++loading,currentKey=key,list=await store.list();if(request!==loading||currentKey!==key)return;rows=list;render();}
   function referenceChanged(){
@@ -315,19 +316,19 @@ export function createSegmentRecording(options) {
     options.pauseOther();invalidate();loop=false;previewEnd=null;render();options.changed();const cancelled=()=>request!==serial||capture!==c;
     showPlayer();
     try{
-      player.pauseVideo();clearResult('');status(`正在準備本段${c.guideMode==='original'?'原唱＋伴樂':'伴樂'}帶唱與收音…`);
-      if(c.guideMode==='backing'&&!ref.pitchShift){
-        if(!ref.hasPreview)throw Error('只有伴樂帶唱需要已保存的伴奏音軌，請先補建音軌。');
+      player.pauseVideo();clearResult('');status(`正在準備本段${guideModeLabel(c.guideMode,ref)}帶唱與收音…`);
+      if(c.guideMode!=='original'&&!ref.pitchShift){   // played from the separated tracks; the video is muted
+        if(!ref.hasPreview)throw Error('這個帶唱方式需要已保存的分離音軌，請先補建音軌。');
         c.monitor=new AudioContext();await c.monitor.resume();
-        const stems=['accompaniment',...(ref.vocalMode==='lead'?['backing']:[])];
+        const stems=guideStems(ref,c.guideMode);
         for(const stem of stems){const bytes=await options.loadStem(ref,stem);if(cancelled())return;c.buffers.push(await c.monitor.decodeAudioData(bytes));if(cancelled())return;}
         if(c.buffers.some(b=>b.duration<draft.duration-.15))throw Error('伴樂長度不足，請補建完整試聽音軌。');
       }
       if(!options.micReady())await options.startMic();if(cancelled())return;if(!options.micReady())throw Error('麥克風未就緒，請查看收音設定。');
       await options.recording.prepare(ref,()=>{}, {}, {mode:'voice',delayMs:0,segmentTake:{version:1,key,partId:p.id,captureId:c.captureId,name:p.name,start:p.start,end:p.end,guideMode:c.guideMode}});
       if(cancelled())return;await seek(c.start,cancelled);if(cancelled())return;
-      player.setPlaybackRate?.(1);if(ref.pitchShift||c.guideMode==='backing')player.mute?.();else player.unMute?.();c.armed=true;player.playVideo();if(player.getPlayerState()===1)playerState(1);
-      status(`準備起唱：${p.name}，${fmt(p.start)}–${fmt(p.end)} · ${c.guideMode==='original'?'原唱＋伴樂':'只有伴樂／和音'}帶唱；到尾音餘量後自動保存。`);
+      player.setPlaybackRate?.(1);if(ref.pitchShift||c.guideMode!=='original')player.mute?.();else player.unMute?.();c.armed=true;player.playVideo();if(player.getPlayerState()===1)playerState(1);
+      status(`準備起唱：${p.name}，${fmt(p.start)}–${fmt(p.end)} · ${guideModeLabel(c.guideMode,ref)}帶唱；到尾音餘量後自動保存。`);
     }catch(e){if(!cancelled()){await stop(e);status('無法完成本段錄音：'+e.message);}}
   }
   function playerState(state){if(state===1){clearTakePreview();$('audio').pause();options.recording.clearPreview();render();}const c=capture;if(!c?.armed)return;if(state===0){stop().catch(e=>status(e.message));return;}options.recording.playerState(state,currentTime());if(state===1)syncMonitor(c,currentTime());else stopMonitor(c);}
@@ -401,7 +402,7 @@ export function createSegmentRecording(options) {
     render();if(enabled)status(takeSourceId&&takeMode==='voice'?'音量已記住。純人聲原檔試聽不套用音量，請選「人聲＋伴樂／和音」邊聽邊調整。':'音量已記住；試聽會先完成整段混音，再接續目前位置播放。滿意後可保存最新音量到錄音後處理。');
   });
   for(const id of takeModeIds)$(id).onchange=()=>{takeMode=$(id).value==='voice'?'voice':'mix';clearTakePreview();render();status(`已切換為${takeModeLabel()}，請按「試聽本段錄音」。`);};
-  for(const id of guideModeIds)$(id).onchange=()=>{guideMode=$(id).value==='backing'?'backing':'original';render();status(guideMode==='backing'?'下次分段錄音只用伴樂／和音帶唱。':'下次分段錄音播放原唱＋伴樂帶唱。');};
+  for(const id of guideModeIds)$(id).onchange=()=>{const v=$(id).value;guideMode=['backing','lead'].includes(v)?v:'original';render();status(`下次分段錄音用「${guideModeLabel(guideMode,reference())}」帶唱。`);};
   async function latestTrialMix(){
     if(!trial.dirty)return;
     status('正在將最新試聽音量合成至成品…');

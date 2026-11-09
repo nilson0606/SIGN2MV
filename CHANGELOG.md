@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Sing & record: the guide choice (「演唱時帶唱」 and, for segments, 「錄音時帶唱」) has 「原唱＋伴樂（不含和音）」 for
+  versions with separate lead and backing vocals: the lead singer and the accompaniment, played from the separated
+  tracks. The default now reads 「原唱＋和音＋伴樂」 there (it always included the backing vocals); a plain version
+  keeps 「原唱＋伴樂」 and does not offer the new choice.
 - Sing & record, lead/backing versions: backing vocals that leaked into the lead track are no longer scored as
   the melody. When the reference is made, a run of melody where the backing-vocal track is clearly louder
   (by 6 dB or more, median over the run) or the lead track is nearly silent (below -45 dBFS) becomes a rest.
