@@ -30,7 +30,11 @@ export function diagStart(phase, video) {
     ? { t: +video.currentTime.toFixed(2), paused: video.paused, seeking: video.seeking, rs: video.readyState }
     : { video: 'gone' });
   const report = (what, gapMs) => send('stall', { phase, what, gapMs: Math.round(gapMs), atS: s(), mbJs: memory(),
-    video: state(), recent: ring.slice() });
+    hidden: document.hidden, focus: document.hasFocus(), video: state(), recent: ring.slice() });
+  // a window that is covered or not in front may stop drawing: note it, so such gaps are not taken for freezes
+  const onWin = (e) => note(`window ${e.type} hidden=${document.hidden} focus=${document.hasFocus()}`);
+  const winEvents = ['visibilitychange', 'focus', 'blur'];
+  for (const ev of winEvents) (ev === 'visibilitychange' ? document : window).addEventListener(ev, onWin);
   const events = ['play', 'playing', 'pause', 'seeking', 'seeked', 'waiting', 'stalled', 'emptied', 'error'];
   const onEvent = (e) => note(`video ${e.type} t=${video.currentTime.toFixed(2)} rs=${video.readyState}`);
   if (video) for (const ev of events) video.addEventListener(ev, onEvent);
@@ -49,7 +53,11 @@ export function diagStart(phase, video) {
     raf = requestAnimationFrame(loop);
   };
   raf = requestAnimationFrame(loop);
-  active = { note, stop() { clearInterval(timer); cancelAnimationFrame(raf); if (video) for (const ev of events) video.removeEventListener(ev, onEvent); } };
+  active = { note, stop() {
+    clearInterval(timer); cancelAnimationFrame(raf);
+    if (video) for (const ev of events) video.removeEventListener(ev, onEvent);
+    for (const ev of winEvents) (ev === 'visibilitychange' ? document : window).removeEventListener(ev, onWin);
+  } };
   note(`start ${phase} mbJs=${memory()}`);
   send('start', { phase, mbJs: memory(), video: state() });
 }
