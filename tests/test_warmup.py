@@ -44,8 +44,8 @@ def test_warmup_skips_while_the_gpu_is_busy_and_can_be_turned_off(tmp_path, monk
     log = tmp_path / "jobs.log"
     w = wm.Warmup(paths, lambda: True, log)
     assert w.start()
-    deadline = time.time() + 10
-    while time.time() < deadline and not log.is_file():
+    deadline = time.time() + 10   # wait for the line, not the file: it exists (empty) a moment before the write
+    while time.time() < deadline and (not log.is_file() or "warm-up" not in log.read_text()):
         time.sleep(0.1)
     w.stop()
     assert "skipped (a graphics-card job is running)" in log.read_text()
