@@ -399,3 +399,4 @@ html[data-theme="day"] { --gold-edge: rgba(180, 132, 20, .55); --gold-edge-hi: r
 
 /* 音軌平移: what it is for, highlighted */
 .shift-purpose { margin: .5em 0 .2em; padding: .45em .7em; border-left: 3px solid var(--hl-warn); background: var(--chip-warn); color: var(--text, inherit); font-weight: 600; border-radius: 4px; }
+.shift-box .shift-apply:not(:disabled) { background: var(--hl-warn); border-color: var(--hl-warn); color: #1a1205; font-weight: 700; box-shadow: 0 0 0 3px var(--chip-warn), 0 0 12px var(--hl-warn); }

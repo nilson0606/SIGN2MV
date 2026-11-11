@@ -301,10 +301,11 @@ function sourceSection(song) {
 // started again only after a pause, a seek or a new value, with 5 ms fades. The preview's own 音量 slider is
 // its volume; the video stays muted meanwhile (its volume control would otherwise add the video's own
 // sound on top). 套用 is offered only for the value that was played, asks, then rebuilds the source.
+const SHIFT_DEFAULT = 1;
 function shiftBox(song, video, player, audioUrl) {
   const input = el('input', { type: 'number', min: -2, max: 2, step: 0.01, value: '0.00', style: 'width:6em' });
   const playBtn = el('button', { type: 'button', class: 'btn small' }, t('lib.shift_play'));
-  const applyBtn = el('button', { type: 'button', class: 'btn small primary', disabled: true }, t('lib.shift_apply'));
+  const applyBtn = el('button', { type: 'button', class: 'btn small primary shift-apply', disabled: true }, t('lib.shift_apply'));
   const volume = el('input', { type: 'range', min: 0, max: 100, step: 1, value: Math.round((video.volume ?? 1) * 100), style: 'width:8em' });
   const volumeText = el('span', { class: 'muted small' });
   const purpose = el('p', { class: 'shift-purpose' }, t('lib.shift_purpose'));
@@ -457,7 +458,12 @@ function shiftBox(song, video, player, audioUrl) {
       const st = await api.get(`/api/songs/${encodeURIComponent(song.song_id)}/audio-shift`);
       allowed = !!st.allowed;
       const now = Math.round((st.offset || 0) * 100) / 100;
-      if (first || now !== current) { current = now; input.value = current.toFixed(2); played = null; }
+      if (first || now !== current) {
+        current = now;
+        // a song not shifted yet starts at +1.00 (lyrics 1 s ahead, the usual wish); a shifted one shows its value
+        input.value = (allowed && current === 0 ? SHIFT_DEFAULT : current).toFixed(2);
+        played = null;
+      }
       const parts = [t('lib.shift_total', fmt(current))];
       if (!allowed) parts.push(errorText({ code: st.reason }));
       statusText = status.textContent = parts.join(' ');

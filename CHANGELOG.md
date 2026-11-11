@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Library, 「音軌平移」: a song not shifted yet opens at +1.00 (lyrics 1 s ahead); a shifted one at its value.
+  「套用」 lights up yellow when it can be used.
 - Library, 「音軌平移」: a highlighted line says what it is for (lyrics in the video a little before the singing, for
   singing along and recording; + makes them earlier), in the box and both manuals. The box asks the server again
   before previewing and when the window comes back to the front: a song separated after the box was drawn still
