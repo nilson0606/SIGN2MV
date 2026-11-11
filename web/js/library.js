@@ -307,6 +307,7 @@ function shiftBox(song, video, player, audioUrl) {
   const applyBtn = el('button', { type: 'button', class: 'btn small primary', disabled: true }, t('lib.shift_apply'));
   const volume = el('input', { type: 'range', min: 0, max: 100, step: 1, value: Math.round((video.volume ?? 1) * 100), style: 'width:8em' });
   const volumeText = el('span', { class: 'muted small' });
+  const purpose = el('p', { class: 'shift-purpose' }, t('lib.shift_purpose'));
   const note = el('p', { class: 'muted small' }, t('lib.shift_hint'));
   const status = el('p', { class: 'muted small' });
   let allowed = false, previewing = false, loading = false, played = null, current = 0;
@@ -378,6 +379,8 @@ function shiftBox(song, video, player, audioUrl) {
   playBtn.addEventListener('click', async () => {
     if (previewing) { stop(); return; }
     player.pause();
+    // the song may have been separated (or more) since this box was drawn: ask again before playing
+    if (!(await loadState())) return;
     try {
       if (!ac) {
         ac = new AudioContext();
@@ -441,32 +444,40 @@ function shiftBox(song, video, player, audioUrl) {
       toast(errorText(e), true);
       // nothing changed: give the players their files back and show why (the page is not drawn again)
       for (const [m, src] of srcs) if (src) m.setAttribute('src', src);
-      loadState();
+      loadState(true);
     }
     await loadSongs();
     diagNote(`page redrawn after ${Math.round(performance.now() - t0)} ms`, true);
     diagStart('after-apply', document.querySelector('.lib-fold video'));
     setTimeout(diagStop, 20000);
   });
-  function loadState() {
-    allowed = false;
-    refresh();
-    api.get(`/api/songs/${encodeURIComponent(song.song_id)}/audio-shift`).then((st) => {
+  // (first: also fills in the current value; later checks keep what was typed and previewed)
+  async function loadState(first = false) {
+    try {
+      const st = await api.get(`/api/songs/${encodeURIComponent(song.song_id)}/audio-shift`);
       allowed = !!st.allowed;
-      current = Math.round((st.offset || 0) * 100) / 100;
-      input.value = current.toFixed(2);
-      played = null;
+      const now = Math.round((st.offset || 0) * 100) / 100;
+      if (first || now !== current) { current = now; input.value = current.toFixed(2); played = null; }
       const parts = [t('lib.shift_total', fmt(current))];
       if (!allowed) parts.push(errorText({ code: st.reason }));
       statusText = status.textContent = parts.join(' ');
-      refresh();
-    }).catch((e) => { status.textContent = errorText(e); });
+    } catch (e) {
+      allowed = false;
+      status.textContent = errorText(e);
+    }
+    refresh();
+    return allowed;
   }
-  loadState();
+  loadState(true);
+  // separating or preparing the song elsewhere locks it: look again when the window comes back to the front
+  window.addEventListener('focus', function again() {
+    if (!input.isConnected) { window.removeEventListener('focus', again); return; }
+    if (!previewing) loadState();
+  });
   return el('div', { class: 'shift-box' },
     el('div', { class: 'row' }, el('b', {}, t('lib.shift_title')), input, el('span', {}, t('lib.shift_unit')), playBtn, applyBtn),
     el('div', { class: 'row' }, el('span', {}, t('lib.shift_volume')), volume, volumeText),
-    note, status);
+    purpose, note, status);
 }
 
 // 「下載 MP3」: the server makes it from the lossless source audio for this click (a few seconds)

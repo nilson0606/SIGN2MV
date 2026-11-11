@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Library, 「音軌平移」: a highlighted line says what it is for (lyrics in the video a little before the singing, for
+  singing along and recording; + makes them earlier), in the box and both manuals. The box asks the server again
+  before previewing and when the window comes back to the front: a song separated after the box was drawn still
+  showed it as usable (applying was already refused by the server).
 - Library, 「音軌平移」: the value is now the total against the originally imported audio (the box opens at the
   current value; 0 goes back), and `POST …/audio-shift` takes `{"target": s}`. 「試播音量」 sets the preview's
   loudness; the video stays muted while previewing (its own volume control unmuted it and added the video's sound

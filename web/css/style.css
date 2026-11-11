@@ -396,3 +396,6 @@ html[data-theme="day"] { --gold-edge: rgba(180, 132, 20, .55); --gold-edge-hi: r
 /* home: 「檢查更新」 under the status list */
 .update-check { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }
 .update-check .update-new { color: var(--accent); font-weight: 600; }
+
+/* 音軌平移: what it is for, highlighted */
+.shift-purpose { margin: .5em 0 .2em; padding: .45em .7em; border-left: 3px solid var(--hl-warn); background: var(--chip-warn); color: var(--text, inherit); font-weight: 600; border-radius: 4px; }
