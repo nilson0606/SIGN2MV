@@ -286,7 +286,39 @@ function sourceSection(song) {
     ? el('a', { href: s.url, target: '_blank', rel: 'noopener', class: 'small', onclick: (e) => e.stopPropagation() }, s.url) : null;   // old 前往 YouTube 原站
   return fold('source', t('lib.source_title'), el('span', { class: 'muted small' }, info.join(' · '), link ? ' · ' : '', link), false,
     el('audio', { src: mediaUrl(song.song_id, s.audio), controls: true, preload: 'none' }),
-    media);
+    media,
+    s.audio ? el('div', { class: 'row' }, mp3Button(song)) : null);
+}
+
+// 「下載 MP3」: the server makes it from the lossless source audio for this click (a few seconds)
+function mp3Button(song) {
+  const btn = el('button', { type: 'button', class: 'btn small' }, t('lib.download_mp3'));
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = t('lib.mp3_making');
+    try {
+      let res;
+      try { res = await fetch(`/api/songs/${encodeURIComponent(song.song_id)}/source.mp3`, { cache: 'no-store' }); }
+      catch { throw new Error(t('err.server_unreachable')); }
+      if (!res.ok) {
+        let code = `http_${res.status}`;
+        try { code = (await res.json()).error || code; } catch { /* not JSON */ }
+        throw new Error(errorText({ code }));
+      }
+      const url = URL.createObjectURL(await res.blob());
+      const a = el('a', { href: url, download: `${song.title || song.song_id}.mp3` });
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      toast(e.message, true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = t('lib.download_mp3');
+    }
+  });
+  return btn;
 }
 
 function stemsSection(song) {

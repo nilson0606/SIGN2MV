@@ -4,11 +4,16 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
+import subprocess
+import threading
 import uuid
 from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, File, Request, UploadFile
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 
 from . import stems as stems_mod
 from .context import Context
@@ -17,6 +22,7 @@ from .proc import ManagedProcess
 from .util import body_json, err, media_response
 
 SEPARATION_TIMEOUT = 3600.0
+NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 
 
 def delete_song_recordings(library_root: Path, song_id: str) -> int:
@@ -394,6 +400,43 @@ def router(ctx: Context) -> APIRouter:
         args = ["explorer", f"/select,{target}"] if target.is_file() else ["explorer", str(target)]
         subprocess.Popen(args)
         return {"ok": True, "path": str(target)}
+
+    # ---------------- source as MP3 ----------------
+    mp3_lock = threading.Lock()
+
+    @r.get("/api/songs/{song_id}/source.mp3")
+    def source_mp3(song_id: str):
+        """The song's own audio as a 192 kbps MP3 download, made from the lossless source/audio.wav
+        (the video's AAC is itself encoded from that WAV, so this is one lossy step, not two).
+        Made for each request in tmp and removed after sending: nothing is added to the library."""
+        lib, song, e = song_or_err(song_id)
+        if e:
+            return e
+        src = (song.get("source") or {}).get("audio")
+        wav = (lib.song_dir(song_id) / src) if src else None
+        if not wav or not wav.is_file():
+            return err("file_not_found", 404)
+        if not mp3_lock.acquire(blocking=False):
+            return err("mp3_busy", 409)
+        out = None
+        try:
+            ctx.paths.tmp.mkdir(parents=True, exist_ok=True)
+            out = ctx.paths.tmp / f"source_{uuid.uuid4().hex}.mp3"
+            try:
+                res = subprocess.run([shutil.which("ffmpeg") or "ffmpeg", "-nostdin", "-y", "-v", "error",
+                                      "-i", str(wav), "-vn", "-threads", "2", "-c:a", "libmp3lame", "-b:a", "192k",
+                                      str(out)], capture_output=True, timeout=180, creationflags=NO_WINDOW)
+                ok = res.returncode == 0 and out.is_file() and out.stat().st_size > 0
+            except (OSError, subprocess.TimeoutExpired):
+                ok = False
+            if not ok:
+                out.unlink(missing_ok=True)
+                return err("mp3_failed", 500)
+        finally:
+            mp3_lock.release()
+        name = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "_", str(song.get("title") or song_id)).strip(" .")[:120] or song_id
+        return FileResponse(out, media_type="audio/mpeg", filename=f"{name}.mp3",
+                            background=BackgroundTask(out.unlink, missing_ok=True))
 
     # ---------------- media ----------------
     @r.get("/media/{song_id}/{rel:path}")

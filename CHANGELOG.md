@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Library: 「下載 MP3」 / *Download MP3* under the video in 「原曲」 saves the song's original audio as a 192 kbps
+  MP3, made for that click from the lossless `source/audio.wav` (the video's AAC is itself encoded from it, so this
+  compresses once, not twice). Nothing is added to the library; the temporary file is removed after sending.
 - Home: 「檢查更新」 / *Check for updates* under the system status asks GitHub whether this copy is the latest and
   how many newer changes there are, with links to the update steps and to GitHub. It only asks: nothing is
   downloaded or replaced.
