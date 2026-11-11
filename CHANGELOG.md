@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Docs (both manuals, both languages): the three guide choices, the trial mix without backing vocals, the
+  automatic draft save, the backing-vocal filter for lead references and their one-time rebuild, 「重新匯入（換來源）」
+  and the rebuilt references after it, and the 「保留原唱音色（舊做法）」 versions.
 - Library: 「下載 MP3」 / *Download MP3* under the video in 「原曲」 saves the song's original audio as a 192 kbps
   MP3, made for that click from the lossless `source/audio.wav` (the video's AAC is itself encoded from it, so this
   compresses once, not twice). Nothing is added to the library; the temporary file is removed after sending.
