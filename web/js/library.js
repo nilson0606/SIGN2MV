@@ -279,15 +279,111 @@ function sourceSection(song) {
     s.video_size && s.video_size[0] ? `${s.video_size[0]}×${s.video_size[1]}` : t('lib.no_video'),
   ];
   if (s.original_name) info.push(s.original_name);
+  const bust = (url) => `${url}?v=${encodeURIComponent(s.shifted_at || s.imported_at || '')}`;   // a shifted source keeps its file names
   const media = s.video
-    ? el('video', { src: mediaUrl(song.song_id, s.video), controls: true, muted: true, style: 'max-height:240px' })
+    ? el('video', { src: bust(mediaUrl(song.song_id, s.video)), controls: true, muted: true, style: 'max-height:240px' })
     : null;
+  const player = el('audio', { src: bust(mediaUrl(song.song_id, s.audio)), controls: true, preload: 'none' });
   const link = s.url && /^https?:\/\//.test(s.url)
     ? el('a', { href: s.url, target: '_blank', rel: 'noopener', class: 'small', onclick: (e) => e.stopPropagation() }, s.url) : null;   // old 前往 YouTube 原站
   return fold('source', t('lib.source_title'), el('span', { class: 'muted small' }, info.join(' · '), link ? ' · ' : '', link), false,
-    el('audio', { src: mediaUrl(song.song_id, s.audio), controls: true, preload: 'none' }),
+    player,
     media,
-    s.audio ? el('div', { class: 'row' }, mp3Button(song)) : null);
+    s.audio ? el('div', { class: 'row' }, mp3Button(song)) : null,
+    media ? shiftBox(song, media, player, bust(mediaUrl(song.song_id, s.audio))) : null);
+}
+
+// 「音軌平移」: move the song audio up to ±2 s against the picture, for a song nothing has been made from
+// yet (the server decides). 試播 plays the video with the audio offset live; 套用 is offered only for the
+// value that was played, asks first, then replaces the source (the old audio and video are deleted).
+function shiftBox(song, video, player, audioUrl) {
+  const input = el('input', { type: 'number', min: -2, max: 2, step: 0.01, value: '0.00', style: 'width:6em' });
+  const playBtn = el('button', { type: 'button', class: 'btn small' }, t('lib.shift_play'));
+  const applyBtn = el('button', { type: 'button', class: 'btn small primary', disabled: true }, t('lib.shift_apply'));
+  const note = el('p', { class: 'muted small' }, t('lib.shift_hint'));
+  const status = el('p', { class: 'muted small' });
+  let allowed = false, previewing = false, played = null, audio = null;
+  const value = () => {
+    const v = Math.round(Number(input.value) * 100) / 100;
+    return Number.isFinite(v) ? Math.max(-2, Math.min(2, v)) : 0;
+  };
+  const fmt = (v) => `${v > 0 ? '+' : ''}${v.toFixed(2)}`;
+  const refresh = () => {
+    playBtn.disabled = !allowed;
+    input.disabled = !allowed;
+    applyBtn.disabled = !allowed || played === null || played !== value() || value() === 0;
+    playBtn.textContent = previewing ? t('lib.shift_stop') : t('lib.shift_play');
+  };
+  function sync() {
+    if (!previewing) return;
+    if (!video.isConnected) { stop(); return; }   // another song was opened
+    const target = video.currentTime - value();
+    if (video.paused || target < 0 || (audio.duration && target >= audio.duration)) {
+      if (!audio.paused) audio.pause();
+      if (target < 0 && audio.currentTime !== 0) audio.currentTime = 0;
+    } else if (audio.paused) {
+      audio.currentTime = target;
+      audio.play().catch(() => {});
+    } else {
+      // a seek clicks, so only a big jump seeks; small lags (starting playback takes tens of ms) are
+      // pulled in by playing slightly faster or slower, so 0.01 s steps can really be heard
+      const lag = target - audio.currentTime;
+      if (Math.abs(lag) > 0.25) { audio.currentTime = target; audio.playbackRate = 1; }
+      else audio.playbackRate = Math.abs(lag) < 0.005 ? 1 : 1 + Math.max(-0.1, Math.min(0.1, lag * 2));
+    }
+    requestAnimationFrame(sync);
+  }
+  function stop() {
+    previewing = false;
+    if (audio) audio.pause();
+    video.pause();
+    refresh();
+  }
+  playBtn.addEventListener('click', () => {
+    if (previewing) { stop(); return; }
+    if (!audio) audio = new Audio(audioUrl);
+    player.pause();
+    video.muted = true;               // the sound comes from the shifted audio only
+    previewing = true;
+    played = value();
+    input.value = played.toFixed(2);
+    video.play().catch(() => {});
+    refresh();
+    sync();
+  });
+  input.addEventListener('input', () => { if (previewing) played = value(); refresh(); });
+  input.addEventListener('change', () => { input.value = value().toFixed(2); if (previewing) played = value(); refresh(); });
+  applyBtn.addEventListener('click', async () => {
+    const v = value();
+    if (!(await confirmDialog(t('lib.shift_confirm', fmt(v)), t('lib.shift_apply')))) return;
+    stop();
+    for (const m of [video, player, audio]) {   // let go of the files so the folder can be replaced
+      if (!m) continue;
+      m.removeAttribute('src');
+      m.load();
+    }
+    applyBtn.disabled = playBtn.disabled = input.disabled = true;
+    status.textContent = t('lib.shift_working');
+    try {
+      await api.post(`/api/songs/${encodeURIComponent(song.song_id)}/audio-shift`, { seconds: v });
+      toast(t('lib.shift_done', fmt(v)));
+    } catch (e) {
+      toast(errorText(e), true);
+    }
+    await loadSongs();
+  });
+  refresh();
+  api.get(`/api/songs/${encodeURIComponent(song.song_id)}/audio-shift`).then((st) => {
+    allowed = !!st.allowed;
+    const parts = [];
+    if (st.offset) parts.push(t('lib.shift_total', fmt(st.offset)));
+    if (!allowed) parts.push(errorText({ code: st.reason }));
+    status.textContent = parts.join(' ');
+    refresh();
+  }).catch((e) => { status.textContent = errorText(e); });
+  return el('div', { class: 'shift-box' },
+    el('div', { class: 'row' }, el('b', {}, t('lib.shift_title')), input, el('span', {}, t('lib.shift_unit')), playBtn, applyBtn),
+    note, status);
 }
 
 // 「下載 MP3」: the server makes it from the lossless source audio for this click (a few seconds)

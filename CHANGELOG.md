@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Library: 「音軌平移」 / *Audio shift* in 「原曲」 moves the song audio −2.00 to +2.00 s against the picture
+  (+ = later: silence at the start, the end cut; the length stays). Only for a song nothing has been made from
+  yet: any other folder in the song (stems, keys, sing, cover, MV, renders, ...) or a sing & record take blocks it.
+  「試播」 plays the muted video with the shifted audio live; 「套用」 is offered only for the previewed value, asks,
+  then rebuilds `source/` like a re-import: the audio is shifted sample-exact with ffmpeg, the picture is copied
+  into the new video.mp4 (not encoded again), the old audio, video and upload copy are deleted. `source.json`
+  records `audio_offset_s` and gets a new `source_hash` (`…#shift+300ms`) so caches never take the old audio.
+  About 3 s for a 228 s song on the PC (measured on a copy).
 - Docs (both manuals, both languages): the three guide choices, the trial mix without backing vocals, the
   automatic draft save, the backing-vocal filter for lead references and their one-time rebuild, 「重新匯入（換來源）」
   and the rebuilt references after it, and the 「保留原唱音色（舊做法）」 versions.

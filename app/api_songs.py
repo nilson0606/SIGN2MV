@@ -7,11 +7,13 @@ import re
 import shutil
 import subprocess
 import threading
+import time
 import uuid
 from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, File, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
@@ -25,29 +27,150 @@ SEPARATION_TIMEOUT = 3600.0
 NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 
 
-def delete_song_recordings(library_root: Path, song_id: str) -> int:
-    """Sing & record keeps its takes in <library>/recordings/<id>/ (shared folder of the
-    sign_record format); delete the takes of this song with it."""
+def song_recording_dirs(library_root: Path, song_id: str) -> list[Path]:
+    """Sing & record keeps its takes in <library>/recordings/<id>/ (shared folder of the sign_record
+    format); the folders of this song's takes."""
     from .api_sing import video_id_for
-    from .sing_archive import RecordingArchive
     root = Path(library_root) / "recordings"
     if not root.is_dir():
-        return 0
+        return []
     vid = video_id_for(song_id)
-    arc = RecordingArchive(root)
-    n = 0
+    out = []
     for d in root.iterdir():
         meta = d / "metadata.json"
         if not meta.is_file():
             continue
         try:
             rec = json.loads(meta.read_text(encoding="utf-8")).get("recording") or {}
-            if rec.get("videoId") == vid:
-                arc.delete(d.name)
-                n += 1
+        except Exception:  # noqa: BLE001  (a damaged take is skipped)
+            continue
+        if rec.get("videoId") == vid:
+            out.append(d)
+    return out
+
+
+def delete_song_recordings(library_root: Path, song_id: str) -> int:
+    """Delete the takes of this song with it."""
+    from .sing_archive import RecordingArchive
+    root = Path(library_root) / "recordings"
+    arc = RecordingArchive(root) if root.is_dir() else None
+    n = 0
+    for d in song_recording_dirs(library_root, song_id):
+        try:
+            arc.delete(d.name)
+            n += 1
         except Exception:  # noqa: BLE001  (a damaged take must not block deleting the song)
             continue
     return n
+
+
+# ---------------- audio shift (songs nothing has been made from yet) ----------------
+SHIFT_MAX_S = 2.0
+SHIFT_KEEP = {"song.json", "source"}
+
+
+def _has_content(p: Path) -> bool:
+    return p.is_file() or (p.is_dir() and any(_has_content(c) for c in p.iterdir()))
+
+
+def audio_shift_block(ctx: Context, song_id: str, song_dir: Path, song: dict) -> str | None:
+    """Why this song's audio cannot be shifted, or None. Anything made from the audio (stems, keys, sing
+    references, covers, MVs, renders, recordings, ...) follows its timeline, so only a song with nothing
+    but its source may be shifted. Any other folder blocks it, also ones added later."""
+    src = song.get("source") or {}
+    if not src.get("audio") or not src.get("video"):
+        return "shift_no_video"
+    if ctx.song_busy(song_id):
+        return "song_busy"
+    for entry in song_dir.iterdir():
+        if entry.name not in SHIFT_KEEP and _has_content(entry):
+            return "shift_processed"
+    if song_recording_dirs(ctx.library().root, song_id):
+        return "shift_processed"
+    return None
+
+
+def _wav_frames(path: Path) -> tuple[int, int]:
+    """(sample rate, frames) of a RIFF WAV (source/audio.wav is float32; Python's wave module cannot read it)."""
+    with open(path, "rb") as fh:
+        head = fh.read(12)
+        if head[:4] != b"RIFF" or head[8:12] != b"WAVE":
+            raise ValueError("not a WAV file")
+        rate = block = 0
+        while True:
+            ck = fh.read(8)
+            if len(ck) < 8:
+                raise ValueError("WAV without data")
+            cid, size = ck[:4], int.from_bytes(ck[4:8], "little")
+            if cid == b"fmt ":
+                fmt = fh.read(size)
+                rate, block = int.from_bytes(fmt[4:8], "little"), int.from_bytes(fmt[12:14], "little")
+            elif cid == b"data":
+                if not block:
+                    raise ValueError("WAV data before fmt")
+                return rate, size // block
+            else:
+                fh.seek(size + (size & 1), 1)
+
+
+def shift_source(song_dir: Path, seconds: float) -> dict:
+    """Shift source/audio.wav by `seconds` (+ = later: silence at the start, the end cut; - = earlier: the
+    start cut, silence at the end), sample-exact and the same length; put the shifted audio into video.mp4
+    (the picture is copied, not encoded again). The new source is built in source.importing and put in
+    place like a re-import (the old one is deleted only once the new one is there). The original upload
+    copy (source/original.*) is not carried over: it no longer matches."""
+    src_dir = song_dir / "source"
+    rec = json.loads((src_dir / "source.json").read_text(encoding="utf-8"))
+    audio, video = src_dir / "audio.wav", song_dir / rec["video"]
+    rate, frames = _wav_frames(audio)
+    n = round(abs(seconds) * rate)
+    if n <= 0 or n >= frames:
+        raise ValueError("shift_range")
+    af = (f"adelay=delays={n}S:all=1,atrim=end_sample={frames}" if seconds > 0
+          else f"atrim=start_sample={n},asetpts=PTS-STARTPTS,apad=whole_len={frames}")
+    work = song_dir / "source.importing"
+    shutil.rmtree(work, ignore_errors=True)
+    work.mkdir()
+    try:
+        ff = shutil.which("ffmpeg") or "ffmpeg"
+        run = lambda args: subprocess.run([ff, "-nostdin", "-y", "-v", "error", *args],  # noqa: E731
+                                          capture_output=True, timeout=600, creationflags=NO_WINDOW, check=True)
+        run(["-i", str(audio), "-af", af, "-c:a", "pcm_f32le", str(work / "audio.wav")])
+        if _wav_frames(work / "audio.wav") != (rate, frames):
+            raise RuntimeError("shifted audio has a different length")
+        run(["-i", str(video), "-i", str(work / "audio.wav"), "-map", "0:v:0", "-c:v", "copy",
+             "-map", "1:a:0", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart",
+             str(work / Path(rec["video"]).name)])
+        total = round(float(rec.get("audio_offset_s") or 0) + n / rate * (1 if seconds > 0 else -1), 4)
+        base = rec.get("source_hash_base") or rec.get("source_hash") or rec.get("audio")
+        rec.update({
+            "source_hash_base": base,
+            # a new name for the audio: caches keyed by the source (stems, covers) never take the old one
+            "source_hash": f"{base}#shift{round(total * 1000):+d}ms" if round(total * 1000) else base,
+            "audio_offset_s": total,
+            "shifted_at": time.time(),
+        })
+        rec.pop("original", None)
+        (work / "source.json").write_text(json.dumps(rec, ensure_ascii=False, indent=2), encoding="utf-8")
+        old = song_dir / "source.old"
+        for attempt in range(8):   # Windows: a player still reading video.mp4 keeps the folder from moving
+            try:
+                os.replace(src_dir, old)
+                break
+            except PermissionError:
+                if attempt == 7:
+                    raise
+                time.sleep(0.5)
+        try:
+            os.replace(work, src_dir)
+        except BaseException:
+            if old.is_dir() and not src_dir.exists():
+                os.replace(old, src_dir)
+            raise
+        shutil.rmtree(old, ignore_errors=True)
+        return rec
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
 
 
 def stored_copies_of(ctx: Context, song_id: str, song_dir: Path) -> dict[str, Any]:
@@ -400,6 +523,47 @@ def router(ctx: Context) -> APIRouter:
         args = ["explorer", f"/select,{target}"] if target.is_file() else ["explorer", str(target)]
         subprocess.Popen(args)
         return {"ok": True, "path": str(target)}
+
+    # ---------------- audio shift ----------------
+    shift_lock = threading.Lock()
+
+    @r.get("/api/songs/{song_id}/audio-shift")
+    def audio_shift_state(song_id: str):
+        lib, song, e = song_or_err(song_id)
+        if e:
+            return e
+        block = audio_shift_block(ctx, song_id, lib.song_dir(song_id), song)
+        return {"allowed": block is None, "reason": block,
+                "offset": float((song.get("source") or {}).get("audio_offset_s") or 0), "max": SHIFT_MAX_S}
+
+    @r.post("/api/songs/{song_id}/audio-shift")
+    async def audio_shift_apply(song_id: str, request: Request):
+        body = await body_json(request)
+        try:
+            seconds = round(float(body.get("seconds")), 2)
+        except (TypeError, ValueError):
+            return err("shift_range")
+        if not (0 < abs(seconds) <= SHIFT_MAX_S):
+            return err("shift_range")
+        lib, song, e = song_or_err(song_id)
+        if e:
+            return e
+        if not shift_lock.acquire(blocking=False):
+            return err("song_busy", 409)
+        try:
+            song_dir = lib.song_dir(song_id)
+            block = audio_shift_block(ctx, song_id, song_dir, song)
+            if block:
+                return err(block, 409)
+            try:
+                rec = await run_in_threadpool(shift_source, song_dir, seconds)
+            except ValueError:
+                return err("shift_range")
+            except (OSError, RuntimeError, subprocess.SubprocessError):
+                return err("shift_failed", 500)
+        finally:
+            shift_lock.release()
+        return {"ok": True, "offset": rec["audio_offset_s"], "source": rec}
 
     # ---------------- source as MP3 ----------------
     mp3_lock = threading.Lock()
