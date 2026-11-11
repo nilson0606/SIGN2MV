@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2026.11.12.2
+
 - Library, 「音軌平移」: a second highlighted line explains 「套用」 (only it changes the files, the originals are
   deleted; separate and sing afterwards, after which the song can no longer be shifted), in the box and both manuals.
 
