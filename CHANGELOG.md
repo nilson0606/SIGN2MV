@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2026.11.12
+
 - Releases: SIGN2MV is published as GitHub releases named by date (e.g. 2026.11.12) with **SIGN2MV.zip**
   attached; the README and the manual download it from `releases/latest/download/SIGN2MV.zip`, and GitHub counts
   the downloads. The ZIP holds a `SIGN2MV` folder (extract to D:\ → D:\SIGN2MV, no renaming). 「檢查更新」 compares
