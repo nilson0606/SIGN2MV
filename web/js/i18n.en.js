@@ -78,6 +78,7 @@ export default {
   "lib.shift_stop": "■ Stop preview",
   "lib.shift_apply": "Apply",
   "lib.shift_purpose": "What it is for: the lyrics burned into the video appear a little before the singing, so they are easier to follow when singing along and recording. For earlier lyrics enter + (the sound moves later); e.g. +1.00 shows the lyrics 1 s before the singing.",
+  "lib.shift_apply_note": "Apply: once Preview shows the lyrics and the singing lined up, press the yellow Apply to really change this song's audio (the original audio and video are deleted and cannot be restored). Separate and sing after applying; once the song is separated it can no longer be shifted.",
   "lib.shift_hint": "The value is the total shift against the originally imported audio: 0 = as imported. + makes the sound come later (silence added at the start, the end cut); − earlier (the start cut, silence at the end). The picture stays and the length is the same. Only for a song without stems, sing & record, a cover or an MV. Check with Preview; Apply is offered only for the value you previewed.",
   "lib.shift_confirm": "Set the audio to {0} s against the original (now {1} s)? The current audio and video are deleted and cannot be restored; the sound cut off at one end is gone for good (what an earlier shift cut cannot come back either).",
   "lib.shift_loading": "Loading the audio…",

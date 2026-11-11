@@ -309,6 +309,7 @@ function shiftBox(song, video, player, audioUrl) {
   const volume = el('input', { type: 'range', min: 0, max: 100, step: 1, value: Math.round((video.volume ?? 1) * 100), style: 'width:8em' });
   const volumeText = el('span', { class: 'muted small' });
   const purpose = el('p', { class: 'shift-purpose' }, t('lib.shift_purpose'));
+  const applyNote = el('p', { class: 'shift-purpose shift-apply-note' }, t('lib.shift_apply_note'));
   const note = el('p', { class: 'muted small' }, t('lib.shift_hint'));
   const status = el('p', { class: 'muted small' });
   let allowed = false, previewing = false, loading = false, played = null, current = 0;
@@ -483,7 +484,7 @@ function shiftBox(song, video, player, audioUrl) {
   return el('div', { class: 'shift-box' },
     el('div', { class: 'row' }, el('b', {}, t('lib.shift_title')), input, el('span', {}, t('lib.shift_unit')), playBtn, applyBtn),
     el('div', { class: 'row' }, el('span', {}, t('lib.shift_volume')), volume, volumeText),
-    purpose, note, status);
+    purpose, applyNote, note, status);
 }
 
 // 「下載 MP3」: the server makes it from the lossless source audio for this click (a few seconds)
