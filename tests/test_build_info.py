@@ -23,14 +23,19 @@ def test_status_reports_it(client):
     assert set(b) == {"date", "commit"}
 
 
-def _fake(head_sha: str, compare: dict | None = None, fail: bool = False):
+def _fake(head_sha: str, compare: dict | None = None, fail: bool = False, tag: str | None = None):
     def fetch(path):
         if fail:
             raise OSError("offline")
-        if path == "commits/main":
+        if path == "releases/latest":
+            if tag is None:
+                raise OSError("404: no release")
+            return {"tag_name": tag}
+        if path in ("commits/main", f"commits/{tag}"):
             return {"sha": head_sha, "commit": {"committer": {"date": "2026-11-09T11:00:00Z"}}}
         if compare is None:
             raise OSError("404")
+        assert path.endswith("...main" if tag is None else f"...{tag}")
         return compare
     return fetch
 
@@ -39,7 +44,7 @@ def test_update_check_states(monkeypatch):
     monkeypatch.setattr(build, "_cache", {"date": "2026-11-08", "commit": "abc1234"})
     assert build.check_update(_fake("abc1234ffff"))["state"] == "latest"
     r = build.check_update(_fake("def5678aaaa", {"status": "ahead", "ahead_by": 3}))
-    assert r["state"] == "update" and r["behind"] == 3 and r["latest"] == {"commit": "def5678", "date": "2026-11-09"}
+    assert r["state"] == "update" and r["behind"] == 3 and r["latest"]["commit"] == "def5678" and r["download"] is None
     assert build.check_update(_fake("def5678aaaa", {"status": "behind"}))["state"] == "ahead"
     assert build.check_update(_fake("def5678aaaa"))["state"] == "unknown"          # commit not on GitHub
     assert build.check_update(_fake("", fail=True))["state"] == "offline"
@@ -47,7 +52,14 @@ def test_update_check_states(monkeypatch):
     assert build.check_update(_fake("def5678aaaa"))["state"] == "unknown"
 
 
+def test_update_check_uses_the_latest_release(monkeypatch):
+    monkeypatch.setattr(build, "_cache", {"date": "2026-11-08", "commit": "abc1234"})
+    r = build.check_update(_fake("def5678aaaa", {"status": "ahead", "ahead_by": 2}, tag="2026.11.12"))
+    assert r["state"] == "update" and r["latest"]["tag"] == "2026.11.12" and r["download"].endswith("/SIGN2MV.zip")
+    # this copy has commits the release does not (installed from main after the release): not "update"
+    assert build.check_update(_fake("def5678aaaa", {"status": "behind"}, tag="2026.11.12"))["state"] == "ahead"
+
+
 def test_update_check_route(client, monkeypatch):
-    monkeypatch.setattr(build, "_github", lambda path: (_ for _ in ()).throw(OSError("offline")))
-    monkeypatch.setattr(build.check_update, "__defaults__", (build._github,))
+    monkeypatch.setattr(build.check_update, "__defaults__", (lambda path: (_ for _ in ()).throw(OSError("offline")),))
     assert client.get("/api/system/update-check").json()["state"] == "offline"

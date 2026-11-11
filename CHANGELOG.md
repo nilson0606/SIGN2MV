@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Releases: SIGN2MV is published as GitHub releases named by date (e.g. 2026.11.12) with **SIGN2MV.zip**
+  attached; the README and the manual download it from `releases/latest/download/SIGN2MV.zip`, and GitHub counts
+  the downloads. The ZIP holds a `SIGN2MV` folder (extract to D:\ → D:\SIGN2MV, no renaming). 「檢查更新」 compares
+  with the latest release and links to its ZIP. `tools/release.py` publishes a release.
 - Library, 「音軌平移」: a song not shifted yet opens at +1.00 (lyrics 1 s ahead); a shifted one at its value.
   「套用」 lights up yellow when it can be used.
 - Library, 「音軌平移」: a highlighted line says what it is for (lyrics in the video a little before the singing, for

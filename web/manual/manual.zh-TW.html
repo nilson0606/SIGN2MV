@@ -71,18 +71,16 @@ a { color:var(--accent); }
 
 <h3>步驟 2：下載程式</h3>
 <ol>
-<li>用瀏覽器打開 <a href="https://github.com/nilson0606/SIGN2MV" target="_blank" rel="noopener">https://github.com/nilson0606/SIGN2MV</a>。</li>
-<li>按頁面右上方綠色的 <b>Code</b> 按鈕，在跳出的選單最下面按 <b>Download ZIP</b>。</li>
+<li>用瀏覽器打開這個下載連結：<a href="https://github.com/nilson0606/SIGN2MV/releases/latest/download/SIGN2MV.zip" target="_blank" rel="noopener">SIGN2MV.zip（最新版）</a>。它永遠是最新發布的版本；各版本列在 <a href="https://github.com/nilson0606/SIGN2MV/releases" target="_blank" rel="noopener">Releases</a>。</li>
 </ol>
-<p><b>成功：</b>瀏覽器的下載清單出現 <code>SIGN2MV-main.zip</code>。</p>
+<p><b>成功：</b>瀏覽器的下載清單出現 <code>SIGN2MV.zip</code>。</p>
 
 <h3>步驟 3：解壓縮到英文路徑</h3>
 <ol>
-<li>在檔案總管找到 <code>SIGN2MV-main.zip</code>，按右鍵 →「內容」。如果視窗最下面有 <b>解除封鎖</b> 的勾選框，把它勾起來，按「確定」。（沒有這個勾選框就跳過。）</li>
-<li>再按右鍵 →「解壓縮全部…」，目的地選 <code>D:\</code>（或其他磁碟），按「解壓縮」。</li>
-<li>把解出來的資料夾 <code>SIGN2MV-main</code> 改名成 <code>SIGN2MV</code>。</li>
+<li>在檔案總管找到 <code>SIGN2MV.zip</code>，按右鍵 →「內容」。如果視窗最下面有 <b>解除封鎖</b> 的勾選框，把它勾起來，按「確定」。（沒有這個勾選框就跳過。）</li>
+<li>再按右鍵 →「解壓縮全部…」，把目的地改成 <code>D:\</code>（或其他磁碟），按「解壓縮」。ZIP 裡已經包了一層 <code>SIGN2MV</code> 資料夾，所以會得到 <code>D:\SIGN2MV</code>。</li>
 </ol>
-<p><b>成功：</b>打開 <code>D:\SIGN2MV</code>，裡面直接看得到 <code>install.bat</code>、<code>start.bat</code> 和 <code>MANUAL.html</code>（雙擊它就能打開這份手冊，不用先安裝）。如果看到的是另一層 <code>SIGN2MV-main</code> 資料夾，代表多包了一層，把裡面的東西搬上來。</p>
+<p><b>成功：</b>打開 <code>D:\SIGN2MV</code>，裡面直接看得到 <code>install.bat</code>、<code>start.bat</code> 和 <code>MANUAL.html</code>（雙擊它就能打開這份手冊，不用先安裝）。如果看到的是另一層 <code>SIGN2MV</code> 資料夾（例如 <code>D:\SIGN2MV\SIGN2MV</code>），代表多包了一層，把裡面的東西搬上來。</p>
 <p class="note">資料夾的完整路徑只用英文字母和數字，不要有中文（例如 <code>D:\SIGN2MV</code> 可以，<code>D:\我的程式\SIGN2MV</code> 不行）。路徑有中文時，音色模型的 index 會讀不到。</p>
 
 <h3>步驟 4：安裝</h3>
@@ -163,12 +161,12 @@ a { color:var(--accent); }
 <p>更新只要把新版的檔案<b>覆蓋</b>到原本的資料夾，你的歌曲、錄音、音色模型和設定都不會被動到（<code>library</code>、<code>models</code>、<code>runtime</code>、<code>config</code> 不在 ZIP 裡）。</p>
 <ol>
 <li>在 SIGN2MV 右上角按 <b>全部關閉</b>，等視窗關掉。</li>
-<li>到 <a href="https://github.com/nilson0606/SIGN2MV">GitHub 專案頁</a> 按 <b>Code → Download ZIP</b>，在 ZIP 上按右鍵 →「內容」→ 勾「解除封鎖」→「確定」（沒有這個勾選框就略過）。</li>
-<li>解壓縮到任何暫存位置，會得到 <code>SIGN2MV-main</code> 資料夾。</li>
-<li>打開 <code>SIGN2MV-main</code>，全選（Ctrl + A）、複製，貼到原本的安裝資料夾（放 <code>start.bat</code> 的那個），跳出詢問時選「<b>取代目的地中的檔案</b>」。</li>
-<li>雙擊 <code>start.bat</code>。首頁「系統狀態」的 <b>程式日期</b> 後面有一串 7 碼（例如 <code>2026-11-08 · 0f0d724</code>），跟 GitHub 頁面檔案清單上方右側的 7 碼一樣，就是最新版了。同一天可能更新好幾次，所以要對這 7 碼，不能只看日期。</li>
+<li>下載 <a href="https://github.com/nilson0606/SIGN2MV/releases/latest/download/SIGN2MV.zip">SIGN2MV.zip（最新版）</a>，在 ZIP 上按右鍵 →「內容」→ 勾「解除封鎖」→「確定」（沒有這個勾選框就略過）。首頁的 <b>檢查更新</b> 有新版時也會附這個連結。</li>
+<li>解壓縮到任何暫存位置（例如「下載」資料夾），會得到 <code>SIGN2MV</code> 資料夾。</li>
+<li>打開這個新的 <code>SIGN2MV</code>，全選（Ctrl + A）、複製，貼到原本的安裝資料夾（放 <code>start.bat</code> 的那個），跳出詢問時選「<b>取代目的地中的檔案</b>」。</li>
+<li>雙擊 <code>start.bat</code>，在首頁「系統狀態」下面按 <b>檢查更新</b>，顯示「已是最新版」就完成了。</li>
 </ol>
-<p>想知道有沒有新版，也可以在首頁「系統狀態」下面按 <b>檢查更新</b>：它會告訴你是不是最新版、GitHub 上多了幾次更新（只查詢，不會自動下載或覆蓋）。</p>
+<p>想知道有沒有新版，隨時都可以按 <b>檢查更新</b>：它會告訴你是不是最新版，有新版時附上下載連結（只查詢，不會自動下載或覆蓋）。</p>
 <p>只有 <code>CHANGELOG.md</code> 寫要重跑 <code>install.bat</code> 時才需要重跑；不確定時跑一次也沒有壞處，已經裝好的部分會略過。</p>
 </section>
 

@@ -71,18 +71,16 @@ a { color:var(--accent); }
 
 <h3>Step 2: Download</h3>
 <ol>
-<li>Open <a href="https://github.com/nilson0606/SIGN2MV" target="_blank" rel="noopener">https://github.com/nilson0606/SIGN2MV</a> in a browser.</li>
-<li>Press the green <b>Code</b> button near the top right, then <b>Download ZIP</b> at the bottom of its menu.</li>
+<li>Open this download link in a browser: <a href="https://github.com/nilson0606/SIGN2MV/releases/latest/download/SIGN2MV.zip" target="_blank" rel="noopener">SIGN2MV.zip (latest)</a>. It is always the latest release; all releases are listed under <a href="https://github.com/nilson0606/SIGN2MV/releases" target="_blank" rel="noopener">Releases</a>.</li>
 </ol>
-<p><b>It worked when:</b> <code>SIGN2MV-main.zip</code> is in the browser's downloads.</p>
+<p><b>It worked when:</b> <code>SIGN2MV.zip</code> is in the browser's downloads.</p>
 
 <h3>Step 3: Extract it to a folder with an English path</h3>
 <ol>
-<li>In File Explorer, right-click <code>SIGN2MV-main.zip</code> → <i>Properties</i>. If there is an <b>Unblock</b> box at the bottom, tick it and press <i>OK</i>. (No box: skip this.)</li>
-<li>Right-click it again → <i>Extract All…</i>, choose <code>D:\</code> (or another drive) and press <i>Extract</i>.</li>
-<li>Rename the extracted folder <code>SIGN2MV-main</code> to <code>SIGN2MV</code>.</li>
+<li>In File Explorer, right-click <code>SIGN2MV.zip</code> → <i>Properties</i>. If there is an <b>Unblock</b> box at the bottom, tick it and press <i>OK</i>. (No box: skip this.)</li>
+<li>Right-click it again → <i>Extract All…</i>, change the destination to <code>D:\</code> (or another drive) and press <i>Extract</i>. The ZIP already holds a <code>SIGN2MV</code> folder, so you get <code>D:\SIGN2MV</code>.</li>
 </ol>
-<p><b>It worked when:</b> <code>D:\SIGN2MV</code> directly contains <code>install.bat</code>, <code>start.bat</code> and <code>MANUAL.html</code> (double-click it to open this manual; nothing needs to be installed). If you see another <code>SIGN2MV-main</code> folder inside, it was wrapped once more: move its contents up.</p>
+<p><b>It worked when:</b> <code>D:\SIGN2MV</code> directly contains <code>install.bat</code>, <code>start.bat</code> and <code>MANUAL.html</code> (double-click it to open this manual; nothing needs to be installed). If you see another <code>SIGN2MV</code> folder inside (e.g. <code>D:\SIGN2MV\SIGN2MV</code>), it was wrapped once more: move its contents up.</p>
 <p class="note">Use only English letters and digits in the folder's full path (<code>D:\SIGN2MV</code> is fine; a path with Chinese characters is not). With such a path the voice model index cannot be read.</p>
 
 <h3>Step 4: Install</h3>
@@ -163,12 +161,12 @@ a { color:var(--accent); }
 <p>To update, copy the new files <b>over</b> the old folder; your songs, recordings, voice models and settings are not touched (<code>library</code>, <code>models</code>, <code>runtime</code> and <code>config</code> are not in the ZIP).</p>
 <ol>
 <li>Press <b>Shut down</b> at the top right of SIGN2MV and wait until the window closes.</li>
-<li>On the <a href="https://github.com/nilson0606/SIGN2MV">GitHub page</a>, <b>Code → Download ZIP</b>; right-click the ZIP → <i>Properties</i> → tick <i>Unblock</i> → <i>OK</i> (skip if there is no such box).</li>
-<li>Extract it anywhere; you get a <code>SIGN2MV-main</code> folder.</li>
-<li>Open <code>SIGN2MV-main</code>, select everything (Ctrl + A), copy, and paste it into your SIGN2MV folder (the one with <code>start.bat</code>); when asked, choose <i>Replace the files in the destination</i>.</li>
-<li>Double-click <code>start.bat</code>. <b>Code date</b> under <i>System status</i> on the home page ends with a 7-character code (e.g. <code>2026-11-08 · 0f0d724</code>). When it matches the 7-character code at the top right of the file list on GitHub, you are up to date. Compare the code, not just the date: there can be several changes on one day.</li>
+<li>Download <a href="https://github.com/nilson0606/SIGN2MV/releases/latest/download/SIGN2MV.zip">SIGN2MV.zip (latest)</a>; right-click the ZIP → <i>Properties</i> → tick <i>Unblock</i> → <i>OK</i> (skip if there is no such box). <b>Check for updates</b> on the home page links to it too when there is a new release.</li>
+<li>Extract it anywhere (e.g. Downloads); you get a <code>SIGN2MV</code> folder.</li>
+<li>Open this new <code>SIGN2MV</code>, select everything (Ctrl + A), copy, and paste it into your SIGN2MV folder (the one with <code>start.bat</code>); when asked, choose <i>Replace the files in the destination</i>.</li>
+<li>Double-click <code>start.bat</code> and press <b>Check for updates</b> under <i>System status</i> on the home page: <i>Up to date</i> means you are done.</li>
 </ol>
-<p>To find out whether there is a new version, you can also press <b>Check for updates</b> under <i>System status</i> on the home page: it says whether you are up to date and how many newer changes GitHub has (it only asks; nothing is downloaded or replaced).</p>
+<p><b>Check for updates</b> tells you at any time whether a newer release exists and links to its download (it only asks; nothing is downloaded or replaced).</p>
 <p>Run <code>install.bat</code> again only when <code>CHANGELOG.md</code> says so; running it when unsure does no harm, finished parts are skipped.</p>
 </section>
 

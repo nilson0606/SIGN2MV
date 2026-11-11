@@ -17,7 +17,7 @@ export default {
   'home.update_check': 'Check for updates', 'home.update_checking': 'Asking GitHub…',
   'home.update_latest': 'Up to date (latest on GitHub: {0}).',
   'home.update_available': 'An update is available: {0} newer change(s) on GitHub (latest {1}).',
-  'home.update_how': 'How to update', 'home.update_github': 'Open GitHub',
+  'home.update_how': 'How to update', 'home.update_github': 'Open GitHub', 'home.update_download': 'Download the latest',
   'home.update_ahead': 'This copy is newer than GitHub (a development version).',
   'home.update_unknown': 'Cannot tell which version this copy is (latest on GitHub: {0}). You can follow "How to update" to get the latest.',
   'home.update_offline': 'Cannot reach GitHub. Check the internet connection and try again.', 'home.folder': 'App folder', 'home.install': 'Installation', 'home.install_ok': 'Complete',

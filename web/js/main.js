@@ -91,9 +91,11 @@ async function checkUpdate() {
   btn.disabled = true; out.className = 'small muted'; out.textContent = t('home.update_checking');
   try {
     const r = await api.get('/api/system/update-check');
-    const latest = r.latest ? `${r.latest.date} · ${r.latest.commit}` : '';
+    const latest = !r.latest ? '' : r.latest.tag ? `${r.latest.tag} · ${r.latest.commit}` : `${r.latest.date} · ${r.latest.commit}`;
     const how = el('a', { href: `/manual/manual.${language()}.html#updating`, target: '_blank', rel: 'noopener' }, t('home.update_how'));
-    const gh = el('a', { href: r.repo, target: '_blank', rel: 'noopener' }, t('home.update_github'));
+    const gh = r.download   // the latest release's SIGN2MV.zip; before the first release, the GitHub page
+      ? el('a', { href: r.download, target: '_blank', rel: 'noopener' }, t('home.update_download'))
+      : el('a', { href: r.repo, target: '_blank', rel: 'noopener' }, t('home.update_github'));
     const text = {
       latest: () => t('home.update_latest', latest),
       update: () => t('home.update_available', r.behind, latest),

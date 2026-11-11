@@ -17,7 +17,7 @@ export default {
   'home.update_check': '檢查更新', 'home.update_checking': '正在詢問 GitHub…',
   'home.update_latest': '已是最新版（GitHub 最新：{0}）。',
   'home.update_available': '有新版：GitHub 上多了 {0} 次更新（最新 {1}）。',
-  'home.update_how': '怎麼更新', 'home.update_github': '打開 GitHub',
+  'home.update_how': '怎麼更新', 'home.update_github': '打開 GitHub', 'home.update_download': '下載最新版',
   'home.update_ahead': '這份程式比 GitHub 上的還新（開發中的版本）。',
   'home.update_unknown': '無法比對這份程式的版本（GitHub 最新：{0}）。可以照「怎麼更新」覆蓋成最新版。',
   'home.update_offline': '連不上 GitHub，請確認網路後再試。', 'home.folder': '程式資料夾', 'home.install': '安裝', 'home.install_ok': '已完成',

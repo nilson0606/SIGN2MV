@@ -13,9 +13,11 @@ Everything runs locally; nothing is uploaded.
 
 ## Quick start (Windows 10/11)
 
-1. **Code → Download ZIP** on this page. Before extracting, right-click the ZIP → *Properties*; if there is an
-   *Unblock* box at the bottom, tick it and press *OK*. Then extract it to a folder whose path has only English letters
-   and digits, e.g. `D:\SIGN2MV` (rename `SIGN2MV-main`). Nothing needs to be installed first.
+1. Download **[SIGN2MV.zip](https://github.com/nilson0606/SIGN2MV/releases/latest/download/SIGN2MV.zip)** (always the latest release; all releases are under
+   [Releases](https://github.com/nilson0606/SIGN2MV/releases)). Before extracting, right-click the ZIP →
+   *Properties*; if there is an *Unblock* box at the bottom, tick it and press *OK*. Then right-click → *Extract
+   All…* and choose `D:\`: you get `D:\SIGN2MV`. The path must have only English letters and digits. Nothing
+   needs to be installed first.
    Double-click `MANUAL.html` in that folder to read the full manual before installing.
 2. Double-click `install.bat`. It downloads Python, the AI programs and models (about 10 GB the first
    time) into the folder; run it again if it stops. If Windows shows *Windows protected your PC*, press
@@ -40,18 +42,16 @@ To update, copy the new files **over** the old folder; your songs, recordings, v
 touched.
 
 1. Press **Shut down** at the top right of SIGN2MV and wait until the window closes.
-2. **Code → Download ZIP** on this page; right-click the ZIP → *Properties* → tick *Unblock* → *OK* (skip if there is
-   no such box).
-3. Extract it anywhere; you get a `SIGN2MV-main` folder.
-4. Open `SIGN2MV-main`, select everything (Ctrl + A), copy, and paste it into your SIGN2MV folder (the one with
-   `start.bat`); when asked, choose *Replace the files in the destination*.
-5. Double-click `start.bat`. **Code date** under *System status* on the home page ends with a 7-character code
-   (e.g. `2026-11-08 · 0f0d724`). When it matches the 7-character code at the top right of the file list on this page,
-   you are up to date. Compare the code, not just the date: there can be several changes on one day.
+2. Download **[SIGN2MV.zip](https://github.com/nilson0606/SIGN2MV/releases/latest/download/SIGN2MV.zip)**; right-click the ZIP → *Properties* → tick *Unblock* → *OK* (skip if there
+   is no such box).
+3. Extract it anywhere (e.g. Downloads); you get a `SIGN2MV` folder.
+4. Open this new `SIGN2MV`, select everything (Ctrl + A), copy, and paste it into your SIGN2MV folder (the one
+   with `start.bat`); when asked, choose *Replace the files in the destination*.
+5. Double-click `start.bat` and press **Check for updates** under *System status* on the home page: *Up to date*
+   means you are done.
 
-To find out whether there is a new version, you can also press **Check for updates** under *System status* on the
-home page: it says whether you are up to date and how many newer changes GitHub has (it only asks; nothing is
-downloaded or replaced).
+**Check for updates** tells you at any time whether a newer release exists and links to its download (it only
+asks; nothing is downloaded or replaced).
 
 `library`, `models`, `runtime` and `config` are not in the ZIP and are never overwritten. Run `install.bat` again
 only when the [CHANGELOG](CHANGELOG.md) says so; running it when unsure does no harm, finished parts are skipped.
