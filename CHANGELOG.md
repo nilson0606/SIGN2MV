@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Library, 「音軌平移」 preview: the audio device is closed when the preview stops or the song is left (it was kept
+  open, with the decoded song, each time the page was drawn again). TEMPORARY: `web/js/diag.js` + `POST /api/diag`
+  write `diag:` lines to `server.log` when the page stops for over a second during the preview or apply, to find a
+  freeze seen only in the SIGN2MV (Edge) window.
 - Library, 「音軌平移」 preview: pops while previewing. The preview kept nudging the audio's playback speed (logged:
   1.00 ↔ 1.10 every 0.1–0.2 s) to chase a coarse position, and each change was audible. It now plays the song
   audio with Web Audio, scheduled once at the offset (allowing for the output latency), and only starts again

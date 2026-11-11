@@ -4,6 +4,7 @@ import { t, errorText, onLanguageChange, setText, language } from './i18n.js';
 import { $, el, toast, confirmDialog, fmtDate, fmtTime, fmtBytes } from './ui.js';
 import { bus, state, selectSong, songById, mediaUrl, reloadJobs } from './app-state.js';
 import { jobBox } from './jobview.js';
+import { diagStart, diagNote, diagStop } from './diag.js';   // TEMPORARY, see diag.js
 
 let filter = '';
 let sizes = {};   // song_id -> bytes on disk
@@ -342,6 +343,7 @@ function shiftBox(song, video, player, audioUrl) {
     gain.gain.linearRampToValueAtTime(1, when + FADE);
     src.start(when, Math.max(0, at));
     voice = { src, gain };
+    diagNote(`sound in ${(when - ac.currentTime).toFixed(3)} from ${Math.max(0, at).toFixed(3)} (video ${video.currentTime.toFixed(3)})`);
   }
   const events = { playing: start, pause: silence, seeking: silence, waiting: silence, seeked: start };
   function stop() {
@@ -350,6 +352,9 @@ function shiftBox(song, video, player, audioUrl) {
     clearInterval(watch);
     for (const [ev, fn] of Object.entries(events)) video.removeEventListener(ev, fn);
     video.pause();
+    // close the audio device; the decoded audio is kept only while this song is shown (for the next preview)
+    if (ac) { const old = ac; ac = null; old.close().catch(() => {}); }
+    diagStop();
     refresh();
   }
   playBtn.addEventListener('click', async () => {
@@ -379,6 +384,7 @@ function shiftBox(song, video, player, audioUrl) {
     played = value();
     input.value = played.toFixed(2);
     for (const [ev, fn] of Object.entries(events)) video.addEventListener(ev, fn);
+    diagStart('preview', video);
     watch = setInterval(() => { if (!video.isConnected) stop(); }, 500);   // another song was opened
     refresh();
     if (video.paused) video.play().catch(() => {}); else start();
@@ -400,14 +406,20 @@ function shiftBox(song, video, player, audioUrl) {
     }
     applyBtn.disabled = playBtn.disabled = input.disabled = true;
     status.textContent = t('lib.shift_working');
+    diagStart('apply', null);
+    const t0 = performance.now();
     try {
       await api.post(`/api/songs/${encodeURIComponent(song.song_id)}/audio-shift`, { seconds: v });
+      diagNote(`apply answered after ${Math.round(performance.now() - t0)} ms`, true);
       toast(t('lib.shift_done', fmt(v)));
     } catch (e) {
+      diagNote(`apply failed after ${Math.round(performance.now() - t0)} ms: ${e.code || e.message}`, true);
       toast(errorText(e), true);
     }
-    if (ac) ac.close().catch(() => {});
     await loadSongs();
+    diagNote(`page redrawn after ${Math.round(performance.now() - t0)} ms`, true);
+    diagStart('after-apply', document.querySelector('.lib-fold video'));
+    setTimeout(diagStop, 20000);
   });
   refresh();
   api.get(`/api/songs/${encodeURIComponent(song.song_id)}/audio-shift`).then((st) => {

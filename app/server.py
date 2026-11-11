@@ -1,6 +1,8 @@
 """HTTP API and static web page."""
 from __future__ import annotations
 
+import logging
+
 import json
 import os
 import sys
@@ -88,6 +90,18 @@ def create_app(paths: Paths, *, port: int, request_shutdown: Callable[[], None] 
 
     # ---------------- system ----------------
     mono_at_start = winaudio.mono_audio()   # to remind on shutdown if it was switched for singing
+
+    # TEMPORARY (11-12): the library page reports stalls of the SIGN2MV window during the audio-shift
+    # preview and apply, to find a freeze seen only in the Edge app window. Remove once it is found.
+    @app.post("/api/diag")
+    async def diag(request: Request) -> dict[str, Any]:
+        try:
+            body = await request.body()
+            text = body[:8000].decode("utf-8", "replace")
+        except Exception:  # noqa: BLE001
+            text = "(unreadable)"
+        logging.getLogger("sign2mv.diag").info("diag: %s", text)
+        return {"ok": True}
 
     @app.get("/api/system/update-check")
     async def update_check() -> dict[str, Any]:
