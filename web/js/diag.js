@@ -37,7 +37,8 @@ export function diagStart(phase, video) {
   let tick = performance.now();
   const timer = setInterval(() => {
     const now = performance.now();
-    if (now - tick > 1000) report('timer', now - tick);   // the page itself was stuck
+    // the page itself was stuck (a covered or hidden window only gets its timer once a second: not a stall)
+    if (now - tick > 1000 && !document.hidden) report('timer', now - tick);
     tick = now;
   }, 100);
   let frame = performance.now(), raf = 0;

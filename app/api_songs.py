@@ -538,16 +538,22 @@ def router(ctx: Context) -> APIRouter:
 
     @r.post("/api/songs/{song_id}/audio-shift")
     async def audio_shift_apply(song_id: str, request: Request):
+        """Body {"target": s}: the total shift against the originally imported audio (what the box shows);
+        the file is moved by target - current."""
         body = await body_json(request)
         try:
-            seconds = round(float(body.get("seconds")), 2)
+            target = round(float(body.get("target")), 2)
         except (TypeError, ValueError):
             return err("shift_range")
-        if not (0 < abs(seconds) <= SHIFT_MAX_S):
+        if not abs(target) <= SHIFT_MAX_S:
             return err("shift_range")
         lib, song, e = song_or_err(song_id)
         if e:
             return e
+        current = round(float((song.get("source") or {}).get("audio_offset_s") or 0), 2)
+        seconds = round(target - current, 2)
+        if seconds == 0:
+            return err("shift_same")
         if not shift_lock.acquire(blocking=False):
             return err("song_busy", 409)
         try:

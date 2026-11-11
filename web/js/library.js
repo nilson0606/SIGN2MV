@@ -294,19 +294,23 @@ function sourceSection(song) {
     media ? shiftBox(song, media, player, bust(mediaUrl(song.song_id, s.audio))) : null);
 }
 
-// 「音軌平移」: move the song audio up to ±2 s against the picture, for a song nothing has been made from
-// yet (the server decides). 試播 plays the muted video and the song audio through Web Audio, started once
-// at the exact offset (no correcting while playing: changing the speed or seeking was heard as pops);
-// pause, seek or a new value stops it and starts it again at the right place, with 5 ms fades.
-// 套用 is offered only for the value that was played, asks, then replaces the source (old audio and video deleted).
+// 「音軌平移」: the song audio against the picture, up to ±2 s from the originally imported audio, for a song
+// nothing has been made from yet (the server decides). The box shows the total (the current shift when
+// it opens); 試播 plays the muted video with the file's audio moved by (value − current) through Web Audio,
+// started once at that offset (no correcting while playing: changing the speed was heard as pops) and
+// started again only after a pause, a seek or a new value, with 5 ms fades. The preview's own 音量 slider is
+// its volume; the video stays muted meanwhile (its volume control would otherwise add the video's own
+// sound on top). 套用 is offered only for the value that was played, asks, then rebuilds the source.
 function shiftBox(song, video, player, audioUrl) {
   const input = el('input', { type: 'number', min: -2, max: 2, step: 0.01, value: '0.00', style: 'width:6em' });
   const playBtn = el('button', { type: 'button', class: 'btn small' }, t('lib.shift_play'));
   const applyBtn = el('button', { type: 'button', class: 'btn small primary', disabled: true }, t('lib.shift_apply'));
+  const volume = el('input', { type: 'range', min: 0, max: 100, step: 1, value: Math.round((video.volume ?? 1) * 100), style: 'width:8em' });
+  const volumeText = el('span', { class: 'muted small' });
   const note = el('p', { class: 'muted small' }, t('lib.shift_hint'));
   const status = el('p', { class: 'muted small' });
-  let allowed = false, previewing = false, loading = false, played = null, ac = null, buffer = null, voice = null, watch = 0;
-  let statusText = '';
+  let allowed = false, previewing = false, loading = false, played = null, current = 0;
+  let ac = null, master = null, buffer = null, voice = null, watch = 0, statusText = '';
   const FADE = 0.005;
   const value = () => {
     const v = Math.round(Number(input.value) * 100) / 100;
@@ -316,9 +320,15 @@ function shiftBox(song, video, player, audioUrl) {
   const refresh = () => {
     playBtn.disabled = !allowed || loading;
     input.disabled = !allowed;
-    applyBtn.disabled = !allowed || loading || played === null || played !== value() || value() === 0;
+    applyBtn.disabled = !allowed || loading || played === null || played !== value() || value() === current;
     playBtn.textContent = previewing ? t('lib.shift_stop') : t('lib.shift_play');
+    volumeText.textContent = `${volume.value}%`;
   };
+  const setVolume = () => {
+    if (master) master.gain.setTargetAtTime(Number(volume.value) / 100, ac.currentTime, 0.01);
+    refresh();
+  };
+  volume.addEventListener('input', setVolume);
   function silence() {
     if (!voice) return;
     const { src, gain } = voice, now = ac.currentTime;
@@ -328,24 +338,32 @@ function shiftBox(song, video, player, audioUrl) {
     gain.gain.linearRampToValueAtTime(0, now + FADE);
     try { src.stop(now + FADE + 0.001); } catch { /* not started */ }
   }
-  // video time t plays song audio at t − shift; the sound reaches the ears `latency` after it is scheduled
+  // video time t plays file audio at t − (value − current); the sound reaches the ears `latency` later
   function start() {
     silence();
     if (!previewing || video.paused || !buffer) return;
     const latency = (ac.outputLatency || 0) + (ac.baseLatency || 0);
-    const at = video.currentTime + latency - value();
+    const at = video.currentTime + latency - (value() - current);
     if (at >= buffer.duration) return;
     const when = ac.currentTime + Math.max(0, -at);
     const src = ac.createBufferSource(), gain = ac.createGain();
     src.buffer = buffer;
-    src.connect(gain).connect(ac.destination);
+    src.connect(gain).connect(master);
     gain.gain.setValueAtTime(0, when);
     gain.gain.linearRampToValueAtTime(1, when + FADE);
     src.start(when, Math.max(0, at));
     voice = { src, gain };
     diagNote(`sound in ${(when - ac.currentTime).toFixed(3)} from ${Math.max(0, at).toFixed(3)} (video ${video.currentTime.toFixed(3)})`);
   }
-  const events = { playing: start, pause: silence, seeking: silence, waiting: silence, seeked: start };
+  // the video's own volume control unmutes it: take its level for the preview and keep the video silent
+  function keepMuted() {
+    if (!previewing || video.muted) return;
+    volume.value = Math.round(video.volume * 100);
+    video.muted = true;
+    setVolume();
+    status.textContent = t('lib.shift_volume_hint');
+  }
+  const events = { playing: start, pause: silence, seeking: silence, waiting: silence, seeked: start, volumechange: keepMuted };
   function stop() {
     previewing = false;
     silence();
@@ -353,7 +371,7 @@ function shiftBox(song, video, player, audioUrl) {
     for (const [ev, fn] of Object.entries(events)) video.removeEventListener(ev, fn);
     video.pause();
     // close the audio device; the decoded audio is kept only while this song is shown (for the next preview)
-    if (ac) { const old = ac; ac = null; old.close().catch(() => {}); }
+    if (ac) { const old = ac; ac = null; master = null; old.close().catch(() => {}); }
     diagStop();
     refresh();
   }
@@ -361,7 +379,12 @@ function shiftBox(song, video, player, audioUrl) {
     if (previewing) { stop(); return; }
     player.pause();
     try {
-      ac = ac || new AudioContext();
+      if (!ac) {
+        ac = new AudioContext();
+        master = ac.createGain();
+        master.gain.value = Number(volume.value) / 100;
+        master.connect(ac.destination);
+      }
       await ac.resume();
       if (!buffer) {
         loading = true;
@@ -397,10 +420,10 @@ function shiftBox(song, video, player, audioUrl) {
   input.addEventListener('change', () => { input.value = value().toFixed(2); changed(); });
   applyBtn.addEventListener('click', async () => {
     const v = value();
-    if (!(await confirmDialog(t('lib.shift_confirm', fmt(v)), t('lib.shift_apply')))) return;
+    if (!(await confirmDialog(t('lib.shift_confirm', fmt(v), fmt(current)), t('lib.shift_apply')))) return;
     stop();
-    buffer = null;
-    for (const m of [video, player]) {   // let go of the files so the folder can be replaced
+    const srcs = [video, player].map((m) => [m, m.getAttribute('src')]);
+    for (const [m] of srcs) {   // let go of the files so the folder can be replaced
       m.removeAttribute('src');
       m.load();
     }
@@ -409,29 +432,40 @@ function shiftBox(song, video, player, audioUrl) {
     diagStart('apply', null);
     const t0 = performance.now();
     try {
-      await api.post(`/api/songs/${encodeURIComponent(song.song_id)}/audio-shift`, { seconds: v });
+      await api.post(`/api/songs/${encodeURIComponent(song.song_id)}/audio-shift`, { target: v });
       diagNote(`apply answered after ${Math.round(performance.now() - t0)} ms`, true);
+      buffer = null;
       toast(t('lib.shift_done', fmt(v)));
     } catch (e) {
       diagNote(`apply failed after ${Math.round(performance.now() - t0)} ms: ${e.code || e.message}`, true);
       toast(errorText(e), true);
+      // nothing changed: give the players their files back and show why (the page is not drawn again)
+      for (const [m, src] of srcs) if (src) m.setAttribute('src', src);
+      loadState();
     }
     await loadSongs();
     diagNote(`page redrawn after ${Math.round(performance.now() - t0)} ms`, true);
     diagStart('after-apply', document.querySelector('.lib-fold video'));
     setTimeout(diagStop, 20000);
   });
-  refresh();
-  api.get(`/api/songs/${encodeURIComponent(song.song_id)}/audio-shift`).then((st) => {
-    allowed = !!st.allowed;
-    const parts = [];
-    if (st.offset) parts.push(t('lib.shift_total', fmt(st.offset)));
-    if (!allowed) parts.push(errorText({ code: st.reason }));
-    statusText = status.textContent = parts.join(' ');
+  function loadState() {
+    allowed = false;
     refresh();
-  }).catch((e) => { status.textContent = errorText(e); });
+    api.get(`/api/songs/${encodeURIComponent(song.song_id)}/audio-shift`).then((st) => {
+      allowed = !!st.allowed;
+      current = Math.round((st.offset || 0) * 100) / 100;
+      input.value = current.toFixed(2);
+      played = null;
+      const parts = [t('lib.shift_total', fmt(current))];
+      if (!allowed) parts.push(errorText({ code: st.reason }));
+      statusText = status.textContent = parts.join(' ');
+      refresh();
+    }).catch((e) => { status.textContent = errorText(e); });
+  }
+  loadState();
   return el('div', { class: 'shift-box' },
     el('div', { class: 'row' }, el('b', {}, t('lib.shift_title')), input, el('span', {}, t('lib.shift_unit')), playBtn, applyBtn),
+    el('div', { class: 'row' }, el('span', {}, t('lib.shift_volume')), volume, volumeText),
     note, status);
 }
 

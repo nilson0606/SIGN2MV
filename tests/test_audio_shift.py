@@ -47,7 +47,7 @@ def test_shift_later_pads_the_start_keeps_length_and_picture(client, root):
     before = _read_wav(song_dir / "source" / "audio.wav").copy()
     pic = _packet_hashes(song_dir / "source" / "video.mp4")
     assert client.get(f"/api/songs/{sid}/audio-shift").json()["allowed"] is True
-    r = client.post(f"/api/songs/{sid}/audio-shift", json={"seconds": 0.5})
+    r = client.post(f"/api/songs/{sid}/audio-shift", json={"target": 0.5})
     assert r.status_code == 200, r.text
     after = _read_wav(song_dir / "source" / "audio.wav")
     n = RATE // 2
@@ -58,16 +58,24 @@ def test_shift_later_pads_the_start_keeps_length_and_picture(client, root):
     assert rec["audio_offset_s"] == 0.5 and rec["source_hash"] == "yt:abc#shift+500ms"
     assert "original" not in rec and not (song_dir / "source" / "original.mp4").exists()
     assert not (song_dir / "source.old").exists() and not (song_dir / "source.importing").exists()
-    # a second shift adds up; back to 0 gives the original name again
-    client.post(f"/api/songs/{sid}/audio-shift", json={"seconds": -0.5})
+    # the value is the total against the original: 0 goes back (the end cut at +0.5 stays silent)
+    assert client.post(f"/api/songs/{sid}/audio-shift", json={"target": 0.5}).json()["error"] == "shift_same"
+    assert client.post(f"/api/songs/{sid}/audio-shift", json={"target": 0}).status_code == 200
     rec = json.loads((song_dir / "source" / "source.json").read_text(encoding="utf-8"))
     assert rec["audio_offset_s"] == 0 and rec["source_hash"] == "yt:abc"
+    back = _read_wav(song_dir / "source" / "audio.wav")
+    assert np.array_equal(back[:-n], before[:-n]) and np.abs(back[-n:]).max() == 0
+    # +0.3 from +0 then -0.2 total: moves by -0.5
+    client.post(f"/api/songs/{sid}/audio-shift", json={"target": 0.3})
+    client.post(f"/api/songs/{sid}/audio-shift", json={"target": -0.2})
+    rec = json.loads((song_dir / "source" / "source.json").read_text(encoding="utf-8"))
+    assert rec["audio_offset_s"] == -0.2 and rec["source_hash"] == "yt:abc#shift-200ms"
 
 
 def test_shift_earlier_cuts_the_start_and_pads_the_end(client, root):
     sid, song_dir = _song(client, root)
     before = _read_wav(song_dir / "source" / "audio.wav").copy()
-    assert client.post(f"/api/songs/{sid}/audio-shift", json={"seconds": -0.25}).status_code == 200
+    assert client.post(f"/api/songs/{sid}/audio-shift", json={"target": -0.25}).status_code == 200
     after = _read_wav(song_dir / "source" / "audio.wav")
     n = round(0.25 * RATE)
     assert len(after) == len(before)
@@ -83,7 +91,7 @@ def test_shift_is_refused_once_anything_was_made(client, root):
     st = client.get(f"/api/songs/{sid}/audio-shift").json()
     assert st["allowed"] is False and st["reason"] == "shift_processed"
     before = (song_dir / "source" / "audio.wav").read_bytes()
-    r = client.post(f"/api/songs/{sid}/audio-shift", json={"seconds": 0.3})
+    r = client.post(f"/api/songs/{sid}/audio-shift", json={"target": 0.3})
     assert r.status_code == 409 and r.json()["error"] == "shift_processed"
     assert (song_dir / "source" / "audio.wav").read_bytes() == before
 
@@ -99,7 +107,8 @@ def test_shift_is_refused_when_the_song_has_takes(client, root):
 
 def test_shift_range_and_songs_without_video(client, root):
     sid, _ = _song(client, root)
-    for bad in (0, 2.5, -3, "x", None):
-        assert client.post(f"/api/songs/{sid}/audio-shift", json={"seconds": bad}).json()["error"] == "shift_range"
+    for bad in (2.5, -3, "x", None):
+        assert client.post(f"/api/songs/{sid}/audio-shift", json={"target": bad}).json()["error"] == "shift_range"
+    assert client.post(f"/api/songs/{sid}/audio-shift", json={"target": 0}).json()["error"] == "shift_same"
     empty = client.post("/api/songs", json={"title": "empty"}).json()["song_id"]
     assert client.get(f"/api/songs/{empty}/audio-shift").json()["reason"] == "shift_no_video"

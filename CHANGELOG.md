@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Library, 「音軌平移」: the value is now the total against the originally imported audio (the box opens at the
+  current value; 0 goes back), and `POST …/audio-shift` takes `{"target": s}`. 「試播音量」 sets the preview's
+  loudness; the video stays muted while previewing (its own volume control unmuted it and added the video's sound
+  on top). A refused apply gives the players their files back and shows the reason. The temporary diagnosis no
+  longer reports a covered window's once-a-second timer as a stall. Checked with 31 browser cases.
 - Library, 「音軌平移」 preview: the audio device is closed when the preview stops or the song is left (it was kept
   open, with the decoded song, each time the page was drawn again). TEMPORARY: `web/js/diag.js` + `POST /api/diag`
   write `diag:` lines to `server.log` when the page stops for over a second during the preview or apply, to find a
