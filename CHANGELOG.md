@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Library, 「音軌平移」 preview: pops while previewing. The preview kept nudging the audio's playback speed (logged:
+  1.00 ↔ 1.10 every 0.1–0.2 s) to chase a coarse position, and each change was audible. It now plays the song
+  audio with Web Audio, scheduled once at the offset (allowing for the output latency), and only starts again
+  after a pause, a seek or a new value, with 5 ms fades. The applied file was never affected.
 - Library: 「音軌平移」 / *Audio shift* in 「原曲」 moves the song audio −2.00 to +2.00 s against the picture
   (+ = later: silence at the start, the end cut; the length stays). Only for a song nothing has been made from
   yet: any other folder in the song (stems, keys, sing, cover, MV, renders, ...) or a sing & record take blocks it.

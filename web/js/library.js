@@ -294,71 +294,107 @@ function sourceSection(song) {
 }
 
 // 「音軌平移」: move the song audio up to ±2 s against the picture, for a song nothing has been made from
-// yet (the server decides). 試播 plays the video with the audio offset live; 套用 is offered only for the
-// value that was played, asks first, then replaces the source (the old audio and video are deleted).
+// yet (the server decides). 試播 plays the muted video and the song audio through Web Audio, started once
+// at the exact offset (no correcting while playing: changing the speed or seeking was heard as pops);
+// pause, seek or a new value stops it and starts it again at the right place, with 5 ms fades.
+// 套用 is offered only for the value that was played, asks, then replaces the source (old audio and video deleted).
 function shiftBox(song, video, player, audioUrl) {
   const input = el('input', { type: 'number', min: -2, max: 2, step: 0.01, value: '0.00', style: 'width:6em' });
   const playBtn = el('button', { type: 'button', class: 'btn small' }, t('lib.shift_play'));
   const applyBtn = el('button', { type: 'button', class: 'btn small primary', disabled: true }, t('lib.shift_apply'));
   const note = el('p', { class: 'muted small' }, t('lib.shift_hint'));
   const status = el('p', { class: 'muted small' });
-  let allowed = false, previewing = false, played = null, audio = null;
+  let allowed = false, previewing = false, loading = false, played = null, ac = null, buffer = null, voice = null, watch = 0;
+  let statusText = '';
+  const FADE = 0.005;
   const value = () => {
     const v = Math.round(Number(input.value) * 100) / 100;
     return Number.isFinite(v) ? Math.max(-2, Math.min(2, v)) : 0;
   };
   const fmt = (v) => `${v > 0 ? '+' : ''}${v.toFixed(2)}`;
   const refresh = () => {
-    playBtn.disabled = !allowed;
+    playBtn.disabled = !allowed || loading;
     input.disabled = !allowed;
-    applyBtn.disabled = !allowed || played === null || played !== value() || value() === 0;
+    applyBtn.disabled = !allowed || loading || played === null || played !== value() || value() === 0;
     playBtn.textContent = previewing ? t('lib.shift_stop') : t('lib.shift_play');
   };
-  function sync() {
-    if (!previewing) return;
-    if (!video.isConnected) { stop(); return; }   // another song was opened
-    const target = video.currentTime - value();
-    if (video.paused || target < 0 || (audio.duration && target >= audio.duration)) {
-      if (!audio.paused) audio.pause();
-      if (target < 0 && audio.currentTime !== 0) audio.currentTime = 0;
-    } else if (audio.paused) {
-      audio.currentTime = target;
-      audio.play().catch(() => {});
-    } else {
-      // a seek clicks, so only a big jump seeks; small lags (starting playback takes tens of ms) are
-      // pulled in by playing slightly faster or slower, so 0.01 s steps can really be heard
-      const lag = target - audio.currentTime;
-      if (Math.abs(lag) > 0.25) { audio.currentTime = target; audio.playbackRate = 1; }
-      else audio.playbackRate = Math.abs(lag) < 0.005 ? 1 : 1 + Math.max(-0.1, Math.min(0.1, lag * 2));
-    }
-    requestAnimationFrame(sync);
+  function silence() {
+    if (!voice) return;
+    const { src, gain } = voice, now = ac.currentTime;
+    voice = null;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setValueAtTime(gain.gain.value, now);
+    gain.gain.linearRampToValueAtTime(0, now + FADE);
+    try { src.stop(now + FADE + 0.001); } catch { /* not started */ }
   }
+  // video time t plays song audio at t − shift; the sound reaches the ears `latency` after it is scheduled
+  function start() {
+    silence();
+    if (!previewing || video.paused || !buffer) return;
+    const latency = (ac.outputLatency || 0) + (ac.baseLatency || 0);
+    const at = video.currentTime + latency - value();
+    if (at >= buffer.duration) return;
+    const when = ac.currentTime + Math.max(0, -at);
+    const src = ac.createBufferSource(), gain = ac.createGain();
+    src.buffer = buffer;
+    src.connect(gain).connect(ac.destination);
+    gain.gain.setValueAtTime(0, when);
+    gain.gain.linearRampToValueAtTime(1, when + FADE);
+    src.start(when, Math.max(0, at));
+    voice = { src, gain };
+  }
+  const events = { playing: start, pause: silence, seeking: silence, waiting: silence, seeked: start };
   function stop() {
     previewing = false;
-    if (audio) audio.pause();
+    silence();
+    clearInterval(watch);
+    for (const [ev, fn] of Object.entries(events)) video.removeEventListener(ev, fn);
     video.pause();
     refresh();
   }
-  playBtn.addEventListener('click', () => {
+  playBtn.addEventListener('click', async () => {
     if (previewing) { stop(); return; }
-    if (!audio) audio = new Audio(audioUrl);
     player.pause();
-    video.muted = true;               // the sound comes from the shifted audio only
+    try {
+      ac = ac || new AudioContext();
+      await ac.resume();
+      if (!buffer) {
+        loading = true;
+        refresh();
+        status.textContent = t('lib.shift_loading');
+        const res = await fetch(audioUrl);
+        if (!res.ok) throw new Error(`http_${res.status}`);
+        buffer = await ac.decodeAudioData(await res.arrayBuffer());
+        status.textContent = statusText;
+      }
+    } catch (e) {
+      status.textContent = errorText({ code: e.message || 'unknown_error' });
+      return;
+    } finally {
+      loading = false;
+      refresh();
+    }
+    video.muted = true;               // the sound comes from the song audio only
     previewing = true;
     played = value();
     input.value = played.toFixed(2);
-    video.play().catch(() => {});
+    for (const [ev, fn] of Object.entries(events)) video.addEventListener(ev, fn);
+    watch = setInterval(() => { if (!video.isConnected) stop(); }, 500);   // another song was opened
     refresh();
-    sync();
+    if (video.paused) video.play().catch(() => {}); else start();
   });
-  input.addEventListener('input', () => { if (previewing) played = value(); refresh(); });
-  input.addEventListener('change', () => { input.value = value().toFixed(2); if (previewing) played = value(); refresh(); });
+  const changed = () => {
+    if (previewing) { played = value(); start(); }
+    refresh();
+  };
+  input.addEventListener('input', changed);
+  input.addEventListener('change', () => { input.value = value().toFixed(2); changed(); });
   applyBtn.addEventListener('click', async () => {
     const v = value();
     if (!(await confirmDialog(t('lib.shift_confirm', fmt(v)), t('lib.shift_apply')))) return;
     stop();
-    for (const m of [video, player, audio]) {   // let go of the files so the folder can be replaced
-      if (!m) continue;
+    buffer = null;
+    for (const m of [video, player]) {   // let go of the files so the folder can be replaced
       m.removeAttribute('src');
       m.load();
     }
@@ -370,6 +406,7 @@ function shiftBox(song, video, player, audioUrl) {
     } catch (e) {
       toast(errorText(e), true);
     }
+    if (ac) ac.close().catch(() => {});
     await loadSongs();
   });
   refresh();
@@ -378,7 +415,7 @@ function shiftBox(song, video, player, audioUrl) {
     const parts = [];
     if (st.offset) parts.push(t('lib.shift_total', fmt(st.offset)));
     if (!allowed) parts.push(errorText({ code: st.reason }));
-    status.textContent = parts.join(' ');
+    statusText = status.textContent = parts.join(' ');
     refresh();
   }).catch((e) => { status.textContent = errorText(e); });
   return el('div', { class: 'shift-box' },

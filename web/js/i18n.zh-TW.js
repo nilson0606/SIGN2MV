@@ -79,6 +79,7 @@ export default {
   "lib.shift_apply": "套用",
   "lib.shift_hint": "只能用在還沒分軌、唱錄、翻唱或做 MV 的歌。＋表示聲音晚一點出來（開頭補靜音、結尾切掉），−表示聲音早一點（開頭切掉、結尾補靜音），畫面不動、長度不變。用試播確認對齊，套用只會對試播過的秒數開放。",
   "lib.shift_confirm": "把音軌平移 {0} 秒？原本的音檔和影片會刪除，無法復原；被切掉的那一端聲音也會永久消失。",
+  "lib.shift_loading": "正在載入音檔…",
   "lib.shift_working": "正在平移音軌…",
   "lib.shift_done": "音軌已平移 {0} 秒。",
   "lib.shift_total": "目前累計已平移 {0} 秒。",

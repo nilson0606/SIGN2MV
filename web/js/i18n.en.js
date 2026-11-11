@@ -79,6 +79,7 @@ export default {
   "lib.shift_apply": "Apply",
   "lib.shift_hint": "Only for a song nothing has been made from yet (no stems, sing & record, cover or MV). + makes the sound come later (silence added at the start, the end cut); − earlier (the start cut, silence at the end). The picture stays and the length is the same. Check the timing with Preview; Apply is offered only for the value you previewed.",
   "lib.shift_confirm": "Shift the audio by {0} s? The original audio and video are deleted and cannot be restored; the sound cut off at one end is gone for good.",
+  "lib.shift_loading": "Loading the audio…",
   "lib.shift_working": "Shifting the audio…",
   "lib.shift_done": "Audio shifted by {0} s.",
   "lib.shift_total": "Shifted by {0} s so far.",
