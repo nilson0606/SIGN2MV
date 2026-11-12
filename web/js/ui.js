@@ -48,6 +48,21 @@ export function confirmDialog(message, okLabel) {
   });
 }
 
+// several named choices plus 取消; resolves the chosen id, or null for 取消 / Esc
+export function choiceDialog(message, choices) {
+  return new Promise((resolve) => {
+    const done = (v) => { dlg.close(); dlg.remove(); resolve(v); };
+    const dlg = el('dialog', { class: 'choice-dialog' },
+      el('p', { style: 'white-space:pre-line' }, message),
+      el('div', { class: 'row', style: 'justify-content:flex-end' },
+        el('button', { class: 'btn', type: 'button', onclick: () => done(null) }, t('common.cancel')),
+        ...choices.map((c) => el('button', { class: `btn${c.primary ? ' primary' : ''}`, type: 'button', onclick: () => done(c.id) }, c.label))));
+    dlg.addEventListener('cancel', (e) => { e.preventDefault(); done(null); });
+    document.body.append(dlg);
+    dlg.showModal();
+  });
+}
+
 export function fmtTime(sec) {
   if (!Number.isFinite(sec) || sec < 0) return '--:--';
   const m = Math.floor(sec / 60);

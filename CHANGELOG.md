@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Library: 「準備分軌」 stops a running 「音軌平移」 preview first (on the GPU machine the window's drawing stopped
+  the moment a separation started while the preview played, until the window was hidden and shown again). When a
+  shift was previewed but not applied it asks before separating, since separating locks the shift:
+  「先套用 …秒，再分軌」 (applies, then separates with the chosen model and options), 「不平移，直接分軌」 or
+  「取消」; a value that was typed but not previewed only gets the warning. The preview also stops when the video
+  is no longer on screen (another page of the app, 「原曲」 folded), and pressing 「準備分軌」 while the audio is
+  still being read no longer lets the preview start afterwards.
 - Sing, 「錄音後處理」: reverb and echo now start at 0% for every recording without saved effects (new or old)
   and for 「還原 A／B 預設設定」 (was hall reverb 20% + echo 10%). The space type, tail and pre-delay still start as
   hall, so raising a slider gives the hall sound. A new first scene 「不加殘響與回聲（預設）」 matches this state and

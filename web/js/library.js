@@ -1,7 +1,7 @@
 // Library page: song list, import (YouTube / file), source preview, stems and key preview.
 import { api } from './api.js';
 import { t, errorText, onLanguageChange, setText, language } from './i18n.js';
-import { $, el, toast, confirmDialog, fmtDate, fmtTime, fmtBytes } from './ui.js';
+import { $, el, toast, confirmDialog, choiceDialog, fmtDate, fmtTime, fmtBytes } from './ui.js';
 import { bus, state, selectSong, songById, mediaUrl, reloadJobs } from './app-state.js';
 import { jobBox } from './jobview.js';
 import { diagStart, diagNote, diagStop } from './diag.js';   // TEMPORARY, see diag.js
@@ -302,6 +302,13 @@ function sourceSection(song) {
 // its volume; the video stays muted meanwhile (its volume control would otherwise add the video's own
 // sound on top). 套用 is offered only for the value that was played, asks, then rebuilds the source.
 const SHIFT_DEFAULT = 1;
+// What 「準備分軌」 asks the open song's shift box (separating locks the shift, and starting it while the
+// preview played froze the window's drawing on the GPU machine): stop the preview, tell whether a previewed
+// value is still waiting for 套用, apply it.
+let shiftGuard = null;
+// Set when 「先套用再分軌」 was chosen and the shift is done: the panel is drawn again for the new source,
+// and its 分軌 section takes this to start the separation with the settings that were chosen.
+let pendingPrepare = null;
 function shiftBox(song, video, player, audioUrl) {
   const input = el('input', { type: 'number', min: -2, max: 2, step: 0.01, value: '0.00', style: 'width:6em' });
   const playBtn = el('button', { type: 'button', class: 'btn small' }, t('lib.shift_play'));
@@ -313,7 +320,7 @@ function shiftBox(song, video, player, audioUrl) {
   const note = el('p', { class: 'muted small' }, t('lib.shift_hint'));
   const status = el('p', { class: 'muted small' });
   let allowed = false, previewing = false, loading = false, played = null, current = 0;
-  let ac = null, master = null, buffer = null, voice = null, watch = 0, statusText = '';
+  let ac = null, master = null, buffer = null, voice = null, watch = 0, statusText = '', playToken = 0;
   const FADE = 0.005;
   const value = () => {
     const v = Math.round(Number(input.value) * 100) / 100;
@@ -380,6 +387,7 @@ function shiftBox(song, video, player, audioUrl) {
   }
   playBtn.addEventListener('click', async () => {
     if (previewing) { stop(); return; }
+    const token = ++playToken;
     player.pause();
     // the song may have been separated (or more) since this box was drawn: ask again before playing
     if (!(await loadState())) return;
@@ -407,13 +415,19 @@ function shiftBox(song, video, player, audioUrl) {
       loading = false;
       refresh();
     }
+    if (token !== playToken) {        // 分軌 was pressed while the audio was being read: no preview now
+      if (ac && !previewing) { const old = ac; ac = null; master = null; old.close().catch(() => {}); }
+      return;
+    }
     video.muted = true;               // the sound comes from the song audio only
     previewing = true;
     played = value();
     input.value = played.toFixed(2);
     for (const [ev, fn] of Object.entries(events)) video.addEventListener(ev, fn);
     diagStart('preview', video);
-    watch = setInterval(() => { if (!video.isConnected) stop(); }, 500);   // another song was opened
+    // another song was opened, or the video is no longer on screen (another page of the app, its section folded)
+    const shown = () => (video.checkVisibility ? video.checkVisibility() : video.getClientRects().length > 0);
+    watch = setInterval(() => { if (!video.isConnected || !shown()) stop(); }, 500);
     refresh();
     if (video.paused) video.play().catch(() => {}); else start();
   });
@@ -423,9 +437,10 @@ function shiftBox(song, video, player, audioUrl) {
   };
   input.addEventListener('input', changed);
   input.addEventListener('change', () => { input.value = value().toFixed(2); changed(); });
-  applyBtn.addEventListener('click', async () => {
-    const v = value();
-    if (!(await confirmDialog(t('lib.shift_confirm', fmt(v), fmt(current)), t('lib.shift_apply')))) return;
+  // (applied: called once the files are changed, before the page is drawn again)
+  async function apply(v, ask = true, applied = null) {
+    if (ask && !(await confirmDialog(t('lib.shift_confirm', fmt(v), fmt(current)), t('lib.shift_apply')))) return false;
+    let ok = false;
     stop();
     const srcs = [video, player].map((m) => [m, m.getAttribute('src')]);
     for (const [m] of srcs) {   // let go of the files so the folder can be replaced
@@ -440,6 +455,8 @@ function shiftBox(song, video, player, audioUrl) {
       await api.post(`/api/songs/${encodeURIComponent(song.song_id)}/audio-shift`, { target: v });
       diagNote(`apply answered after ${Math.round(performance.now() - t0)} ms`, true);
       buffer = null;
+      ok = true;
+      if (applied) applied();
       toast(t('lib.shift_done', fmt(v)));
     } catch (e) {
       diagNote(`apply failed after ${Math.round(performance.now() - t0)} ms: ${e.code || e.message}`, true);
@@ -452,7 +469,22 @@ function shiftBox(song, video, player, audioUrl) {
     diagNote(`page redrawn after ${Math.round(performance.now() - t0)} ms`, true);
     diagStart('after-apply', document.querySelector('.lib-fold video'));
     setTimeout(diagStop, 20000);
-  });
+    return ok;
+  }
+  applyBtn.addEventListener('click', () => apply(value()));
+  shiftGuard = {
+    songId: song.song_id,
+    alive: () => input.isConnected,
+    stopPreview() { playToken++; if (previewing) stop(); },
+    // a shift this box was used for (something was previewed) and that is not applied, after asking the server
+    // once more; ready: 套用 would take it now (it is the value that was played). null: nothing is waiting
+    async pending() {
+      await loadState();
+      const v = value();
+      return allowed && played !== null && v !== current ? { value: v, text: fmt(v), ready: played === v } : null;
+    },
+    apply: (v, applied) => apply(v, false, applied),
+  };
   // (first: also fills in the current value; later checks keep what was typed and previewed)
   async function loadState(first = false) {
     try {
@@ -539,6 +571,24 @@ function stemsSection(song) {
   }
 
   async function prepare() {
+    const guard = shiftGuard && shiftGuard.songId === song.song_id && shiftGuard.alive() ? shiftGuard : null;
+    if (guard) {
+      guard.stopPreview();
+      const wait = await guard.pending();
+      if (wait) {
+        const choice = await choiceDialog(t(wait.ready ? 'sep.shift_pending' : 'sep.shift_unplayed', wait.text), [
+          { id: 'skip', label: t('sep.shift_skip') },
+          ...(wait.ready ? [{ id: 'apply', label: t('sep.shift_apply_first', wait.text), primary: true }] : [])]);
+        if (!choice) return;
+        if (choice === 'apply') {
+          const settings = { songId: song.song_id, model: model.value, second: second.checked, lead: lead.checked, key: key.value };
+          const ok = await guard.apply(wait.value, () => { pendingPrepare = settings; });
+          const left = pendingPrepare === settings;   // the panel was not drawn again: go on here
+          if (left) pendingPrepare = null;
+          if (!ok || !left) return;                   // refused (the reason is shown), or the new panel has started it
+        }
+      }
+    }
     try {
       const res = await api.post(`/api/songs/${song.song_id}/stems`, { recipe: recipe() });
       if (!res.ready) {
@@ -561,7 +611,7 @@ function stemsSection(song) {
 
   const stored = storedCopies(song);
 
-  return fold('stems', t('sep.title'), null, true,
+  const section = fold('stems', t('sep.title'), null, true,
     el('p', { class: 'muted small' }, t('sep.hint')),
     el('div', { class: 'row' },
       el('label', {}, t('sep.model'), ' ', model),
@@ -570,6 +620,14 @@ function stemsSection(song) {
       el('label', {}, t('key.label'), ' ', key),
       el('button', { class: 'btn primary', onclick: prepare }, t('sep.prepare'))),
     jb.el, tracksBox, stored.el);
+  // 「先套用再分軌」: the shift is applied and this is the new panel; separate with what was chosen
+  if (pendingPrepare && pendingPrepare.songId === song.song_id) {
+    const p = pendingPrepare;
+    pendingPrepare = null;
+    model.value = p.model; second.checked = p.second; lead.checked = p.lead; key.value = p.key;
+    setTimeout(() => { section.open = true; prepare(); }, 0);
+  }
+  return section;
 }
 
 // ------------------------------------------------------------------ storage overview
