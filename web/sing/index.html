@@ -346,7 +346,7 @@
     <p id="post-status" class="status" role="status">請選擇一筆錄音。</p>
     <p id="post-info" class="help"></p><p id="recording-storage-status" class="help" role="status">連接本機錄音目錄中…</p>
     <div id="post-ab-editor" class="audition-slot-b" data-slot="b" aria-labelledby="post-ab-editor-heading">
-      <div class="ab-editor-heading"><div><h3 id="post-ab-editor-heading">正在調整 B 組</h3><p class="help">另存保留 A／B 各自設定。還原只重設目前組：原音、大廳殘響 20%、回聲 10%、音量 100%、校正回到這筆錄音當時的收音延遲；剪輯保留。</p></div><div class="ab-editor-switch" role="group" aria-label="切換正在編輯的設定"><button id="post-audition-a-edit" class="audition-slot-a" type="button" aria-pressed="false" disabled>A 設定</button><button id="post-audition-b-edit" class="audition-slot-b" type="button" aria-pressed="true" disabled>B 設定</button><button id="post-audition-reset" class="secondary" type="button" disabled title="還原目前組別的系統預設音量、延時與效果；另一組、剪輯與已保存錄音保留">還原 B 預設設定</button></div></div>
+      <div class="ab-editor-heading"><div><h3 id="post-ab-editor-heading">正在調整 B 組</h3><p class="help">另存保留 A／B 各自設定。還原只重設目前組：原音、殘響 0%、回聲 0%、音量 100%、校正回到這筆錄音當時的收音延遲；剪輯保留。</p></div><div class="ab-editor-switch" role="group" aria-label="切換正在編輯的設定"><button id="post-audition-a-edit" class="audition-slot-a" type="button" aria-pressed="false" disabled>A 設定</button><button id="post-audition-b-edit" class="audition-slot-b" type="button" aria-pressed="true" disabled>B 設定</button><button id="post-audition-reset" class="secondary" type="button" disabled title="還原目前組別的系統預設音量、延時與效果；另一組、剪輯與已保存錄音保留">還原 B 預設設定</button></div></div>
     <div class="recording-levels">
       <div><label for="post-voice-level">歌唱者音量 <output id="post-voice-value" for="post-voice-level">100%</output></label><input id="post-voice-level" type="range" min="0" max="200" step="5" value="100" disabled aria-describedby="post-volume-help"></div>
       <div><label for="post-backing-level">配樂／和音音量 <output id="post-backing-value" for="post-backing-level">100%</output></label><input id="post-backing-level" type="range" min="0" max="200" step="5" value="100" disabled aria-describedby="post-volume-help"></div>
@@ -358,7 +358,7 @@
     <p class="help">音色效果：輕度稍微柔和，中度明顯降低尖亮感，強烈做出厚柔、較暗的音色；不是修復原音或消除呼吸聲。只處理歌唱者，配樂與和音不套用。選好後按「重新合成」另存，原錄音及評分不變；強烈會犧牲一些明亮感與咬字清晰度。比較強度時保持相同音量與延時；選取成品可再調整，柔化不會重複疊加。</p>
     <details id="post-effects-panel" class="post-effects"><summary><span class="post-effects-heading"><strong>人聲進階後製</strong><span>局部音量 · EQ · 動態壓縮 · 殘響</span></span><span class="post-effects-toggle"><span class="when-closed">點此展開</span><span class="when-open">收合設定</span></span></summary>
       <fieldset id="post-effects-fields" disabled><legend>只處理歌唱者</legend>
-        <p class="help">新版錄製的音檔，A／B 後製起始設定皆為大廳殘響 20%＋回聲 10%；舊錄音沿用原有設定。可先用片段試聽比較，滿意後按「重新合成」另存；每次從原始歌聲重算，效果不會疊加。配樂／和音不套用這些效果。</p>
+        <p class="help">A／B 後製起始設定皆為殘響 0%、回聲 0%（不加空間效果）；另存過的成品沿用保存的設定。可先用片段試聽比較，滿意後按「重新合成」另存；每次從原始歌聲重算，效果不會疊加。配樂／和音不套用這些效果。</p>
         <details id="post-repair-panel" class="post-repair-panel"><summary><strong>人聲清理與音準修正</strong><span id="post-repair-summary">降噪 · 齒音 · 呼吸聲 · 音準（全部關閉）</span></summary>
           <p class="help">只處理原始歌聲，A／B 各自保存；情緒和空間情境不會更動這些設定。0% 關閉。先用同一小段比較，滿意再重新合成另存；處理時會顯示階段與進度。</p>
           <div class="post-eq-grid">
@@ -393,7 +393,7 @@
         </div><p class="help">0 dB 不變；往左減少、往右增加。先從 ±2～3 dB 比較。</p>
         <div class="post-eq-grid">
           <div><label for="post-compression">動態壓縮 · 穩定大小聲</label><select id="post-compression"><option value="off">關閉</option><option value="light">輕度 · 保留較多起伏</option><option value="medium">中度 · 更穩定</option></select></div>
-          <div><label for="post-reverb">殘響音量 <output id="post-reverb-value">20%</output></label><input id="post-reverb" type="range" min="0" max="100" step="1" value="20"><p class="help">新後製預設大廳 20%，已有設定則沿用；0% 關閉，最高 100%。可用 20%、40%、60% 比較效果。數字越高，加入的殘響越明顯；原本人聲仍保留。按「重新合成」另存後試聽。</p></div>
+          <div><label for="post-reverb">殘響音量 <output id="post-reverb-value">0%</output></label><input id="post-reverb" type="range" min="0" max="100" step="1" value="0"><p class="help">預設 0%（不加殘響），已有設定則沿用；最高 100%。可用 20%、40%、60% 比較效果。數字越高，加入的殘響越明顯；原本人聲仍保留。按「重新合成」另存後試聽。</p></div>
         </div>
         <div class="post-eq-grid">
           <div><label for="post-reverb-space">空間類型</label><select id="post-reverb-space" aria-describedby="post-reverb-space-help"><option value="classic">原版（沿用舊殘響）</option><option value="room">房間 · 緊密、較短</option><option value="hall" selected>大廳 · 寬廣、較長</option><option value="plate">板式 · 明亮、密集</option><option value="studio">錄音室 · 貼近、短尾</option><option value="chamber">小室 · 溫暖、厚實</option><option value="church">教堂 · 柔暗、莊嚴長尾</option><option value="arena">體育館 · 開闊、遠距</option><option value="tunnel">隧道 · 規律、連續反射</option><option value="cave">洞穴 · 低沉、不規則反射</option><option value="bathroom">浴室 · 明亮、近牆反射</option><option value="dream">夢幻空間 · 漸起、漂浮長尾</option></select><p id="post-reverb-space-help" class="help">寬廣、柔和，尾音逐漸鋪開，適合抒情歌。</p></div>
@@ -405,7 +405,7 @@
           <div><label for="post-reverb-width">殘響立體寬度 <output id="post-reverb-width-value">100%</output></label><input id="post-reverb-width" type="range" min="0" max="100" step="5" value="100"><p class="help">0% 集中在中央，100% 保留完整左右空間感。戴耳機比較較明顯；原本人聲位置不變。</p></div>
         </div><p class="help">殘響音量大於 0% 時才會聽到這些效果。單換「空間類型」只帶入尾音與預延遲建議值，其餘數值保留；上方「情境預設」才會帶入整組空間與回聲設定。「原版」預設為 0.8 秒／15 ms。每次先改一項，再用片段試聽比較。</p>
         <h3>回聲 Delay</h3><div class="post-eq-grid">
-          <div><label for="post-echo-amount">回聲音量 <output id="post-echo-amount-value">0%</output></label><input id="post-echo-amount" type="range" min="0" max="100" step="1" value="0"><p class="help">0% 關閉；提高後，能聽到句子或字音重複出現。可從 15% 開始。</p></div>
+          <div><label for="post-echo-amount">回聲音量 <output id="post-echo-amount-value">0%</output></label><input id="post-echo-amount" type="range" min="0" max="100" step="1" value="0"><p class="help">預設 0%（不加回聲）；提高後，能聽到句子或字音重複出現。可從 15% 開始。</p></div>
           <div><label for="post-echo-time">重複間隔 <output id="post-echo-time-value">300 ms</output></label><input id="post-echo-time" type="range" min="80" max="1000" step="10" value="300"><p class="help">80～1000 ms。小值像緊貼人聲的重影，大值像一句接一句的回應。</p></div>
           <div><label for="post-echo-repeats">重複次數 <output id="post-echo-repeats-value">3 次</output></label><input id="post-echo-repeats" type="range" min="1" max="8" step="1" value="3"><p class="help">最多 8 次；間隔和次數一起決定回聲延伸多長。</p></div>
           <div><label for="post-echo-feedback">每次保留音量 <output id="post-echo-feedback-value">40%</output></label><input id="post-echo-feedback" type="range" min="0" max="80" step="5" value="40"><p class="help">後一次是前一次的幾成。40% 會很快變小；80% 衰減較慢；0% 只留下第一次回聲。</p></div>

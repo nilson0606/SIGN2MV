@@ -4,7 +4,7 @@ import {isPostRecording} from './recording-store.mjs';
 import {createMV} from './mv-client.mjs';
 import {createMVLibrary} from './mv-library-client.mjs';
 import { createRecordingAudition } from './recording-audition.mjs';
-import { recordingScenes, initialRecordingEffects, matchingRecordingScene, recordingEmotions, matchingRecordingEmotion } from './recording-scenes.mjs';
+import { recordingScenes, defaultRecordingEffects, initialRecordingEffects, matchingRecordingScene, recordingEmotions, matchingRecordingEmotion } from './recording-scenes.mjs';
 import { PITCH_DETECTOR_VERSION } from './audio.mjs';
 import { softeningProfile, recordingSofteningSuffix, recordingEffectsSuffix, vocalEffects, reverbProfile, reverbSpacePresets } from './recording-soften.mjs';
 import { scoringProfile } from './scoring.mjs';
@@ -164,7 +164,7 @@ export function createRecordingPost({store,stop,pause,download,onDelete,referenc
     $('rescore-status').textContent=selected?'已選取錄音，可調整設定後重新評分。':'請先保存一段演唱錄音。';
     $('post-reference-source').value='original';
     $('post-softening').value=selected?.vocalSoftening?.strength||'off';
-    // Both drafts agree; only newly captured recordings opt into the new default.
+    // Both drafts agree: saved settings, or the dry default.
     setEffects(initialRecordingEffects(selected));
     setEdit(selected?.postEdit);
     $('post-edit-info').textContent=selected?`原始錄音約 ${(selected.sourceSeconds??selected.seconds).toFixed(2)} 秒；目前成品 ${selected.seconds.toFixed(2)} 秒。剪輯秒數以套用延時後、尚未裁切的完整錄音為準。${selected.postEdit?.start?`目前播放器 0 秒對應原始錄音 ${selected.postEdit.start} 秒。`:''}`:'';
@@ -367,7 +367,7 @@ export function createRecordingPost({store,stop,pause,download,onDelete,referenc
     const href=URL.createObjectURL(mp3),a=document.createElement('a');a.href=href;a.download=row.title.replace(/[\\/:*?"<>|]/g,'_').slice(0,100)+recordingEffectsSuffix(row)+recordingSofteningSuffix(row)+recordingTuningSuffix(row)+recordingDelaySuffix(row)+'.mp3';a.click();setTimeout(()=>URL.revokeObjectURL(href),60000);status(savedPath?'MP3 已轉換並開始下載，同時保存至 '+savedPath+'。':'MP3 已轉換並開始下載，但尚未存入錄音目錄：'+saveError);
   }));
   audition=createRecordingAudition({run,getPosition:originalPlayhead,beforePlay:()=>{$('post-audio').pause();pause();},
-    defaults:row=>({delayMs:Number.isFinite(row?.appliedDelayMs)?row.appliedDelayMs:Number.isFinite(row?.recordingDelayMs)?row.recordingDelayMs:Number($('offset').value)||0,softening:'off',volume:recordingVolume(),effects:vocalEffects(recordingScenes.hall.effects)}),
+    defaults:row=>({delayMs:Number.isFinite(row?.appliedDelayMs)?row.appliedDelayMs:Number.isFinite(row?.recordingDelayMs)?row.recordingDelayMs:Number($('offset').value)||0,softening:'off',volume:recordingVolume(),effects:vocalEffects(defaultRecordingEffects())}),
     onEditor:name=>{const panel=$('post-ab-editor'),label=name.toUpperCase();panel.dataset.slot=name;panel.className='audition-slot-'+name;$('post-ab-editor-heading').textContent=`正在調整 ${label} 組`;$('post-audition-quick').textContent=`片段試聽目前 ${label} 設定`;$('post-remix').textContent=`重新合成 ${label}（音量／延時／音色／剪輯）`;},
     read:()=>{const delayMs=Number($('remix-delay').value);delaySeconds(delayMs);return {delayMs,softening:$('post-softening').value,volume:recordingVolume({voice:Number($('post-voice-level').value),backing:Number($('post-backing-level').value)}),effects:readEffects()};},
     apply:s=>{$('post-softening').value=s.softening;setEffects(s.effects);$('remix-delay').value=s.delayMs;$('post-delay').value=s.delayMs;$('post-voice-level').value=s.volume.voice;$('post-backing-level').value=s.volume.backing;volumeLabels();},

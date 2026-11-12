@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Sing, 「錄音後處理」: reverb and echo now start at 0% for every recording without saved effects (new or old)
+  and for 「還原 A／B 預設設定」 (was hall reverb 20% + echo 10%). The space type, tail and pre-delay still start as
+  hall, so raising a slider gives the hall sound. A new first scene 「不加殘響與回聲（預設）」 matches this state and
+  turns both off in one click; 「大廳 · 一般流行」 is no longer marked as the default. Saved copies keep their settings.
+
 ## 2026.11.12.2
 
 - Library, 「音軌平移」: a second highlighted line explains 「套用」 (only it changes the files, the originals are

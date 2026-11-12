@@ -88,7 +88,7 @@ export function createRecordingAudition({read,defaults,apply,render,run,beforePl
     // Skip reading the draft: restoring must also recover incomplete/invalid fields.
     stop();delete cache[editor];slots[editor]=structuredClone(defaultSlots[editor]);
     apply(structuredClone(slots[editor]));describe(editor);showTab(editor);controls();
-    say(`已還原 ${editor.toUpperCase()} 系統預設：原音、大廳殘響 20%、回聲 10%、音量 100%、校正 ${slots[editor].delayMs} ms，清理與音準修正關閉；另一組保留。按試聽即可重新比較。`);
+    say(`已還原 ${editor.toUpperCase()} 系統預設：原音、殘響 0%、回聲 0%、音量 100%、校正 ${slots[editor].delayMs} ms，清理與音準修正關閉；另一組保留。按試聽即可重新比較。`);
   }
   function range(){const start=$('start').value===''?NaN:Number($('start').value),end=$('end').value===''?NaN:Number($('end').value);
     if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end<=start||end>3600||end-start>30)throw Error('試聽需設定有效起訖，每段最多 30 秒。');return {start,end};}
