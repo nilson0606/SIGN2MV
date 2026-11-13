@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2026.11.13
+
 - Library: 「準備分軌」 stops a running 「音軌平移」 preview first (on the GPU machine the window's drawing stopped
   the moment a separation started while the preview played, until the window was hidden and shown again). When a
   shift was previewed but not applied it asks before separating, since separating locks the shift:
