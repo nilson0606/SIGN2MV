@@ -1272,7 +1272,10 @@ def router(ctx: Context) -> APIRouter:
             return Path(illust_dir) / f"scene_{int(m.group(1)):02d}.png"
         return Path(instrumental_photo_path(illust_dir, m.group(2)))
 
-    def card_state(proj: Dict[str, Any]) -> Dict[str, Any]:
+    def card_grade(body: Dict[str, Any]) -> str:
+        return "standard" if body.get("grade") == "standard" else "simple"
+
+    def card_state(proj: Dict[str, Any], grade: str = "simple") -> Dict[str, Any]:
         """What the cards button would do now. "empty": the parts of the timeline that show no photo, each with
         the card chosen for it (the choice goes over the whole timeline, so a card drawn later still differs
         from its neighbours). "cards": the photos in the project that are cards, with what each one is."""
@@ -1310,8 +1313,10 @@ def router(ctx: Context) -> APIRouter:
         else:
             seed = cards.song_seed(f"{slug}#{rnd}" if rnd else slug)
             # (the song's own last world is among them too, so cards made again do not look like the ones taken out)
-            world = cardworld.choose_world(seed, [h["world"] for h in cards.read_history(core.LIBRARY_ROOT)])
-        if world:
+            world = cardworld.choose_world(seed, [h["world"] for h in cards.read_history(core.LIBRARY_ROOT)], grade)
+        if world and world.get("grade") == "standard":
+            picks = [(spec, 0) for spec in cardworld.plan_standard(parts, seed, world)]
+        elif world:
             picks = [(spec, 0) for spec in cardworld.plan(parts, seed, world)]
         else:
             picks = cards.pick(parts, seed)
@@ -1341,7 +1346,8 @@ def router(ctx: Context) -> APIRouter:
                 seen.add(slot)
                 empty.append({"slot": slot, "card": name, "look": look})
         return {"empty": empty, "cards": have, "tone": rec["tone"] or "fresh", "tones": list(cards.TONES),
-                "timeline": len(tl), "seed": seed, "world": world, "round": rnd}
+                "timeline": len(tl), "seed": seed, "world": world, "round": rnd,
+                "grade": (world or {}).get("grade", "simple")}
 
     def card_save(illust_dir: str, out_path: Path, name: str, look: int, tone: str, state: Dict[str, Any],
                   keep: Dict[str, Any], replace_print: str, slug: str) -> None:
@@ -1376,7 +1382,7 @@ def router(ctx: Context) -> APIRouter:
             proj = load_project_dict(str(body.get("slug", "")))
         except ProjectNotFound as exc:
             return jerr(404, str(exc))
-        return {"status": "ok", **card_state(proj)}
+        return {"status": "ok", **card_state(proj, card_grade(body))}
 
     @r.post("/api/mv/cards/draw")
     async def api_cards_draw(request: Request):
@@ -1393,7 +1399,7 @@ def router(ctx: Context) -> APIRouter:
         out_path = card_slot_path(illust_dir, slot)
         if out_path is None or tone not in cards.TONES:
             return jerr(400, "簡易圖卡的資料不正確")
-        state = card_state(proj)
+        state = card_state(proj, card_grade(body))
         old_print = ""
         if body.get("redraw"):
             hit = next((c for c in state["cards"] if c["slot"] == slot), None)
@@ -1459,7 +1465,7 @@ def router(ctx: Context) -> APIRouter:
             return jerr(404, str(exc))
         return {"status": "ok", "all_scenes": _scene_payload(proj),
                 "instrument_photos": list_instrumental_photos(proj["illust_dir"], proj.get("timeline", [])),
-                **card_state(proj)}
+                **card_state(proj, card_grade(body))}
 
     @r.post("/api/mv/scenes/delete_shift")
     async def api_delete_scenes_shift(request: Request):

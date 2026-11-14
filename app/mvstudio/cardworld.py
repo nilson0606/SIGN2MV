@@ -52,6 +52,9 @@ PLACES_STD = ("cafe", "busstop", "library", "train", "market", "snowtown", "gard
 SUBJECTS_STD = ("solo_run", "duo_hug")
 FRAMES_STD = ("sil", "over", "hands", "still")
 INDOOR_STD = ("cafe", "library", "train")
+PROPS_STD = ("hourglass", "calendar", "suitcase", "phone", "key", "candle", "ring", "cranes", "dandelion", "broken", "wine",
+             "guitar", "camera", "diary", "footprints", "door", "raincloud", "rays", "fireworks", "paperboat", "butterfly", "cat",
+             "thought", "dream")
 POSES = ("l", "c", "r")
 LINES = {"ink": ((50, 60, 92), 4), "brown": ((96, 68, 60), 5), "soft": (None, 3), "fine": ((74, 80, 100), 3)}
 HAIR_COLORS = ((92, 70, 70), (52, 48, 62), (134, 88, 62), (182, 134, 88), (116, 62, 70), (70, 84, 110))
@@ -76,7 +79,14 @@ def make_world(seed: int, grade: str = "simple") -> Dict[str, Any]:
     r = random.Random(f"world:{int(seed)}:{grade}" if std else f"world:{int(seed)}")
     indoor = INDOOR + (INDOOR_STD if std else ())
     out_places = [p for p in PLACES + (PLACES_STD if std else ()) if p not in indoor]
-    places = (r.sample(out_places, 6) + r.sample(indoor, 2)) if std else (r.sample(out_places, 4) + [r.choice(INDOOR)])
+    if std:      # six put-together places, two of the painted ones, two rooms
+        terrains, places = r.sample(TERRAINS, 5), []
+        for i, lm in enumerate(r.sample(LANDMARKS, 6)):
+            t = terrains[i % 5] if fits(lm, terrains[i % 5]) else r.choice([x for x in TERRAINS if fits(lm, x)])
+            places.append(f"{t}.{lm}.{r.choice(FRONTS)}")
+        places += r.sample(out_places, 2) + r.sample(indoor, 2)
+    else:
+        places = r.sample(out_places, 4) + [r.choice(INDOOR)]
     hue, sat = r.choice(PALETTES)
 
     def person(cuts, wears):
@@ -95,7 +105,10 @@ def make_world(seed: int, grade: str = "simple") -> Dict[str, Any]:
 def world_distance(a: Dict[str, Any], b: Dict[str, Any]) -> float:
     """How unlike two songs' worlds are (larger: more unlike)."""
     d = 0.0
-    d += 3.0 * (min(len(a.get("places", [])), len(b.get("places", []))) - len(set(a.get("places", [])) & set(b.get("places", []))))
+    def parts(wd):      # a put-together place counts by its terrain and its landmark
+        return {x for p in wd.get("places", []) for x in (str(p).split(".")[:2] if "." in str(p) else [p])}
+    pa, pb = parts(a), parts(b)
+    d += 3.0 * (min(len(pa), len(pb)) - len(pa & pb)) * 5.0 / max(5, min(len(pa), len(pb)))
     d += 2.5 if a.get("line") != b.get("line") else 0
     d += 2.0 if (a.get("hue"), a.get("sat")) != (b.get("hue"), b.get("sat")) else 0
     d += 1.5 if a.get("lights") != b.get("lights") else 0
@@ -123,7 +136,7 @@ def choose_world(seed: int, recent: Sequence[Dict[str, Any]] = (), grade: str = 
 
 def valid_world(wd: Any) -> bool:
     try:
-        return (wd.get("v") == 2 and len(wd["places"]) >= 1 and all(p in PLACES + PLACES_STD for p in wd["places"])
+        return (wd.get("v") == 2 and len(wd["places"]) >= 1 and all(valid_place(p) for p in wd["places"])
                 and all(x in LIGHTS for x in wd["lights"]) and wd["line"] in LINES and wd["border"] in BORDERS
                 and wd.get("grade", "simple") in ("simple", "standard") and float(wd.get("tall", 0)) >= 0
                 and wd["lead"] in ("girl", "boy") and all(s in SUBJECTS + SUBJECTS_STD for s in wd["subjects"]) and all(f in FRAMES for f in wd["frames"])
@@ -226,8 +239,8 @@ def card(place, light, weather, subject, prop, frame, pos, n) -> str:
 
 def parse(spec: str) -> Optional[Tuple[str, str, str, str, str, str, str, int]]:
     p = str(spec or "").split("|")
-    if (len(p) == 9 and p[0] == "w2" and p[1] in PLACES + PLACES_STD and p[2] in LIGHTS and p[3] in WEATHERS
-            and p[4] in SUBJECTS + SUBJECTS_STD and p[5] in PROPS and p[6] in FRAMES + FRAMES_STD and p[7] in POSES
+    if (len(p) == 9 and p[0] == "w2" and valid_place(p[1]) and p[2] in LIGHTS and p[3] in WEATHERS
+            and p[4] in SUBJECTS + SUBJECTS_STD and p[5] in PROPS + PROPS_STD and p[6] in FRAMES + FRAMES_STD and p[7] in POSES
             and p[8].isdigit() and len(p[8]) <= 4):
         return p[1], p[2], p[3], p[4], p[5], p[6], p[7], int(p[8])
     return None
@@ -240,7 +253,8 @@ def plan(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, Any]) -> 
     r = random.Random(f"plan:{int(seed)}")
     rows = [(tuple(_simple(w) for w in ws), what) for ws, what in HINTS]
     places, lights = list(world["places"]), list(world["lights"])
-    outdoor = [p for p in places if p not in INDOOR] or ["meadow"]
+    rooms = INDOOR + INDOOR_STD
+    outdoor = [p for p in places if p not in rooms] or ["meadow"]
     subjects, frames = list(world["subjects"]), list(world["frames"])
     n_lines = max(1, sum(1 for k, _ in parts if k not in ("intro", "outro")))
     out: List[str] = []
@@ -260,9 +274,12 @@ def plan(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, Any]) -> 
                 place, stay = order[0], r.choice((2, 2, 3))
             stay -= 1
             pl = h.get("place", place)
+            if (h.get("terrain") or h.get("landmark")) and world.get("grade") == "standard" and h.get("place") not in PLACES_STD + rooms:
+                # the standard grade's own words win over the simple grade's place for the same line
+                pl = compose(place, h.get("terrain"), h.get("landmark"), world)
             light = h.get("light") or lights[min(len(lights) - 1, li * len(lights) // n_lines)]
             weather = h.get("weather", "clear")
-            if pl in INDOOR and weather != "clear":
+            if pl in rooms and weather != "clear":
                 weather = "clear" if h.get("place") else weather
                 pl = pl if h.get("place") else outdoor[li % len(outdoor)]
             subject = h.get("subject") or subjects[li % len(subjects)]
@@ -1188,7 +1205,9 @@ def draw(spec: str, world: Dict[str, Any], seed: int = 0) -> Image.Image:
     if place != "forest":
         k.clouds()
     thing(k, prop, "back", None, 0)
-    info = PLACE_FN[place](k) or {}
+    if prop in PROPS_STD:
+        thing_standard(k, prop, "back", None, 0)
+    info = paint_place(k, place) or {}
     ground = float(info.get("ground", 900))
     if std:
         k.mood = MOODS.get(prop, "sad" if subject in SAD_SUBJECTS else "smile")
@@ -1217,12 +1236,12 @@ def draw(spec: str, world: Dict[str, Any], seed: int = 0) -> Image.Image:
             k.d.rectangle([0, P(ground - 40), W * S, H * S], fill=(24, 22, 46, 150))
             k.flat = _mix((26, 24, 48), k.sky3[0], 0.12)
         if shot == "close" or frame == "over":
-            PLACE_FN[place](k, True)
+            paint_place(k, place, True)
         if frame == "over":
             k.blur(5)
         who = people(k, subject, pos, shot, ground, n)
         if shot != "close" and frame != "over":
-            PLACE_FN[place](k, True)
+            paint_place(k, place, True)
         k.flat = None
         if frame == "over":      # someone's shoulder and head in front, looking on
             k.blur(3)
@@ -1231,6 +1250,8 @@ def draw(spec: str, world: Dict[str, Any], seed: int = 0) -> Image.Image:
             figure(k, watcher, 330 if pos != "l" else 1590, 1900, 4.2, "back")
             k.rim = rim
         thing(k, prop, "front", who, ground)
+        if prop in PROPS_STD:
+            thing_standard(k, prop, "front", who, ground)
     weather(k, wth)
     im = _finish(k, world["border"])
     return _finish_standard(im, zlib.crc32(spec.encode())) if std else im
@@ -1522,21 +1543,102 @@ PLACE_FN.update({"cafe": pl_cafe, "busstop": pl_busstop, "library": pl_library, 
                  "stairs": pl_stairs, "riverbank": pl_riverbank})
 HINTS_STD = (
     _row(("咖啡", "coffee", "cafe"), place="cafe"),
-    _row(("公車", "巴士", "站牌", "bus"), place="busstop"),
+    _row(("公車", "巴士", "bus"), place="busstop"),
     _row(("書", "圖書館", "故事", "book", "story"), place="library"),
     _row(("車廂", "電車", "捷運", "地鐵"), place="train"),
     _row(("夜市", "燈火", "熱鬧", "人群", "crowd"), place="market"),
-    _row(("雪", "冬", "聖誕", "snow", "winter", "christmas"), place="snowtown", weather="snow"),
     _row(("花園", "玫瑰", "garden", "rose"), place="garden"),
     _row(("巷", "轉角", "角落", "老街", "corner"), place="alley"),
-    _row(("田", "稻", "麥", "故鄉", "家鄉", "field"), place="field"),
-    _row(("摩天輪", "遊樂", "約會", "煙火", "date"), place="fair"),
-    _row(("階梯", "樓梯", "石階", "祈", "廟"), place="stairs"),
+    _row(("階梯", "樓梯", "石階"), place="stairs"),
     _row(("河岸", "河邊", "堤", "岸"), place="riverbank"),
+    # landmarks
+    _row(("燈塔", "lighthouse"), landmark="lighthouse", terrain="cliff"),
+    _row(("摩天輪", "約會", "date"), landmark="ferris"),
+    _row(("風車",), landmark="windmill"),
+    _row(("教堂", "婚禮", "誓言", "承諾", "嫁", "娶", "promise", "wedding"), landmark="chapel"),
+    _row(("鐘樓", "鐘聲", "bell"), landmark="clocktower"),
+    _row(("電話亭",), landmark="phonebooth"),
+    _row(("鞦韆", "童年", "小時候", "長大", "childhood"), landmark="swings"),
+    _row(("溜滑梯", "遊樂場", "公園"), landmark="slide"),
+    _row(("營火", "露營", "帳篷", "篝火", "camp"), landmark="camp", light="night"),
+    _row(("櫻", "春天", "spring"), landmark="cherry"),
+    _row(("楓", "秋天", "落葉", "autumn", "fall"), landmark="maple"),
+    _row(("噴泉", "廣場", "square"), landmark="fountain", terrain="plaza"),
+    _row(("站牌", "等車"), landmark="shelter"),
+    _row(("販賣機",), landmark="vending"),
+    _row(("郵筒", "寄"), landmark="mailbox"),
+    _row(("單車", "腳踏車"), landmark="bicycle"),
+    _row(("車", "開往", "公路", "drive", "car"), landmark="car"),
+    _row(("列車", "火車", "鐵軌", "train"), landmark="trainpass"),
+    _row(("橋", "bridge"), landmark="farbridge", terrain="river"),
+    _row(("鐵塔", "電波", "廣播", "radio"), landmark="radiotower"),
+    _row(("農", "穀倉", "故鄉", "家鄉", "老家", "hometown"), landmark="barn", terrain="wheat"),
+    _row(("小屋", "木屋", "炊煙", "家", "home"), landmark="cabin"),
+    _row(("城堡", "王子", "公主", "童話", "castle", "fairy"), landmark="castle"),
+    _row(("熱氣球",), landmark="hotair"),
+    _row(("帆", "船", "航", "sail", "boat"), landmark="sailboats", terrain="coast"),
+    _row(("天文", "宇宙", "星球", "universe"), landmark="observatory", light="night"),
+    _row(("溫室", "種", "發芽", "grow"), landmark="greenhouse"),
+    _row(("舞台", "演唱", "掌聲", "聚光", "stage"), landmark="stage"),
+    _row(("旋轉木馬", "遊樂園", "樂園"), landmark="carousel"),
+    _row(("雪人",), landmark="snowman", terrain="snow", weather="snow"),
+    _row(("稻草人",), landmark="scarecrow", terrain="wheat"),
+    _row(("路口", "方向", "迷路", "選擇", "岔路", "direction", "lost"), landmark="signpost"),
+    _row(("井", "許願"), landmark="well"),
+    _row(("涼亭",), landmark="gazebo"),
+    _row(("鋼琴", "琴聲", "piano"), landmark="piano"),
+    _row(("望遠鏡", "眺望", "遠望"), landmark="telescope"),
+    _row(("碼頭", "棧橋", "pier"), landmark="jetty"),
+    _row(("飛機", "機場", "航班", "plane", "flight"), landmark="jet"),
+    _row(("市集", "園遊會", "祭"), landmark="tents"),
+    _row(("燈籠", "廟", "祈"), landmark="lanterns"),
+    # terrains
+    _row(("海", "浪", "沙灘", "sea", "ocean", "beach", "waves"), terrain="coast"),
+    _row(("城市", "霓虹", "高樓", "都市", "city"), terrain="skyline"),
+    _row(("小鎮", "街", "town", "street"), terrain="town"),
+    _row(("山", "湖", "mountain", "lake"), terrain="peaks"),
+    _row(("森林", "樹林", "forest"), terrain="woods"),
+    _row(("雪", "冬", "聖誕", "snow", "winter", "christmas"), terrain="snow", weather="snow"),
+    _row(("田", "稻", "麥", "field"), terrain="wheat"),
+    _row(("河", "溪", "river"), terrain="river"),
+    _row(("沙漠", "荒", "desert"), terrain="dunes"),
+    _row(("懸崖", "盡頭", "天涯", "海角", "edge"), terrain="cliff"),
+    _row(("草原", "原野", "草地"), terrain="grass"),
+    # stances
     _row(("跑", "追", "奔", "run", "running", "chase"), subject="solo_run"),
     _row(("擁抱", "抱", "懷裡", "hug", "arms"), subject="duo_hug"),
+    # things
+    _row(("想你", "想念", "思念", "牽掛", "miss"), prop="thought"),
+    _row(("夢", "睡", "dream", "sleep"), prop="dream"),
+    _row(("沙漏", "流逝", "來不及"), prop="hourglass"),
+    _row(("日子", "那天", "那年", "每天", "明天", "昨天", "紀念", "days", "yesterday"), prop="calendar"),
+    _row(("行李", "遠行", "出發", "流浪", "漂泊", "離家", "leave", "leaving"), prop="suitcase"),
+    _row(("電話", "手機", "訊息", "簡訊", "已讀", "phone", "text", "message"), prop="phone"),
+    _row(("鑰匙", "鎖", "秘密", "心門", "key", "secret"), prop="key"),
+    _row(("蠟燭", "燭", "生日", "祈禱", "candle", "pray"), prop="candle"),
+    _row(("戒指", "永遠", "一輩子", "ring", "forever"), prop="ring"),
+    _row(("紙鶴", "願望", "心願", "wish"), prop="cranes"),
+    _row(("蒲公英", "隨風", "飄"), prop="dandelion"),
+    _row(("心碎", "碎", "分手", "背叛", "broken", "breakup"), prop="broken"),
+    _row(("酒", "醉", "乾杯", "wine", "drunk"), prop="wine"),
+    _row(("吉他", "彈", "guitar"), prop="guitar"),
+    _row(("相機", "拍", "鏡頭", "camera", "photo"), prop="camera"),
+    _row(("日記", "寫下", "diary"), prop="diary"),
+    _row(("腳印", "足跡", "走過", "一步", "footprints", "steps"), prop="footprints"),
+    _row(("門", "打開", "door", "open"), prop="door"),
+    _row(("烏雲", "陰天", "憂鬱", "悲傷", "難過", "sad", "blue"), prop="raincloud"),
+    _row(("光", "希望", "曙光", "勇氣", "相信", "light", "hope", "believe", "brave"), prop="rays"),
+    _row(("煙火", "煙花", "慶祝", "新年", "fireworks"), prop="fireworks", light="night"),
+    _row(("紙船", "漂流", "drift"), prop="paperboat"),
+    _row(("蝴蝶", "butterfly"), prop="butterfly"),
+    _row(("貓", "cat"), prop="cat"),
+    # a line with no thing to show still has a feeling: it decides the light and how they stand
+    _row(("痛", "傷", "哭", "淚", "寂寞", "孤單", "失去", "後悔", "遺憾", "心酸", "錯過", "cry", "hurt", "lonely", "regret"), light="dusk", subject="solo_back"),
+    _row(("快樂", "幸福", "開心", "笑", "甜", "美好", "溫暖", "happy", "smile", "sweet", "warm"), light="day", subject="solo_wave"),
+    _row(("我們", "一起", "陪", "身邊", "together"), subject="duo_sit"),
 )
-MOODS = {"tears": "sad", "hearts": "closed", "call": "wow", "ask": "wow", "shooting": "wow", "notes": "closed", "umbrella": "sad"}
+MOODS = {"tears": "sad", "hearts": "closed", "call": "wow", "ask": "wow", "shooting": "wow", "notes": "closed", "umbrella": "sad",
+         "broken": "sad", "raincloud": "sad", "fireworks": "wow", "thought": "closed", "dream": "closed", "guitar": "closed", "suitcase": "sad"}
 SAD_SUBJECTS = ("duo_apart", "solo_back", "other_back")
 
 
@@ -1562,9 +1664,9 @@ def plan_standard(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, 
             shot = ""
             outdoor = place not in INDOOR + INDOOR_STD
             if since >= 3 and r.random() < 0.6:
-                if subject == "none" or prop in ("letter", "clock", "frames"):
+                if subject == "none" or prop in ("letter", "clock", "frames", "hourglass", "calendar", "key", "candle", "diary"):
                     shot = "still"
-                elif outdoor and place != "forest" and wth == "clear" and light in ("sunset", "golden", "dawn", "dusk") and prop in ("none", "birds", "hearts", "thread", "leaves", "petals"):
+                elif outdoor and place != "forest" and not place.startswith(("woods.", "skyline.")) and wth == "clear" and light in ("sunset", "golden", "dawn", "dusk") and prop in ("none", "birds", "hearts", "thread", "leaves", "petals"):
                     shot = "sil"
                 elif subject.startswith("duo") and subject != "duo_apart" and prop in ("none", "hearts", "thread", "petals", "leaves", "bubbles", "fireflies", "stars"):
                     shot = "hands"
@@ -1661,3 +1763,733 @@ def _finish_standard(im: Image.Image, seed: int) -> Image.Image:
     noise = Image.frombytes("L", (W // 2, H // 2), random.Random(seed).randbytes((W // 2) * (H // 2)))
     grain = noise.point(lambda v: 128 + (v - 128) // 5).resize((W, H), Image.BILINEAR).convert("RGB")
     return Image.blend(im, ImageChops.overlay(im, grain), 0.16)
+
+
+# ------------------------------------------------- the standard grade: places put together from parts
+# A place of this kind is written "terrain.landmark.front": the lie of the land, the one thing that stands
+# in it, and what is nearest to the eye. Twelve terrains, forty landmarks and nine fronts.
+def tr_grass(k):
+    k.ridge(650, 46, (140, 200, 170), far=0.6); k.ridge(720, 40, (134, 204, 158), far=0.3)
+    k.band(790, H, (170, 224, 160), (128, 196, 132)); k.ridge(790, 14, (170, 224, 160), rough=0.6)
+    return {"ground": 890, "base": 800}
+
+
+def tr_coast(k):
+    k.band(620, 880, (150, 214, 236), (86, 170, 214))
+    for i in range(16):
+        x = k.r.uniform(0, W - 300)
+        k.stroke([(x, 640 + i * 15), (x + k.r.uniform(120, 360), 640 + i * 15)], (255, 255, 255, 110), 3)
+    pts = [(x, 872 + math.sin(x / 170 + 1.3) * 20) for x in range(-30, W + 60, 30)]
+    k.poly([(x, y - 14) for x, y in pts] + [(W + 30, H + 30), (-30, H + 30)], (255, 255, 255), line=False)
+    k.poly(pts + [(W + 30, H + 30), (-30, H + 30)], (250, 230, 190), line=False)
+    return {"ground": 940, "base": 890}
+
+
+def tr_skyline(k):
+    for i in range(16):
+        x, h = i * 128 - 30 + k.r.uniform(-14, 14), k.r.uniform(150, 420)
+        k.rect(x, 780 - h, x + 112, 800, k.far((120, 132, 170), 0.55), line=False, raw=True)
+        k.windows(x + 14, 790 - h + 12, x + 100, 770, cw=18, ch=24, gap=14, lit=0.4)
+    k.band(800, H, (220, 216, 220), (186, 184, 196)); k.stroke([(0, 800), (W, 800)], None, k.lw)
+    for y in (880, 980):
+        k.stroke([(0, y), (W, y)], (200, 198, 206), 3)
+    return {"ground": 900, "base": 808}
+
+
+def tr_town(k):
+    k.ridge(680, 30, (140, 196, 176), far=0.6)
+    x = -30
+    while x < W:
+        wd, h = k.r.uniform(150, 230), k.r.uniform(110, 190)
+        k.rect(x + 10, 790 - h, x + wd - 10, 800, k.far(k.r.choice(((246, 214, 190), (212, 230, 240), (250, 232, 180), (226, 206, 236))), 0.2), raw=True)
+        k.poly([(x, 790 - h), (x + wd / 2, 790 - h - 70), (x + wd, 790 - h)], k.far(k.r.choice(((214, 120, 110), (120, 140, 180), (170, 120, 100))), 0.2), raw=True)
+        k.windows(x + 30, 790 - h + 20, x + wd - 30, 780, cw=30, ch=36, gap=24, lit=0.6)
+        x += wd + k.r.uniform(0, 30)
+    k.band(800, H, (232, 222, 208), (206, 194, 184)); k.stroke([(0, 800), (W, 800)], None, k.lw)
+    return {"ground": 900, "base": 810}
+
+
+def tr_peaks(k):
+    for x, top in ((k.r.uniform(200, 600), k.r.uniform(300, 400)), (k.r.uniform(800, 1150), k.r.uniform(240, 340)), (k.r.uniform(1350, 1750), k.r.uniform(320, 420))):
+        k.poly([(x - 560, 650), (x, top), (x + 560, 650)], k.far((120, 160, 196), 0.42), line=False, raw=True)
+        k.poly([(x - 74, top + 62), (x, top), (x + 74, top + 62), (x + 26, top + 48), (x - 18, top + 70)], (255, 255, 255), line=False)
+    k.band(650, 820, (170, 216, 238), (112, 176, 216))
+    for i in range(9):
+        x = k.r.uniform(0, W - 300)
+        k.stroke([(x, 670 + i * 16), (x + k.r.uniform(100, 300), 670 + i * 16)], (255, 255, 255, 110), 3)
+    k.band(820, H, (176, 220, 164), (130, 190, 134)); k.ridge(820, 10, (176, 220, 164), rough=0.8)
+    return {"ground": 900, "base": 830}
+
+
+def tr_woods(k):
+    for i in range(10):
+        k.tree(i * 220 - 40 + k.r.uniform(-50, 50), 770, k.r.uniform(0.9, 1.3), far=0.5, kind="pine" if i % 3 == 0 else "round")
+    k.band(770, H, (160, 214, 154), (112, 176, 122)); k.stroke([(0, 770), (W, 770)], None, max(2, k.lw - 1))
+    k.poly([(880, 770), (1040, 770), (1500, H + 20), (420, H + 20)], (226, 208, 170), line=False)
+    return {"ground": 900, "base": 790}
+
+
+def tr_snow(k):
+    k.ridge(640, 50, (226, 236, 246), far=0.3); k.ridge(720, 34, (240, 246, 252), far=0.15)
+    for i in range(5):
+        k.tree(i * 480 + k.r.uniform(-90, 90), 800, k.r.uniform(0.7, 1.0), col=(120, 170, 160), far=0.3, kind="pine")
+    k.band(800, H, (255, 255, 255), (216, 230, 246)); k.ridge(800, 12, (255, 255, 255), rough=0.9)
+    return {"ground": 900, "base": 812}
+
+
+def tr_wheat(k):
+    k.ridge(660, 36, (140, 196, 176), far=0.6)
+    k.band(720, H, (244, 222, 140), (214, 180, 96))
+    for row in range(12):
+        k.stroke([(0, 730 + row * row * 2.6), (W, 730 + row * row * 2.6)], (206, 170, 90, 120), 2 + row * 0.5)
+    return {"ground": 900, "base": 790}
+
+
+def tr_river(k):
+    k.ridge(600, 36, (136, 196, 176), far=0.6)
+    k.band(640, 770, (170, 216, 238), (112, 176, 216))
+    for i in range(7):
+        x = k.r.uniform(0, W - 300)
+        k.stroke([(x, 656 + i * 15), (x + k.r.uniform(100, 300), 656 + i * 15)], (255, 255, 255, 110), 3)
+    k.band(770, H, (166, 218, 152), (124, 188, 128)); k.ridge(770, 10, (166, 218, 152), rough=0.8)
+    return {"ground": 900, "base": 800}
+
+
+def tr_dunes(k):
+    k.ridge(620, 60, (236, 200, 150), far=0.45, rough=0.1); k.ridge(700, 50, (240, 206, 150), far=0.2, rough=0.1)
+    k.band(780, H, (246, 220, 164), (226, 186, 128)); k.ridge(780, 26, (246, 220, 164), rough=0.1)
+    for _ in range(5):
+        x = k.r.uniform(60, W - 60)
+        k.rect(x - 10, 720, x + 10, 800, (110, 170, 120), r=10); k.rect(x - 34, 740, x - 18, 780, (110, 170, 120), r=8); k.rect(x + 18, 730, x + 34, 770, (110, 170, 120), r=8)
+    return {"ground": 900, "base": 810}
+
+
+def tr_cliff(k):
+    k.band(640, H, (150, 214, 236), (70, 150, 200))
+    for i in range(22):
+        x = k.r.uniform(0, W - 300)
+        k.stroke([(x, 660 + i * 18), (x + k.r.uniform(100, 340), 660 + i * 18)], (255, 255, 255, 100), 3)
+    side = k.r.choice((0, 1))
+    pts = [(-30, 800), (1150, 790), (1260, 830), (1220, 940), (1300, H + 30), (-30, H + 30)]
+    if side:
+        pts = [(W - x, y) for x, y in pts]
+    k.poly(pts, (150, 136, 130)); top = [(-30, 800), (1150, 790), (1260, 830), (1100, 850), (-30, 860)]
+    k.poly([(W - x, y) for x, y in top] if side else top, (160, 214, 150))
+    return {"ground": 850, "base": 800, "x": 1500 if side else 420}
+
+
+def tr_plaza(k):
+    for i in range(9):
+        k.tree(i * 250 - 40 + k.r.uniform(-50, 50), 780, k.r.uniform(0.8, 1.1), far=0.45)
+    k.band(780, H, (236, 226, 214), (210, 198, 190)); k.stroke([(0, 780), (W, 780)], None, k.lw)
+    for i in range(1, 9):
+        y = 780 + i * i * 4.6
+        k.stroke([(0, y), (W, y)], (214, 204, 196), 2)
+    for i in range(-8, 9):
+        k.stroke([(960 + i * 60, 780), (960 + i * 320, H)], (214, 204, 196), 2)
+    return {"ground": 900, "base": 800}
+
+
+TERRAIN_FN = {"grass": tr_grass, "coast": tr_coast, "skyline": tr_skyline, "town": tr_town, "peaks": tr_peaks, "woods": tr_woods,
+              "snow": tr_snow, "wheat": tr_wheat, "river": tr_river, "dunes": tr_dunes, "cliff": tr_cliff, "plaza": tr_plaza}
+TERRAINS = tuple(TERRAIN_FN)
+
+
+def _lit(k):
+    return k.dark or k.light == "overcast"
+
+
+def lm_lighthouse(k, x, y, s):
+    k.poly([(x - 44 * s, y), (x - 26 * s, y - 330 * s), (x + 26 * s, y - 330 * s), (x + 44 * s, y)], (255, 252, 244))
+    for i in (1, 3): k.poly([(x - (44 - i * 4.4) * s, y - i * 66 * s), (x + (44 - i * 4.4) * s, y - i * 66 * s), (x + (40 - i * 4.4) * s, y - (i * 66 + 60) * s), (x - (40 - i * 4.4) * s, y - (i * 66 + 60) * s)], (226, 100, 100), line=False)
+    k.rect(x - 34 * s, y - 384 * s, x + 34 * s, y - 330 * s, (255, 240, 170), e=_lit(k)); k.poly([(x - 44 * s, y - 384 * s), (x + 44 * s, y - 384 * s), (x, y - 440 * s)], (226, 100, 100))
+    if _lit(k): k.d.polygon([(P(x), P(y - 358 * s)), (P(x + 900 * s), P(y - 470 * s)), (P(x + 900 * s), P(y - 250 * s))], fill=(255, 244, 180, 44))
+
+
+def lm_ferris(k, x, y, s):
+    cy, rr = y - 330 * s, 250 * s
+    k.poly([(x - 100 * s, y), (x, cy), (x + 100 * s, y)], (150, 160, 190), line=False)
+    k.d.ellipse([P(x - rr), P(cy - rr), P(x + rr), P(cy + rr)], outline=k.c((150, 160, 200)), width=P(9 * s))
+    for i in range(12):
+        a = i * math.pi / 6
+        k.stroke([(x, cy), (x + math.cos(a) * rr, cy + math.sin(a) * rr)], (150, 160, 200), 4 * s)
+        k.rect(x + math.cos(a) * rr - 26 * s, cy + math.sin(a) * rr - 4 * s, x + math.cos(a) * rr + 26 * s, cy + math.sin(a) * rr + 40 * s, ((255, 150, 150), (255, 220, 120), (150, 214, 190), (170, 190, 255))[i % 4], r=8 * s, e=k.dark)
+
+
+def lm_windmill(k, x, y, s):
+    k.poly([(x - 60 * s, y), (x - 34 * s, y - 280 * s), (x + 34 * s, y - 280 * s), (x + 60 * s, y)], (250, 240, 226)); k.poly([(x - 44 * s, y - 280 * s), (x + 44 * s, y - 280 * s), (x, y - 340 * s)], (190, 110, 100))
+    k.rect(x - 18 * s, y - 70 * s, x + 18 * s, y, (150, 110, 92), r=6 * s)
+    a0 = k.r.uniform(0, 1.5)
+    for i in range(4):
+        a = a0 + i * math.pi / 2
+        k.poly([(x, y - 290 * s), (x + math.cos(a) * 230 * s - math.sin(a) * 30 * s, y - 290 * s + math.sin(a) * 230 * s + math.cos(a) * 30 * s), (x + math.cos(a) * 230 * s + math.sin(a) * 30 * s, y - 290 * s + math.sin(a) * 230 * s - math.cos(a) * 30 * s)], (236, 226, 214))
+    k.ell(x, y - 290 * s, 14 * s, 14 * s, (150, 110, 92))
+
+
+def lm_chapel(k, x, y, s):
+    k.rect(x - 130 * s, y - 200 * s, x + 130 * s, y, (255, 252, 244)); k.poly([(x - 150 * s, y - 200 * s), (x, y - 310 * s), (x + 150 * s, y - 200 * s)], (120, 150, 190))
+    k.rect(x - 44 * s, y - 400 * s, x + 44 * s, y - 250 * s, (255, 252, 244)); k.poly([(x - 56 * s, y - 400 * s), (x, y - 500 * s), (x + 56 * s, y - 400 * s)], (120, 150, 190))
+    k.stroke([(x, y - 500 * s), (x, y - 560 * s)], None, 6 * s); k.stroke([(x - 20 * s, y - 536 * s), (x + 20 * s, y - 536 * s)], None, 6 * s)
+    k.ell(x, y - 330 * s, 22 * s, 26 * s, (255, 226, 130), e=True); k.rect(x - 34 * s, y - 110 * s, x + 34 * s, y, (150, 110, 92), r=30 * s)
+    for sx in (-80, 80): k.rect(x + sx * s - 16 * s, y - 150 * s, x + sx * s + 16 * s, y - 80 * s, (255, 232, 150) if _lit(k) else (190, 220, 240), r=14 * s, e=_lit(k))
+
+
+def lm_clocktower(k, x, y, s):
+    k.rect(x - 60 * s, y - 380 * s, x + 60 * s, y, (236, 214, 190)); k.poly([(x - 76 * s, y - 380 * s), (x, y - 480 * s), (x + 76 * s, y - 380 * s)], (120, 130, 170))
+    k.ell(x, y - 300 * s, 44 * s, 44 * s, (255, 255, 255), e=_lit(k)); k.stroke([(x, y - 300 * s), (x, y - 330 * s)], None, 5 * s); k.stroke([(x, y - 300 * s), (x + 22 * s, y - 290 * s)], None, 5 * s)
+    k.windows(x - 40 * s, y - 220 * s, x + 40 * s, y - 60 * s, cw=26 * s, ch=36 * s, gap=20 * s, lit=0.5)
+
+
+def lm_phonebooth(k, x, y, s):
+    s *= 0.8
+    k.rect(x - 60 * s, y - 250 * s, x + 60 * s, y, (226, 90, 90), r=8 * s); k.rect(x - 44 * s, y - 220 * s, x + 44 * s, y - 40 * s, (255, 240, 180) if _lit(k) else (214, 236, 250), r=4 * s, e=_lit(k))
+    k.stroke([(x, y - 220 * s), (x, y - 40 * s)], None, 3); k.stroke([(x - 44 * s, y - 130 * s), (x + 44 * s, y - 130 * s)], None, 3); k.rect(x - 66 * s, y - 270 * s, x + 66 * s, y - 250 * s, (226, 90, 90), r=6 * s)
+    if _lit(k): k.d.ellipse([P(x - 170 * s), P(y - 320 * s), P(x + 170 * s), P(y + 40 * s)], fill=(255, 236, 170, 34))
+
+
+def lm_swings(k, x, y, s):
+    k.stroke([(x - 190 * s, y), (x - 150 * s, y - 250 * s), (x + 150 * s, y - 250 * s), (x + 190 * s, y)], (120, 150, 190), 10 * s)
+    for dx in (-70, 70):
+        sw = k.r.uniform(-24, 24)
+        k.stroke([(x + (dx - 22) * s, y - 250 * s), (x + (dx - 22 + sw) * s, y - 60 * s)], None, 3); k.stroke([(x + (dx + 22) * s, y - 250 * s), (x + (dx + 22 + sw) * s, y - 60 * s)], None, 3)
+        k.rect(x + (dx - 30 + sw) * s, y - 66 * s, x + (dx + 30 + sw) * s, y - 52 * s, (232, 180, 90), r=4 * s)
+
+
+def lm_slide(k, x, y, s):
+    k.rect(x - 20 * s, y - 220 * s, x + 20 * s, y, (120, 150, 190)); k.rect(x - 60 * s, y - 250 * s, x + 60 * s, y - 220 * s, (232, 110, 110), r=6 * s)
+    k.poly([(x + 40 * s, y - 230 * s), (x + 60 * s, y - 250 * s), (x + 330 * s, y - 10 * s), (x + 290 * s, y)], (250, 214, 96))
+    for i in range(5): k.stroke([(x - 70 * s, y - i * 44 * s), (x - 24 * s, y - i * 44 * s)], (120, 150, 190), 7 * s)
+    k.stroke([(x - 70 * s, y), (x - 70 * s, y - 230 * s)], (120, 150, 190), 7 * s)
+
+
+def lm_camp(k, x, y, s):
+    for dx, col in ((-170, (236, 150, 90)), (150, (110, 170, 150))):
+        k.poly([(x + (dx - 130) * s, y), (x + dx * s, y - 180 * s), (x + (dx + 130) * s, y)], col); k.poly([(x + (dx - 30) * s, y), (x + dx * s, y - 110 * s), (x + (dx + 30) * s, y)], (70, 60, 70))
+    for a in (-0.5, 0.5): k.limb([(x - 40 * s, y + 20 * s + a * 10), (x + 40 * s, y + 10 * s - a * 10)], (150, 110, 92), 12 * s)
+    k.d.ellipse([P(x - 150 * s), P(y - 190 * s), P(x + 150 * s), P(y + 70 * s)], fill=(255, 190, 90, 40))
+    k.poly([(x - 34 * s, y + 6 * s), (x - 10 * s, y - 60 * s), (x, y - 30 * s), (x + 14 * s, y - 96 * s), (x + 36 * s, y + 6 * s)], (255, 170, 70), e=True); k.poly([(x - 14 * s, y + 6 * s), (x, y - 40 * s), (x + 16 * s, y + 6 * s)], (255, 236, 150), line=False, e=True)
+
+
+def lm_bigtree(k, x, y, s):
+    k.tree(x, y + 10, 1.7 * s)
+
+
+def lm_cherry(k, x, y, s):
+    k.tree(x, y + 10, 1.6 * s, col=(255, 196, 214))
+    for _ in range(26): k.ell(x + k.r.uniform(-260, 260) * s, y - k.r.uniform(-10, 420) * s, 8, 5, (255, 214, 226), line=False)
+
+
+def lm_maple(k, x, y, s):
+    k.tree(x, y + 10, 1.6 * s, col=k.r.choice(((240, 150, 80), (226, 110, 90), (250, 200, 100))))
+
+
+def lm_gate(k, x, y, s):
+    for sx in (-1, 1): k.rect(x + sx * 130 * s - 16 * s, y - 280 * s, x + sx * 130 * s + 16 * s, y, (214, 90, 80))
+    k.rect(x - 190 * s, y - 320 * s, x + 190 * s, y - 286 * s, (214, 90, 80), r=6 * s); k.rect(x - 150 * s, y - 250 * s, x + 150 * s, y - 226 * s, (214, 90, 80))
+    k.poly([(x - 210 * s, y - 320 * s), (x + 210 * s, y - 320 * s), (x + 190 * s, y - 350 * s), (x - 190 * s, y - 350 * s)], (70, 66, 80))
+
+
+def lm_fountain(k, x, y, s):
+    k.ell(x, y, 220 * s, 44 * s, (200, 206, 216)); k.ell(x, y - 8 * s, 190 * s, 32 * s, (150, 206, 236)); k.rect(x - 18 * s, y - 150 * s, x + 18 * s, y - 6 * s, (200, 206, 216)); k.ell(x, y - 150 * s, 80 * s, 18 * s, (200, 206, 216))
+    for sx in (-1, 1):
+        pts = [(x + sx * t * 110 * s, y - 150 * s - math.sin(t * math.pi) * 110 * s + t * 140 * s) for t in [i / 12 for i in range(13)]]
+        k.stroke(pts, (255, 255, 255, 200), 7 * s, e=True)
+    k.stroke([(x, y - 160 * s), (x, y - 270 * s)], (255, 255, 255, 200), 8 * s, e=True)
+
+
+def lm_busstop(k, x, y, s):
+    k.rect(x - 200 * s, y - 300 * s, x + 200 * s, y - 276 * s, (120, 150, 190), r=8)
+    for sx in (-188, 188): k.rect(x + sx * s - 7 * s, y - 276 * s, x + sx * s + 7 * s, y, (120, 128, 150))
+    k.rect(x - 180 * s, y - 260 * s, x + 180 * s, y - 70 * s, (220, 240, 250, 90), r=4); k.rect(x - 150 * s, y - 60 * s, x + 150 * s, y - 44 * s, (206, 156, 122), r=5)
+    k.rect(x + 250 * s, y - 280 * s, x + 262 * s, y, (120, 128, 150)); k.ell(x + 256 * s, y - 300 * s, 38 * s, 38 * s, (250, 214, 96))
+
+
+def lm_benchlamp(k, x, y, s):
+    k.lamp(x - 150 * s, y + 20, 380 * s); bench(k, x + 60 * s, y + 30 * s, s * 1.1)
+
+
+def lm_vending(k, x, y, s):
+    s *= 0.9
+    for dx, col in ((-70, (226, 90, 90)), (70, (90, 140, 200))):
+        k.rect(x + (dx - 60) * s, y - 250 * s, x + (dx + 60) * s, y, col, r=8 * s); k.rect(x + (dx - 46) * s, y - 230 * s, x + (dx + 46) * s, y - 110 * s, (255, 250, 220), r=4 * s, e=True)
+        for i in range(3):
+            for j in range(3): k.rect(x + (dx - 38 + i * 28) * s, y - (222 - j * 38) * s, x + (dx - 20 + i * 28) * s, y - (192 - j * 38) * s, ((255, 150, 130), (150, 214, 190), (255, 220, 120))[(i + j) % 3], line=False, r=3, e=True)
+        k.rect(x + (dx - 40) * s, y - 60 * s, x + (dx + 40) * s, y - 30 * s, (40, 44, 60), r=4)
+    if _lit(k): k.d.ellipse([P(x - 240 * s), P(y - 330 * s), P(x + 240 * s), P(y + 60 * s)], fill=(255, 244, 200, 36))
+
+
+def lm_mailbox(k, x, y, s):
+    k.rect(x - 10 * s, y - 120 * s, x + 10 * s, y, (120, 128, 150)); k.rect(x - 56 * s, y - 230 * s, x + 56 * s, y - 110 * s, (226, 90, 90), r=30 * s)
+    k.rect(x - 34 * s, y - 196 * s, x + 34 * s, y - 182 * s, (60, 50, 60), line=False, r=4); k.poly([(x + 56 * s, y - 200 * s), (x + 100 * s, y - 200 * s), (x + 100 * s, y - 170 * s), (x + 56 * s, y - 170 * s)], (250, 214, 96))
+
+
+def lm_bicycle(k, x, y, s):
+    for dx in (-90, 90): k.d.ellipse([P(x + (dx - 64) * s), P(y - 128 * s), P(x + (dx + 64) * s), P(y)], outline=k.ink or (70, 76, 100), width=P(6))
+    k.stroke([(x - 90 * s, y - 64 * s), (x - 10 * s, y - 64 * s), (x + 56 * s, y - 150 * s), (x - 44 * s, y - 150 * s), (x - 90 * s, y - 64 * s)], (96, 170, 176), 8 * s)
+    k.stroke([(x + 56 * s, y - 150 * s), (x + 90 * s, y - 64 * s)], (96, 170, 176), 8 * s); k.stroke([(x + 40 * s, y - 190 * s), (x + 84 * s, y - 184 * s)], None, 8 * s); k.stroke([(x - 62 * s, y - 162 * s), (x - 26 * s, y - 162 * s)], None, 10 * s)
+
+
+def lm_car(k, x, y, s):
+    col = k.r.choice(((226, 110, 110), (110, 160, 210), (250, 214, 110), (150, 200, 170)))
+    k.rect(x - 220 * s, y - 100 * s, x + 220 * s, y - 20 * s, col, r=26 * s); k.poly([(x - 130 * s, y - 100 * s), (x - 90 * s, y - 170 * s), (x + 90 * s, y - 170 * s), (x + 140 * s, y - 100 * s)], col)
+    k.poly([(x - 104 * s, y - 104 * s), (x - 78 * s, y - 154 * s), (x - 6 * s, y - 154 * s), (x - 6 * s, y - 104 * s)], (214, 236, 250)); k.poly([(x + 8 * s, y - 104 * s), (x + 8 * s, y - 154 * s), (x + 80 * s, y - 154 * s), (x + 112 * s, y - 104 * s)], (214, 236, 250))
+    for dx in (-130, 130): k.ell(x + dx * s, y - 20 * s, 40 * s, 40 * s, (60, 62, 76)); k.ell(x + dx * s, y - 20 * s, 16 * s, 16 * s, (200, 204, 214), line=False)
+    if _lit(k): k.d.polygon([(P(x + 220 * s), P(y - 66 * s)), (P(x + 620 * s), P(y - 110 * s)), (P(x + 620 * s), P(y + 10 * s))], fill=(255, 244, 190, 60))
+
+
+def lm_trainpass(k, x, y, s):
+    k.rect(-10, y - 16, W + 10, y, (150, 144, 140), line=False)
+    x0 = k.r.uniform(-300, 500)
+    for c in range(3):
+        cx = x0 + c * 520
+        k.rect(cx, y - 180, cx + 500, y - 14, (240, 244, 248), r=24); k.rect(cx, y - 90, cx + 500, y - 60, (96, 150, 210), line=False)
+        for i in range(4): k.rect(cx + 40 + i * 112, y - 160, cx + 124 + i * 112, y - 100, (255, 236, 170) if k.dark else (196, 226, 246), r=8, e=k.dark)
+
+
+def lm_farbridge(k, x, y, s):
+    k.rect(-10, y - 130, W + 10, y - 104, (190, 110, 100))
+    for tx in (520, 1400):
+        k.rect(tx - 16, y - 360, tx + 16, y, (190, 110, 100))
+        for i in range(-12, 13): k.stroke([(tx, y - 350), (tx + i * 34, y - 130)], (190, 110, 100), 2)
+
+
+def lm_radiotower(k, x, y, s):
+    k.poly([(x - 80 * s, y), (x, y - 520 * s), (x + 80 * s, y)], (226, 100, 100), line=False); k.poly([(x - 54 * s, y), (x, y - 420 * s), (x + 54 * s, y)], k.sky3[2], line=False, raw=True)
+    for i in range(1, 6): k.stroke([(x - (80 - i * 13) * s, y - i * 84 * s), (x + (80 - i * 13) * s, y - i * 84 * s)], (226, 100, 100), 6 * s)
+    k.ell(x, y - 524 * s, 9 * s, 9 * s, (255, 90, 90), line=False, e=True)
+    if k.dark: k.d.ellipse([P(x - 50 * s), P(y - 574 * s), P(x + 50 * s), P(y - 474 * s)], fill=(255, 90, 90, 60))
+
+
+def lm_watertower(k, x, y, s):
+    for sx in (-70, 70): k.stroke([(x + sx * s, y), (x + sx * 0.6 * s, y - 250 * s)], (120, 128, 150), 9 * s)
+    k.stroke([(x - 62 * s, y - 100 * s), (x + 62 * s, y - 100 * s)], (120, 128, 150), 6 * s); k.rect(x - 100 * s, y - 380 * s, x + 100 * s, y - 250 * s, (190, 210, 226), r=10 * s); k.poly([(x - 110 * s, y - 380 * s), (x, y - 440 * s), (x + 110 * s, y - 380 * s)], (150, 110, 100))
+
+
+def lm_barn(k, x, y, s):
+    k.rect(x - 170 * s, y - 180 * s, x + 170 * s, y, (206, 96, 90)); k.poly([(x - 190 * s, y - 180 * s), (x - 110 * s, y - 280 * s), (x + 110 * s, y - 280 * s), (x + 190 * s, y - 180 * s)], (120, 100, 100))
+    k.rect(x - 60 * s, y - 120 * s, x + 60 * s, y, (255, 252, 244)); k.stroke([(x - 60 * s, y - 120 * s), (x + 60 * s, y)], (206, 96, 90), 6 * s); k.stroke([(x + 60 * s, y - 120 * s), (x - 60 * s, y)], (206, 96, 90), 6 * s)
+    k.rect(x + 210 * s, y - 320 * s, x + 290 * s, y, (226, 226, 230), r=36 * s)
+
+
+def lm_cabin(k, x, y, s):
+    k.rect(x - 150 * s, y - 150 * s, x + 150 * s, y, (176, 128, 100)); k.poly([(x - 180 * s, y - 150 * s), (x, y - 270 * s), (x + 180 * s, y - 150 * s)], (120, 86, 76))
+    k.rect(x - 36 * s, y - 96 * s, x + 14 * s, y, (120, 86, 76), r=4); k.rect(x + 50 * s, y - 110 * s, x + 110 * s, y - 50 * s, (255, 232, 150) if _lit(k) else (214, 236, 250), r=4, e=_lit(k))
+    k.rect(x + 70 * s, y - 280 * s, x + 110 * s, y - 200 * s, (150, 110, 100))
+    for i in range(4): k.ell(x + (90 + i * 22) * s, y - (300 + i * 44) * s, (24 + i * 8) * s, (18 + i * 6) * s, (255, 255, 255, 150), line=False, e=True)
+
+
+def lm_castle(k, x, y, s):
+    k.rect(x - 200 * s, y - 220 * s, x + 200 * s, y, (226, 220, 226))
+    for i in range(-4, 5): k.rect(x + i * 46 * s - 14 * s, y - 250 * s, x + i * 46 * s + 14 * s, y - 220 * s, (226, 220, 226))
+    for sx in (-200, 0, 200):
+        h = 420 if sx == 0 else 330
+        k.rect(x + sx * s - 50 * s, y - h * s, x + sx * s + 50 * s, y, (236, 230, 236)); k.poly([(x + sx * s - 64 * s, y - h * s), (x + sx * s, y - (h + 120) * s), (x + sx * s + 64 * s, y - h * s)], k.r.choice(((120, 150, 200), (200, 110, 130), (150, 120, 190))))
+        k.rect(x + sx * s - 14 * s, y - (h - 60) * s, x + sx * s + 14 * s, y - (h - 110) * s, (255, 232, 150) if _lit(k) else (120, 130, 160), r=12 * s, e=_lit(k))
+    k.rect(x - 40 * s, y - 110 * s, x + 40 * s, y, (150, 110, 92), r=36 * s)
+
+
+def lm_balloons(k, x, y, s):
+    for i in range(3):
+        bx, by, sz = x + (i - 1) * 330 * s + k.r.uniform(-60, 60), y - k.r.uniform(330, 600) * s, k.r.uniform(0.6, 1.1) * s
+        col = ((255, 150, 130), (250, 214, 110), (130, 190, 230))[i]
+        k.ell(bx, by, 100 * sz, 120 * sz, col); k.poly([(bx - 50 * sz, by + 100 * sz), (bx + 50 * sz, by + 100 * sz), (bx + 18 * sz, by + 170 * sz), (bx - 18 * sz, by + 170 * sz)], col, line=False)
+        for a in (-0.6, 0, 0.6): k.d.arc([P(bx - 100 * sz * abs(math.cos(a)) - 1), P(by - 120 * sz), P(bx + 100 * sz * abs(math.cos(a)) + 1), P(by + 120 * sz)], 0, 360, fill=(255, 255, 255, 130), width=P(3))
+        k.rect(bx - 20 * sz, by + 176 * sz, bx + 20 * sz, by + 206 * sz, (176, 128, 100), r=3)
+
+
+def lm_sailboats(k, x, y, s):
+    for i in range(3):
+        bx, by, sz = x + (i - 1) * 300 * s + k.r.uniform(-50, 50), y - k.r.uniform(120, 230), k.r.uniform(0.5, 1.0)
+        k.poly([(bx - 90 * sz, by), (bx + 90 * sz, by), (bx + 62 * sz, by + 30 * sz), (bx - 62 * sz, by + 30 * sz)], (255, 255, 255)); k.poly([(bx, by - 4), (bx, by - 130 * sz), (bx + 76 * sz, by - 14 * sz)], k.r.choice(((255, 236, 200), (255, 190, 180), (190, 220, 250))))
+        k.poly([(bx - 8 * sz, by - 4), (bx - 8 * sz, by - 100 * sz), (bx - 60 * sz, by - 12 * sz)], (255, 255, 255))
+
+
+def lm_observatory(k, x, y, s):
+    k.rect(x - 130 * s, y - 130 * s, x + 130 * s, y, (236, 236, 240)); k.d.pieslice([P(x - 130 * s), P(y - 260 * s), P(x + 130 * s), P(y)], 180, 360, fill=k.c((214, 220, 232)), outline=k.edge(k.c((214, 220, 232))), width=P(k.lw))
+    k.poly([(x - 16 * s, y - 250 * s), (x + 30 * s, y - 256 * s), (x + 50 * s, y - 130 * s), (x - 10 * s, y - 130 * s)], (60, 64, 90)); k.rect(x - 30 * s, y - 80 * s, x + 30 * s, y, (150, 110, 92), r=4)
+    k.limb([(x + 20 * s, y - 200 * s), (x + 130 * s, y - 330 * s)], (120, 128, 150), 22 * s)
+
+
+def lm_greenhouse(k, x, y, s):
+    k.poly([(x - 200 * s, y), (x - 200 * s, y - 160 * s), (x, y - 270 * s), (x + 200 * s, y - 160 * s), (x + 200 * s, y)], (220, 244, 236, 150))
+    for i in range(-3, 4): k.stroke([(x + i * 66 * s, y), (x + i * 66 * s, y - (270 - abs(i) * 36.6) * s)], (255, 255, 255), 4 * s)
+    k.stroke([(x - 200 * s, y - 160 * s), (x + 200 * s, y - 160 * s)], (255, 255, 255), 4 * s)
+    for i in range(5): k.ell(x + (i - 2) * 70 * s, y - 40 * s, 30 * s, 44 * s, (110, 186, 130), line=False); k.ell(x + (i - 2) * 70 * s, y - 76 * s, 12 * s, 12 * s, ((255, 150, 170), (255, 222, 110), (255, 255, 255))[i % 3], line=False)
+
+
+def lm_stage(k, x, y, s):
+    k.rect(x - 330 * s, y - 60 * s, x + 330 * s, y, (90, 84, 110)); k.rect(x - 330 * s, y - 380 * s, x - 300 * s, y - 60 * s, (60, 62, 80)); k.rect(x + 300 * s, y - 380 * s, x + 330 * s, y - 60 * s, (60, 62, 80)); k.rect(x - 340 * s, y - 410 * s, x + 340 * s, y - 380 * s, (60, 62, 80))
+    for i, col in enumerate(((255, 120, 150), (255, 230, 120), (120, 200, 255), (190, 150, 255), (150, 240, 190))):
+        lx = x + (i - 2) * 130 * s
+        k.d.polygon([(P(lx), P(y - 376 * s)), (P(lx - 90 * s + (i - 2) * 30 * s), P(y - 60 * s)), (P(lx + 90 * s + (i - 2) * 30 * s), P(y - 60 * s))], fill=col + (60,)); k.ell(lx, y - 372 * s, 18 * s, 14 * s, col, e=True)
+    k.stroke([(x, y - 60 * s), (x, y - 190 * s)], (200, 204, 214), 5 * s); k.ell(x, y - 200 * s, 12 * s, 18 * s, (60, 62, 80))
+
+
+def lm_carousel(k, x, y, s):
+    k.rect(x - 220 * s, y - 40 * s, x + 220 * s, y, (240, 150, 160), r=8); k.poly([(x - 250 * s, y - 260 * s), (x, y - 380 * s), (x + 250 * s, y - 260 * s)], (255, 236, 200))
+    for i in range(-3, 4): k.poly([(x + (i - 0.5) * 70 * s, y - 260 * s), (x + i * 70 * s, y - 230 * s), (x + (i + 0.5) * 70 * s, y - 260 * s)], ((240, 150, 160), (150, 200, 230))[i % 2])
+    for i in range(-2, 3):
+        px = x + i * 100 * s
+        k.stroke([(px, y - 256 * s), (px, y - 40 * s)], (250, 214, 110), 6 * s); k.ell(px, y - (110 + (i % 2) * 40) * s, 40 * s, 22 * s, (255, 255, 255)); k.ell(px + 36 * s, y - (136 + (i % 2) * 40) * s, 16 * s, 14 * s, (255, 255, 255))
+    k.ell(x, y - 386 * s, 14 * s, 14 * s, (250, 214, 110), e=True)
+
+
+def lm_snowman(k, x, y, s):
+    k.ell(x, y - 70 * s, 90 * s, 80 * s, (255, 255, 255)); k.ell(x, y - 190 * s, 64 * s, 60 * s, (255, 255, 255)); k.ell(x, y - 286 * s, 46 * s, 44 * s, (255, 255, 255))
+    for e in (-16, 16): k.ell(x + e * s, y - 296 * s, 5 * s, 6 * s, (46, 50, 74), line=False)
+    k.poly([(x, y - 286 * s), (x + 50 * s, y - 276 * s), (x, y - 270 * s)], (255, 150, 80)); k.rect(x - 50 * s, y - 250 * s, x + 50 * s, y - 228 * s, (226, 90, 90), r=8 * s)
+    k.rect(x - 36 * s, y - 376 * s, x + 36 * s, y - 322 * s, (60, 62, 80)); k.rect(x - 56 * s, y - 330 * s, x + 56 * s, y - 318 * s, (60, 62, 80))
+    for sx in (-1, 1): k.stroke([(x + sx * 60 * s, y - 200 * s), (x + sx * 130 * s, y - 250 * s)], (150, 110, 92), 6 * s)
+
+
+def lm_scarecrow(k, x, y, s):
+    k.stroke([(x, y), (x, y - 260 * s)], (150, 110, 92), 9 * s); k.stroke([(x - 100 * s, y - 200 * s), (x + 100 * s, y - 200 * s)], (150, 110, 92), 9 * s)
+    k.poly([(x - 60 * s, y - 220 * s), (x + 60 * s, y - 220 * s), (x + 44 * s, y - 90 * s), (x - 44 * s, y - 90 * s)], (110, 150, 200)); k.ell(x, y - 270 * s, 40 * s, 40 * s, (250, 232, 190)); k.poly([(x - 66 * s, y - 290 * s), (x + 66 * s, y - 290 * s), (x, y - 360 * s)], (214, 150, 90))
+
+
+def lm_signpost(k, x, y, s):
+    k.stroke([(x, y), (x, y - 300 * s)], (150, 110, 92), 10 * s)
+    for i, (d, col) in enumerate(((1, (255, 252, 244)), (-1, (250, 232, 180)), (1, (226, 240, 250)))):
+        yy = y - (270 - i * 62) * s
+        k.poly([(x - d * 20 * s, yy - 22 * s), (x + d * 150 * s, yy - 22 * s), (x + d * 180 * s, yy), (x + d * 150 * s, yy + 22 * s), (x - d * 20 * s, yy + 22 * s)], col)
+
+
+def lm_well(k, x, y, s):
+    k.rect(x - 90 * s, y - 90 * s, x + 90 * s, y, (190, 186, 190), r=8)
+    for sx in (-76, 76): k.rect(x + sx * s - 8 * s, y - 250 * s, x + sx * s + 8 * s, y - 90 * s, (150, 110, 92))
+    k.poly([(x - 120 * s, y - 250 * s), (x, y - 320 * s), (x + 120 * s, y - 250 * s)], (190, 110, 100)); k.stroke([(x, y - 250 * s), (x, y - 150 * s)], None, 3); k.rect(x - 22 * s, y - 150 * s, x + 22 * s, y - 110 * s, (176, 128, 100), r=4)
+
+
+def lm_gazebo(k, x, y, s):
+    k.rect(x - 190 * s, y - 30 * s, x + 190 * s, y, (236, 230, 226), r=6)
+    for i in range(-2, 3): k.rect(x + i * 86 * s - 9 * s, y - 250 * s, x + i * 86 * s + 9 * s, y - 30 * s, (255, 252, 244))
+    k.poly([(x - 230 * s, y - 250 * s), (x, y - 390 * s), (x + 230 * s, y - 250 * s)], (120, 170, 160)); k.ell(x, y - 396 * s, 12 * s, 12 * s, (250, 214, 110))
+    k.rect(x - 180 * s, y - 100 * s, x + 180 * s, y - 86 * s, (255, 252, 244), r=4)
+
+
+def lm_piano(k, x, y, s):
+    k.poly([(x - 170 * s, y - 130 * s), (x + 90 * s, y - 130 * s), (x + 170 * s, y - 200 * s), (x + 170 * s, y - 100 * s), (x - 170 * s, y - 100 * s)], (50, 50, 64))
+    k.rect(x - 170 * s, y - 104 * s, x + 30 * s, y - 80 * s, (255, 255, 255))
+    for i in range(9): k.stroke([(x - 170 * s + i * 22 * s, y - 104 * s), (x - 170 * s + i * 22 * s, y - 80 * s)], (50, 50, 64), 2)
+    for sx in (-150, 150, 0): k.rect(x + sx * s - 7 * s, y - 100 * s, x + sx * s + 7 * s, y, (50, 50, 64))
+    k.poly([(x + 60 * s, y - 130 * s), (x + 170 * s, y - 200 * s), (x + 150 * s, y - 300 * s)], (70, 70, 88)); k.rect(x - 240 * s, y - 60 * s, x - 190 * s, y - 46 * s, (120, 86, 76)); k.rect(x - 222 * s, y - 46 * s, x - 208 * s, y, (120, 86, 76))
+
+
+def lm_telescope(k, x, y, s):
+    for a in (-0.4, 0, 0.4): k.stroke([(x, y - 170 * s), (x + math.sin(a) * 110 * s, y)], (120, 128, 150), 7 * s)
+    k.limb([(x - 70 * s, y - 150 * s), (x + 120 * s, y - 260 * s)], (236, 236, 240), 34 * s); k.limb([(x + 110 * s, y - 254 * s), (x + 150 * s, y - 278 * s)], (120, 128, 150), 44 * s)
+
+
+def lm_lifeguard(k, x, y, s):
+    for sx in (-1, 1): k.stroke([(x + sx * 90 * s, y), (x + sx * 50 * s, y - 250 * s)], (255, 252, 244), 10 * s)
+    for i in range(1, 4): k.stroke([(x - (90 - i * 10) * s, y - i * 60 * s), (x + (90 - i * 10) * s, y - i * 60 * s)], (255, 252, 244), 7 * s)
+    k.rect(x - 70 * s, y - 280 * s, x + 70 * s, y - 250 * s, (226, 100, 100), r=4); k.rect(x - 70 * s, y - 380 * s, x - 56 * s, y - 280 * s, (226, 100, 100)); k.poly([(x - 110 * s, y - 380 * s), (x + 110 * s, y - 400 * s), (x + 110 * s, y - 380 * s)], (255, 236, 200))
+
+
+def lm_jetty(k, x, y, s):
+    k.poly([(x - 60, y - 10), (x + 60, y - 10), (x + 30, y - 190), (x - 30, y - 190)], (214, 172, 132))
+    for i in range(5): k.stroke([(x - 60 + i * 6, y - 14 - i * 40), (x + 60 - i * 6, y - 14 - i * 40)], (176, 134, 104), 3)
+    for sx in (-1, 1): k.rect(x + sx * 62 - 8, y - 70, x + sx * 62 + 8, y, (160, 120, 96), r=4)
+
+
+def lm_plane(k, x, y, s):
+    bx, by = x + k.r.uniform(-100, 100), y - k.r.uniform(420, 560)
+    k.limb([(bx - 160 * s, by + 20 * s), (bx + 150 * s, by - 30 * s)], (255, 255, 255), 44 * s)
+    k.poly([(bx - 30 * s, by - 6 * s), (bx - 110 * s, by + 110 * s), (bx - 50 * s, by + 110 * s), (bx + 50 * s, by - 16 * s)], (226, 232, 244)); k.poly([(bx - 150 * s, by + 14 * s), (bx - 200 * s, by - 60 * s), (bx - 160 * s, by - 60 * s), (bx - 110 * s, by + 6 * s)], (226, 100, 100))
+    for i in range(7): k.ell(bx - (230 + i * 70) * s, by + (34 + i * 12) * s, (26 + i * 6) * s, (14 + i * 3) * s, (255, 255, 255, 150 - i * 18), line=False, e=True)
+
+
+def lm_tents(k, x, y, s):
+    for i in range(3):
+        tx, col = x + (i - 1) * 250 * s, ((232, 110, 110), (96, 160, 200), (236, 180, 80))[i]
+        k.rect(tx - 100 * s, y - 150 * s, tx + 100 * s, y, (255, 248, 230))
+        for j in range(6): k.poly([(tx - 110 * s + j * 36.7 * s, y - 150 * s), (tx, y - 270 * s), (tx - 110 * s + (j + 1) * 36.7 * s, y - 150 * s)], col if j % 2 == 0 else (255, 255, 255))
+        k.poly([(tx, y - 270 * s), (tx + 40 * s, y - 290 * s), (tx, y - 310 * s)], col)
+
+
+def lm_torch(k, x, y, s):
+    for dx in (-200, 0, 200):
+        k.rect(x + dx * s - 8 * s, y - 220 * s, x + dx * s + 8 * s, y, (120, 100, 96)); k.rect(x + dx * s - 40 * s, y - 290 * s, x + dx * s + 40 * s, y - 220 * s, (255, 232, 160) if _lit(k) else (250, 244, 232), r=6, e=_lit(k)); k.poly([(x + dx * s - 54 * s, y - 290 * s), (x + dx * s + 54 * s, y - 290 * s), (x + dx * s, y - 340 * s)], (190, 90, 90))
+        if _lit(k): k.d.ellipse([P(x + dx * s - 130 * s), P(y - 390 * s), P(x + dx * s + 130 * s), P(y - 130 * s)], fill=(255, 226, 150, 36))
+
+
+LANDMARK_FN = {"lighthouse": lm_lighthouse, "ferris": lm_ferris, "windmill": lm_windmill, "chapel": lm_chapel, "clocktower": lm_clocktower,
+               "phonebooth": lm_phonebooth, "swings": lm_swings, "slide": lm_slide, "camp": lm_camp, "bigtree": lm_bigtree, "cherry": lm_cherry,
+               "maple": lm_maple, "gate": lm_gate, "fountain": lm_fountain, "shelter": lm_busstop, "benchlamp": lm_benchlamp,
+               "vending": lm_vending, "mailbox": lm_mailbox, "bicycle": lm_bicycle, "car": lm_car, "trainpass": lm_trainpass,
+               "farbridge": lm_farbridge, "radiotower": lm_radiotower, "watertower": lm_watertower, "barn": lm_barn, "cabin": lm_cabin,
+               "castle": lm_castle, "hotair": lm_balloons, "sailboats": lm_sailboats, "observatory": lm_observatory,
+               "greenhouse": lm_greenhouse, "stage": lm_stage, "carousel": lm_carousel, "snowman": lm_snowman, "scarecrow": lm_scarecrow,
+               "signpost": lm_signpost, "well": lm_well, "gazebo": lm_gazebo, "piano": lm_piano, "telescope": lm_telescope,
+               "lifeguard": lm_lifeguard, "jetty": lm_jetty, "jet": lm_plane, "tents": lm_tents, "lanterns": lm_torch}
+LANDMARKS = tuple(LANDMARK_FN)
+# a landmark that only makes sense on some terrains
+ONLY_ON = {"lighthouse": ("coast", "cliff", "peaks"), "sailboats": ("coast", "cliff", "peaks", "river"), "lifeguard": ("coast",),
+           "jetty": ("coast", "peaks", "river"), "snowman": ("snow",), "scarecrow": ("wheat", "grass"), "barn": ("wheat", "grass"),
+           "farbridge": ("river", "coast", "skyline"), "trainpass": ("grass", "wheat", "town", "snow", "river", "plaza"),
+           "vending": ("town", "skyline", "plaza"), "phonebooth": ("town", "skyline", "plaza", "snow"), "shelter": ("town", "skyline", "plaza", "grass"),
+           "stage": ("plaza", "skyline", "grass"), "carousel": ("plaza", "grass", "skyline"), "ferris": ("plaza", "skyline", "coast", "grass", "town")}
+NOT_ON = {"dunes": ("cherry", "maple", "bigtree", "greenhouse", "gazebo", "fountain", "swings", "slide", "castle", "chapel", "cabin", "mailbox", "benchlamp", "piano", "clocktower")}
+WIDE_LANDMARKS = ("trainpass", "farbridge", "hotair", "sailboats", "jet", "tents", "lanterns")
+
+
+def fits(landmark: str, terrain: str) -> bool:
+    return terrain in ONLY_ON.get(landmark, TERRAINS) and landmark not in NOT_ON.get(terrain, ())
+
+
+def fr_none(k, front):
+    return None
+
+
+def fr_flowers(k, front):
+    if front: pl_flowers(k, True)
+
+
+def fr_grass(k, front):
+    if front: pl_meadow(k, True)
+
+
+def fr_fence(k, front):
+    if not front:
+        for x in range(0, W + 1, 70): k.rect(x - 9, 760, x + 9, 850, (255, 252, 244), r=6)
+        k.rect(-10, 786, W + 10, 800, (255, 252, 244))
+
+
+def fr_railing(k, front):
+    if not front:
+        for x in range(0, W + 1, 96): k.stroke([(x, 850), (x, 770)], (120, 126, 150), 7)
+        k.stroke([(0, 770), (W, 770)], (120, 126, 150), 9)
+
+
+def fr_lamps(k, front):
+    if not front:
+        for x in (k.r.uniform(120, 300), k.r.uniform(1620, 1800)): k.lamp(x, 880, 400)
+
+
+def fr_branches(k, front):
+    if front:
+        col = k.r.choice(((104, 176, 124), (255, 196, 214), (240, 160, 90)))
+        for side in (0, 1):
+            x0 = -40 if side == 0 else W + 40
+            k.stroke([(x0, 60), (x0 + (420 if side == 0 else -420), 150)], (120, 86, 76), 16)
+            for _ in range(36):
+                x, y = x0 + (k.r.uniform(0, 520) if side == 0 else -k.r.uniform(0, 520)), k.r.uniform(-20, 260)
+                k.ell(x, y, k.r.uniform(26, 50), k.r.uniform(18, 34), col, line=False)
+
+
+def fr_rocks(k, front):
+    if front:
+        for _ in range(7):
+            x, sz = k.r.uniform(0, W), k.r.uniform(40, 110)
+            k.poly([(x - sz, H + 10), (x - sz * 0.6, H - sz * 0.7), (x + sz * 0.2, H - sz), (x + sz, H - sz * 0.4), (x + sz * 1.1, H + 10)], k.r.choice(((170, 170, 180), (150, 150, 164), (190, 184, 180))))
+
+
+def fr_puddles(k, front):
+    if not front:
+        for _ in range(5):
+            x, y, rx = k.r.uniform(100, W - 100), k.r.uniform(930, 1040), k.r.uniform(90, 220)
+            k.d.ellipse([P(x - rx), P(y - rx * 0.16), P(x + rx), P(y + rx * 0.16)], fill=k.sky3[1] + (150,)); k.d.arc([P(x - rx * 0.6), P(y - rx * 0.09), P(x + rx * 0.6), P(y + rx * 0.09)], 0, 360, fill=(255, 255, 255, 120), width=P(3))
+
+
+FRONT_FN = {"none": fr_none, "flowers": fr_flowers, "grass": fr_grass, "fence": fr_fence, "railing": fr_railing, "lamps": fr_lamps,
+            "branches": fr_branches, "rocks": fr_rocks, "puddles": fr_puddles}
+FRONTS = tuple(FRONT_FN)
+
+
+def composite(place: str) -> Optional[Tuple[str, str, str]]:
+    p = str(place).split(".")
+    if len(p) == 3 and p[0] in TERRAIN_FN and p[1] in LANDMARK_FN and p[2] in FRONT_FN:
+        return p[0], p[1], p[2]
+    return None
+
+
+def valid_place(place: object) -> bool:
+    return isinstance(place, str) and (place in PLACE_FN or composite(place) is not None)
+
+
+def paint_place(k, place: str, front: bool = False):
+    """Paint a place of either kind (one of PLACE_FN, or "terrain.landmark.front")."""
+    parts = composite(place)
+    if not parts:
+        return PLACE_FN[place](k, front)
+    t, l, f = parts
+    if front:
+        FRONT_FN[f](k, True)
+        return None
+    info = TERRAIN_FN[t](k)
+    x = 960 if l in WIDE_LANDMARKS else info.get("x") or k.r.choice((400, 1520))
+    LANDMARK_FN[l](k, x, info["base"], 1.0 if l in WIDE_LANDMARKS else 1.4)
+    FRONT_FN[f](k, False)
+    return {"ground": info["ground"]}
+
+
+def compose(base: str, terrain: Optional[str], landmark: Optional[str], world: Dict[str, Any]) -> str:
+    """The place a line's words ask for: this terrain and/or this landmark, the rest from where the song is."""
+    parts = composite(base) or next((composite(p) for p in world.get("places", []) if composite(p)), None) or ("grass", "bigtree", "none")
+    t, l, f = parts
+    if landmark:
+        l = landmark
+        t = terrain or t
+        if not fits(l, t):
+            t = next(x for x in TERRAINS if fits(l, x))
+    elif terrain:
+        t = terrain
+        if not fits(l, t):
+            l = next(x for x in ("bigtree", "signpost", "bicycle", "hotair") if fits(x, t))
+    return f"{t}.{l}.{f}"
+
+
+# ------------------------------------------------------------------ the standard grade: more small things
+def thing_standard(k, prop, phase, who, ground):
+    """The things only the standard grade has (PROPS_STD); phases as in thing()."""
+    r = k.r
+    one = next((f for f in (who or []) if f), None)
+    hx, hy, hr = one["head"] if one else (960, 520, 50)
+    sc = one["s"] if one else 1.0
+    side = 1 if hx < 960 else -1
+    bx, by = hx + side * (150 + 130 * sc), ground - 10       # a spot on the ground beside the person
+    if phase == "back":
+        if prop == "rays":
+            cx = r.uniform(500, 1400)
+            for i in range(9):
+                a = math.pi * (0.12 + i * 0.095)
+                k.d.polygon([(P(cx), P(-60)), (P(cx + math.cos(a) * 1900), P(-60 + math.sin(a) * 1900)), (P(cx + math.cos(a + 0.045) * 1900), P(-60 + math.sin(a + 0.045) * 1900))], fill=(255, 250, 210, 46))
+        elif prop == "fireworks":
+            for _ in range(4):
+                cx, cy, rr = r.uniform(250, W - 250), r.uniform(120, 420), r.uniform(110, 220)
+                col = r.choice(((255, 130, 150), (255, 226, 120), (140, 220, 255), (190, 160, 255), (150, 240, 190)))
+                for i in range(22):
+                    a = i * math.pi / 11
+                    k.d.line([(P(cx + math.cos(a) * rr * 0.25), P(cy + math.sin(a) * rr * 0.25)), (P(cx + math.cos(a) * rr), P(cy + math.sin(a) * rr))], fill=col + (230,), width=P(5))
+                    k.d.ellipse([P(cx + math.cos(a) * rr - 7), P(cy + math.sin(a) * rr - 7), P(cx + math.cos(a) * rr + 7), P(cy + math.sin(a) * rr + 7)], fill=(255, 255, 255, 240))
+                k.d.ellipse([P(cx - rr * 1.2), P(cy - rr * 1.2), P(cx + rr * 1.2), P(cy + rr * 1.2)], fill=col + (22,))
+        elif prop == "cranes":
+            for i in range(7):
+                x, y, z = r.uniform(150, W - 150), r.uniform(80, 480), r.uniform(0.7, 1.4)
+                col = r.choice(((255, 190, 200), (255, 236, 160), (190, 226, 250), (210, 190, 250), (255, 255, 255)))
+                k.poly([(x - 60 * z, y), (x, y - 14 * z), (x + 70 * z, y - 30 * z), (x + 10 * z, y + 16 * z)], col, e=True); k.poly([(x - 6 * z, y - 10 * z), (x - 30 * z, y - 76 * z), (x + 24 * z, y - 12 * z)], col, e=True)
+        return
+    if phase != "front":
+        return
+    if prop == "door":
+        x = 1500 if hx < 960 else 420
+        k.rect(x - 110, ground - 400, x + 110, ground, (255, 250, 220), e=True); k.d.polygon([(P(x - 110), P(ground)), (P(x + 110), P(ground)), (P(x + 330), P(ground + 190)), (P(x - 330), P(ground + 190))], fill=(255, 250, 210, 70))
+        k.poly([(x + 110, ground - 400), (x + 230, ground - 440), (x + 230, ground + 30), (x + 110, ground)], (176, 128, 100)); k.ell(x + 130, ground - 190, 9, 9, (250, 214, 110), e=True)
+    elif prop == "hourglass":
+        x, y, z = bx, by, 1.5 * sc
+        k.rect(x - 60 * z, y - 190 * z, x + 60 * z, y - 176 * z, (176, 128, 100), r=4); k.rect(x - 60 * z, y - 14 * z, x + 60 * z, y, (176, 128, 100), r=4)
+        k.poly([(x - 48 * z, y - 176 * z), (x + 48 * z, y - 176 * z), (x + 6 * z, y - 95 * z), (x + 48 * z, y - 14 * z), (x - 48 * z, y - 14 * z), (x - 6 * z, y - 95 * z)], (230, 244, 250, 170))
+        k.poly([(x - 30 * z, y - 150 * z), (x + 30 * z, y - 150 * z), (x, y - 100 * z)], (250, 214, 110), line=False, e=True); k.poly([(x - 40 * z, y - 16 * z), (x + 40 * z, y - 16 * z), (x, y - 56 * z)], (250, 214, 110), line=False, e=True)
+        k.stroke([(x, y - 100 * z), (x, y - 40 * z)], (250, 214, 110), 3, e=True)
+    elif prop == "calendar":
+        x, y = hx + side * (hr + 200), max(150, hy - hr - 60)
+        mark = (r.randrange(4), r.randrange(3))
+        k.rect(x - 110, y - 100, x + 110, y + 120, (255, 255, 255), r=10, e=True); k.rect(x - 110, y - 100, x + 110, y - 50, (232, 110, 110), r=10, e=True)
+        for i in range(4):
+            for j in range(3): k.rect(x - 86 + i * 46, y - 26 + j * 44, x - 54 + i * 46, y + 6 + j * 44, (255, 150, 150) if (i, j) == mark else (226, 232, 240), line=False, r=5, e=True)
+        for dx in (-60, 60): k.rect(x + dx - 7, y - 122, x + dx + 7, y - 80, (120, 128, 150), r=5)
+    elif prop == "suitcase":
+        x, y, z = bx, by, 1.2 * sc
+        k.rect(x - 70 * z, y - 150 * z, x + 70 * z, y - 10 * z, r.choice(((214, 150, 90), (120, 160, 200), (226, 110, 110))), r=14 * z)
+        k.d.arc([P(x - 30 * z), P(y - 190 * z), P(x + 30 * z), P(y - 130 * z)], 180, 360, fill=k.ink or (70, 76, 100), width=P(8 * z))
+        for dx in (-34, 34): k.stroke([(x + dx * z, y - 150 * z), (x + dx * z, y - 10 * z)], (255, 255, 255, 170), 6 * z, e=True)
+        for dx in (-44, 44): k.ell(x + dx * z, y - 4 * z, 12 * z, 12 * z, (60, 62, 76))
+    elif prop == "phone":
+        x, y = (one["hands"][1] if one else (960, 600))
+        z = 1.1 * sc
+        k.d.ellipse([P(x - 110 * z), P(y - 150 * z), P(x + 110 * z), P(y + 70 * z)], fill=(190, 226, 255, 60))
+        k.rect(x - 30 * z, y - 96 * z, x + 30 * z, y + 16 * z, (50, 54, 70), r=10 * z); k.rect(x - 24 * z, y - 86 * z, x + 24 * z, y + 4 * z, (200, 232, 255), line=False, r=5 * z, e=True)
+        _bubble(k, hx + side * (hr + 150), max(110, hy - hr - 110), "dots", side)
+    elif prop == "key":
+        x, y = hx + side * (hr + 170), max(150, hy - hr - 40)
+        k.d.ellipse([P(x - 110), P(y - 110), P(x + 110), P(y + 110)], fill=(255, 236, 150, 44))
+        k.d.ellipse([P(x - 56), P(y - 86), P(x + 4), P(y - 26)], outline=(250, 206, 96), width=P(16)); k.limb([(x - 4, y - 36), (x + 70, y + 60)], (250, 206, 96), 16)
+        for d in (0.55, 0.8): k.limb([(x - 4 + 74 * d, y - 36 + 96 * d), (x + 22 + 74 * d, y - 54 + 96 * d)], (250, 206, 96), 12)
+    elif prop == "candle":
+        for i in range(3):
+            x, y, h = bx + (i - 1) * 76 * sc, by, (90 + (i % 2) * 50) * sc
+            k.d.ellipse([P(x - 100 * sc), P(y - h - 150 * sc), P(x + 100 * sc), P(y - h + 50 * sc)], fill=(255, 220, 130, 40))
+            k.rect(x - 20 * sc, y - h, x + 20 * sc, y, (255, 250, 236), r=6); k.poly([(x - 12 * sc, y - h - 6 * sc), (x, y - h - 56 * sc), (x + 12 * sc, y - h - 6 * sc)], (255, 190, 80), e=True); k.ell(x, y - h - 14 * sc, 6 * sc, 10 * sc, (255, 244, 190), line=False, e=True)
+    elif prop == "ring":
+        x, y = (((who[0]["x"] + who[1]["x"]) / 2, hy - hr * 2.4) if who and who[0] and who[1] else (hx + side * (hr + 160), hy - hr - 30))
+        y = max(170, y)
+        k.d.ellipse([P(x - 120), P(y - 120), P(x + 120), P(y + 120)], fill=(255, 244, 190, 50))
+        k.d.ellipse([P(x - 54), P(y - 30), P(x + 54), P(y + 78)], outline=(250, 214, 110), width=P(16)); k.poly([(x - 30, y - 46), (x, y - 86), (x + 30, y - 46), (x, y - 16)], (190, 236, 255), e=True)
+        for a in range(4): _star(k, x + math.cos(a * 1.57 + 0.6) * 110, y - 30 + math.sin(a * 1.57 + 0.6) * 100, 12, (255, 255, 255))
+    elif prop == "dandelion":
+        x, y, z = bx, by, 1.3 * sc
+        k.stroke([(x, y), (x + 14 * z, y - 190 * z)], (110, 176, 120), 5 * z)
+        for i in range(14):
+            a = i * 0.449
+            k.stroke([(x + 14 * z, y - 190 * z), (x + 14 * z + math.cos(a) * 50 * z, y - 190 * z + math.sin(a) * 50 * z)], (255, 255, 255, 220), 2, e=True); k.ell(x + 14 * z + math.cos(a) * 54 * z, y - 190 * z + math.sin(a) * 54 * z, 7 * z, 7 * z, (255, 255, 255, 230), line=False, e=True)
+        for i in range(12):
+            fx, fy = x + side * (60 + i * 70) + r.uniform(-20, 20), y - 230 * z - i * 34 + r.uniform(-30, 30)
+            k.stroke([(fx, fy), (fx + 6, fy + 26)], (255, 255, 255, 200), 2, e=True); k.ell(fx, fy, 9, 6, (255, 255, 255, 220), line=False, e=True)
+    elif prop == "broken":
+        x, y = hx, max(150, hy - hr * 2.8)
+        if who and who[0] and who[1]: x = (who[0]["x"] + who[1]["x"]) / 2
+        for sx in (-1, 1):
+            cx = x + sx * 26
+            k.ell(cx + sx * 16, y - 12, 26, 26, (255, 120, 144), line=False, e=True); k.poly([(cx + sx * 42, y - 2), (cx - sx * 8, y - 6), (cx + sx * 2, y + 14), (cx - sx * 10, y + 30), (cx - sx * 2, y + 56)], (255, 120, 144), line=False, e=True)
+    elif prop == "wine":
+        x, y = (one["hands"][1] if one else (960, 600))
+        z = 1.1 * sc
+        k.stroke([(x, y), (x, y - 60 * z)], (236, 240, 250), 5 * z, e=True); k.ell(x, y + 2 * z, 22 * z, 6 * z, (236, 240, 250), e=True)
+        k.d.pieslice([P(x - 34 * z), P(y - 140 * z), P(x + 34 * z), P(y - 50 * z)], 0, 180, fill=(190, 60, 90), outline=(236, 240, 250), width=P(4)); k.d.arc([P(x - 34 * z), P(y - 150 * z), P(x + 34 * z), P(y - 50 * z)], 180, 360, fill=(236, 240, 250), width=P(4))
+    elif prop == "guitar" and one:
+        x, y, z = one["x"], one["top"] + 110 * sc, sc
+        k.limb([(x + 30 * z, y - 10 * z), (x + 190 * z, y - 110 * z)], (120, 86, 76), 16 * z)
+        k.ell(x - 10 * z, y + 30 * z, 66 * z, 56 * z, (226, 170, 100)); k.ell(x + 44 * z, y - 4 * z, 46 * z, 42 * z, (226, 170, 100)); k.ell(x + 10 * z, y + 14 * z, 18 * z, 18 * z, (90, 60, 50))
+        thing(k, "notes", "front", who, ground)
+    elif prop == "camera":
+        x, y = (one["hands"][1] if one else (960, 600))
+        z = 1.2 * sc
+        k.rect(x - 50 * z, y - 70 * z, x + 50 * z, y, (70, 74, 92), r=10 * z); k.rect(x - 20 * z, y - 86 * z, x + 14 * z, y - 68 * z, (70, 74, 92), r=4)
+        k.ell(x, y - 34 * z, 26 * z, 26 * z, (200, 226, 250)); k.ell(x + 34 * z, y - 56 * z, 6 * z, 6 * z, (255, 236, 150), line=False, e=True)
+        for i in range(8):
+            a = i * math.pi / 4
+            k.d.line([(P(x + math.cos(a) * 44 * z), P(y - 34 * z + math.sin(a) * 44 * z)), (P(x + math.cos(a) * 110 * z), P(y - 34 * z + math.sin(a) * 110 * z))], fill=(255, 255, 255, 150), width=P(4))
+    elif prop == "diary":
+        x, y = hx + side * (hr + 190), max(170, hy - hr - 40)
+        k.poly([(x - 150, y - 80), (x, y - 60), (x, y + 90), (x - 150, y + 70)], (255, 252, 242), e=True); k.poly([(x + 150, y - 80), (x, y - 60), (x, y + 90), (x + 150, y + 70)], (255, 252, 242), e=True)
+        for i in range(5):
+            k.stroke([(x - 130, y - 44 + i * 24), (x - 20, y - 30 + i * 24)], (170, 176, 196), 3, e=True); k.stroke([(x + 20, y - 30 + i * 24), (x + 130 - (i == 4) * 60, y - 44 + i * 24)], (170, 176, 196), 3, e=True)
+        k.limb([(x + 90, y + 100), (x + 170, y + 10)], (232, 110, 110), 12)
+    elif prop == "footprints":
+        for i in range(9):
+            fx, fy, z = hx - side * (120 + i * 120), ground + 60 + (i % 2) * 30 + i * 4, 1.0 + i * 0.07
+            k.ell(fx, fy, 22 * z, 11 * z, (60, 50, 70, 70), line=False, e=True); k.ell(fx + 26 * z, fy, 9 * z, 8 * z, (60, 50, 70, 70), line=False, e=True)
+    elif prop == "raincloud":
+        x, y = hx, max(120, hy - hr * 3.0)
+        k.cloud(x, y, 1.2 * max(0.7, sc), col=(150, 160, 186))
+        for i in range(9): k.stroke([(x - 110 + i * 28, y + 60), (x - 122 + i * 28, y + 60 + r.uniform(40, 110))], (170, 214, 250), 5, e=True)
+    elif prop == "paperboat":
+        for i in range(3):
+            x, y, z = r.uniform(200, W - 200), min(H - 60, ground + r.uniform(20, 120)), r.uniform(0.8, 1.4)
+            k.poly([(x - 70 * z, y - 20 * z), (x + 70 * z, y - 20 * z), (x + 44 * z, y + 14 * z), (x - 44 * z, y + 14 * z)], (255, 255, 255), e=True); k.poly([(x, y - 20 * z), (x, y - 86 * z), (x + 46 * z, y - 20 * z)], (255, 252, 240), e=True); k.poly([(x, y - 20 * z), (x, y - 70 * z), (x - 38 * z, y - 20 * z)], (236, 240, 250), e=True)
+    elif prop == "butterfly":
+        for i in range(7):
+            x, y, z = hx + r.uniform(-420, 420), hy - r.uniform(-60, 380), r.uniform(0.7, 1.3)
+            col = r.choice(((255, 190, 120), (190, 160, 250), (140, 210, 250), (255, 170, 200)))
+            for sx in (-1, 1): k.ell(x + sx * 20 * z, y - 10 * z, 20 * z, 24 * z, col, e=True); k.ell(x + sx * 15 * z, y + 18 * z, 13 * z, 15 * z, col, e=True)
+            k.limb([(x, y - 22 * z), (x, y + 26 * z)], (70, 60, 80), 5 * z)
+    elif prop == "cat":
+        x, y, z = bx, by, 1.1 * sc
+        col = r.choice(((250, 250, 250), (240, 180, 110), (90, 90, 104), (226, 226, 230)))
+        k.ell(x, y - 46 * z, 46 * z, 50 * z, col); k.ell(x, y - 120 * z, 38 * z, 34 * z, col)
+        for sx in (-1, 1): k.poly([(x + sx * 34 * z, y - 136 * z), (x + sx * 30 * z, y - 176 * z), (x + sx * 8 * z, y - 150 * z)], col)
+        k.d.arc([P(x + 20 * z), P(y - 90 * z), P(x + 110 * z), P(y + 6 * z)], 20, 180, fill=k.edge(k.c(col)), width=P(12 * z))
+        for sx in (-14, 14): k.ell(x + sx * z, y - 124 * z, 4 * z, 6 * z, (46, 50, 74), line=False)
+    elif prop in ("thought", "dream"):
+        x, y = hx + side * (hr + 210), max(190, hy - hr - 150)
+        for i, rr in enumerate((14, 22)): k.ell(x - side * (150 - i * 34), y + 150 - i * 38, rr, rr, (255, 255, 255), e=True)
+        for dx, dy, rr in ((-90, 10, 86), (0, -36, 104), (96, 6, 88), (0, 46, 96)): k.ell(x + dx, y + dy, rr, rr * 0.82, (255, 255, 255), line=False, e=True)
+        if prop == "thought":       # the other one, in a cloud
+            who2 = "boy" if k.w["lead"] == "girl" else "girl"
+            k.rect(x - 46, y + 30, x + 46, y + 76, tuple(k.w[who2]["top"]), r=20, e=True); k.ell(x, y - 10, 44, 44, SKIN, e=True)
+            k.d.pieslice([P(x - 47), P(y - 58), P(x + 47), P(y + 28)], 180, 360, fill=tuple(k.w[who2]["hair"]))
+            for e in (-15, 15): k.ell(x + e, y - 4, 5, 7, (46, 50, 74), line=False, e=True)
+            k.d.arc([P(x - 9), P(y + 6), P(x + 9), P(y + 22)], 20, 160, fill=(120, 70, 80), width=P(3))
+        else:
+            k.d.ellipse([P(x - 60), P(y - 60), P(x + 20), P(y + 20)], fill=(255, 236, 150)); k.d.ellipse([P(x - 36), P(y - 70), P(x + 36), P(y + 2)], fill=(255, 255, 255))
+            for dx, dy in ((50, -20), (20, 30), (-50, 34), (70, 30)): _star(k, x + dx, y + dy, 13, (255, 220, 110))

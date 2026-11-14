@@ -622,7 +622,12 @@
   "簡易圖卡的資料不正確": "The simple card request is not valid",
   "這一格已經不是簡易圖卡（換成照片了），沒有重畫": "This slot is no longer a simple card (it has a photo now); not redrawn",
   "這一格已經有照片，沒有畫簡易圖卡": "This slot already has a photo; no card drawn",
-  "只移除程式畫的圖卡；你放的照片和時間軸都會留著。": "Only the cards the app drew are removed; your photos and the timeline stay."
+  "只移除程式畫的圖卡；你放的照片和時間軸都會留著。": "Only the cards the app drew are removed; your photos and the timeline stay.",
+  "畫法": "Drawing",
+  "簡易": "Simple",
+  "標準": "Standard",
+  "簡易：畫面單純；標準：場景和元素更多，還有逆光、特寫、靜物等鏡頭，畫得比較久": "Simple: plain pictures. Standard: many more places and things, and shots against the light, close-ups and still lifes; takes longer to draw",
+  "按「取消」就不做任何事。": "Cancel does nothing."
  },
  "patterns": [
   {
@@ -1784,6 +1789,14 @@
   {
    "zh": "簡易圖卡畫不出來：{0}",
    "en": "The simple card could not be drawn: {0}"
+  },
+  {
+   "zh": "這首歌已經有 {0} 張「{1}」畫法的圖卡。",
+   "en": "This song already has {0} card(s) drawn the \"{1}\" way."
+  },
+  {
+   "zh": "要換成「{0}」嗎？會先移除這些圖卡，再全部重新畫（你放的照片不會動）。",
+   "en": "Change to \"{0}\"? These cards are removed first and all drawn anew (your photos are not touched)."
   }
  ]
 }

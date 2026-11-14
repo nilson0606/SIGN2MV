@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Simple cards: a second way of drawing, 「畫法：標準」, beside the first (「簡易」, unchanged). A standard
+  world has ten places, six of them put together from a terrain (12), a landmark (45: lighthouse, Ferris wheel,
+  chapel, phone booth, campfire, castle, ...) and a foreground (9), 392 fitting terrain and landmark pairs in
+  all, besides twelve more painted places (café, library, train, night market, ...). 24 more things for the
+  words (the other person in a thought bubble, suitcase, phone, ring, candles, wine glass, guitar,
+  fireworks, ...), two more stances (running, a hug), faces with moods, taller people, a bright edge against
+  the light. About one card in four is another kind of shot: against the light, over a shoulder, two hands,
+  things on a table, with the place out of focus behind. Glow and a little grain on every card. The word
+  table is about three times as large and a line's feeling decides light and stance when it names nothing.
+  The page remembers the way chosen last; cards of the other way are removed (after a question) and drawn anew.
+
 ## 2026.11.15
 
 - Full MV: 「🎨 產生簡易圖卡」 (simple cards) in the photo step, for an MV without photos. For every part of

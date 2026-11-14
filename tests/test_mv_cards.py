@@ -259,16 +259,34 @@ def test_the_standard_grade_has_more_places_and_shots_and_leaves_the_simple_one_
     for i in range(6):
         seed = cards.song_seed(f"std{i}")
         wd = cardworld.choose_world(seed, recent, "standard")
-        assert cardworld.valid_world(wd) and wd["grade"] == "standard" and len(wd["places"]) == 8
+        assert cardworld.valid_world(wd) and wd["grade"] == "standard" and len(wd["places"]) == 10
+        assert sum(1 for p in wd["places"] if cardworld.composite(p)) == 6
         specs = cardworld.plan_standard(lines, seed, wd)
         assert len(set(specs)) == len(specs) == len(lines) and specs == cardworld.plan_standard(lines, seed, wd)
         got = [cardworld.parse(sp) for sp in specs]
         assert all(got) and got[0][5] not in cardworld.FRAMES_STD and got[-1][5] not in cardworld.FRAMES_STD
-        assert got[6][0] == "cafe" and got[7][3] == "duo_hug" and got[5][3] == "solo_run"
+        assert got[6][0] == "cafe" and got[7][3] == "duo_hug" and got[5][3] == "solo_run" and got[5][4] == "dream"
         shots |= {g[5] for g in got}
         places |= {g[0] for g in got}
         recent.append(wd)
-    assert shots >= set(cardworld.FRAMES_STD) and len(places & set(cardworld.PLACES_STD)) >= 8
+    assert shots >= set(cardworld.FRAMES_STD) and len(places) >= 30
+    # every landmark stands somewhere, every element draws, and the words of a line can name them
+    n = sum(1 for t in cardworld.TERRAINS for lm in cardworld.LANDMARKS if cardworld.fits(lm, t))
+    assert n >= 350 and all(any(cardworld.fits(lm, t) for t in cardworld.TERRAINS) for lm in cardworld.LANDMARKS)
+    wd0 = cardworld.make_world(8, "standard")
+    said = cardworld.plan_standard([("lyric", "海邊的燈塔還亮著"), ("lyric", "摩天輪轉了一圈"), ("lyric", "把行李收好就出發"), ("lyric", "沙漠裡的一口井")], 3, wd0)
+    got = [cardworld.parse(sp) for sp in said]
+    assert got[0][0].split(".")[1] == "lighthouse" and got[1][0].split(".")[1] == "ferris" and got[2][4] == "suitcase"
+    assert got[3][0].split(".")[:2] == ["dunes", "well"]
+    for i, lm in enumerate(cardworld.LANDMARKS):
+        t = next(t for t in cardworld.TERRAINS if cardworld.fits(lm, t))
+        cardworld.draw(cardworld.card(f"{t}.{lm}.{cardworld.FRONTS[i % 9]}", list(cardworld.LIGHTS)[i % 7], "clear", "solo_back", "none", "wide", "c", 0), wd0, 5)
+    for i, t in enumerate(cardworld.TERRAINS):
+        cardworld.draw(cardworld.card(f"{t}.signpost.none", "night" if i % 2 else "day", "clear", "none", "none", "wide", "c", 0), wd0, 5)
+    for i, prop in enumerate(cardworld.PROPS_STD):
+        for subject in ("solo_front", "duo_face", "none"):
+            cardworld.draw(cardworld.card("grass.bigtree.grass", "day", "clear", subject, prop, "mid", "lr"[i % 2], 0), wd0, 5)
+    assert not cardworld.parse("w2|grass.nothing.none|day|clear|none|none|wide|c|0") and cardworld.valid_place("coast.lighthouse.rocks")
     wd = cardworld.make_world(3, "standard")
     for i, place in enumerate(cardworld.PLACES_STD):
         im = cardworld.draw(cardworld.card(place, list(cardworld.LIGHTS)[i % 7], "clear", cardworld.SUBJECTS_STD[i % 2], "none", "mid", "c", 0), wd, 5)
@@ -279,3 +297,21 @@ def test_the_standard_grade_has_more_places_and_shots_and_leaves_the_simple_one_
     a = cardworld.card("sea", "sunset", "clear", "duo_hands", "none", "sil", "c", 0)
     assert cardworld.draw(a, wd, 5).tobytes() == cardworld.draw(a, wd, 5).tobytes()
     assert cardworld.draw(a, simple, 5).size == (1920, 1080)      # a simple world draws such a card as a plain one
+
+
+def test_the_page_can_ask_for_the_standard_grade_and_change_between_the_two(client, root):
+    sid, slug, pdir = _aligned_project(client, root)
+    plan = _post(client, "/api/mv/cards/plan", slug=slug, grade="standard").json()
+    assert plan["grade"] == "standard" and plan["world"]["grade"] == "standard" and plan["cards"] == []
+    assert _post(client, "/api/mv/cards/plan", slug=slug).json()["grade"] == "simple"
+    for e in plan["empty"]:
+        assert _post(client, "/api/mv/cards/draw", slug=slug, slot=e["slot"], tone="fresh", grade="standard").status_code == 200
+    # while cards are there the song keeps their grade, whatever is asked for
+    for g in ("simple", "standard"):
+        st = _post(client, "/api/mv/cards/done", slug=slug, grade=g).json()
+        assert st["grade"] == "standard" and len(st["cards"]) == len(plan["empty"]) and st["empty"] == []
+    assert _post(client, "/api/mv/cards/draw", slug=slug, slot=plan["empty"][0]["slot"], tone="warm", redraw=True).status_code == 200
+    # taken out: the other grade can start
+    assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == len(plan["empty"])
+    again = _post(client, "/api/mv/cards/plan", slug=slug, grade="simple").json()
+    assert again["grade"] == "simple" and "grade" not in again["world"] and len(again["empty"]) == len(plan["empty"])
