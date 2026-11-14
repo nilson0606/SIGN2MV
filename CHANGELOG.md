@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- MV: after the first render of a project, 「播放成品 MV」 stayed off until the project was opened again. During
+  a render every control is switched off and gets its earlier state back at the end; the button had been off
+  (no MV yet) and was switched off again right after the render had enabled it.
 - MV: a project uses only the photos that came in through the page (upload, insert, project import). Until now a
   photo was "whatever file is called scene_NN.png in the project's scenes folder", so files written there by
   another program appeared on the page and in the render although the user had placed nothing. The project now

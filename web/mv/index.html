@@ -3589,7 +3589,14 @@
     function updateMvDownloadButtons(exists) {
       // [SIGN2MV] 「播放成品 MV」 follows the same rule: without a finished MV it only showed an empty player
       const btnPlay = document.getElementById('btnPlayMv');
-      if (btnPlay) { btnPlay.disabled = !exists; btnPlay.title = exists ? '' : '尚未渲染成品 MV'; }
+      if (btnPlay) {
+        btnPlay.title = exists ? '' : '尚未渲染成品 MV';
+        // During a render every control is off and gets its earlier state back when the render ends. The
+        // first render of a project ended with this button off again (it was off before: no MV yet), so the
+        // new MV could not be played until the project was opened again. Tell the lock the new state instead.
+        if (isRenderingInProgress && btnPlay.dataset.preRenderDisabled !== undefined) btnPlay.dataset.preRenderDisabled = exists ? 'false' : 'true';
+        else btnPlay.disabled = !exists;
+      }
       const btnVid = document.getElementById('btnDownloadMvVideo');
       const btnTop = document.getElementById('btnDownloadMvTop');
       if (btnVid) btnVid.style.display = exists ? 'inline-flex' : 'none';
