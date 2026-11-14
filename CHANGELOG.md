@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- MV and quick MV, lyric timing: the pasted lines are now matched to the words Whisper recognized one character
+  at a time (one word at a time for other languages), and each line starts with its own first word
+  (`app/lyric_align.py`). The clause matching this replaces gave a line to one to four whole recognized clauses;
+  Whisper's clauses often hold two lines or half of one, and those lines were then placed by guessing (on a test
+  song with every word recognized, 38 of 46 lines started more than 0.6 s off; now none). The quick MV's
+  segment packing, which did not compare text at all, is replaced by the same matching. A few misheard words
+  do not move a line; a line that was not heard is placed between its neighbours, inside the unmatched singing
+  when there is some. Anchors, interludes, intro/outro and the early lead work as before.
+- MV and quick MV: a notice lists stretches of singing that no pasted line accounts for (typically a repeated
+  verse or chorus pasted only once), with their times. Of equally good placements the earliest is taken, so a
+  missing last chorus is left over at the end.
+- `app/t2s_chars.txt`: Traditional → Simplified characters from OpenCC (Apache-2.0), only for comparing lyrics
+  with recognized text (see THIRD_PARTY.md).
 ## 2026.11.13
 
 - Library: 「準備分軌」 stops a running 「音軌平移」 preview first (on the GPU machine the window's drawing stopped

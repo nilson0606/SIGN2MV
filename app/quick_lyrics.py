@@ -1,14 +1,16 @@
 """Lyric subtitles for the quick MV studio look (AI_COVER_MV 12_generate_dynamic_mv.py).
 
 Lines come from LRC timestamps when the lyrics have them; otherwise the plain lines are
-matched to the song's Whisper segments (old align_lyrics_with_acoustic_segments, unchanged);
-without Whisper they are spread evenly (old fallback). The timing is then tuned per line on
+matched to the words Whisper recognized in the song (app/lyric_align.py; the old segment
+packing put lines where they were not sung); without Whisper they are spread evenly (old fallback). The timing is then tuned per line on
 the page (old 字幕時間軸微調) and saved per song and audio.
 """
 from __future__ import annotations
 
 import re
 from typing import Any
+
+from . import lyric_align
 
 LRC = re.compile(r"\[(\d+):(\d+(?:\.\d+)?)\](.*)")
 MAX_LINES = 400
@@ -37,46 +39,57 @@ def plain_lines(raw: str) -> list[str]:
     return [ln for ln in lines if not (ln.startswith("[") and re.match(r"^\[\d+:\d+", ln))]
 
 
-def align(lines: list[str], segments: list[Any]) -> list[dict]:
-    """Old align_lyrics_with_acoustic_segments: the text stays the user's; no line over 8 s;
-    pauses between lines respected; nothing before the first sung moment."""
-    clean = []
+def _words(segments: list[Any]) -> list[dict]:
+    """Whisper segments -> words with times (a segment without word times counts as one long word)."""
+    words = []
     for s in segments:
         if isinstance(s, dict):
-            raw_t, st, et = s.get("text", ""), float(s.get("start", 0)), float(s.get("end", 0))
+            raw_t, st, et, ws = s.get("text", ""), float(s.get("start", 0)), float(s.get("end", 0)), s.get("words") or []
         elif isinstance(s, (list, tuple)) and len(s) >= 3:
-            st, et, raw_t = float(s[0]), float(s[1]), str(s[2])
+            st, et, raw_t, ws = float(s[0]), float(s[1]), str(s[2]), []
         else:
             continue
-        t = re.sub(r"[^\w一-鿿]", "", raw_t)
-        if t and et > st:
-            clean.append({"start": st, "end": et, "text": t})
-    if not clean or not lines:
-        return []
-    n_lines, n_segs = len(lines), len(clean)
-    out, idx = [], 0
-    for li, lyr in enumerate(lines):
-        target = max(2, len(re.sub(r"[^\w一-鿿]", "", lyr)))
-        if idx >= n_segs:
-            break
-        start = clean[idx]["start"]
-        text, last_end = "", clean[idx]["end"]
-        while idx < n_segs:
-            text += clean[idx]["text"]
-            last_end = clean[idx]["end"]
-            idx += 1
-            if len(text) >= target * 0.75:
-                if idx < n_segs and clean[idx]["start"] - last_end >= 0.4:
-                    break
-                if idx < n_segs and len(text) + len(clean[idx]["text"]) > target * 1.3:
-                    break
-            if last_end - start >= 8.0:
-                break
-            if n_segs - idx <= n_lines - (li + 1):
-                break
-        last_end = min(last_end, start + 8.0)
-        out.append({"start": round(start, 2), "end": round(last_end, 2), "text": lyr})
-    return out
+        good = []
+        for w in ws:
+            try:
+                a, b = float(w.get("start", 0)), float(w.get("end", 0))
+            except (AttributeError, TypeError, ValueError):
+                continue
+            if b - a >= 0.02 and str(w.get("word", "")).strip():
+                good.append({"word": str(w["word"]), "start": a, "end": b})
+        if good:
+            words.extend(good)
+        elif et > st and str(raw_t).strip():
+            words.append({"word": " " + str(raw_t).strip(), "start": st, "end": et})
+    words.sort(key=lambda w: w["start"])
+    return words
+
+
+def align_report(lines: list[str], segments: list[Any]) -> dict:
+    """The user's lines at the times they are sung: {"lines", "placed", "unsung"}.
+
+    Each line is matched to the recognized words one character / word at a time (app/lyric_align.py) and
+    starts with its own first word. A line stays until shortly after its last word, or until the next line
+    when that follows within a second; lines too little of which was heard share the time between their
+    neighbours (at most 8 s each). "unsung": singing that none of the lines accounts for."""
+    words = _words(segments)
+    if not words or not lines:
+        return {"lines": [], "placed": 0, "unsung": []}
+    found = lyric_align.align_lines(lines, words)
+    lo, hi = words[0]["start"], max(w["end"] for w in words)
+    spans = lyric_align.fill_unplaced(found["spans"], lines, lo, hi, words)
+    out = []
+    for i, (st, et, ok) in enumerate(spans):
+        nxt = spans[i + 1][0] if i + 1 < len(spans) else None
+        end = et + 0.5 if ok else min(et, st + 8.0)
+        if nxt is not None and (nxt - et < 1.0 or end > nxt):
+            end = nxt
+        out.append({"start": round(st, 2), "end": round(max(end, st + 0.3), 2), "text": lines[i]})
+    return {"lines": out, "placed": sum(1 for x in found["spans"] if x), "unsung": found["unsung"]}
+
+
+def align(lines: list[str], segments: list[Any]) -> list[dict]:
+    return align_report(lines, segments)["lines"]
 
 
 def spread(lines: list[str], total: float) -> list[dict]:

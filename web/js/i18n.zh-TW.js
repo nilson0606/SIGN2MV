@@ -692,6 +692,7 @@ export default {
   "qmvl.whisper_failed": "Whisper 沒有完成；可以先按「平均分配」再逐句調整。",
   "qmvl.mode_lrc": "依 LRC 時間碼排好 {0} 句。",
   "qmvl.mode_whisper": "{1} 句中有 {0} 句對上演唱位置，請用 ▶ 確認。",
+  "qmvl.unsung": "⚠ 這幾段聽得到歌聲、但沒有對應的歌詞：{0}。可能少貼了重複的段落；補上後再按一次「自動對時間」。",
   "qmvl.mode_even": "{0} 句平均分配，請配合播放器微調。",
   "qmvl.saved": "歌詞已儲存。",
   "qmvl.from_original": "先帶入原曲的歌詞時間軸（時間相同）。",

@@ -59,6 +59,12 @@ Both projects are by the same author as SIGN2MV and are covered by this project'
 - The MV page (`web/mv/index.html`) and the MV, mixing, melody, training and alignment logic are
   ported from the author's earlier private project (AI_COVER_MV).
 
+## Data included in this repository
+
+- `app/t2s_chars.txt`: Traditional → Simplified Chinese, one character each, taken from
+  [OpenCC](https://github.com/BYVoid/OpenCC)'s `TSCharacters.txt` (Apache-2.0). It is used only to compare
+  pasted lyrics with recognized words (Whisper mixes both scripts); no text shown to the user is converted.
+
 ## FFmpeg (GPL)
 
 This repository contains no FFmpeg binaries: `install.bat` downloads the BtbN GPL build (pinned

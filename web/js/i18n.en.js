@@ -692,6 +692,7 @@ export default {
   "qmvl.whisper_failed": "Whisper did not finish; you can spread the lines evenly and tune them.",
   "qmvl.mode_lrc": "{0} lines from the LRC times.",
   "qmvl.mode_whisper": "{0} of {1} lines matched to the singing. Check them with ▶.",
+  "qmvl.unsung": "⚠ Singing with no matching line: {0}. A repeated section may be missing from the lyrics; add it and press “Time the lines” again.",
   "qmvl.mode_even": "{0} lines spread evenly; tune them with the player.",
   "qmvl.saved": "Lyrics saved.",
   "qmvl.from_original": "Started from the original's lyrics (same timing).",

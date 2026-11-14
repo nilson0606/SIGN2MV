@@ -606,6 +606,10 @@
  },
  "patterns": [
   {
+   "zh": "⚠️ 有 {0} 段聽得到歌聲、但貼上的歌詞沒有對應的句子：{1}。可能是歌詞少貼了重複的段落；補上後再按一次對齊。",
+   "en": "⚠️ {0} stretch(es) of singing have no line in the pasted lyrics: {1}. A repeated section may be missing from the lyrics; add it and align again."
+  },
+  {
    "zh": "💡 提醒：因右側字幕框尚未貼入自訂歌詞，系統已自動用 Whisper 聽音辨識出的詞句填滿左側 {0} 張照片的時間與字幕！若台語/國語同音字有誤差，您可直接在卡片上改字，或貼上正確歌詞後點「✏️ 僅替換歌詞文字（保留時間）」。",
    "en": "💡 Note: no lyrics were pasted in the subtitle box on the right, so the words recognized by Whisper were used to fill the times and subtitles of the {0} photos on the left! If Taiwanese/Mandarin homophones are wrong, edit the text on the cards, or paste the correct lyrics and click \"✏️ Replace lyric text only (keep times)\"."
   },

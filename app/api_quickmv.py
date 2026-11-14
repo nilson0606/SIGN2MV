@@ -301,9 +301,10 @@ def router(ctx: Context) -> APIRouter:
                 segs = data.get("segments", []) if isinstance(data, dict) else data
             except (OSError, ValueError):
                 segs = []
-            lines = quick_lyrics.align(plain, segs)
-            if len(lines) >= 2:
-                return {"lines": lines, "mode": "whisper", "matched": len(lines), "total": len(plain)}
+            rep = quick_lyrics.align_report(plain, segs)
+            if rep["placed"] >= 1:
+                return {"lines": rep["lines"], "mode": "whisper", "matched": rep["placed"], "total": len(plain),
+                        "unsung": rep["unsung"][:8]}
             return {"lines": quick_lyrics.spread(plain, total), "mode": "even", "whisper_empty": True}
         src = song.get("source") or {}
         if not src.get("audio"):

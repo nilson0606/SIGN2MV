@@ -34,7 +34,7 @@ from . import stems as stems_mod
 from .context import Context
 from .library import LibraryError
 from .mvstudio import align, core
-from .mvstudio.align import (align_timeline_with_anchors_and_whisper, apply_anchor_locks,
+from .mvstudio.align import (align_timeline_with_anchors_and_whisper, apply_anchor_locks, unsung_sections,
                              auto_generate_timeline_from_whisper_only, build_guaranteed_fallback_timeline,
                              enforce_anchor_invariants, WHISPER_PIPELINE)
 from .mvstudio.core import (Image, KARAOKE_TIMING_MODES, MAX_SCENES, FRAME_W, FRAME_H, INST_KEY_RE,
@@ -756,6 +756,13 @@ def router(ctx: Context) -> APIRouter:
                                          f"套用 {early_lead}s 提前進字與 +{tail_ext}s 尾韻延展（嚴格定錨約束）")
                             new_tl = _align(existing_timeline=existing_tl, line_pairs=line_pairs, w_segs=w_segs, total_dur=total_dur,
                                             early_lead=early_lead, tail_ext=tail_ext, title=proj.get("title", ""), target_scene_count=target_sc_max)
+                            missing = unsung_sections(line_pairs, w_segs)
+                            if missing:
+                                def _mmss(sec: float) -> str:
+                                    return f"{int(sec) // 60}:{int(sec) % 60:02d}"
+                                spots = "、".join(f"{_mmss(u['start'])}–{_mmss(u['end'])}「{u['text'][:10]}…」" for u in missing[:6])
+                                warning_notes.append(f"⚠️ 有 {len(missing)} 段聽得到歌聲、但貼上的歌詞沒有對應的句子：{spots}。"
+                                                     "可能是歌詞少貼了重複的段落；補上後再按一次對齊。")
                     else:
                         if has_existing_lyrics:
                             return _keep_timeline("Whisper 沒有偵測到人聲")

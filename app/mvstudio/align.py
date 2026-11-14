@@ -1,8 +1,9 @@
 """Lyrics <-> Whisper timeline alignment for the MV workspace.
 
-Ported unchanged (logic) from the MV Studio of AI_COVER_MV (whisper_align_engine.py,
-2026-10-27). Only the parts that ran separation / Whisper in subprocesses were
-moved to workers/mv_whisper.py; everything here is pure Python.
+Ported from the MV Studio of AI_COVER_MV (whisper_align_engine.py, 2026-10-27). The parts that ran
+separation / Whisper in subprocesses were moved to workers/mv_whisper.py; everything here is pure Python.
+Since 2026-11-14 the lines are placed by app/lyric_align.py (align_bracket_dp); the timeline building
+around it (anchors, interludes, intro/outro, early lead) is the ported logic.
 """
 import json
 import os
@@ -238,16 +239,20 @@ def align_bracket_dp(
     tail_ext: float = 2.50
 ) -> List[Tuple[float, float, bool]]:
     """
-    Dynamic programming alignment for a subset of lyric lines within a bounded bracket window [w_start, w_end].
+    Where each lyric line of a bracket window [w_start, w_end] is sung: (vocal start, vocal end, matched).
+
+    [2026-11-14] The lines are matched to the recognized words one character / word at a time
+    (app/lyric_align.py). The clause DP this replaces gave a line to one to four whole clauses, and Whisper's
+    clauses often hold two lines or half of one: with every word recognized, 38 of 46 lines of a test song
+    started more than 0.6 s off. Lines too little of which was heard share the time between their neighbours.
     """
     n = len(lyric_lines)
     if n == 0:
         return []
 
-    m = len(clauses)
     min_dur = 0.40
 
-    if m == 0:
+    if not clauses:
         step = (w_end - w_start) / n
         res = []
         for k in range(n):
@@ -256,94 +261,23 @@ def align_bracket_dp(
             res.append((st, et, False))
         return res
 
-    INF = 1e9
-    dp = [[-INF] * (m + 1) for _ in range(n + 1)]
-    parent: List[List[Optional[Tuple[int, int, str]]]] = [[None] * (m + 1) for _ in range(n + 1)]
-    dp[0][0] = 0.0
+    from ..lyric_align import align_lines, fill_unplaced
+    words = [w for c in clauses for w in (c.get("words") or [])]
+    # marker lines (「～ 間奏 ～」) are never sung: they take the pause between their neighbours
+    texts = ["" if str(t or "").startswith("～") else str(t or "") for _, t in lyric_lines]
+    found = align_lines(texts, words)
+    return fill_unplaced(found["spans"], texts, w_start, w_end, words, min_dur)
 
-    skip_clause_pen = 0.35
-    match_weight = 10.0
 
-    for i in range(n + 1):
-        for j in range(m + 1):
-            cur = dp[i][j]
-            if cur <= -INF / 2:
-                continue
-
-            # 1. Skip clause
-            if j < m:
-                cand = cur - skip_clause_pen
-                if cand > dp[i][j + 1]:
-                    dp[i][j + 1] = cand
-                    parent[i][j + 1] = (i, j, "skip_clause")
-
-            # 2. Skip lyric
-            if i < n:
-                cand = cur - 2.5
-                if cand > dp[i + 1][j]:
-                    dp[i + 1][j] = cand
-                    parent[i + 1][j] = (i, j, "skip_lyric")
-
-            # 3. Match 1 lyric to k clauses (k=1..4)
-            if i < n:
-                lyr_txt = lyric_lines[i][1]
-                lyr_len = max(1, len(normalize_cjk(lyr_txt)))
-                for k in range(1, 5):
-                    if j + k > m:
-                        break
-                    comb_txt = "".join(clauses[j + r]["text"] for r in range(k))
-                    sim = similarity_score(lyr_txt, comb_txt)
-                    cand = cur + sim * match_weight - (0.1 * (k - 1))
-                    if cand > dp[i + 1][j + k]:
-                        dp[i + 1][j + k] = cand
-                        parent[i + 1][j + k] = (i, j, f"match_1to{k}")
-
-    # Backtrack
-    ci, cj = n, m
-    line_to_clauses: Dict[int, List[int]] = {}
-    while ci > 0 or cj > 0:
-        step = parent[ci][cj]
-        if not step:
-            break
-        pi, pj, act = step
-        if act.startswith("match_1to"):
-            k = int(act.replace("match_1to", ""))
-            line_to_clauses[pi] = [pj + r for r in range(k)]
-        ci, cj = pi, pj
-
-    raw_spans: List[Optional[Tuple[float, float, bool]]] = [None] * n
-    for idx in range(n):
-        c_idxs = line_to_clauses.get(idx)
-        if c_idxs:
-            st = float(clauses[c_idxs[0]]["start"])
-            et = float(clauses[c_idxs[-1]]["end"])
-            raw_spans[idx] = (round(st, 2), round(et, 2), True)
-
-    # Interpolate missing spans proportionally based on lyric CJK text length
-    i = 0
-    while i < n:
-        if raw_spans[i] is not None:
-            i += 1
-            continue
-        j = i
-        while j < n and raw_spans[j] is None:
-            j += 1
-        cnt = j - i
-        prev_end = raw_spans[i - 1][1] if i > 0 and raw_spans[i - 1] else w_start
-        next_start = raw_spans[j][0] if j < n and raw_spans[j] else w_end
-        span_dur = max(min_dur * cnt, next_start - prev_end)
-        weights = [max(3, len(normalize_cjk(lyric_lines[i + k][1]))) for k in range(cnt)]
-        tot_w = sum(weights) or float(cnt)
-        cur_t = prev_end
-        for k in range(cnt):
-            alloc = (weights[k] / tot_w) * span_dur
-            s_k = round(cur_t, 2)
-            cur_t += alloc
-            e_k = round(cur_t, 2) if k < cnt - 1 else round(next_start, 2)
-            raw_spans[i + k] = (s_k, e_k, False)
-        i = j
-
-    return [sp or (w_start, w_end, False) for sp in raw_spans]
+def unsung_sections(line_pairs: List[Tuple[int, str]], w_segs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Stretches of singing that none of the pasted lines accounts for: [{"start", "end", "text"}].
+    Typical cause: the lyrics were pasted without a repeated verse or chorus."""
+    from ..lyric_align import align_lines
+    words = [w for c in extract_elementary_clauses(w_segs or []) for w in (c.get("words") or [])]
+    texts = ["" if str(t or "").startswith("～") else str(t or "") for _, t in (line_pairs or [])]
+    if not words or not any(texts):
+        return []
+    return align_lines(texts, words)["unsung"]
 
 
 def enforce_anchor_invariants(

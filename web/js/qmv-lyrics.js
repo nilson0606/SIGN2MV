@@ -111,7 +111,11 @@ export function lyricsEditor() {
         return;
       }
       lines = res.lines || [];
-      status.textContent = t(`qmvl.mode_${res.mode}`, lines.length, res.total || lines.length);
+      status.textContent = t(`qmvl.mode_${res.mode}`, res.matched ?? lines.length, res.total || lines.length);
+      if (res.unsung && res.unsung.length) {
+        const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+        status.textContent += ' ' + t('qmvl.unsung', res.unsung.map((u) => `${mmss(u.start)}–${mmss(u.end)}`).join(', '));
+      }
       render();
       await save(false);
     } catch (err) { toast(errorText(err), true); }
