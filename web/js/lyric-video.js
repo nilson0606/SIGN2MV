@@ -22,7 +22,7 @@ export function lyricVideoBody(song) {
   const sid = song.song_id;
   const s = song.source;
   const now = el('p', { class: 'small' });
-  const editor = lyricsEditor({ title: 'lv.step_lyrics', hint: 'lv.lyrics_hint' });
+  const editor = lyricsEditor({ title: 'lv.step_lyrics', hint: 'lv.lyrics_hint', fold: true });
   const jb = jobBox();
   const plain = el('input', { type: 'radio', name: `lv-style-${sid}`, value: 'plain' });
   const overlay = el('input', { type: 'radio', name: `lv-style-${sid}`, value: 'overlay' });

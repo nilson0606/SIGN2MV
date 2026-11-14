@@ -17,7 +17,8 @@ function parse(text) {   // 1:23.45, 83.45 or 1：23.45
   return /^\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
 }
 
-// keys: other heading / hint texts (the library's lyric picture uses the same editor and the same saved lines)
+// keys: other heading / hint texts (the library's lyric picture uses the same editor and the same saved lines);
+// keys.fold: the per-line panel (player, buttons, lines) starts folded under a one-line summary
 export function lyricsEditor(keys = {}) {
   let songId = null;
   let source = null;
@@ -45,11 +46,14 @@ export function lyricsEditor(keys = {}) {
   } });
   const saveBtn = el('button', { class: 'btn small', onclick: () => save(true) });
   const clearBtn = el('button', { class: 'btn small danger', onclick: () => { lines = []; render(); } });
+  const adjust = [player, el('div', { class: 'row' }, addBtn, saveBtn, clearBtn), table];
+  const foldTitle = el('span', {});
   const box = el('div', { class: 'qmv-lyrics' },
     head, hint,
     el('div', { class: 'row' }, pasteBtn, alignBtn, evenBtn), area, status, jb.el,
-    player,
-    el('div', { class: 'row' }, addBtn, saveBtn, clearBtn), table);
+    ...(keys.fold
+      ? [el('details', { class: 'qmv-adjust' }, el('summary', { style: 'cursor:pointer;margin:6px 0' }, foldTitle), ...adjust)]
+      : adjust));
 
   function texts() {
     head.textContent = t(keys.title || 'qmvl.title');
@@ -65,6 +69,7 @@ export function lyricsEditor(keys = {}) {
   }
 
   function render() {
+    foldTitle.textContent = t('qmvl.adjust', lines.length);
     if (!lines.length) { table.replaceChildren(el('div', { class: 'empty small' }, t('qmvl.none'))); return; }
     table.replaceChildren(...lines.map((ln, i) => {
       const st = el('input', { type: 'text', value: fmt(ln.start), style: 'width:84px', onchange: () => {
