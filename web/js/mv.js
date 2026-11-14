@@ -77,10 +77,13 @@ frame.addEventListener('load', () => { ready = false; });
 const quick = (() => {
   const songSel = el('select', { onchange: () => loadSong(songSel.value) });
   const srcSel = el('select', { onchange: () => fillStudio(true) });
-  // look (sign_record card / AI_COVER_MV studio card) and size (old 1080p / 720p buttons); remembered
+  // look (sign_record card / AI_COVER_MV studio card) and size (old 1080p / 720p buttons). The size is
+  // remembered for the program; the look is remembered per song, and a song starts with the studio look
+  // (the one that can carry lyric subtitles): a new song never opens as a card.
   const pref = (k, d) => { try { return localStorage.getItem(`sign2mv.qmv.${k}`) || d; } catch { return d; } };
   const keep = (k, v) => { try { localStorage.setItem(`sign2mv.qmv.${k}`, v); } catch { /* ignore */ } };
-  const styleSel = el('select', { onchange: () => { keep('style', styleSel.value); studioBox.classList.toggle('hidden', styleSel.value !== 'studio'); texts(); } });
+  const styleSel = el('select', { onchange: () => { if (songId) keep(`style.${songId}`, styleSel.value); studioBox.classList.toggle('hidden', styleSel.value !== 'studio'); texts(); } });
+  let styleSong = null;   // the song the look selector currently shows the look of
   const resSel = el('select', { onchange: () => keep('res', resSel.value) });
   const studioIn = {
     subtitle: el('input', { type: 'text', maxlength: 80, style: 'flex:1;min-width:240px' }),
@@ -152,7 +155,7 @@ const quick = (() => {
     labels.artist.textContent = t('qmv.artist');
     labels.list.textContent = t(scope === 'all' ? 'qmv.list_all' : 'qmv.list');
     makeBtn.textContent = t('qmv.make');
-    const sv = styleSel.value || pref('style', 'studio');   // the look with lyric subtitles; a look picked before is kept
+    const sv = styleSel.value || 'studio';
     styleSel.replaceChildren(el('option', { value: 'card' }, t('qmv.style_card')), el('option', { value: 'studio' }, t('qmv.style_studio')));
     styleSel.value = sv;
     const rv = resSel.value || pref('res', '1080p');
@@ -251,6 +254,11 @@ const quick = (() => {
     const pick = [wantSource, prev].find((v) => v && data.sources.some((s) => s.id === v));
     if (pick) srcSel.value = pick;
     wantSource = null;
+    if (styleSong !== songId) {   // another song: its own look, the studio look if none was picked for it
+      styleSong = songId;
+      styleSel.value = pref(`style.${songId}`, 'studio') === 'card' ? 'card' : 'studio';
+      studioBox.classList.toggle('hidden', styleSel.value !== 'studio');
+    }
     fillStudio(true);
     if (!title.dataset.song || title.dataset.song !== songId) {
       title.value = data.defaults.title;
