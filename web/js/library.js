@@ -122,7 +122,7 @@ function renderDetail() {
   if (song.source) src = sourceSection(song);
   if (song.source && song.source.audio) {
     pick = subtitlePick(song, src.player);
-    if (!song.source.video) {
+    if (!song.source.video && !src.again) {   // (a picture that only failed to download is fetched again first)
       // a song without a picture shows no words in sing & record: say where they can be added
       parts.push(el('div', { class: 'banner info row', style: 'align-items:center;gap:10px' },
         el('span', { class: 'grow' }, t('lv.tip_no_picture')),
@@ -131,6 +131,7 @@ function renderDetail() {
   }
   parts.push(importSection(song));
   if (song.source) {
+    if (src.again) parts.push(src.again);
     parts.push(src.section);
     if (pick) parts.push(pick.head, pick.shift, pick.lyrics);
     parts.push(stemsSection(song));
@@ -168,7 +169,9 @@ function importSection(song) {
   const file = el('input', { type: 'file', accept: 'audio/*,video/*,.mkv,.flac,.m4a,.wav,.mp3,.mp4,.mov,.webm' });
   async function afterJob(job) {
     const fin = await jb.follow(job);
-    if (fin.status === 'succeeded') toast(t('lib.import_done'));
+    // the audio arrived but the picture did not: say so (it used to pass as a plain "done")
+    const noPicture = fin.status === 'succeeded' && fin.result && fin.result.video_missing;
+    if (fin.status === 'succeeded') toast(t(noPicture ? 'lib.import_no_video' : 'lib.import_done'), !!noPicture, noPicture ? 12000 : undefined);
     await loadSongs();
   }
   const ytBtn = el('button', { class: 'btn primary', onclick: async () => {
@@ -304,11 +307,31 @@ function sourceSection(song) {
   const player = el('audio', { src: bust(mediaUrl(song.song_id, s.audio)), controls: true, preload: 'none' });
   const link = s.url && /^https?:\/\//.test(s.url)
     ? el('a', { href: s.url, target: '_blank', rel: 'noopener', class: 'small', onclick: (e) => e.stopPropagation() }, s.url) : null;   // old 前往 YouTube 原站
+  // a YouTube song without its picture (the picture's download failed while the audio succeeded):
+  // fetch only the picture; the audio and everything made from it stay as they are
+  let again = null;
+  const picture = s.lyric_video ? (s.video_original || {}).video : s.video;
+  if (s.type === 'youtube' && s.url && !picture) {
+    const jb = jobBox();
+    const btn = el('button', { class: 'btn small primary', onclick: async () => {
+      btn.disabled = true;
+      try {
+        const fin = await jb.follow(await api.post(`/api/songs/${song.song_id}/import/video`, {}));
+        if (fin.status === 'succeeded') toast(t('lib.video_again_done'));
+        await loadSongs();
+      } catch (err) { toast(errorText(err), true); }
+      finally { btn.disabled = false; }
+    } }, t('lib.video_again'));
+    again = el('div', { class: 'banner warn' }, el('div', { class: 'row', style: 'align-items:center;gap:10px' },
+      el('span', { class: 'grow' }, t('lib.video_missing')), btn), jb.el);
+  }
   const section = fold('source', t('lib.source_title'), el('span', { class: 'muted small' }, info.join(' · '), link ? ' · ' : '', link), false,
     player,
     media,
     s.audio ? el('div', { class: 'row' }, mp3Button(song)) : null);
-  return { section, player };   // 音軌平移 has its own block below (subtitlePick), with its own copy of the picture
+  // 音軌平移 has its own block below (subtitlePick), with its own copy of the picture.
+  // again: shown above the section, so it is seen while the section is folded
+  return { section, player, again };
 }
 
 // 「字幕（二選一）」: two blocks that are always there, the audio shift above (the picture already has

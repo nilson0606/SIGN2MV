@@ -3,6 +3,7 @@
 Input JSON:
   {"song_dir": "...", "mode": "youtube", "url": "https://..."}
   {"song_dir": "...", "mode": "file", "path": "<uploaded file>", "original_name": "x.mp4"}
+  {"song_dir": "...", "mode": "youtube_video"}   only the picture of a YouTube song imported without one
 Output: writes <song_dir>/source/ and returns the "source" record for song.json.
   source/original.<ext>   the file as received (local import only)
   source/audio.wav        44.1 kHz stereo float32, used by every engine
@@ -24,7 +25,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import protocol
-from common import ffmpeg, probe, run, sha256_file, write_json, NO_WINDOW
+from common import ffmpeg, probe, read_json, replace_retry, run, sha256_file, write_json, NO_WINDOW
 
 MAX_SECONDS = 15 * 60
 MAX_LOCAL_BYTES = 2 * 1024 ** 3
@@ -159,8 +160,7 @@ def import_youtube(song_dir: Path, url: str) -> dict:
     def attempt(fam: str) -> None:
         ytdlp(common + ["-f", "bestaudio/best", "-o", str(work / "audio_dl.%(ext)s"), clean], fam, "download_audio", 2, 45)
         try:
-            ytdlp(["--match-filter", f"duration <= {MAX_SECONDS} & !is_live",
-                   "-f", "bv*[height<=1080][vcodec^=avc1]/bv*[height<=1080][vcodec^=vp09]/bv*[height<=1080]",
+            ytdlp(["--match-filter", f"duration <= {MAX_SECONDS} & !is_live", "-f", VIDEO_FORMAT,
                    "-o", str(work / "video_dl.%(ext)s"), clean], fam, "download_video", 45, 85)
         except RuntimeError as exc:  # video is optional: audio-only songs still work
             protocol.log(f"video download failed: {exc}")
@@ -196,8 +196,74 @@ def import_youtube(song_dir: Path, url: str) -> dict:
         "youtube_title": str(meta.get("title") or "")[:300],
         "uploader": str(meta.get("uploader") or "")[:200],
         "original": None,
+        # the audio arrived and the picture did not: the page says so and offers to fetch it again
+        **({} if video else {"video_missing": True}),
     }, video)
     return record
+
+
+VIDEO_FORMAT = "bv*[height<=1080][vcodec^=avc1]/bv*[height<=1080][vcodec^=vp09]/bv*[height<=1080]"
+
+
+def fetch_youtube_video(song_dir: Path) -> dict:
+    """Fetch only the picture of a YouTube song that was imported without one (the download had failed)
+    and put it beside the audio it already has. source/audio.wav is not touched, so everything made from
+    the song stays valid. While the lyric picture is the song's picture, the fetched one becomes its
+    remembered original."""
+    src = song_dir / "source"
+    rec = read_json(src / "source.json")
+    if not isinstance(rec, dict) or rec.get("type") != "youtube" or not rec.get("audio"):
+        raise ValueError("video_fetch_not_youtube")
+    lyric_on = isinstance(rec.get("lyric_video"), dict)
+    have = (rec.get("video_original") or {}).get("video") if lyric_on else rec.get("video")
+    if have and (song_dir / have).is_file():
+        raise ValueError("video_fetch_has_video")
+    _vid, clean = normalize_youtube(str(rec.get("url") or ""))
+    audio = song_dir / rec["audio"]
+    work = src / "video.fetching"   # inside source/: a leftover does not count as something made from the song
+    shutil.rmtree(work, ignore_errors=True)
+    work.mkdir(parents=True)
+    try:
+        protocol.progress(1, "network", "")
+        family = "ipv6" if ipv6_ok() else "ipv4"
+
+        def attempt(fam: str) -> None:
+            ytdlp(["--match-filter", f"duration <= {MAX_SECONDS} & !is_live", "-f", VIDEO_FORMAT,
+                   "-o", str(work / "video_dl.%(ext)s"), clean], fam, "download_video", 2, 85)
+
+        try:
+            attempt(family)
+        except RuntimeError as exc:
+            if family == "ipv6" and is_network_failure(str(exc)):
+                for f in work.glob("*"):
+                    f.unlink()
+                attempt("ipv4")
+            else:
+                raise
+        video_dl = next((p for p in work.glob("video_dl.*") if p.suffix not in (".json", ".part")), None)
+        if video_dl is None:
+            raise RuntimeError("no video file was downloaded")
+        protocol.progress(88, "video", "")
+        video = make_playable_video(video_dl, work, probe(video_dl), audio)
+        if video is None:
+            raise RuntimeError("the downloaded video could not be made playable")
+        vinfo = probe(video).get("video") or {}
+        size = [vinfo.get("width"), vinfo.get("height")]
+        # the song may have changed underneath (the job keeps it busy; this is the last check)
+        now = read_json(src / "source.json")
+        if not isinstance(now, dict) or now.get("source_hash") != rec.get("source_hash"):
+            raise ValueError("video_fetch_source_changed")
+        replace_retry(video, src / "video.mp4")
+        if isinstance(now.get("lyric_video"), dict):
+            now["video_original"] = {"video": "source/video.mp4", "video_size": size}
+        else:
+            now["video"], now["video_size"] = "source/video.mp4", size
+        now.pop("video_missing", None)
+        now["video_fetched_at"] = time.time()
+        write_json(src / "source.json", now)
+        return now
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
 
 
 def import_file(song_dir: Path, path: Path, original_name: str) -> dict:
@@ -290,6 +356,8 @@ def main() -> None:
         recover_source(song_dir)
         if data.get("mode") == "youtube":
             record = import_youtube(song_dir, data.get("url", ""))
+        elif data.get("mode") == "youtube_video":
+            record = fetch_youtube_video(song_dir)
         else:
             record = import_file(song_dir, Path(data["path"]), data.get("original_name", "file"))
     except ValueError as exc:
@@ -297,7 +365,7 @@ def main() -> None:
         protocol.fail(str(exc))
     except Exception as exc:  # noqa: BLE001
         shutil.rmtree(song_dir / "source.importing", ignore_errors=True)
-        protocol.fail("import_failed", str(exc)[-1500:])
+        protocol.fail("video_fetch_failed" if data.get("mode") == "youtube_video" else "import_failed", str(exc)[-1500:])
     protocol.progress(100, "done", "")
     protocol.result(record)
 

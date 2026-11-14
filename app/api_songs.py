@@ -298,6 +298,27 @@ def router(ctx: Context) -> APIRouter:
                           title=f"import: {song['title']}", song_id=song_id, timeout_s=3600,
                           dedupe="import")
 
+    @r.post("/api/songs/{song_id}/import/video")
+    def fetch_video(song_id: str):
+        """A YouTube song whose picture did not arrive (its download failed while the audio succeeded):
+        fetch only the picture. The audio is not touched, so nothing made from the song changes."""
+        lib, song, e = song_or_err(song_id)
+        if e:
+            return e
+        src = song.get("source") or {}
+        if src.get("type") != "youtube" or not src.get("audio") or not re.match(r"^https?://", str(src.get("url") or "")):
+            return err("video_fetch_not_youtube")
+        sdir = lib.song_dir(song_id)
+        have = ((src.get("video_original") or {}) if src.get("lyric_video") else src).get("video")
+        if have and (sdir / str(have)).is_file():
+            return err("video_fetch_has_video")
+        if ctx.song_busy(song_id):
+            return err("song_busy", 409)
+        return ctx.submit(kind="import", lane="cpu", script="import_media.py",
+                          input={"song_dir": str(sdir), "mode": "youtube_video"},
+                          title=f"video again: {song['title']}", song_id=song_id, timeout_s=3600,
+                          dedupe="import")
+
     info_cache: dict[str, dict] = {}
 
     @r.get("/api/youtube/info")

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Library: a YouTube import whose video could not be downloaded (the audio arrived, the video did not) used
+  to end as a plain "done" with an audio-only song. It now says so, and the song shows a notice with
+  「重新下載影片」: only the picture is fetched and put beside the audio the song already has, so stems,
+  timed lyrics and takes stay as they are. Under a lyric picture the fetched picture becomes its remembered
+  original. A failed attempt leaves the song as it was.
 - Library: 「字幕（二選一）」. The audio shift and the lyric picture are now two blocks of their own below
   「原曲」, the shift (yellow) above the lyric picture (cyan), each with a tick box, unticked and folded at
   first. Ticking one opens it and greys the other, so both can never be ticked; a tick that was only tried

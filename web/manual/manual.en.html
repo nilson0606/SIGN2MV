@@ -187,6 +187,7 @@ a { color:var(--accent); }
 <li>When the import finishes, the song shows a folded <i>▸ Original</i> section (open it for the original player) and three buttons: <b>Sing this song</b>, <b>Make an MV</b>, <b>AI cover</b>.</li>
 </ol>
 <p>Under the video in <i>Original</i>, <b>Download MP3</b> saves the song’s original audio as a 192 kbps MP3 (made from the lossless source audio, so it is compressed only once; a few seconds for a 4-minute song). <i>Download</i> in the video’s ⋮ menu is the browser’s own and saves the MP4 video.</p>
+<p><b>The video could not be downloaded</b>: a YouTube import fetches the audio first, then the video. Now and then, on a shaky network, the audio arrives and the video does not (it is retried three times). The import then ends with <i>the video could not be downloaded: only the audio is here</i>, and the song shows a yellow notice above <i>Original</i> with a <b>Download the video again</b> button. It fetches only the video: the audio does not change, so stems, timed lyrics and takes are not affected. If it fails again the song stays as it was; press it again later.</p>
 <h3 id="either">Lyrics on screen (one of two): audio shift or lyric picture</h3>
 <p class="note"><b>Below <i>Original</i> there are two blocks, and only one of them can be used.</b> The yellow one above is <b>Audio shift</b> (the picture already has lyrics and they should come a little before the singing); the cyan one below is <b>Lyric picture</b> (the picture has no lyrics, they are too small or blurry, or the song is audio only).</p>
 <ul>
