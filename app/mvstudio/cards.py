@@ -21,6 +21,8 @@ from typing import Dict, List, Sequence, Tuple
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageOps
 
+from . import cardworld
+
 W, H, S = 1920, 1080, 2
 INK = (52, 62, 92)
 SKIN = (255, 226, 205)
@@ -532,13 +534,21 @@ def song_seed(key: str) -> int:
     return zlib.crc32(str(key).encode("utf-8")) % 2000000000 + 1
 
 
-def draw(name: str, look: int = 0, tone: str = "fresh", seed: int = 0) -> Image.Image:
-    """The card as a 1920x1080 picture. The same name, look, tone and seed always give the same picture.
-    seed is the song's (song_style): 0 draws the plain look."""
-    if name not in SCENES:
-        raise KeyError(name)
+def valid_card(name: object) -> bool:
+    """A scene of the first cards, or a card put together from parts (cardworld)."""
+    return isinstance(name, str) and (name in SCENES or cardworld.parse(name) is not None)
+
+
+def draw(name: str, look: int = 0, tone: str = "fresh", seed: int = 0, world: object = None) -> Image.Image:
+    """The card as a 1920x1080 picture. The same name, look, tone, seed and world always give the same
+    picture. A name from cardworld.plan() is drawn in the song's world; a scene name is one of the first
+    cards (seed: the song's, song_style; 0 draws the plain look)."""
     if tone not in TONES:
         raise KeyError(tone)
+    if cardworld.parse(name):
+        return _tone(cardworld.draw(name, world, int(seed or 0)), tone)   # type: ignore[arg-type]
+    if name not in SCENES:
+        raise KeyError(name)
     look = int(look or 0) % LOOKS
     again, look = look // 2, look % 2
     seed = int(seed or 0)
@@ -563,29 +573,70 @@ def record_path(illust_dir: str) -> str:
 
 
 def read_record(illust_dir: str) -> Dict[str, object]:
-    out: Dict[str, object] = {"tone": "", "cards": {}, "seed": None}
+    out: Dict[str, object] = {"tone": "", "cards": {}, "seed": None, "world": None, "round": 0}
     try:
         with open(record_path(illust_dir), "r", encoding="utf-8") as f:
             data = json.load(f)
         got = data.get("cards")
         if isinstance(got, dict):
             out["cards"] = {str(k): v for k, v in got.items()
-                            if isinstance(v, dict) and v.get("card") in SCENES and v.get("tone") in TONES}
+                            if isinstance(v, dict) and valid_card(v.get("card")) and v.get("tone") in TONES}
         if data.get("tone") in TONES:
             out["tone"] = data["tone"]
         if isinstance(data.get("seed"), int) and data["seed"] >= 0:
             out["seed"] = data["seed"]
+        if cardworld.valid_world(data.get("world")):
+            out["world"] = data["world"]
+        if isinstance(data.get("round"), int) and 0 <= data["round"] < 100000:
+            out["round"] = data["round"]
     except (OSError, ValueError, AttributeError):
         pass
     return out
 
 
-def write_record(illust_dir: str, tone: str, found: Dict[str, Dict[str, object]], seed: object = None) -> None:
+def write_record(illust_dir: str, tone: str, found: Dict[str, Dict[str, object]], seed: object = None,
+                 world: object = None, rnd: int = 0) -> None:
+    """rnd counts how often the song's cards were taken out: each time the song starts with another look."""
     fp = record_path(illust_dir)
     tmp = fp + "." + secrets.token_hex(4) + ".tmp"
-    data: Dict[str, object] = {"version": 1, "tone": tone if tone in TONES else "", "cards": found}
+    data: Dict[str, object] = {"version": 1, "tone": tone if tone in TONES else "", "cards": found, "round": int(rnd or 0)}
     if isinstance(seed, int) and found:      # the look belongs to the cards that are there; with none left it starts anew
         data["seed"] = seed
+        if world:
+            data["world"] = world
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=1, sort_keys=True)
     os.replace(tmp, fp)
+
+
+# ---- what the songs before used ------------------------------------------------------------------------
+# <library>/cards_history.json: the worlds of the last songs that got cards, newest last, so that the next
+# song's world can keep away from them (cardworld.choose_world).
+HISTORY = 12
+
+
+def history_path(library_root: object) -> str:
+    return os.path.join(str(library_root), "cards_history.json")
+
+
+def read_history(library_root: object) -> List[Dict[str, object]]:
+    try:
+        with open(history_path(library_root), "r", encoding="utf-8") as f:
+            got = json.load(f).get("songs")
+        return [h for h in got if isinstance(h, dict) and isinstance(h.get("slug"), str) and cardworld.valid_world(h.get("world"))][-HISTORY:]
+    except (OSError, ValueError, AttributeError, TypeError):
+        return []
+
+
+def note_history(library_root: object, slug: str, world: object) -> None:
+    if not cardworld.valid_world(world):
+        return
+    songs = [h for h in read_history(library_root) if h.get("slug") != slug] + [{"slug": slug, "world": world}]
+    fp = history_path(library_root)
+    tmp = fp + "." + secrets.token_hex(4) + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"version": 1, "songs": songs[-HISTORY:]}, f, indent=1)
+        os.replace(tmp, fp)
+    except OSError:
+        pass

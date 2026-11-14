@@ -4146,7 +4146,7 @@
       try {
         const data = await cardsCall('remove');
         cardsTakePhotos(data);
-        setInlineStatus('step2StatusBox', 'ok', `🧹 已移除 ${data.removed} 張簡易圖卡。你放的照片和時間軸都還在。`);
+        setInlineStatus('step2StatusBox', 'ok', `🧹 已移除 ${data.removed} 張簡易圖卡。你放的照片和時間軸都還在。再按「產生簡易圖卡」會換一組新的樣子。`);
       } catch (e) {
         setInlineStatus('step2StatusBox', 'err', `❌ 移除簡易圖卡失敗：${e.message}`);
       }

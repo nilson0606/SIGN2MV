@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Simple cards, second generation (`app/mvstudio/cardworld.py`): a card is no longer one of 34 fixed scenes
+  but put together from parts: one of 16 places, a light (dawn to night) and weather, who is in the picture
+  and how (15 ways), a small thing that goes with the words (27), and how close the picture is. Each song
+  has a world of its own (five places, the lights it moves through, palette, line, border, and its two
+  people), chosen away from the worlds of the songs before it, which the library remembers in
+  `cards_history.json`; no two cards of a song are the same. A few English words are known besides the
+  Chinese ones. Taking the cards out and making them again gives another set. Cards made before keep their
+  scenes (and what is added to them matches) until they are taken out.
 - Full MV: 「🎨 產生簡易圖卡」 (simple cards) in the photo step. For every part of the timeline that shows no
   photo (lyric lines, intro, interludes, outro) the app draws a 1920x1080 comic-style picture card itself
   (`app/mvstudio/cards.py`, Pillow only, nothing fetched; about half a second a card). A card is chosen per

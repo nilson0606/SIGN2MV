@@ -33,7 +33,7 @@ from . import settings as settings_mod
 from . import stems as stems_mod
 from .context import Context
 from .library import LibraryError
-from .mvstudio import align, cards, core
+from .mvstudio import align, cards, cardworld, core
 from .mvstudio.align import (align_timeline_with_anchors_and_whisper, apply_anchor_locks, unsung_sections,
                              auto_generate_timeline_from_whisper_only, build_guaranteed_fallback_timeline,
                              enforce_anchor_invariants, WHISPER_PIPELINE)
@@ -1298,13 +1298,23 @@ def router(ctx: Context) -> APIRouter:
                 if info and core.photo_ok(illust_dir, fp):
                     have.append({"slot": f"scene:{int(m.group(1))}" if m else f"inst:{mi.group(1)}", "card": info["card"],
                                  "look": int(info.get("look", 0) or 0), "tone": info["tone"], "file": fn, "print": pr})
-        # The song's look. While cards are there it is theirs (cards from before songs had a look: the plain
-        # one), so that cards added later match; with no card left the song starts with its own.
+        # The song's look. While cards are there it is theirs, so that cards added later match: a world of
+        # its own (cardworld), or for cards from before songs had worlds the scenes of the first cards.
+        # With no card left the song gets a new world, away from what the songs before it used, and another
+        # one each time its cards were taken out.
+        slug = str(proj.get("slug") or "")
+        rnd = int(rec["round"] or 0)
+        parts = [(kind(seg), str(seg.get("text", ""))) for seg in tl]
         if have:
-            seed = int(rec["seed"] or 0)
+            seed, world = int(rec["seed"] or 0), rec["world"]
         else:
-            seed = cards.song_seed(str(proj.get("slug") or ""))
-        picks = cards.pick([(kind(seg), str(seg.get("text", ""))) for seg in tl], seed)
+            seed = cards.song_seed(f"{slug}#{rnd}" if rnd else slug)
+            # (the song's own last world is among them too, so cards made again do not look like the ones taken out)
+            world = cardworld.choose_world(seed, [h["world"] for h in cards.read_history(core.LIBRARY_ROOT)])
+        if world:
+            picks = [(spec, 0) for spec in cardworld.plan(parts, seed, world)]
+        else:
+            picks = cards.pick(parts, seed)
         empty: List[Dict[str, Any]] = []
         seen = set()
         for seg, (name, look) in zip(tl, picks):
@@ -1331,11 +1341,12 @@ def router(ctx: Context) -> APIRouter:
                 seen.add(slot)
                 empty.append({"slot": slot, "card": name, "look": look})
         return {"empty": empty, "cards": have, "tone": rec["tone"] or "fresh", "tones": list(cards.TONES),
-                "timeline": len(tl), "seed": seed}
+                "timeline": len(tl), "seed": seed, "world": world, "round": rnd}
 
-    def card_save(illust_dir: str, out_path: Path, name: str, look: int, tone: str, seed: int,
-                  keep: Dict[str, Any], replace_print: str) -> None:
-        img = cards.draw(name, look, tone, seed)
+    def card_save(illust_dir: str, out_path: Path, name: str, look: int, tone: str, state: Dict[str, Any],
+                  keep: Dict[str, Any], replace_print: str, slug: str) -> None:
+        seed, world = state["seed"], state["world"]
+        img = cards.draw(name, look, tone, seed, world)
         os.makedirs(illust_dir, exist_ok=True)
         part = out_path.with_name(out_path.name + ".part")
         try:
@@ -1353,7 +1364,9 @@ def router(ctx: Context) -> APIRouter:
         known.pop(replace_print, None)
         if pr:
             known[pr] = {"card": name, "look": look, "tone": tone, "seed": seed}
-        cards.write_record(illust_dir, tone, known, seed)
+        cards.write_record(illust_dir, tone, known, seed, world, state["round"])
+        if world:
+            cards.note_history(core.LIBRARY_ROOT, slug, world)
 
     @r.post("/api/mv/cards/plan")
     async def api_cards_plan(request: Request):
@@ -1396,7 +1409,8 @@ def router(ctx: Context) -> APIRouter:
         try:
             keep = {c["print"]: {"card": c["card"], "look": c["look"], "tone": c["tone"], "seed": state["seed"]}
                     for c in state["cards"]}
-            await asyncio.to_thread(card_save, illust_dir, out_path, name, look, tone, state["seed"], keep, old_print)
+            await asyncio.to_thread(card_save, illust_dir, out_path, name, look, tone, state, keep, old_print,
+                                    str(proj.get("slug") or ""))
         except Exception as e:  # noqa: BLE001
             return jerr(500, f"簡易圖卡畫不出來：{e}")
         m = CARD_SLOT_RE.fullmatch(slot)
@@ -1429,7 +1443,8 @@ def router(ctx: Context) -> APIRouter:
                 pass
         rec = cards.read_record(illust_dir)
         if rec["cards"] or removed:
-            cards.write_record(illust_dir, str(rec["tone"]), {})      # no cards, so no look either: the next ones start anew
+            # no cards, so no look either: the next ones are another set
+            cards.write_record(illust_dir, str(rec["tone"]), {}, rnd=int(rec["round"] or 0) + (1 if removed else 0))
         return {"status": "ok", "removed": removed, "all_scenes": _scene_payload(proj),
                 "instrument_photos": list_instrumental_photos(illust_dir, proj.get("timeline", []))}
 

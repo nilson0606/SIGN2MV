@@ -5,7 +5,7 @@ import io
 
 from PIL import Image
 
-from app.mvstudio import cards, core
+from app.mvstudio import cards, cardworld, core
 from test_mv_photos import _aligned_project, png, state
 
 
@@ -103,10 +103,10 @@ def test_cards_fill_only_the_empty_parts(client, root):
     assert f"scene:{mine}" not in slots and len(slots) == len(set(slots))
     assert set(slots) >= {f"scene:{n}" for n in lyric_scenes if n != mine}
     intro = next((s for s in tl if s.get("type") == "intro"), None)
-    if intro:   # the intro borrows line 1's photo; with none there it gets a card of its own
-        assert "inst:intro" in slots and next(e for e in plan["empty"] if e["slot"] == "inst:intro")["card"] == "opening"
+    if intro:   # the intro borrows line 1's photo; with none there it gets a card of its own (no people in it)
+        assert "inst:intro" in slots and cardworld.parse(next(e for e in plan["empty"] if e["slot"] == "inst:intro")["card"])[3] == "none"
     names = [e["card"] for e in plan["empty"]]
-    assert all(n in cards.SCENES for n in names)
+    assert all(cardworld.parse(n) for n in names) and len(set(names)) == len(names) and cardworld.valid_world(plan["world"])
 
     # a slot with a photo is refused; so are a made-up slot and a made-up tone
     assert _post(client, "/api/mv/cards/draw", slug=slug, slot=f"scene:{mine}", tone="fresh").status_code == 409
@@ -177,23 +177,72 @@ def test_one_card_taken_out_comes_back_the_same_and_no_timeline_means_nothing_to
     rec = json.loads((pdir / "cards.json").read_text(encoding="utf-8"))
     seed = cards.song_seed(slug)
     assert rec["seed"] == seed and left["seed"] == seed and rec["tone"] == "warm"
+    assert rec["world"] == plan["world"] == left["world"] and cardworld.valid_world(rec["world"])
     other = next(e for e in plan["empty"] if e["slot"].startswith("scene:") and e["slot"] != target["slot"])
     with Image.open(pdir / "scenes" / ("scene_%02d.png" % int(other["slot"].split(":")[1]))) as im:
-        assert im.convert("RGB").tobytes() == cards.draw(other["card"], other["look"], "warm", seed).tobytes()
-    # cards from before songs had a look keep the plain one for what is added to them
-    rec.pop("seed")
+        assert im.convert("RGB").tobytes() == cards.draw(other["card"], other["look"], "warm", seed, rec["world"]).tobytes()
+    # the library remembers the song's world for the songs after it
+    hist = cards.read_history(root / "library")
+    assert [h["slug"] for h in hist] == [slug] and hist[0]["world"] == rec["world"]
+    # cards from before songs had worlds keep the first cards' scenes for what is added to them
+    rec.pop("seed"); rec.pop("world")
+    for v in rec["cards"].values():
+        v["card"], v["look"] = "sea", 0
     (pdir / "cards.json").write_text(json.dumps(rec), encoding="utf-8")
     old = _post(client, "/api/mv/cards/plan", slug=slug).json()
-    assert old["seed"] == 0 and len(old["empty"]) == 1
+    assert old["seed"] == 0 and old["world"] is None and len(old["empty"]) == 1 and old["empty"][0]["card"] in cards.SCENES
     assert _post(client, "/api/mv/cards/draw", slug=slug, slot=old["empty"][0]["slot"], tone="warm").status_code == 200
     with Image.open(pdir / "scenes" / f"scene_{sid_n:02d}.png") as im:
         assert im.convert("RGB").tobytes() == cards.draw(old["empty"][0]["card"], old["empty"][0]["look"], "warm", 0).tobytes()
     assert json.loads((pdir / "cards.json").read_text(encoding="utf-8"))["seed"] == 0
     # taken out and made again: the song's own look
     assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == len(plan["empty"])
-    assert _post(client, "/api/mv/cards/plan", slug=slug).json()["seed"] == seed
+    anew = _post(client, "/api/mv/cards/plan", slug=slug).json()
+    assert anew["round"] == 1 and anew["seed"] == cards.song_seed(slug + "#1") and cardworld.valid_world(anew["world"])
+    assert anew["world"] != plan["world"] and len(anew["empty"]) == len(plan["empty"])
 
     # a project that has not been aligned has no parts to draw for
     slug2 = client.post("/api/mv/project/create", json={"song_id": sid, "slug": "bare", "title": "t", "scene_count": 3}).json()["project"]["slug"]
     bare = _post(client, "/api/mv/cards/plan", slug=slug2).json()
     assert bare["empty"] == [] and bare["timeline"] == 0
+
+
+def test_worlds_keep_away_from_the_songs_before_and_cards_never_repeat():
+    lines = [("intro", "")] + [("lyric", t) for t in ("雨落在窗外的小巷", "追著夜空的流星", "na na na", "你是我的幸運", "一起對抗全世界",
+                                                      "hold my hand tonight", "追著夜空的流星", "na na na")] * 6 + [("outro", "")]
+    recent = []
+    for i in range(8):
+        seed = cards.song_seed(f"song{i}")
+        wd = cardworld.choose_world(seed, recent)
+        assert cardworld.valid_world(wd) and wd == cardworld.choose_world(seed, recent)
+        if recent:      # at most two places shared with the song just before, and never its whole look
+            assert len(set(wd["places"]) & set(recent[-1]["places"])) <= 2, (i, wd["places"], recent[-1]["places"])
+            assert cardworld.world_distance(wd, recent[-1]) > 12
+        specs = cardworld.plan(lines, seed, wd)
+        assert len(specs) == len(lines) and len(set(specs)) == len(specs) and all(cardworld.parse(sp) for sp in specs)
+        assert specs == cardworld.plan(lines, seed, wd)
+        got = [cardworld.parse(sp) for sp in specs]
+        assert got[1][2] == "rain" and got[2][1] == "night" and got[2][4] == "shooting" and got[4][4] == "clover"
+        assert got[6][1] == "night" and got[6][3] == "duo_hands"          # English words count too
+        recent.append(wd)
+    assert not cardworld.parse("w2|sea|day|clear|none|none|wide|c|x") and not cardworld.parse("sea") and not cardworld.valid_world({"v": 2})
+
+
+def test_every_place_person_and_thing_draws():
+    wd = cardworld.make_world(3)
+    seen = set()
+    for i, place in enumerate(cardworld.PLACES):
+        im = cardworld.draw(cardworld.card(place, list(cardworld.LIGHTS)[i % 7], cardworld.WEATHERS[i % 3], "none", "none", "wide", "c", 0), wd, 5)
+        assert im.size == (1920, 1080) and im.mode == "RGB" and len(set(im.resize((48, 27)).getdata())) > 20, place
+        seen.add(im.resize((32, 18)).tobytes())
+    assert len(seen) == len(cardworld.PLACES)
+    for i, subject in enumerate(cardworld.SUBJECTS):
+        for wd2 in (wd, cardworld.make_world(40 + i)):
+            cardworld.draw(cardworld.card("park", "day", "clear", subject, "none", cardworld.FRAMES[i % 3], cardworld.POSES[i % 3], i % 2), wd2, 5)
+    for i, prop in enumerate(cardworld.PROPS):
+        for subject in ("solo_front", "duo_face", "none"):
+            cardworld.draw(cardworld.card("meadow", "night" if i % 2 else "day", "clear", subject, prop, "mid", "c", 0), wd, 5)
+    a = cardworld.card("sea", "sunset", "clear", "solo_back", "birds", "mid", "l", 0)
+    assert cardworld.draw(a, wd, 5).tobytes() == cardworld.draw(a, wd, 5).tobytes()
+    assert cardworld.draw(a, wd, 5).tobytes() != cardworld.draw(a, cardworld.make_world(4), 5).tobytes()
+    assert cards.draw(a, 0, "manga", 5, wd).size == (1920, 1080) and cards.valid_card(a) and cards.valid_card("sea") and not cards.valid_card("x")

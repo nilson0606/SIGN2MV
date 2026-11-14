@@ -1774,8 +1774,8 @@
    "en": "Remove this song's {0} simple card(s)?"
   },
   {
-   "zh": "🧹 已移除 {0} 張簡易圖卡。你放的照片和時間軸都還在。",
-   "en": "🧹 {0} simple card(s) removed. Your photos and the timeline are still there."
+   "zh": "🧹 已移除 {0} 張簡易圖卡。你放的照片和時間軸都還在。再按「產生簡易圖卡」會換一組新的樣子。",
+   "en": "🧹 {0} simple card(s) removed. Your photos and the timeline are still there. Press \"Make simple cards\" again for a new set with another look."
   },
   {
    "zh": "❌ 移除簡易圖卡失敗：{0}",
