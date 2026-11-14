@@ -401,3 +401,17 @@ html[data-theme="day"] { --gold-edge: rgba(180, 132, 20, .55); --gold-edge-hi: r
 .shift-purpose { margin: .5em 0 .2em; padding: .45em .7em; border-left: 3px solid var(--hl-warn); background: var(--chip-warn); color: var(--text, inherit); font-weight: 600; border-radius: 4px; }
 .shift-box .shift-apply:not(:disabled) { background: var(--hl-warn); border-color: var(--hl-warn); color: #1a1205; font-weight: 700; box-shadow: 0 0 0 3px var(--chip-warn), 0 0 12px var(--hl-warn); }
 .shift-purpose.shift-apply-note { border-left-color: var(--hl-bad); background: #f8717122; }
+
+/* library: 「字幕（二選一）」 — audio shift above, lyric picture below; one tick at a time */
+.pick-title { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin: 16px 0 6px; }
+.pick { border: 1px solid var(--edge); border-left-width: 5px; border-radius: 10px; padding: 10px 14px; margin: 8px 0; }
+.pick-shift { border-left-color: var(--warn); background: linear-gradient(90deg, color-mix(in srgb, var(--warn) 9%, transparent), transparent 55%); }
+.pick-lyrics { border-left-color: var(--accent); background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 9%, transparent), transparent 55%); }
+.pick-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; cursor: pointer; }
+.pick-head input { width: 18px; height: 18px; margin: 0 4px 0 0; align-self: center; cursor: pointer; }
+.pick-state { margin: 4px 0 0 32px; min-height: 0; }
+.pick-state:empty { display: none; }
+.pick.applied .pick-state { color: var(--ok); }
+.pick.off { opacity: .5; }
+.pick.off .pick-head, .pick.off .pick-head input, .pick.applied .pick-head input { cursor: not-allowed; }
+.pick-body { margin-top: 10px; }

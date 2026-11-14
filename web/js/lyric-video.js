@@ -11,18 +11,12 @@ import { lyricsEditor } from './qmv-lyrics.js';
 const pref = (k, d) => { try { return localStorage.getItem(`sign2mv.lyricvideo.${k}`) || d; } catch { return d; } };
 const keep = (k, v) => { try { localStorage.setItem(`sign2mv.lyricvideo.${k}`, v); } catch { /* ignore */ } };
 
-// What the section's summary line says about the song's picture.
-export function lyricVideoInfo(song) {
-  const s = song.source || {};
-  if (s.lyric_video) return t('lv.info_on');
-  return s.video ? '' : t('lv.info_none');
-}
-
-export function lyricVideoBody(song) {
+// opts.beforeAlign: asked before the lines are timed (see qmv-lyrics.js)
+export function lyricVideoBody(song, opts = {}) {
   const sid = song.song_id;
   const s = song.source;
   const now = el('p', { class: 'small' });
-  const editor = lyricsEditor({ title: 'lv.step_lyrics', hint: 'lv.lyrics_hint' });
+  const editor = lyricsEditor({ title: 'lv.step_lyrics', hint: 'lv.lyrics_hint', beforeAlign: opts.beforeAlign });
   const jb = jobBox();
   const plain = el('input', { type: 'radio', name: `lv-style-${sid}`, value: 'plain' });
   const overlay = el('input', { type: 'radio', name: `lv-style-${sid}`, value: 'overlay' });

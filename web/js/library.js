@@ -5,7 +5,7 @@ import { $, el, toast, confirmDialog, choiceDialog, fmtDate, fmtTime, fmtBytes }
 import { bus, state, selectSong, songById, mediaUrl, reloadJobs } from './app-state.js';
 import { jobBox } from './jobview.js';
 import { diagStart, diagNote, diagStop } from './diag.js';   // TEMPORARY, see diag.js
-import { lyricVideoBody, lyricVideoInfo } from './lyric-video.js';
+import { lyricVideoBody } from './lyric-video.js';
 
 let filter = '';
 let sizes = {};   // song_id -> bytes on disk
@@ -117,21 +117,22 @@ function renderDetail() {
       el('button', { class: 'btn', onclick: go('mv') }, t('lib.go_mv')),
       el('button', { class: 'btn', onclick: go('cover') }, t('lib.go_cover'))));
   }
-  let lyricSection = null;
+  let pick = null;
+  let src = null;
+  if (song.source) src = sourceSection(song);
   if (song.source && song.source.audio) {
-    lyricSection = fold('lyricvideo', t('lv.title'), el('span', { class: 'muted small' }, lyricVideoInfo(song)), false,
-      ...lyricVideoBody(song));
+    pick = subtitlePick(song, src.player);
     if (!song.source.video) {
       // a song without a picture shows no words in sing & record: say where they can be added
       parts.push(el('div', { class: 'banner info row', style: 'align-items:center;gap:10px' },
         el('span', { class: 'grow' }, t('lv.tip_no_picture')),
-        el('button', { class: 'btn small', onclick: () => { lyricSection.open = true; lyricSection.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, t('lv.tip_open'))));
+        el('button', { class: 'btn small', onclick: pick.openLyrics }, t('lv.tip_open'))));
     }
   }
   parts.push(importSection(song));
   if (song.source) {
-    parts.push(sourceSection(song));
-    if (lyricSection) parts.push(lyricSection);
+    parts.push(src.section);
+    if (pick) parts.push(pick.head, pick.shift, pick.lyrics);
     parts.push(stemsSection(song));
   }
   parts.push(storageSection(song));
@@ -303,13 +304,123 @@ function sourceSection(song) {
   const player = el('audio', { src: bust(mediaUrl(song.song_id, s.audio)), controls: true, preload: 'none' });
   const link = s.url && /^https?:\/\//.test(s.url)
     ? el('a', { href: s.url, target: '_blank', rel: 'noopener', class: 'small', onclick: (e) => e.stopPropagation() }, s.url) : null;   // old 前往 YouTube 原站
-  return fold('source', t('lib.source_title'), el('span', { class: 'muted small' }, info.join(' · '), link ? ' · ' : '', link), false,
+  const section = fold('source', t('lib.source_title'), el('span', { class: 'muted small' }, info.join(' · '), link ? ' · ' : '', link), false,
     player,
     media,
-    s.audio ? el('div', { class: 'row' }, mp3Button(song)) : null,
-    // the lyric picture's lines follow the audio: nothing to shift against
-    media && !s.lyric_video ? shiftBox(song, media, player, bust(mediaUrl(song.song_id, s.audio))) : null);
+    s.audio ? el('div', { class: 'row' }, mp3Button(song)) : null);
+  return { section, player };   // 音軌平移 has its own block below (subtitlePick), with its own copy of the picture
 }
+
+// 「字幕（二選一）」: two blocks that are always there, the audio shift above (the picture already has
+// lyrics; make them come earlier) and the lyric picture below (the picture has none). Each has a tick box,
+// unticked and folded at first; ticking one opens it and greys the other, so both can never be ticked.
+// A tick that was only tried (nothing applied) can be taken away again, which frees the other. Once one is
+// applied (the audio is shifted / the lyric picture is the song's picture) the other stays grey. A song
+// whose audio can no longer be shifted (stems, takes, ...) has the shift block grey and folded.
+const picks = new Map();   // song_id -> 'shift' | 'lyrics': a tick that is not applied (kept while the page is open)
+function subtitlePick(song, sourcePlayer) {
+  const s = song.source;
+  const sid = song.song_id;
+  const lyricsOn = !!s.lyric_video;
+  const picture = lyricsOn ? (s.video_original || {}).video : s.video;   // the imported picture, if any
+  const bust = (url) => `${url}?v=${encodeURIComponent(s.shifted_at || s.imported_at || '')}`;
+  const fmt = (v) => `${v > 0 ? '+' : ''}${v.toFixed(2)}`;
+  let st = null;   // the server's word on the audio shift
+  const stillShiftable = () => !!(picture && !lyricsOn && st && st.allowed);
+
+  function block(kind, titleKey, subKey) {
+    const box = el('input', { type: 'checkbox' });
+    const state = el('div', { class: 'small pick-state' });
+    const body = el('div', { class: 'pick-body hidden' });
+    const root = el('div', { class: `pick pick-${kind}` },
+      el('label', { class: 'pick-head' }, box, el('b', {}, t(titleKey)), el('span', { class: 'muted small' }, t(subKey))),
+      state, body);
+    return { kind, box, state, body, root, built: false };
+  }
+  const A = block('shift', 'pick.shift_title', 'pick.shift_sub');
+  const B = block('lyrics', 'pick.lyrics_title', 'pick.lyrics_sub');
+
+  function buildShift() {
+    if (A.built) return;
+    A.built = true;
+    const video = el('video', { src: bust(mediaUrl(sid, picture)), controls: true, muted: true, preload: 'metadata', style: 'max-height:240px' });
+    A.body.replaceChildren(video, shiftBox(song, video, sourcePlayer, bust(mediaUrl(sid, s.audio))));
+  }
+  function buildLyrics() {
+    if (B.built) return;
+    B.built = true;
+    B.body.replaceChildren(...lyricVideoBody(song, {
+      // timing the lines separates the vocals, and a separated song can no longer be shifted: say so first
+      beforeAlign: async () => {
+        await load();
+        return !stillShiftable() || confirmDialog(t('pick.align_confirm'), t('pick.align_go'));
+      },
+    }));
+  }
+
+  function show() {
+    const offset = st ? Math.round((st.offset || 0) * 100) / 100 : 0;
+    const shifted = offset !== 0;
+    const picked = picks.get(sid) || null;
+    // why the audio shift cannot be ticked (null: it can)
+    let aOff = null;
+    if (!picture) aOff = t('pick.shift_off_novideo');
+    else if (lyricsOn) aOff = t('pick.shift_off_lyrics_on');
+    else if (!st) aOff = t('common.loading');
+    else if (!st.allowed) aOff = st.reason === 'song_busy' ? t('err.song_busy') : (shifted ? t('pick.shift_off_locked_applied', fmt(offset)) : t('pick.shift_off_locked'));
+    else if (picked === 'lyrics') aOff = t('pick.off_other_lyrics');
+    let bOff = null;
+    if (!lyricsOn && shifted) bOff = t('pick.lyrics_off_shifted', fmt(offset));
+    else if (!lyricsOn && picked === 'shift') bOff = t('pick.off_other_shift');
+    const aApplied = !aOff && shifted;
+    const set = (blk, off, applied, on, appliedText) => {
+      blk.root.classList.toggle('off', !!off);
+      blk.root.classList.toggle('applied', applied);
+      blk.box.checked = !off && on;
+      blk.box.disabled = !!off || applied;   // an applied one is undone inside it, not by the tick
+      blk.state.textContent = off || (applied ? appliedText : '');
+      blk.body.classList.toggle('hidden', !blk.box.checked);
+    };
+    set(A, aOff, aApplied, aApplied || picked === 'shift', t('pick.shift_applied', fmt(offset)));
+    set(B, bOff, lyricsOn, lyricsOn || picked === 'lyrics', t(picture ? 'pick.lyrics_applied' : 'pick.lyrics_applied_audio'));
+    if (A.box.checked) buildShift();
+    if (B.box.checked) buildLyrics();
+  }
+  async function load() {
+    if (!picture || lyricsOn) { st = { allowed: false, offset: (s.audio_offset_s || 0) }; show(); return; }
+    try { st = await api.get(`/api/songs/${encodeURIComponent(sid)}/audio-shift`); } catch { /* keep the last answer */ }
+    show();
+  }
+  A.box.addEventListener('change', () => {
+    if (A.box.checked) picks.set(sid, 'shift');
+    else {
+      picks.delete(sid);
+      if (shiftGuard && shiftGuard.songId === sid) shiftGuard.stopPreview();   // a preview does not go on in a folded block
+      const v = A.body.querySelector('video');
+      if (v) v.pause();
+    }
+    show();
+  });
+  B.box.addEventListener('change', () => {
+    if (B.box.checked) picks.set(sid, 'lyrics'); else picks.delete(sid);
+    show();
+  });
+  const onJob = () => { if (A.root.isConnected) load(); else bus.removeEventListener('job-finished', onJob); };
+  bus.addEventListener('job-finished', onJob);
+  window.addEventListener('focus', function again() {
+    if (!A.root.isConnected) { window.removeEventListener('focus', again); return; }
+    load();
+  });
+  show();
+  load();
+  const openLyrics = () => {
+    if (!B.box.disabled && !B.box.checked) { B.box.checked = true; B.box.dispatchEvent(new Event('change')); }
+    B.root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  return { head: el('div', { class: 'pick-title' }, el('b', {}, t('pick.title')), el('span', { class: 'muted small' }, t('pick.note'))),
+    shift: A.root, lyrics: B.root, openLyrics };
+}
+
 
 // 「音軌平移」: the song audio against the picture, up to ±2 s from the originally imported audio, for a song
 // nothing has been made from yet (the server decides). The box shows the total (the current shift when
@@ -459,7 +570,8 @@ function shiftBox(song, video, player, audioUrl) {
     if (ask && !(await confirmDialog(t('lib.shift_confirm', fmt(v), fmt(current)), t('lib.shift_apply')))) return false;
     let ok = false;
     stop();
-    const srcs = [video, player].map((m) => [m, m.getAttribute('src')]);
+    const srcs = [...new Set([video, player, ...document.querySelectorAll('#song-detail video, #song-detail audio')])]
+      .map((m) => [m, m.getAttribute('src')]);
     for (const [m] of srcs) {   // let go of the files so the folder can be replaced
       m.removeAttribute('src');
       m.load();

@@ -103,6 +103,9 @@ export function lyricsEditor(keys = {}) {
   async function align(even, retried = false) {
     if (!songId) return;
     if (!area.value.trim()) { toast(t('qmvl.need_text'), true); return; }
+    // keys.beforeAlign: a last question before Whisper is asked (it separates the vocals first); LRC lines
+    // carry their own times and "even" only spreads the lines, so neither separates anything
+    if (!even && !retried && keys.beforeAlign && !/^\s*\[\d{1,3}:\d{2}/m.test(area.value) && !(await keys.beforeAlign())) return;
     alignBtn.disabled = evenBtn.disabled = true;
     try {
       const res = await api.post(`/api/songs/${songId}/quickmv/lyrics/align`, { text: area.value, even });

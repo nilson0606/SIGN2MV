@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Library: 「字幕（二選一）」. The audio shift and the lyric picture are now two blocks of their own below
+  「原曲」, the shift (yellow) above the lyric picture (cyan), each with a tick box, unticked and folded at
+  first. Ticking one opens it and greys the other, so both can never be ticked; a tick that was only tried
+  (a preview, nothing applied) can be taken away, which frees the other; once one is applied (the audio is
+  shifted, or the lyric picture is the song's picture) the other stays grey, and the applied one says how to
+  undo it. A song whose audio is already separated has the shift block grey and folded. The first
+  「自動對時間」 of the lyric picture asks before it separates the vocals while the song can still be shifted
+  (not for LRC lines, which separate nothing). The audio shift moved out of 「原曲」 and previews on its own
+  copy of the picture; applying it lets go of every player of the song.
 - Quick MV (studio look): the lyric subtitles are twice as large (ASS size 92 instead of 46 at 1080p; they
   read as small print before), and a line too long for the picture is put in rows of about the same width
   instead of running off both sides. Same place as before (above the spectrum). Videos already made do not
