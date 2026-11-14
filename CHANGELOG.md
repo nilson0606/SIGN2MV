@@ -11,7 +11,12 @@
   and each is a photo like any other afterwards. One tone per song (清新／暖色復古／夜藍／黑白漫畫): choosing
   another tone asks before redrawing the cards that are there. 「🧹 移除簡易圖卡」 takes out the cards only
   (photos and the timeline stay). Which photos are cards is kept in the project's `cards.json` by content
-  fingerprint, so a photo put over a card is never taken for one.
+  fingerprint, so a photo put over a card is never taken for one. Each song has a look of its own, from a
+  seed made of the project's name: the figures (hair cut and colour, clothes), a slight turn of the landscape
+  colours, where the small things are, which way round each scene is and which of its two lights comes first,
+  and which of the general scenes the song uses (11 of 16). A scene that comes back in a song has four looks
+  before one repeats. The seed is kept with the cards, so cards added later match; with no card left the
+  song starts with its own again.
 - Library: a YouTube import whose video could not be downloaded (the audio arrived, the video did not) used
   to end as a plain "done" with an audio-only song. It now says so, and the song shows a notice with
   「重新下載影片」: only the picture is fetched and put beside the audio the song already has, so stems,

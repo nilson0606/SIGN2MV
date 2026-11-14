@@ -1283,9 +1283,28 @@ def router(ctx: Context) -> APIRouter:
             tp = str(seg.get("type", "lyric"))
             return tp if tp in ("intro", "outro") else ("interlude" if tp in core.INTERLUDE_TYPES else "lyric")
 
-        picks = cards.pick([(kind(seg), str(seg.get("text", ""))) for seg in tl])
         rec = cards.read_record(illust_dir)
         known: Dict[str, Any] = rec["cards"]  # type: ignore[assignment]
+        have: List[Dict[str, Any]] = []
+        if known and os.path.isdir(illust_dir):
+            for fn in sorted(os.listdir(illust_dir)):
+                m = re.fullmatch(r"scene_(\d{2})\.png", fn)
+                mi = re.fullmatch(r"inst_((?:intro|outro|interlude_[0-9a-f]{6}))\.png", fn)
+                if not (m or mi):
+                    continue
+                fp = os.path.join(illust_dir, fn)
+                pr = core._photo_print(fp) or ""
+                info = known.get(pr)
+                if info and core.photo_ok(illust_dir, fp):
+                    have.append({"slot": f"scene:{int(m.group(1))}" if m else f"inst:{mi.group(1)}", "card": info["card"],
+                                 "look": int(info.get("look", 0) or 0), "tone": info["tone"], "file": fn, "print": pr})
+        # The song's look. While cards are there it is theirs (cards from before songs had a look: the plain
+        # one), so that cards added later match; with no card left the song starts with its own.
+        if have:
+            seed = int(rec["seed"] or 0)
+        else:
+            seed = cards.song_seed(str(proj.get("slug") or ""))
+        picks = cards.pick([(kind(seg), str(seg.get("text", ""))) for seg in tl], seed)
         empty: List[Dict[str, Any]] = []
         seen = set()
         for seg, (name, look) in zip(tl, picks):
@@ -1311,23 +1330,12 @@ def router(ctx: Context) -> APIRouter:
             if slot not in seen:
                 seen.add(slot)
                 empty.append({"slot": slot, "card": name, "look": look})
-        have: List[Dict[str, Any]] = []
-        if known and os.path.isdir(illust_dir):
-            for fn in sorted(os.listdir(illust_dir)):
-                m = re.fullmatch(r"scene_(\d{2})\.png", fn)
-                mi = re.fullmatch(r"inst_((?:intro|outro|interlude_[0-9a-f]{6}))\.png", fn)
-                if not (m or mi):
-                    continue
-                fp = os.path.join(illust_dir, fn)
-                info = known.get(core._photo_print(fp) or "")
-                if info and core.photo_ok(illust_dir, fp):
-                    have.append({"slot": f"scene:{int(m.group(1))}" if m else f"inst:{mi.group(1)}", "card": info["card"],
-                                 "look": int(info.get("look", 0) or 0), "tone": info["tone"], "file": fn})
         return {"empty": empty, "cards": have, "tone": rec["tone"] or "fresh", "tones": list(cards.TONES),
-                "timeline": len(tl)}
+                "timeline": len(tl), "seed": seed}
 
-    def card_save(illust_dir: str, out_path: Path, name: str, look: int, tone: str, replace_print: str) -> None:
-        img = cards.draw(name, look, tone)
+    def card_save(illust_dir: str, out_path: Path, name: str, look: int, tone: str, seed: int,
+                  keep: Dict[str, Any], replace_print: str) -> None:
+        img = cards.draw(name, look, tone, seed)
         os.makedirs(illust_dir, exist_ok=True)
         part = out_path.with_name(out_path.name + ".part")
         try:
@@ -1338,12 +1346,14 @@ def router(ctx: Context) -> APIRouter:
         finally:
             if part.exists():
                 part.unlink()
-        rec = cards.read_record(illust_dir)
-        known: Dict[str, Any] = rec["cards"]  # type: ignore[assignment]
+        # the cards that were there a moment ago, and any drawn by another request since
+        known: Dict[str, Any] = dict(cards.read_record(illust_dir)["cards"])  # type: ignore[arg-type]
+        known = {k: v for k, v in known.items() if k in keep or v.get("seed") == seed}
+        known.update(keep)
         known.pop(replace_print, None)
         if pr:
-            known[pr] = {"card": name, "look": look, "tone": tone}
-        cards.write_record(illust_dir, tone, known)
+            known[pr] = {"card": name, "look": look, "tone": tone, "seed": seed}
+        cards.write_record(illust_dir, tone, known, seed)
 
     @r.post("/api/mv/cards/plan")
     async def api_cards_plan(request: Request):
@@ -1384,7 +1394,9 @@ def router(ctx: Context) -> APIRouter:
                 return jerr(409, "這一格已經有照片，沒有畫簡易圖卡")
             name, look = hit["card"], hit["look"]
         try:
-            await asyncio.to_thread(card_save, illust_dir, out_path, name, look, tone, old_print)
+            keep = {c["print"]: {"card": c["card"], "look": c["look"], "tone": c["tone"], "seed": state["seed"]}
+                    for c in state["cards"]}
+            await asyncio.to_thread(card_save, illust_dir, out_path, name, look, tone, state["seed"], keep, old_print)
         except Exception as e:  # noqa: BLE001
             return jerr(500, f"簡易圖卡畫不出來：{e}")
         m = CARD_SLOT_RE.fullmatch(slot)
@@ -1417,7 +1429,7 @@ def router(ctx: Context) -> APIRouter:
                 pass
         rec = cards.read_record(illust_dir)
         if rec["cards"] or removed:
-            cards.write_record(illust_dir, str(rec["tone"]), {})
+            cards.write_record(illust_dir, str(rec["tone"]), {})      # no cards, so no look either: the next ones start anew
         return {"status": "ok", "removed": removed, "all_scenes": _scene_payload(proj),
                 "instrument_photos": list_instrumental_photos(illust_dir, proj.get("timeline", []))}
 

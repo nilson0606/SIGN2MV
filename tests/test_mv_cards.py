@@ -50,6 +50,35 @@ def test_every_scene_draws_in_both_looks_and_every_tone():
         raise AssertionError(bad)
 
 
+def test_a_song_has_a_look_of_its_own():
+    a, b = cards.song_seed("song_a_demo"), cards.song_seed("song_b_demo")
+    assert a and b and a != b and cards.song_style(0) == cards.PLAIN
+    for name in ("blossom_meet", "sea", "classroom_heart"):
+        plain, one, two = cards.draw(name), cards.draw(name, 0, "fresh", a), cards.draw(name, 0, "fresh", b)
+        assert len({plain.tobytes(), one.tobytes(), two.tobytes()}) == 3, name
+        assert one.tobytes() == cards.draw(name, 0, "fresh", a).tobytes()
+        assert one.tobytes() != cards.draw(name, 1, "fresh", a).tobytes()
+    # the lines without a known word do not show the same landscapes in every song
+    plain = [("lyric", "na na na")] * 40
+    sets = [frozenset(n for n, _ in cards.pick(plain, cards.song_seed(f"song{i}"))) for i in range(12)]
+    assert all(len(st) == cards.GENERAL_USED for st in sets) and len(set(sets)) > 6
+    for i in range(12):
+        got = cards.pick(plain + [("lyric", "雨落在窗外的小巷"), ("lyric", "雨落在窗外的小巷")], cards.song_seed(f"song{i}"))
+        assert all(x[0] != y[0] for x, y in zip(got, got[1:])) and got == cards.pick(plain + [("lyric", "雨落在窗外的小巷")] * 2, cards.song_seed(f"song{i}"))
+        assert {got[-1][0], got[-2][0]} <= {"rain_meadow", "rain_together", "umbrella_wait", "window_rain", "window_quiet"}
+    assert cards.pick(plain, 0) == cards.pick(plain)
+    # a line sung many times: four pictures before one comes back, and never two the same side by side
+    seed = cards.song_seed("song_a_demo")
+    many = cards.pick([("lyric", "追著夜空的流星"), ("lyric", "na na na")] * 5, seed)
+    stars = [x for x in many if x[0] == "shooting_star"]
+    assert [look for _, look in stars] == [0, 1, 2, 3, 0]
+    assert len({cards.draw("shooting_star", look, "fresh", seed).tobytes() for look in range(4)}) == 4
+    assert len({cards.draw("bike_road", look, "fresh", seed).tobytes() for look in range(4)}) == 4
+    # 妳 counts as 你, and the 星 of a weekday is no star
+    assert cards.pick([("lyric", "如何的想妳")])[0][0] in ("window_quiet", "letter")
+    assert cards.pick([("lyric", "星期天的下午")])[0][0] in cards.GENERAL
+
+
 def _post(client, path, **body):
     return client.post(path, json=body)
 
@@ -142,6 +171,27 @@ def test_one_card_taken_out_comes_back_the_same_and_no_timeline_means_nothing_to
     left = _post(client, "/api/mv/cards/plan", slug=slug).json()
     assert [(e["slot"], e["card"], e["look"]) for e in left["empty"]] == [(target["slot"], target["card"], target["look"])]
     assert left["tone"] == "warm"
+
+    # the song's look stays while its cards are there, and is the one its name gives
+    import json
+    rec = json.loads((pdir / "cards.json").read_text(encoding="utf-8"))
+    seed = cards.song_seed(slug)
+    assert rec["seed"] == seed and left["seed"] == seed and rec["tone"] == "warm"
+    other = next(e for e in plan["empty"] if e["slot"].startswith("scene:") and e["slot"] != target["slot"])
+    with Image.open(pdir / "scenes" / ("scene_%02d.png" % int(other["slot"].split(":")[1]))) as im:
+        assert im.convert("RGB").tobytes() == cards.draw(other["card"], other["look"], "warm", seed).tobytes()
+    # cards from before songs had a look keep the plain one for what is added to them
+    rec.pop("seed")
+    (pdir / "cards.json").write_text(json.dumps(rec), encoding="utf-8")
+    old = _post(client, "/api/mv/cards/plan", slug=slug).json()
+    assert old["seed"] == 0 and len(old["empty"]) == 1
+    assert _post(client, "/api/mv/cards/draw", slug=slug, slot=old["empty"][0]["slot"], tone="warm").status_code == 200
+    with Image.open(pdir / "scenes" / f"scene_{sid_n:02d}.png") as im:
+        assert im.convert("RGB").tobytes() == cards.draw(old["empty"][0]["card"], old["empty"][0]["look"], "warm", 0).tobytes()
+    assert json.loads((pdir / "cards.json").read_text(encoding="utf-8"))["seed"] == 0
+    # taken out and made again: the song's own look
+    assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == len(plan["empty"])
+    assert _post(client, "/api/mv/cards/plan", slug=slug).json()["seed"] == seed
 
     # a project that has not been aligned has no parts to draw for
     slug2 = client.post("/api/mv/project/create", json={"song_id": sid, "slug": "bare", "title": "t", "scene_count": 3}).json()["project"]["slug"]

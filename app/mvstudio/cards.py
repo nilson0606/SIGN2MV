@@ -10,6 +10,7 @@ otherwise have no picture at all, and each one can be replaced by a photo like a
 """
 from __future__ import annotations
 
+import colorsys
 import json
 import math
 import os
@@ -36,11 +37,48 @@ PAL = {
 
 def P(v): return int(round(v * S))
 
+# ---- a song's own look -----------------------------------------------------------------------------------
+# The scenes are the same for every song; what a song gets of its own is who is in them (hair, clothes), a
+# slight turn of the landscape colours, where the small things are (clouds, flowers, stars), which way round
+# each scene is and which of its two lights comes first. All of it follows from one number, the song's seed;
+# seed 0 is the plain look.
+GIRL_HAIR = ((92, 70, 70), (58, 52, 66), (132, 86, 60), (178, 130, 86), (114, 62, 68))
+BOY_HAIR = ((58, 62, 84), (86, 66, 60), (40, 40, 48), (106, 94, 86))
+SKIRTS = ((232, 120, 140), (92, 170, 176), (88, 104, 160), (226, 170, 84), (160, 132, 204), (120, 176, 120))
+PANTS = ((88, 104, 160), (74, 80, 92), (150, 128, 96), (84, 128, 116))
+TOPS = ((255, 255, 255), (255, 246, 224), (226, 240, 255), (255, 232, 236))
+HAIR_STYLES = ("long", "bob", "ponytail", "twin")
+HUES = (-14, -8, 8, 14)
+PLAIN = {"girl_hair": GIRL_HAIR[0], "boy_hair": BOY_HAIR[0], "skirt": SKIRTS[0], "pants": PANTS[0], "girl_top": TOPS[0],
+         "boy_top": TOPS[0], "hair_style": "long", "hue": 0}
+
+
+def song_style(seed: int) -> Dict[str, object]:
+    if not seed:
+        return dict(PLAIN)
+    r = random.Random(f"style:{seed}")
+    st = {"girl_hair": r.choice(GIRL_HAIR), "boy_hair": r.choice(BOY_HAIR), "skirt": r.choice(SKIRTS), "pants": r.choice(PANTS),
+          "girl_top": r.choice(TOPS), "boy_top": r.choice(TOPS), "hair_style": r.choice(HAIR_STYLES), "hue": r.choice(HUES)}
+    if st["hair_style"] == "long" and st["skirt"] == SKIRTS[0] and st["girl_hair"] == GIRL_HAIR[0]:
+        st["hair_style"] = "bob"          # never the plain girl again
+    return st
+
+
+def _turn(col, deg):
+    """The colour with its hue turned by deg degrees (alpha, if any, kept)."""
+    if not deg:
+        return col
+    h, l, sat = colorsys.rgb_to_hls(col[0] / 255, col[1] / 255, col[2] / 255)
+    r, g, b = colorsys.hls_to_rgb((h + deg / 360) % 1.0, l, sat)
+    return (int(round(r * 255)), int(round(g * 255)), int(round(b * 255))) + tuple(col[3:])
+
 class C:
-    def __init__(self, seed):
+    def __init__(self, seed, style=None, mirrored=False):
         self.im = Image.new("RGB", (W * S, H * S), "white"); self.d = ImageDraw.Draw(self.im, "RGBA"); self.r = random.Random(seed)
+        self.style = style or dict(PLAIN); self.hue = int(self.style.get("hue", 0) or 0)
+        self.mirrored = mirrored          # the finished picture is mirrored: marks that read one way are drawn reversed
     def sky(self, name):
-        a, b, c = PAL[name]
+        a, b, c = (_turn(col, self.hue) for col in PAL[name])
         for y in range(H * S):
             t = y / (H * S - 1)
             col = [int(a[i] + (b[i] - a[i]) * (t / 0.55)) if t < 0.55 else int(b[i] + (c[i] - b[i]) * ((t - 0.55) / 0.45)) for i in range(3)]
@@ -78,13 +116,16 @@ class C:
             self.line([(x, y), (x + L * slant, y + L)], col, 3)
     def hills(self, y=760, cols=((150, 214, 170), (120, 198, 150)), amp=60):
         for j, col in enumerate(cols):
+            col = _turn(col, self.hue)
             ph = self.r.uniform(0, 6); base = y + j * 70
             pts = [(x, base + math.sin(x / 260 + ph) * amp * (1 - j * 0.3) + math.sin(x / 97 + ph) * 14) for x in range(-20, W + 40, 20)]
             self.poly(pts + [(W + 20, H + 20), (-20, H + 20)], col, None)
     def ground(self, y=820, col=(170, 222, 160), edge=True):
+        col = _turn(col, self.hue)
         self.rect(-10, y, W + 10, H + 10, col, None)
         if edge: self.line([(0, y), (W, y)], INK, 4)
     def grass(self, y=820, n=160, col=(96, 176, 120)):
+        col = _turn(col, self.hue)
         for _ in range(n):
             x, h = self.r.uniform(0, W), self.r.uniform(14, 40); yy = self.r.uniform(y, H)
             self.line([(x, yy), (x + self.r.uniform(-8, 8), yy - h)], col, 3)
@@ -95,7 +136,7 @@ class C:
             self.ell(x, yy, 5, 5, (255, 200, 90), None)
     def tree(self, x, y, s=1.0, crown=(150, 214, 160), blossom=False):
         self.poly([(x - 22 * s, y), (x - 14 * s, y - 230 * s), (x + 14 * s, y - 230 * s), (x + 22 * s, y)], (176, 132, 108))
-        col = (255, 196, 214) if blossom else crown
+        col = (255, 196, 214) if blossom else _turn(crown, self.hue)
         for dx, dy, r in ((-90, -260, 95), (80, -270, 100), (0, -350, 120), (-20, -250, 90), (130, -200, 60), (-140, -190, 60)):
             self.ell(x + dx * s, y + dy * s, r * s, r * s * 0.9, col)
         self.ell(x, y - 300 * s, 150 * s, 110 * s, col, None)
@@ -116,12 +157,18 @@ class C:
         self.rect(x - 34 * s, y - 90 * s, x + 34 * s, y, (190, 150, 120), r=4)
     def person(self, x, y, s=1.0, kind="girl", face="front", arm=None, col=None, hair=None):
         """Feet at (x, y); about 300 px tall at s=1."""
-        hair = hair or ((92, 70, 70) if kind == "girl" else (58, 62, 84)); top = col or (255, 255, 255); low = (88, 104, 160) if kind == "boy" else (232, 120, 140)
+        st = self.style; girl = kind == "girl"; cut = st["hair_style"] if girl else ""
+        hair = hair or (st["girl_hair"] if girl else st["boy_hair"]); top = col or (st["girl_top"] if girl else st["boy_top"]); low = st["skirt"] if girl else st["pants"]
         hy = y - 262 * s
-        if kind == "girl" and face != "back": self.poly([(x - 52 * s, hy - 6 * s), (x + 52 * s, hy - 6 * s), (x + 46 * s, hy + 110 * s), (x - 46 * s, hy + 110 * s)], hair)
+        if girl and face != "back":       # the hair behind the head and shoulders
+            if cut == "long": self.poly([(x - 52 * s, hy - 6 * s), (x + 52 * s, hy - 6 * s), (x + 46 * s, hy + 110 * s), (x - 46 * s, hy + 110 * s)], hair)
+            elif cut == "bob": self.poly([(x - 54 * s, hy - 6 * s), (x + 54 * s, hy - 6 * s), (x + 58 * s, hy + 54 * s), (x - 58 * s, hy + 54 * s)], hair)
+            elif cut == "ponytail": self.ell(x + 56 * s, hy + 34 * s, 17 * s, 52 * s, hair)
+            else:
+                for sx in (-1, 1): self.ell(x + sx * 60 * s, hy + 46 * s, 16 * s, 50 * s, hair)
         self.line([(x - 22 * s, y - 110 * s), (x - 24 * s, y)], INK, 16 * s); self.line([(x + 22 * s, y - 110 * s), (x + 24 * s, y)], INK, 16 * s)
-        self.line([(x - 22 * s, y - 110 * s), (x - 24 * s, y - 4 * s)], SKIN if kind == "girl" else low, 10 * s); self.line([(x + 22 * s, y - 110 * s), (x + 24 * s, y - 4 * s)], SKIN if kind == "girl" else low, 10 * s)
-        if kind == "girl": self.poly([(x - 40 * s, y - 150 * s), (x + 40 * s, y - 150 * s), (x + 62 * s, y - 84 * s), (x - 62 * s, y - 84 * s)], low)
+        self.line([(x - 22 * s, y - 110 * s), (x - 24 * s, y - 4 * s)], SKIN if girl else low, 10 * s); self.line([(x + 22 * s, y - 110 * s), (x + 24 * s, y - 4 * s)], SKIN if girl else low, 10 * s)
+        if girl: self.poly([(x - 40 * s, y - 150 * s), (x + 40 * s, y - 150 * s), (x + 62 * s, y - 84 * s), (x - 62 * s, y - 84 * s)], low)
         else: self.rect(x - 38 * s, y - 150 * s, x + 38 * s, y - 100 * s, low, r=6 * s)
         self.rect(x - 42 * s, y - 220 * s, x + 42 * s, y - 140 * s, top, r=16 * s)
         arms = {None: ((-52, -150), (52, -150)), "up": ((-70, -290), (52, -150)), "both": ((-78, -290), (78, -290)), "wave": ((-52, -150), (86, -300)), "reach": ((-52, -150), (110, -230)), "out": ((-120, -200), (120, -200))}[arm]
@@ -131,7 +178,12 @@ class C:
         self.ell(x, hy, 46 * s, 46 * s, SKIN)
         if face == "back":
             self.ell(x, hy - 4 * s, 48 * s, 46 * s, hair)
-            if kind == "girl": self.poly([(x - 48 * s, hy), (x + 48 * s, hy), (x + 44 * s, hy + 120 * s), (x - 44 * s, hy + 120 * s)], hair)
+            if girl and cut == "long": self.poly([(x - 48 * s, hy), (x + 48 * s, hy), (x + 44 * s, hy + 120 * s), (x - 44 * s, hy + 120 * s)], hair)
+            elif girl and cut == "bob": self.poly([(x - 48 * s, hy), (x + 48 * s, hy), (x + 54 * s, hy + 58 * s), (x - 54 * s, hy + 58 * s)], hair)
+            elif girl and cut == "ponytail":
+                self.poly([(x - 15 * s, hy + 30 * s), (x + 15 * s, hy + 30 * s), (x + 20 * s, hy + 128 * s), (x - 20 * s, hy + 128 * s)], hair); self.ell(x, hy + 34 * s, 12 * s, 9 * s, (255, 170, 170))
+            elif girl:
+                for sx in (-1, 1): self.poly([(x + sx * 28 * s, hy + 26 * s), (x + sx * 52 * s, hy + 26 * s), (x + sx * 60 * s, hy + 120 * s), (x + sx * 34 * s, hy + 120 * s)], hair)
         else:
             self.d.pieslice([P(x - 48 * s), P(hy - 50 * s), P(x + 48 * s), P(hy + 40 * s)], 180, 360, fill=hair, outline=INK, width=P(4))
             dx = {"front": 0, "left": -8, "right": 8}[face] * s
@@ -159,7 +211,8 @@ class C:
         elif marks == "!":
             self.rect(x - 9, y - 44, x + 9, y + 14, (255, 130, 140), None, r=8); self.ell(x, y + 36, 11, 11, (255, 130, 140), None)
         elif marks == "?":
-            self.d.arc([P(x - 26), P(y - 46), P(x + 26), P(y + 6)], 200, 80, fill=INK, width=P(9)); self.line([(x + 4, y + 2), (x, y + 20)], INK, 9); self.ell(x, y + 40, 8, 8, INK, None)
+            a0, a1, k = (100, 340, -1) if self.mirrored else (200, 80, 1)
+            self.d.arc([P(x - 26), P(y - 46), P(x + 26), P(y + 6)], a0, a1, fill=INK, width=P(9)); self.line([(x + 4 * k, y + 2), (x, y + 20)], INK, 9); self.ell(x, y + 40, 8, 8, INK, None)
     def bench(self, x, y, s=1.0):
         self.rect(x - 220 * s, y - 70 * s, x + 220 * s, y - 50 * s, (214, 170, 130), r=4); self.rect(x - 220 * s, y - 150 * s, x + 220 * s, y - 110 * s, (214, 170, 130), r=4)
         for k in (-180, 180): self.rect(x + k * s - 8 * s, y - 150 * s, x + k * s + 8 * s, y, (150, 120, 100), r=3)
@@ -356,6 +409,10 @@ SCENES = ("opening", "rain_meadow", "school_bell", "window_quiet", "calling", "c
 # lines without a known word take turns through these
 GENERAL = ("sunny_field", "horizon_birds", "bike_road", "mountain", "sea", "rooftops_sunset", "blossom_meet", "arms_open",
            "balloons", "city_night", "path_leaves", "bench_sunset")
+# a song with a look of its own takes GENERAL_USED of these and the ones above, so that two songs do not show
+# the same landscapes
+GENERAL_MORE = ("shooting_star", "window_quiet", "letter", "school_bell")
+GENERAL_USED = 11
 # a word in the line -> scenes that go with it (the first that is not the scene before it). Earlier rows win.
 WORDS: Tuple[Tuple[Tuple[str, ...], Tuple[str, ...]], ...] = (
     (("傘", "守護", "守候", "原地", "等你", "等待", "等候"), ("umbrella_wait",)),
@@ -366,29 +423,30 @@ WORDS: Tuple[Tuple[Tuple[str, ...], Tuple[str, ...]], ...] = (
     (("呼喚", "呼喊", "喊", "名字", "姓名"), ("calling",)),
     (("聽不見", "沒有聽見", "沉默", "安靜", "無聲", "寂寞", "孤單", "想你", "想念", "思念"), ("window_quiet", "letter")),
     (("離別", "告別", "再見", "分手", "離開", "車站", "送別", "道別"), ("farewell_train", "tear_dusk")),
-    (("流星", "星星", "星空", "夜空", "銀河", "願望", "月光", "月亮"), ("shooting_star",)),
+    (("流星", "星", "夜空", "銀河", "願望", "月光", "月亮"), ("shooting_star",)),
     (("幸運", "幸福", "奇蹟"), ("clover", "blossom_meet")),
     (("遇見", "相遇", "邂逅", "擦肩"), ("corridor_pass", "blossom_meet")),
     (("註定", "命運", "緣分", "牽"), ("red_thread",)),
     (("翅膀", "雙翼", "飛", "自由"), ("wings", "horizon_birds")),
     (("天際", "天空", "遠方", "地平線", "天邊"), ("horizon_birds", "mountain")),
-    (("淚", "哭泣", "失去", "心碎", "心痛", "傷心", "難過"), ("tear_dusk", "smile_tear")),
+    (("淚", "哭泣", "失去", "心碎", "痛", "傷", "苦", "難過"), ("tear_dusk", "smile_tear")),
     (("微笑", "笑", "哭"), ("smile_tear",)),
     (("對抗", "保護", "勇敢", "決定", "世界"), ("shield",)),
     (("一幕", "畫面", "照片", "回憶", "記憶", "真心"), ("photos", "path_leaves")),
     (("忘記", "遺忘", "曾經", "從前", "過去", "當時"), ("path_leaves", "photos")),
     (("靠近", "靠得", "身邊", "陪", "一起", "肩膀", "擁抱"), ("bench_sunset", "rain_together")),
     (("愛上", "喜歡", "心動", "暗戀", "愛情", "戀"), ("classroom_heart", "bench_sunset")),
-    (("感謝", "謝謝", "勇氣", "信", "寫"), ("letter",)),
+    (("感謝", "謝謝", "勇氣", "信", "寫", "紙", "日記", "千言萬語"), ("letter",)),
     (("青春", "旅行", "旅程", "路上", "單車", "腳踏車"), ("bike_road",)),
     (("夕陽", "黃昏", "日落", "美麗", "晚霞"), ("rooftops_sunset", "sea")),
     (("海", "浪", "沙灘", "港口", "船"), ("sea",)),
-    (("城市", "街", "霓虹", "路燈", "夜晚", "深夜", "黑夜"), ("city_night",)),
+    (("城市", "街", "霓虹", "路燈", "夜晚", "深夜", "黑夜", "夜裡"), ("city_night",)),
     (("山", "風", "雲"), ("mountain", "horizon_birds")),
     (("氣球", "快樂", "慶祝", "生日", "歡笑"), ("balloons",)),
     (("最好", "陽光", "晴", "太陽", "燦爛", "美好", "春天", "花"), ("sunny_field", "blossom_meet")),
     (("自己", "夢", "未來", "希望", "明天"), ("arms_open", "horizon_birds")),
     (("她", "別人", "祝福"), ("watching",)),
+    (("愛",), ("classroom_heart", "bench_sunset", "red_thread", "blossom_meet")),
 )
 
 
@@ -399,13 +457,22 @@ def _simple(text: str) -> str:
         table = _t2s()
     except Exception:  # noqa: BLE001  (the cards work without the table; Simplified lines then get general scenes)
         table = {}
-    return "".join(table.get(ch, ch) for ch in str(text or ""))
+    # 妳 is 你 here, and the 星 of 星期 (a weekday) is no star
+    return "".join(table.get(ch, ch) for ch in str(text or "").replace("妳", "你").replace("星期", ""))
 
 
-def pick(parts: Sequence[Tuple[str, str]]) -> List[Tuple[str, int]]:
+def pick(parts: Sequence[Tuple[str, str]], seed: int = 0) -> List[Tuple[str, int]]:
     """parts: (kind, text) in timeline order, kind "intro" | "outro" | "interlude" | anything else. Returns (scene, look)
-    for each: never the scene of the part before, and a scene used before comes back in its other look."""
+    for each: never the scene of the part before, and a scene used before comes back in its other look.
+    seed is the song's (0: the plain choice); the same parts and seed always give the same answer."""
     words = [(tuple(_simple(w) for w in ws), scs) for ws, scs in WORDS]
+    general: Sequence[str] = GENERAL
+    if seed:        # the song's own choice: which general scenes, in which order, and which of a word's scenes first
+        r = random.Random(f"pick:{int(seed)}")
+        pool = list(GENERAL + GENERAL_MORE)
+        r.shuffle(pool)
+        general = pool[:GENERAL_USED]
+        words = [(ws, tuple(r.sample(scs, len(scs)))) for ws, scs in words]
     used: Dict[str, int] = {}
     out: List[Tuple[str, int]] = []
     turn = 0
@@ -426,12 +493,12 @@ def pick(parts: Sequence[Tuple[str, str]]) -> List[Tuple[str, int]]:
             if options:
                 name = min(options, key=lambda s: (used.get(s, 0), options.index(s)))
             else:
-                name = GENERAL[turn % len(GENERAL)]
+                name = general[turn % len(general)]
                 turn += 1
                 if name == last:
-                    name = GENERAL[turn % len(GENERAL)]
+                    name = general[turn % len(general)]
                     turn += 1
-        out.append((name, used.get(name, 0) % 2))
+        out.append((name, used.get(name, 0) % LOOKS))
         used[name] = used.get(name, 0) + 1
         last = name
     return out
@@ -439,6 +506,9 @@ def pick(parts: Sequence[Tuple[str, str]]) -> List[Tuple[str, int]]:
 
 # One tone for all cards of a song (the MV page's 色調): the same drawing in other colours.
 TONES = ("fresh", "warm", "night", "manga")
+# A scene used again in a song: look 1 is its other light (or, for a scene with one light, its mirror image);
+# looks 2 and 3 are those two again, the other way round and with the small things elsewhere.
+LOOKS = 4
 
 
 def _tone(im: Image.Image, tone: str) -> Image.Image:
@@ -457,22 +527,35 @@ def _tone(im: Image.Image, tone: str) -> Image.Image:
     return im
 
 
-def draw(name: str, look: int = 0, tone: str = "fresh") -> Image.Image:
-    """The card as a 1920x1080 picture. The same name, look and tone always give the same picture."""
+def song_seed(key: str) -> int:
+    """The seed of a song's look from something that names the song (never 0, the plain look)."""
+    return zlib.crc32(str(key).encode("utf-8")) % 2000000000 + 1
+
+
+def draw(name: str, look: int = 0, tone: str = "fresh", seed: int = 0) -> Image.Image:
+    """The card as a 1920x1080 picture. The same name, look, tone and seed always give the same picture.
+    seed is the song's (song_style): 0 draws the plain look."""
     if name not in SCENES:
         raise KeyError(name)
     if tone not in TONES:
         raise KeyError(tone)
-    look = 1 if look else 0
+    look = int(look or 0) % LOOKS
+    again, look = look // 2, look % 2
+    seed = int(seed or 0)
     own = name in OWN_VARIANT
-    c = C(zlib.crc32(name.encode()) % 100000 + (look if own else 0))
-    _scene(name, c, look if own else 0)
-    return _tone(c.finish(mirror=bool(look and not own)), tone)
+    turn = random.Random(f"scene:{seed}:{name}") if seed else None
+    flip = bool(turn and turn.random() < 0.5)             # this song has the scene the other way round
+    first = 1 if (turn and own and turn.random() < 0.5) else 0   # ... and starts with its other light
+    v = (look ^ first) if own else 0
+    mirror = bool(look and not own) ^ flip ^ bool(again and own)
+    c = C(zlib.crc32(name.encode()) % 100000 + v + (seed % 999983) * 3 + again * 7919, song_style(seed), mirrored=mirror)
+    _scene(name, c, v)
+    return _tone(c.finish(mirror=mirror), tone)
 
 
 # ---- which of a project's photos are cards -------------------------------------------------------------
 # <project>/cards.json, beside photos.json: the fingerprint of every card drawn for the project (the same
-# fingerprint as the photo list's) and the tone they were drawn in. A photo the user puts over a card has
+# fingerprint as the photo list's), the tone they were drawn in and the seed of the song's look. A photo the user puts over a card has
 # another fingerprint, so it is never taken for a card; a card that moves to another slot stays one.
 
 def record_path(illust_dir: str) -> str:
@@ -480,7 +563,7 @@ def record_path(illust_dir: str) -> str:
 
 
 def read_record(illust_dir: str) -> Dict[str, object]:
-    out: Dict[str, object] = {"tone": "", "cards": {}}
+    out: Dict[str, object] = {"tone": "", "cards": {}, "seed": None}
     try:
         with open(record_path(illust_dir), "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -490,14 +573,19 @@ def read_record(illust_dir: str) -> Dict[str, object]:
                             if isinstance(v, dict) and v.get("card") in SCENES and v.get("tone") in TONES}
         if data.get("tone") in TONES:
             out["tone"] = data["tone"]
+        if isinstance(data.get("seed"), int) and data["seed"] >= 0:
+            out["seed"] = data["seed"]
     except (OSError, ValueError, AttributeError):
         pass
     return out
 
 
-def write_record(illust_dir: str, tone: str, found: Dict[str, Dict[str, object]]) -> None:
+def write_record(illust_dir: str, tone: str, found: Dict[str, Dict[str, object]], seed: object = None) -> None:
     fp = record_path(illust_dir)
     tmp = fp + "." + secrets.token_hex(4) + ".tmp"
+    data: Dict[str, object] = {"version": 1, "tone": tone if tone in TONES else "", "cards": found}
+    if isinstance(seed, int) and found:      # the look belongs to the cards that are there; with none left it starts anew
+        data["seed"] = seed
     with open(tmp, "w", encoding="utf-8") as f:
-        json.dump({"version": 1, "tone": tone if tone in TONES else "", "cards": found}, f, indent=1, sort_keys=True)
+        json.dump(data, f, indent=1, sort_keys=True)
     os.replace(tmp, fp)
