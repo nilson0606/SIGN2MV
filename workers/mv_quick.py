@@ -123,10 +123,18 @@ def font_family(path: str) -> str:
         return "Microsoft YaHei"
 
 
-def lyrics_ass(lines: list, family: str, resolution: str) -> str:
-    """Old parse_lyrics_to_ass look: white, dark outline, bottom centre, 310 px from the bottom."""
+LYRIC_SIZE = 92   # ASS font size at 1080p; the old look had 46, which read as small print on a TV or a phone
+
+
+def lyrics_ass(lines: list, family: str, resolution: str, font_path: str) -> str:
+    """White with a dark outline, bottom centre, 310 px from the bottom (the old parse_lyrics_to_ass
+    place), twice the old size. A line too long for the picture is put in rows (sub_wrap)."""
+    from sub_wrap import line_ratio, wrap
     scale = 720.0 / 1080.0 if resolution == "720p" else 1.0
     rx, ry = (1280, 720) if resolution == "720p" else (1920, 1080)
+    size = int(LYRIC_SIZE * scale)
+    ratio = line_ratio(font_path)
+    em, max_w = max(8, round(size / ratio)), int(rx * 0.9)
 
     def ts(sec: float) -> str:
         return f"{int(sec // 3600)}:{int(sec % 3600 // 60):02d}:{sec % 60:05.2f}"
@@ -136,13 +144,16 @@ def lyrics_ass(lines: list, family: str, resolution: str) -> str:
             "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, "
             "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, "
             "MarginR, MarginV, Encoding",
-            f"Style: MV_Lyric,{family.replace(',', ' ')},{int(46 * scale)},&H00FFFFFF,&H000000FF,&H000F172A,"
-            f"&H80000000,-1,0,0,0,100,100,1,0,1,{round(3.5 * scale, 1)},{round(1.5 * scale, 1)},2,80,80,"
-            f"{int(310 * scale)},1",
+            f"Style: MV_Lyric,{family.replace(',', ' ')},{size},&H00FFFFFF,&H000000FF,&H000F172A,"
+            f"&H80000000,-1,0,0,0,100,100,1,0,1,{round(7 * scale, 1)},{round(3 * scale, 1)},2,{int(80 * scale)},"
+            f"{int(80 * scale)},{int(310 * scale)},1",
             "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"]
-    body = [f"Dialogue: 0,{ts(float(x['start']))},{ts(float(x['end']))},MV_Lyric,,0,0,0,,"
-            + str(x["text"]).replace("{", "").replace("}", "").replace("\\", "").replace("\n", " ")
-            for x in lines]
+    body = []
+    for x in lines:
+        text = str(x["text"]).replace("{", "").replace("}", "").replace("\\", "").replace("\n", " ")
+        rows, used = wrap(text, font_path, em, max_w)
+        body.append(f"Dialogue: 0,{ts(float(x['start']))},{ts(float(x['end']))},MV_Lyric,,0,0,0,,"
+                    + (f"{{\\fs{round(used * ratio)}}}" if used != em else "") + "\\N".join(rows))
     return "\n".join(head + body) + "\n"
 
 
@@ -232,7 +243,7 @@ def main() -> None:
                               data.get("credits") or "", resolution)
             lines = [x for x in (data.get("lyrics") or []) if isinstance(x, dict) and x.get("text")]
             if lines:
-                (tmp / "lyrics.ass").write_text(lyrics_ass(lines, font_family(str(tmp / "font.ttc")), resolution),
+                (tmp / "lyrics.ass").write_text(lyrics_ass(lines, font_family(str(tmp / "font.ttc")), resolution, str(tmp / "font.ttc")),
                                                 encoding="utf-8")
             graph = build_studio_filter(resolution, bool(lines))
             inputs = ["-loop", "1", "-framerate", "60", "-i", "background.png", "-i", "source.wav"]

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Quick MV (studio look): the lyric subtitles are twice as large (ASS size 92 instead of 46 at 1080p; they
+  read as small print before), and a line too long for the picture is put in rows of about the same width
+  instead of running off both sides. Same place as before (above the spectrum). Videos already made do not
+  change. The row wrapping is shared with the library's lyric picture (`workers/sub_wrap.py`).
 - Library: 「字幕畫面」 (lyric picture) for a song whose picture has no lyrics, or that is audio only. Paste the
   lyrics, time them (the quick MV's editor, matching and saved lines), choose 「純歌詞畫面」 (a dark card with the
   line in the middle) or 「字幕疊在原本的畫面上」 (along the bottom of the imported picture), and the result becomes

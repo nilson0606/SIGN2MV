@@ -269,3 +269,22 @@ def test_long_lines_are_wrapped_in_even_rows():
     rows, em = lyric_video.wrap(text * 4, font, 60, 800)                 # far too long: smaller, never more rows than fit
     assert "".join(rows) == text * 4 and em < 60
     assert lyric_video.line_ratio(font) >= 1.0
+
+
+def test_quick_mv_subtitles_are_twice_the_old_size_and_wrapped():
+    import mv_quick
+    font = next((p for p in ("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", "C:/Windows/Fonts/msjh.ttc",
+                             "C:/Windows/Fonts/msyh.ttc") if Path(p).is_file()), None)
+    if not font:
+        pytest.skip("no CJK font on this machine")
+    long_line = "河水帶著落葉慢慢流向遠方的大海岸邊的燈一盞一盞亮了起來今晚的月色很美"
+    lines = [{"start": 1, "end": 2, "text": "風吹過了小河"}, {"start": 2, "end": 3, "text": long_line},
+             {"start": 3, "end": 4, "text": "a{b}\\c"}]
+    big = mv_quick.lyrics_ass(lines, "Some, Font", "1080p", font).splitlines()
+    style = next(x for x in big if x.startswith("Style: MV_Lyric,")).split(",")
+    assert style[1] == "Some  Font" and style[2] == "92"                     # the old look had 46
+    events = [x.split(",,0,0,0,,", 1)[1] for x in big if x.startswith("Dialogue:")]
+    assert events[0] == "風吹過了小河" and events[2] == "abc"
+    assert "\\N" in events[1] and events[1].replace("\\N", "") == long_line     # rows instead of running off the sides
+    small = mv_quick.lyrics_ass(lines, "F", "720p", font).splitlines()
+    assert next(x for x in small if x.startswith("Style: MV_Lyric,")).split(",")[2] == "61"
