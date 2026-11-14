@@ -319,7 +319,9 @@ def router(ctx: Context) -> APIRouter:
             proj = save_project_dict(proj)
         return {"project": proj, "instrument_photos": list_instrumental_photos(proj.get("illust_dir", ""), proj.get("timeline", [])),
                 "audio_probe": audio_probe, "mv_probe": mv_probe, "scenes": scenes, "whisper_segments": whisper_segments,
-                "verification": verify_info, "brand": brand()}
+                "verification": verify_info, "brand": brand(),
+                # image files in the project that did not come in through this page: not used, kept in that folder
+                "not_imported": core.set_aside_foreign_photos(proj.get("illust_dir", ""))}
 
     @r.post("/api/mv/project/save")
     async def api_save_project(request: Request):
@@ -387,6 +389,7 @@ def router(ctx: Context) -> APIRouter:
                 "early_lead_sec": -0.70, "tail_extend_sec": 2.50, "timeline": []}
         proj["outro_desc"] = core.default_outro(proj)
         (Path(core.project_dir(slug)) / "scenes").mkdir(parents=True, exist_ok=True)
+        core.accepted_photos(str(Path(core.project_dir(slug)) / "scenes"))    # starts the (empty) list of photos
         saved = save_project_dict(proj)
         return {"status": "ok", "project": saved, "audio_probe": probe}
 
@@ -444,6 +447,7 @@ def router(ctx: Context) -> APIRouter:
                 if f.is_file() and f.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"):
                     dst = pdir / "scenes" / f.name
                     if replace or not dst.exists():
+                        core.accept_photo(str(pdir / "scenes"), str(f))     # the user chose to import this project
                         shutil.copy2(f, dst)
                         copied["photos"] += 1
         old_w = str(src.get("whisper_json") or "")
@@ -992,10 +996,20 @@ def router(ctx: Context) -> APIRouter:
             tmp.unlink(missing_ok=True)
 
     def to_scene_png(raw: bytes, out_path: Path) -> None:
+        """A photo the user sent, as the project's 1920x1080 PNG. It is put on the project's list of photos
+        (core.accept_photo) before it gets its name, so it is never taken for a file from somewhere else."""
         with Image.open(BytesIO(raw)) as im:
             rgb = im.convert("RGB").resize((FRAME_W, FRAME_H), Image.Resampling.LANCZOS)
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        rgb.save(out_path, compress_level=1)
+        illust_dir = out_path.parent.parent if out_path.parent.name == "__insert_tmp" else out_path.parent
+        part = out_path.with_name(out_path.name + ".part")
+        try:
+            rgb.save(part, format="PNG", compress_level=1)
+            core.accept_photo(str(illust_dir), str(part))
+            os.replace(part, out_path)
+        finally:
+            if part.exists():
+                part.unlink()
 
     @r.post("/api/mv/upload_audio")
     async def api_upload_audio(slug: str = Form(...), file: UploadFile = File(...)):

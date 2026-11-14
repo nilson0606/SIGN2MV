@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- MV: a project uses only the photos that came in through the page (upload, insert, project import). Until now a
+  photo was "whatever file is called scene_NN.png in the project's scenes folder", so files written there by
+  another program appeared on the page and in the render although the user had placed nothing. The project now
+  keeps a list of its photos (`photos.json`, a fingerprint of each file's content, so moving and swapping slots
+  needs no update). A file that is not on it is not shown, rendered or counted; it is moved to the project's
+  `not_imported` folder (kept, never overwritten) and the page says how many are there. A project from an
+  earlier version starts with the photos it has.
 - MV and quick MV, lyric timing: the pasted lines are now matched to the words Whisper recognized one character
   at a time (one word at a time for other languages), and each line starts with its own first word
   (`app/lyric_align.py`). The clause matching this replaces gave a line to one to four whole recognized clauses;

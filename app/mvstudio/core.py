@@ -247,7 +247,9 @@ def load_project_dict(slug: str) -> Dict[str, Any]:
         proj = json.load(f)
     proj["slug"] = slug
     _apply_brand_defaults(proj)
-    return _resolve(proj)
+    proj = _resolve(proj)
+    set_aside_foreign_photos(proj["illust_dir"])      # photos come in through the page only (see "photos" below)
+    return proj
 
 
 def list_project_slugs() -> List[str]:
@@ -361,17 +363,149 @@ def probe_media_file(filepath: str) -> Dict[str, Any]:
         return {"exists": True, "path": filepath, "error": str(e)}
 
 
+# ==== photos: only what the user put in through the page ====
+# [SIGN2MV 2026-11-14] A photo used to be "whatever file is called scene_NN.png in the project's scenes folder".
+# A program that wrote files there (another AI agent preparing pictures) made them appear on the MV page and in
+# the render without the user having placed anything. Which photos an MV shows, and in which order, is the
+# user's decision alone, so the project now keeps a list of the photos that came in through the page
+# (<project>/photos.json: a fingerprint of each file's content, so moving and swapping slots needs no update),
+# and every lookup ignores a file that is not on it. Such files are moved, never deleted, to
+# <project>/not_imported/ so that they cannot be mistaken or overwritten; the page says how many are there.
+PHOTO_EXT = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif")
+NOT_IMPORTED_DIR = "not_imported"
+_photo_prints: Dict[Tuple[str, int, int], str] = {}
+_photo_lists: Dict[str, Tuple[int, set]] = {}
+
+
+def _photo_list_path(illust_dir: str) -> str:
+    return os.path.join(os.path.dirname(os.path.abspath(illust_dir)), "photos.json")
+
+
+def _photo_print(path: str) -> Optional[str]:
+    """Content fingerprint: size + SHA-1 of the first and last 256 KB (photos are 1920x1080 PNGs of several MB)."""
+    try:
+        st = os.stat(path)
+        key = (os.path.abspath(path), st.st_size, st.st_mtime_ns)
+        hit = _photo_prints.get(key)
+        if hit:
+            return hit
+        h = hashlib.sha1()
+        with open(path, "rb") as f:
+            h.update(f.read(262144))
+            if st.st_size > 524288:
+                f.seek(-262144, os.SEEK_END)
+                h.update(f.read(262144))
+        if len(_photo_prints) > 4000:
+            _photo_prints.clear()
+        _photo_prints[key] = out = f"{st.st_size}:{h.hexdigest()}"
+        return out
+    except OSError:
+        return None
+
+
+def _photo_files(illust_dir: str) -> List[str]:
+    try:
+        return sorted(fn for fn in os.listdir(illust_dir)
+                      if fn.lower().endswith(PHOTO_EXT) and os.path.isfile(os.path.join(illust_dir, fn)))
+    except OSError:
+        return []
+
+
+def _write_photo_list(illust_dir: str, prints: set) -> None:
+    fp = _photo_list_path(illust_dir)
+    tmp = fp + "." + secrets.token_hex(4) + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump({"version": 1, "photos": sorted(prints)}, f, indent=1)
+    os.replace(tmp, fp)
+    _photo_lists.pop(fp, None)
+
+
+def accepted_photos(illust_dir: str) -> set:
+    """Fingerprints of the photos the user put in. A project from before this list existed starts with the
+    photos it has at that moment (they were all placed by the user then)."""
+    fp = _photo_list_path(illust_dir)
+    try:
+        mt = os.stat(fp).st_mtime_ns
+    except OSError:
+        if not os.path.isdir(illust_dir):
+            return set()
+        prints = {p for p in (_photo_print(os.path.join(illust_dir, fn)) for fn in _photo_files(illust_dir)) if p}
+        try:
+            _write_photo_list(illust_dir, prints)
+        except OSError:
+            pass
+        return prints
+    hit = _photo_lists.get(fp)
+    if hit and hit[0] == mt:
+        return hit[1]
+    try:
+        with open(fp, "r", encoding="utf-8") as f:
+            prints = set(json.load(f).get("photos") or [])
+    except (OSError, ValueError, AttributeError):
+        prints = set()
+    _photo_lists[fp] = (mt, prints)
+    return prints
+
+
+def accept_photo(illust_dir: str, path: str) -> None:
+    """Call after the page's upload / insert / project import wrote a photo."""
+    pr = _photo_print(str(path))
+    if not pr:
+        return
+    prints = set(accepted_photos(illust_dir))
+    if pr not in prints:
+        prints.add(pr)
+        _write_photo_list(illust_dir, prints)
+
+
+def photo_ok(illust_dir: str, path: str) -> bool:
+    return bool(illust_dir) and _photo_print(path) in accepted_photos(illust_dir)
+
+
+def set_aside_foreign_photos(illust_dir: str) -> Dict[str, Any]:
+    """Move image files that did not come in through the page out of scenes/ into <project>/not_imported/
+    (kept, never overwritten). Returns {"moved": now, "waiting": files in that folder, "folder": path}.
+    A file that cannot be moved right now (still being written) stays and is ignored by every lookup."""
+    out = {"moved": 0, "waiting": 0, "folder": ""}
+    if not illust_dir or not os.path.isdir(illust_dir):
+        return out
+    hold = os.path.join(os.path.dirname(os.path.abspath(illust_dir)), NOT_IMPORTED_DIR)
+    out["folder"] = hold
+    ok = accepted_photos(illust_dir)
+    for fn in _photo_files(illust_dir):
+        src = os.path.join(illust_dir, fn)
+        if _photo_print(src) in ok:
+            continue
+        try:
+            os.makedirs(hold, exist_ok=True)
+            stem, ext = os.path.splitext(fn)
+            dst, n = os.path.join(hold, fn), 2
+            while os.path.exists(dst):
+                dst, n = os.path.join(hold, f"{stem} ({n}){ext}"), n + 1
+            os.replace(src, dst)
+            out["moved"] += 1
+        except OSError:
+            continue
+    try:
+        out["waiting"] = sum(1 for fn in os.listdir(hold) if fn.lower().endswith(PHOTO_EXT))
+    except OSError:
+        pass
+    return out
+
+
 # ==== scenes_render ====
 def resolve_scene_image_path(illust_dir: str, scene_id: int) -> Optional[str]:
     if not illust_dir or not os.path.exists(illust_dir):
         return None
     direct = os.path.join(illust_dir, f"scene_{scene_id:02d}.png")
-    if os.path.exists(direct):
+    if os.path.exists(direct) and photo_ok(illust_dir, direct):
         return direct
     prefix = f"scene_{scene_id:02d}_"
     for fn in sorted(os.listdir(illust_dir)):
         if fn.startswith(prefix) and fn.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
-            return os.path.join(illust_dir, fn)
+            fp = os.path.join(illust_dir, fn)
+            if photo_ok(illust_dir, fp):
+                return fp
     return None
 
 
@@ -461,7 +595,7 @@ def seg_photo_path(proj: Dict[str, Any], seg: Dict[str, Any]) -> str:
     key = instrumental_key(seg)
     if key:
         ip = instrumental_photo_path(illust_dir, key)
-        if illust_dir and os.path.exists(ip):
+        if illust_dir and os.path.exists(ip) and photo_ok(illust_dir, ip):
             return ip
     return resolve_scene_image_path(illust_dir, int(seg.get("scene", 1))) or ""
 
@@ -472,7 +606,7 @@ def list_instrumental_photos(illust_dir: str, timeline: List[Dict[str, Any]]) ->
         key = instrumental_key(seg)
         if key and key not in out:
             ip = instrumental_photo_path(illust_dir, key)
-            if illust_dir and os.path.exists(ip):
+            if illust_dir and os.path.exists(ip) and photo_ok(illust_dir, ip):
                 out[key] = {"path": ip, "mtime": int(os.path.getmtime(ip))}
     return out
 

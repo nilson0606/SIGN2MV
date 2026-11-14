@@ -606,6 +606,10 @@
  },
  "patterns": [
   {
+   "zh": "⚠️ 專案資料夾裡有 {0} 個不是從這個頁面放進來的圖檔，沒有使用（已移到專案的 not_imported 資料夾）。要用的話，請自己從這裡匯入並排好順序。",
+   "en": "⚠️ {0} image file(s) in the project folder were not put in through this page and are not used (moved to the project's not_imported folder). To use them, import them here yourself and put them in order."
+  },
+  {
    "zh": "⚠️ 有 {0} 段聽得到歌聲、但貼上的歌詞沒有對應的句子：{1}。可能是歌詞少貼了重複的段落；補上後再按一次對齊。",
    "en": "⚠️ {0} stretch(es) of singing have no line in the pasted lyrics: {1}. A repeated section may be missing from the lyrics; add it and align again."
   },

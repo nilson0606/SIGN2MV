@@ -1571,6 +1571,11 @@
         liveKara = []; liveRefreshKaraoke(50);
 
         currentScenesList = data.scenes || [];
+        // [SIGN2MV] photos come in through this page only: image files that something else wrote into the
+        // project are never shown or rendered (the server keeps them in the project's not_imported folder)
+        if (data.not_imported && data.not_imported.waiting > 0) {
+          setInlineStatus('step2StatusBox', 'err', `⚠️ 專案資料夾裡有 ${data.not_imported.waiting} 個不是從這個頁面放進來的圖檔，沒有使用（已移到專案的 not_imported 資料夾）。要用的話，請自己從這裡匯入並排好順序。`);
+        }
         currentScenesMap = {};
         currentScenesList.forEach(sc => {
           currentScenesMap[sc.scene_id] = sc;
