@@ -83,6 +83,7 @@ export function diagStop() {
 const JANK_MS = 300;
 const JANK_EVERY_MS = 5000;
 const JANK_MAX = 300;
+const SETTLE_MS = 1500;   // after the window comes back into view its first frames are late: not a stall
 let watching = false;
 
 function playingMedia() {
@@ -94,12 +95,34 @@ function playingMedia() {
   for (const d of docs) {
     for (const m of d.querySelectorAll('video, audio')) {
       if (m.paused || m.ended) continue;
+      let q = null;
+      try { q = m.getVideoPlaybackQuality ? m.getVideoPlaybackQuality() : null; } catch { /* audio */ }
+      let ahead = null;   // seconds of data already loaded after the playing position
+      try {
+        for (let i = 0; i < m.buffered.length; i += 1) {
+          if (m.buffered.start(i) <= m.currentTime + 0.05 && m.currentTime <= m.buffered.end(i)) ahead = +(m.buffered.end(i) - m.currentTime).toFixed(1);
+        }
+      } catch { /* ignore */ }
       out.push({ tag: m.tagName.toLowerCase(), src: String(m.currentSrc || m.src || '').split('?')[0].split('/').slice(-2).join('/'),
-        t: +m.currentTime.toFixed(1), w: m.videoWidth || undefined, muted: m.muted || undefined,
+        t: +m.currentTime.toFixed(2), w: m.videoWidth || undefined, muted: m.muted || undefined,
+        rs: m.readyState, ns: m.networkState, ahead,
+        frames: q ? q.totalVideoFrames : undefined, dropped: q ? q.droppedVideoFrames : undefined,
         shown: m.checkVisibility ? m.checkVisibility() : undefined });
     }
   }
   return out.slice(0, 6);
+}
+
+// which graphics card the window draws with (a laptop has two); asked once
+function gpuName() {
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    const ext = gl && gl.getExtension('WEBGL_debug_renderer_info');
+    const name = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : (gl ? gl.getParameter(gl.RENDERER) : 'no webgl');
+    const lose = gl && gl.getExtension('WEBGL_lose_context');
+    if (lose) lose.loseContext();
+    return String(name).slice(0, 160);
+  } catch { return 'unknown'; }
 }
 
 export function diagWatch() {
@@ -111,20 +134,31 @@ export function diagWatch() {
       .map((j) => ({ kind: j.kind, lane: j.lane, status: j.status, stage: j.stage || '', pct: j.percent == null ? null : Math.round(j.percent) }));
   });
   const recent = [];
-  const note = (text) => { recent.push(`${new Date().toISOString().slice(11, 23)} ${text}`); if (recent.length > 12) recent.shift(); };
+  const note = (text) => { recent.push(`${new Date().toISOString().slice(11, 23)} ${text}`); if (recent.length > 16) recent.shift(); };
+  let tick = performance.now();
+  let frame = performance.now();
+  let quietUntil = 0;
+  const settle = () => { tick = frame = performance.now(); quietUntil = tick + SETTLE_MS; };
   for (const ev of ['focus', 'blur']) window.addEventListener(ev, () => note(`window ${ev}`));
-  document.addEventListener('visibilitychange', () => note(`hidden=${document.hidden}`));
+  document.addEventListener('visibilitychange', () => { note(`hidden=${document.hidden}`); settle(); });
   bus.addEventListener('goto', (e) => note(`goto ${e.detail}`));
   document.addEventListener('click', (e) => {
     const b = e.target && e.target.closest ? e.target.closest('button, summary, #tabs button') : null;
     if (b) note(`click ${(b.dataset && b.dataset.page) || (b.textContent || '').trim().slice(0, 16)}`);
   }, true);
+  // what a video or audio element of this page says (these events do not bubble: caught on the way down)
+  for (const ev of ['play', 'playing', 'pause', 'waiting', 'stalled', 'seeking', 'seeked', 'error', 'emptied', 'ended']) {
+    document.addEventListener(ev, (e) => {
+      const m = e.target;
+      if (m && (m.tagName === 'VIDEO' || m.tagName === 'AUDIO')) note(`${m.tagName.toLowerCase()} ${ev} t=${m.currentTime.toFixed(2)} rs=${m.readyState}`);
+    }, true);
+  }
 
   let sent = 0;
   let bucket = null;   // gaps since the last line
   const add = (what, gap) => {
     if (!bucket) {
-      bucket = { timer: 0, frames: 0, worst: 0, total: 0, first: new Date().toISOString() };
+      bucket = { timer: 0, frames: 0, worst: 0, total: 0, first: new Date().toISOString(), media: playingMedia() };
       setTimeout(flush, JANK_EVERY_MS);
     }
     bucket[what] += 1;
@@ -139,22 +173,22 @@ export function diagWatch() {
     const tab = document.querySelector('#tabs button.active');
     const mvTab = document.querySelector('.mv-tabs .active');
     send('jank', { first: b.first, worstMs: b.worst, totalMs: b.total, timerGaps: b.timer, frameGaps: b.frames,
-      page: tab ? tab.dataset.page : '', mvTab: mvTab ? mvTab.textContent.trim() : undefined,
-      focus: document.hasFocus(), mbJs: memory(), media: playingMedia(), jobs, recent: recent.slice(), n: sent });
+      page: tab ? tab.dataset.page : '', mvTab: tab && tab.dataset.page === 'mv' && mvTab ? mvTab.textContent.trim() : undefined,
+      focus: document.hasFocus(), mbJs: memory(), mediaAtFirst: b.media, media: playingMedia(), jobs, recent: recent.slice(), n: sent });
   }
-  let tick = performance.now();
+  const counts = (now) => !document.hidden && now > quietUntil;
   setInterval(() => {
     const now = performance.now();
-    if (now - tick > JANK_MS && !document.hidden) add('timer', now - tick);   // the page's own code was stuck
+    if (now - tick > JANK_MS && counts(now)) add('timer', now - tick);   // the page's own code was stuck
     tick = now;
   }, 50);
-  let frame = performance.now();
   const loop = () => {
     const now = performance.now();
-    if (now - frame > JANK_MS && !document.hidden) add('frames', now - frame);   // drawing stopped
+    if (now - frame > JANK_MS && counts(now)) add('frames', now - frame);   // drawing stopped
     frame = now;
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
-  send('watch', { mbJs: memory() });
+  send('watch', { v: 2, mbJs: memory(), gpu: gpuName(), cores: navigator.hardwareConcurrency, dpr: window.devicePixelRatio,
+    screen: `${window.screen.width}x${window.screen.height}`, win: `${window.innerWidth}x${window.innerHeight}` });
 }
