@@ -603,7 +603,26 @@
   "❌ 渲染連線中斷": "❌ Render connection lost",
   "⚠️ 渲染已中斷（伺服器已重新啟動）": "⚠️ Render interrupted (the server was restarted)",
   "🎉 MV 渲染完成": "🎉 MV render finished",
-  "⏱️ MV 渲染逾時": "⏱️ MV render timed out"
+  "⏱️ MV 渲染逾時": "⏱️ MV render timed out",
+  "🎨 產生簡易圖卡": "🎨 Make simple cards",
+  "沒有照片的畫面，由程式依歌詞畫一張簡單的圖卡補上。不需要網路，不會動你放的照片；畫好的圖卡跟一般照片一樣，可以再換成自己的照片": "For every part that has no photo, the app draws a simple picture card that goes with the line. No network needed, your own photos are not touched; a card is a photo like any other and you can put your own photo over it",
+  "色調": "Tone",
+  "整首歌的簡易圖卡用同一種色調": "All simple cards of a song use the same tone",
+  "清新": "Fresh",
+  "暖色復古": "Warm vintage",
+  "夜藍": "Night blue",
+  "黑白漫畫": "Black and white",
+  "只移除程式畫的簡易圖卡；你放的照片和時間軸都會留著": "Removes only the cards the app drew; your photos and the timeline stay",
+  "🧹 移除簡易圖卡 (": "🧹 Remove simple cards (",
+  "停止": "Stop",
+  "正在輸出 MV，等它完成再產生簡易圖卡": "The MV is being rendered; make the simple cards when it is done",
+  "正在輸出 MV，等它完成再移除簡易圖卡": "The MV is being rendered; remove the simple cards when it is done",
+  "⚠️ 還沒有時間軸：請先到 Step 3 貼上歌詞並對齊，再產生簡易圖卡（圖卡是依每一句歌詞挑的）。": "⚠️ No timeline yet: paste the lyrics and align them in Step 3 first, then make the simple cards (a card is chosen for each line).",
+  "✅ 每個畫面都已經有照片或圖卡，沒有需要補的。": "✅ Every part already has a photo or a card; nothing to add.",
+  "簡易圖卡的資料不正確": "The simple card request is not valid",
+  "這一格已經不是簡易圖卡（換成照片了），沒有重畫": "This slot is no longer a simple card (it has a photo now); not redrawn",
+  "這一格已經有照片，沒有畫簡易圖卡": "This slot already has a photo; no card drawn",
+  "只移除程式畫的圖卡；你放的照片和時間軸都會留著。": "Only the cards the app drew are removed; your photos and the timeline stay."
  },
  "patterns": [
   {
@@ -1709,6 +1728,62 @@
   {
    "zh": "外部音檔 {0}",
    "en": "external file {0}"
+  },
+  {
+   "zh": "🎨 正在畫簡易圖卡… {0}／{1}",
+   "en": "🎨 Drawing simple cards… {0} / {1}"
+  },
+  {
+   "zh": "❌ 簡易圖卡沒有畫：{0}",
+   "en": "❌ No simple cards were drawn: {0}"
+  },
+  {
+   "zh": "❌ 簡易圖卡沒有畫完：{0}（已畫好 {1} 張，再按一次會接著畫）",
+   "en": "❌ The simple cards were not finished: {0} ({1} drawn; press again to continue)"
+  },
+  {
+   "zh": "⏹️ 已停止，畫好 {0} 張簡易圖卡（共 {1} 張）。再按一次「產生簡易圖卡」會接著畫剩下的。",
+   "en": "⏹️ Stopped with {0} of {1} simple cards drawn. Press \"Make simple cards\" again to draw the rest."
+  },
+  {
+   "zh": "✅ 簡易圖卡已經是「{0}」色調：重畫 {1} 張，新補 {2} 張。你放的照片沒有動。",
+   "en": "✅ The simple cards are now in the \"{0}\" tone: {1} redrawn, {2} added. Your photos were not touched."
+  },
+  {
+   "zh": "✅ 已補上 {0} 張「{1}」簡易圖卡。每一張都跟一般照片一樣，可以點它換成自己的照片。",
+   "en": "✅ {0} simple card(s) added in the \"{1}\" tone. Each is a photo like any other: click it to put your own photo there."
+  },
+  {
+   "zh": "✔ 簡易圖卡完成（{0} 張）",
+   "en": "✔ Simple cards done ({0})"
+  },
+  {
+   "zh": "這首歌已經有 {0} 張「{1}」色調的簡易圖卡。",
+   "en": "This song already has {0} simple card(s) in the \"{1}\" tone."
+  },
+  {
+   "zh": "要把它們一起換成「{0}」嗎？（你放的照片不會動）",
+   "en": "Change them to \"{0}\" as well? (Your photos are not touched.)"
+  },
+  {
+   "zh": "按「取消」就不做任何事，色調維持「{0}」。",
+   "en": "Cancel does nothing and keeps the \"{0}\" tone."
+  },
+  {
+   "zh": "要移除這首歌的 {0} 張簡易圖卡嗎？",
+   "en": "Remove this song's {0} simple card(s)?"
+  },
+  {
+   "zh": "🧹 已移除 {0} 張簡易圖卡。你放的照片和時間軸都還在。",
+   "en": "🧹 {0} simple card(s) removed. Your photos and the timeline are still there."
+  },
+  {
+   "zh": "❌ 移除簡易圖卡失敗：{0}",
+   "en": "❌ Removing the simple cards failed: {0}"
+  },
+  {
+   "zh": "簡易圖卡畫不出來：{0}",
+   "en": "The simple card could not be drawn: {0}"
   }
  ]
 }

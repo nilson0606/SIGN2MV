@@ -33,7 +33,7 @@ from . import settings as settings_mod
 from . import stems as stems_mod
 from .context import Context
 from .library import LibraryError
-from .mvstudio import align, core
+from .mvstudio import align, cards, core
 from .mvstudio.align import (align_timeline_with_anchors_and_whisper, apply_anchor_locks, unsung_sections,
                              auto_generate_timeline_from_whisper_only, build_guaranteed_fallback_timeline,
                              enforce_anchor_invariants, WHISPER_PIPELINE)
@@ -1260,6 +1260,179 @@ def router(ctx: Context) -> APIRouter:
             deleted = True
         return {"status": "ok", "deleted": deleted,
                 "instrument_photos": list_instrumental_photos(proj["illust_dir"], proj.get("timeline", []))}
+
+    # ---- simple picture cards (app/mvstudio/cards.py): drawn here for the parts that have no photo ----
+    CARD_SLOT_RE = re.compile(r"^(?:scene:([1-9][0-9]?)|inst:(intro|outro|interlude_[0-9a-f]{6}))$")
+
+    def card_slot_path(illust_dir: str, slot: str) -> Optional[Path]:
+        m = CARD_SLOT_RE.fullmatch(slot or "")
+        if not m:
+            return None
+        if m.group(1):
+            return Path(illust_dir) / f"scene_{int(m.group(1)):02d}.png"
+        return Path(instrumental_photo_path(illust_dir, m.group(2)))
+
+    def card_state(proj: Dict[str, Any]) -> Dict[str, Any]:
+        """What the cards button would do now. "empty": the parts of the timeline that show no photo, each with
+        the card chosen for it (the choice goes over the whole timeline, so a card drawn later still differs
+        from its neighbours). "cards": the photos in the project that are cards, with what each one is."""
+        illust_dir = proj.get("illust_dir", "")
+        tl = proj.get("timeline") or []
+
+        def kind(seg: Dict[str, Any]) -> str:
+            tp = str(seg.get("type", "lyric"))
+            return tp if tp in ("intro", "outro") else ("interlude" if tp in core.INTERLUDE_TYPES else "lyric")
+
+        picks = cards.pick([(kind(seg), str(seg.get("text", ""))) for seg in tl])
+        rec = cards.read_record(illust_dir)
+        known: Dict[str, Any] = rec["cards"]  # type: ignore[assignment]
+        empty: List[Dict[str, Any]] = []
+        seen = set()
+        for seg, (name, look) in zip(tl, picks):
+            key = core.instrumental_key(seg)
+            if key:
+                # an intro, interlude or outro without a photo of its own shows the photo of the line it
+                # borrows. A photo of the user's there stays what it shows; a card there (or nothing) means
+                # it gets a card of its own, so it never repeats the card of the line beside it.
+                shown = core.seg_photo_path(proj, seg)
+                if shown and (core._photo_print(shown) or "") not in known:
+                    continue
+                if shown and os.path.basename(shown).startswith("inst_"):
+                    continue                            # its own card is there already
+                slot = f"inst:{key}"
+            else:
+                try:
+                    sid = int(seg.get("scene", 1))
+                except (TypeError, ValueError):
+                    continue
+                if not 1 <= sid <= MAX_SCENES or resolve_scene_image_path(illust_dir, sid):
+                    continue
+                slot = f"scene:{sid}"
+            if slot not in seen:
+                seen.add(slot)
+                empty.append({"slot": slot, "card": name, "look": look})
+        have: List[Dict[str, Any]] = []
+        if known and os.path.isdir(illust_dir):
+            for fn in sorted(os.listdir(illust_dir)):
+                m = re.fullmatch(r"scene_(\d{2})\.png", fn)
+                mi = re.fullmatch(r"inst_((?:intro|outro|interlude_[0-9a-f]{6}))\.png", fn)
+                if not (m or mi):
+                    continue
+                fp = os.path.join(illust_dir, fn)
+                info = known.get(core._photo_print(fp) or "")
+                if info and core.photo_ok(illust_dir, fp):
+                    have.append({"slot": f"scene:{int(m.group(1))}" if m else f"inst:{mi.group(1)}", "card": info["card"],
+                                 "look": int(info.get("look", 0) or 0), "tone": info["tone"], "file": fn})
+        return {"empty": empty, "cards": have, "tone": rec["tone"] or "fresh", "tones": list(cards.TONES),
+                "timeline": len(tl)}
+
+    def card_save(illust_dir: str, out_path: Path, name: str, look: int, tone: str, replace_print: str) -> None:
+        img = cards.draw(name, look, tone)
+        os.makedirs(illust_dir, exist_ok=True)
+        part = out_path.with_name(out_path.name + ".part")
+        try:
+            img.save(part, format="PNG", compress_level=1)
+            pr = core._photo_print(str(part)) or ""
+            core.accept_photo(illust_dir, str(part))
+            os.replace(part, out_path)
+        finally:
+            if part.exists():
+                part.unlink()
+        rec = cards.read_record(illust_dir)
+        known: Dict[str, Any] = rec["cards"]  # type: ignore[assignment]
+        known.pop(replace_print, None)
+        if pr:
+            known[pr] = {"card": name, "look": look, "tone": tone}
+        cards.write_record(illust_dir, tone, known)
+
+    @r.post("/api/mv/cards/plan")
+    async def api_cards_plan(request: Request):
+        configure()
+        body = await request.json()
+        try:
+            proj = load_project_dict(str(body.get("slug", "")))
+        except ProjectNotFound as exc:
+            return jerr(404, str(exc))
+        return {"status": "ok", **card_state(proj)}
+
+    @r.post("/api/mv/cards/draw")
+    async def api_cards_draw(request: Request):
+        """Draw one card: into a part that shows no photo ("slot" from the plan), or, with "redraw", over a
+        card that is there (to give every card of the song the same tone). A photo is never written over."""
+        configure()
+        body = await request.json()
+        try:
+            proj = load_project_dict(str(body.get("slug", "")))
+        except ProjectNotFound as exc:
+            return jerr(404, str(exc))
+        slot, tone = str(body.get("slot", "")), str(body.get("tone", "fresh"))
+        illust_dir = proj["illust_dir"]
+        out_path = card_slot_path(illust_dir, slot)
+        if out_path is None or tone not in cards.TONES:
+            return jerr(400, "簡易圖卡的資料不正確")
+        state = card_state(proj)
+        old_print = ""
+        if body.get("redraw"):
+            hit = next((c for c in state["cards"] if c["slot"] == slot), None)
+            if not hit:
+                return jerr(409, "這一格已經不是簡易圖卡（換成照片了），沒有重畫")
+            name, look = hit["card"], hit["look"]
+            old_print = core._photo_print(str(out_path)) or ""
+        else:
+            hit = next((c for c in state["empty"] if c["slot"] == slot), None)
+            if not hit:
+                return jerr(409, "這一格已經有照片，沒有畫簡易圖卡")
+            name, look = hit["card"], hit["look"]
+        try:
+            await asyncio.to_thread(card_save, illust_dir, out_path, name, look, tone, old_print)
+        except Exception as e:  # noqa: BLE001
+            return jerr(500, f"簡易圖卡畫不出來：{e}")
+        m = CARD_SLOT_RE.fullmatch(slot)
+        if m and m.group(1):
+            sid = int(m.group(1))
+            for fn in _scene_files(illust_dir, sid):
+                if fn != out_path.name:
+                    os.remove(os.path.join(illust_dir, fn))
+            if sid > int(proj.get("scene_count", 12) or 12):
+                proj["scene_count"] = sid
+                save_project_dict(proj)
+        return {"status": "ok", "slot": slot, "card": name, "look": look, "tone": tone}
+
+    @r.post("/api/mv/cards/remove")
+    async def api_cards_remove(request: Request):
+        """Take the cards out again (only the cards: photos stay, and so does the timeline)."""
+        configure()
+        body = await request.json()
+        try:
+            proj = load_project_dict(str(body.get("slug", "")))
+        except ProjectNotFound as exc:
+            return jerr(404, str(exc))
+        illust_dir = proj["illust_dir"]
+        removed = 0
+        for c in card_state(proj)["cards"]:
+            try:
+                os.remove(os.path.join(illust_dir, c["file"]))
+                removed += 1
+            except OSError:
+                pass
+        rec = cards.read_record(illust_dir)
+        if rec["cards"] or removed:
+            cards.write_record(illust_dir, str(rec["tone"]), {})
+        return {"status": "ok", "removed": removed, "all_scenes": _scene_payload(proj),
+                "instrument_photos": list_instrumental_photos(illust_dir, proj.get("timeline", []))}
+
+    @r.post("/api/mv/cards/done")
+    async def api_cards_done(request: Request):
+        """The page's refresh after a run: the photo slots as they are now."""
+        configure()
+        body = await request.json()
+        try:
+            proj = load_project_dict(str(body.get("slug", "")))
+        except ProjectNotFound as exc:
+            return jerr(404, str(exc))
+        return {"status": "ok", "all_scenes": _scene_payload(proj),
+                "instrument_photos": list_instrumental_photos(proj["illust_dir"], proj.get("timeline", [])),
+                **card_state(proj)}
 
     @r.post("/api/mv/scenes/delete_shift")
     async def api_delete_scenes_shift(request: Request):

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Full MV: 「🎨 產生簡易圖卡」 (simple cards) in the photo step. For every part of the timeline that shows no
+  photo (lyric lines, intro, interludes, outro) the app draws a 1920x1080 comic-style picture card itself
+  (`app/mvstudio/cards.py`, Pillow only, nothing fetched; about half a second a card). A card is chosen per
+  line by Chinese keywords (rain, star, luck, goodbye, ...); other lines take turns through general scenes,
+  never the same scene twice in a row, and a scene used again comes back in another light or mirrored. Only
+  empty parts are filled and a photo is never written over; cards are made only when the button is pressed,
+  and each is a photo like any other afterwards. One tone per song (清新／暖色復古／夜藍／黑白漫畫): choosing
+  another tone asks before redrawing the cards that are there. 「🧹 移除簡易圖卡」 takes out the cards only
+  (photos and the timeline stay). Which photos are cards is kept in the project's `cards.json` by content
+  fingerprint, so a photo put over a card is never taken for one.
 - Library: a YouTube import whose video could not be downloaded (the audio arrived, the video did not) used
   to end as a plain "done" with an audio-only song. It now says so, and the song shows a notice with
   「重新下載影片」: only the picture is fetched and put beside the audio the song already has, so stems,
