@@ -201,11 +201,27 @@ a { color:var(--accent); }
 <li><b>Pressing <i>Prepare stems</i> with a previewed shift that is not applied</b>: the preview stops and a question reminds you that a separated song can no longer be shifted, with three choices: <b>Apply … s, then separate</b> (shifts first, then separates with the model you chose), <b>Separate without shifting</b>, or <b>Cancel</b>. With a value you typed but did not preview, it only warns; to shift, cancel, preview, then apply.</li>
 <li>The preview stops by itself when you go to another page (Sing, MV…) or fold <i>Original</i>.</li>
 </ul>
+<h3 id="lyric-picture">Lyric picture (for a song without subtitles)</h3>
+<p class="note"><b>The song's picture has no lyrics, or the song is audio only (an MP3, for example)?</b> Paste the lyrics under <i>Lyric picture</i> of that song in the Library to make a picture with subtitles and use it as the song's picture, so that Sing &amp; Record shows the words.</p>
+<ol>
+<li>Pick the song in the Library and open <i>▸ Lyric picture (for a song without subtitles)</i>. An audio-only song shows a notice under its title; its <b>Go to "Lyric picture"</b> button opens the same section.</li>
+<li><b>① Paste the lyrics and time them</b>: paste the lyrics, one line each, and press <b>🎙️ Time the lines</b>. The first time for a song, the vocals are separated and Whisper listens once (a few minutes); after that the lines are placed at once. Play each line with ▶ and correct the ones that are off with −0.5 / +0.5, 📍 or by typing a time. The subtitles show the text you pasted. These are the same lyrics as the quick MV's <i>Lyric subtitles</i>.</li>
+<li><b>② Choose the picture</b>: <b>Lyrics only</b> (a dark background with the line in the middle) or <b>Subtitles over the original picture</b> (along the bottom; only for a song that has a picture).</li>
+<li><b>Show each line … s before it is sung</b>: 0.7 s by default (as in the full MV), 0 to 3. One line shows at a time and makes room for the next when it has been sung.</li>
+<li>Press <b>🎬 Make it and use it as this song's picture</b>. When it is done, <i>Picture in use</i> says <i>lyric picture</i> and Sing &amp; Record shows the words (if the song is already open there, pick it again).</li>
+</ol>
+<ul>
+<li><b>The audio does not change</b>, only the picture: stems, key versions, covers, takes and scores stay as they are.</li>
+<li><b>The original picture is kept</b>: <b>↩ Back to the original picture</b> puts it back (for an audio-only song: <i>Stop using the lyric picture</i>). The lyric picture is kept too; <b>Use the last lyric picture again</b> switches back without making it again.</li>
+<li>After changing the lyrics or the times, press <b>🎬 Make it again and use it as this song's picture</b>; the new one replaces the last lyric picture.</li>
+<li>While the lyric picture is in use the audio cannot be shifted: its lines follow the audio, so there is nothing to shift.</li>
+<li>How long it takes: the lyrics-only picture is a still (10 frames a second); a 4½-minute song took about 40 s on a 2-core test machine without a graphics card. Subtitles over the original picture encode the whole video once more, about 1 min 45 s on the same machine. A graphics card is used for encoding when there is one.</li>
+</ul>
 <h3>Stems and key</h3>
 <p>Under <i>Stems and key</i> you can prepare and listen to the separated tracks: choose the separator (Demucs, BS-RoFormer, Mel-RoFormer Kim), optionally a second pass on the instrumental and a lead/backing split, and a key. Separation is cached per song: any workspace that needs the same stems reuses them.</p>
 <p><b>Saved stems</b> (below the Prepare button) lists every separation and key copy this song keeps, as a tree: a lead/backing split sits under the separation it was made from. Each row shows its tracks, size, date and which cover versions or sing &amp; record references use it. <b>Delete</b> removes that copy and everything made from it. Nothing breaks: whatever uses it separates again the next time it needs it (that takes a few minutes). Deleting waits while a job for the song is running.</p>
 <p><b>Replacing the source</b>: a song that already has its original shows a folded <i>▸ Import again (replace source)</i> at the top; open it to replace the original with a new link or file. The old original is removed only once the new one is fully in place; if that fails or the program is stopped in between, the old one is put back. After a new source, older sing references are marked <i>Source replaced: made again when loaded</i> and are made again when loaded.</p>
-<p>Click a section title (Original, Stems and key, Saved stems, Storage) to fold or unfold it; the page remembers which ones you keep open. A folded section still shows a one-line summary. In Saved stems, <b>▸ N below</b> shows or hides the copies made from that row.</p>
+<p>Click a section title (Original, Lyric picture, Stems and key, Saved stems, Storage) to fold or unfold it; the page remembers which ones you keep open. A folded section still shows a one-line summary. In Saved stems, <b>▸ N below</b> shows or hides the copies made from that row.</p>
 <h3>Storage</h3>
 <p>The library list shows each song's size, and under it the library total and the free space on the drive. A song's <i>Storage</i> section splits its size into original, stems &amp; key copies, finished AI covers, cover cache, sing &amp; record, MV projects and other, with where to clean up each one:</p>
 <ul>

@@ -45,6 +45,21 @@ def _clean_title(title: Any) -> str:
     return title
 
 
+def lost_lyric_picture(song_dir: Path, src: dict[str, Any]) -> bool:
+    """The song uses a lyric picture (api_lyricvideo) that is gone from the disk: make the record say
+    what is true, the imported picture (or none). Returns whether the record was changed."""
+    if not src.get("lyric_video") or (song_dir / str(src.get("video") or "")).is_file():
+        return False
+    orig = src.pop("video_original", None) or {}
+    src.pop("lyric_video", None)
+    src["video"] = orig.get("video")
+    if orig.get("video_size"):
+        src["video_size"] = orig["video_size"]
+    else:
+        src.pop("video_size", None)
+    return True
+
+
 class Library:
     def __init__(self, root: Path):
         self.root = Path(root)
@@ -75,6 +90,7 @@ class Library:
         except (OSError, ValueError):
             data["source"] = None
         src = data.get("source") or {}
+        lost_lyric_picture(self._song_dir(song_id), src)
         if data.get("title_auto") and src.get("youtube_title"):
             data["title"] = src["youtube_title"]
         return data

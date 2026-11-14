@@ -171,6 +171,7 @@ export const messages = {
   "播放器與麥克風分別啟動": "Start the player and microphone separately",
   "LOCAL AUDIO / 本機音檔": "LOCAL AUDIO",
   "預設聲波畫面 · 可整首演唱或分段錄製": "Waveform view · Record a whole song or individual segments",
+  "想看著歌詞唱：到歌曲庫這首歌的「字幕畫面」貼上歌詞，就會有字幕畫面。": "To sing along with the lyrics: open this song in the Library and paste the lyrics under \"Lyric picture\".",
   "播放器時間": "Player time",
   "補償後位置": "Adjusted position",
   "歌曲 Key · 每格半音，速度不變": "Song key · One semitone per step, same tempo",

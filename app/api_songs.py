@@ -80,6 +80,8 @@ def audio_shift_block(ctx: Context, song_id: str, song_dir: Path, song: dict) ->
     src = song.get("source") or {}
     if not src.get("audio") or not src.get("video"):
         return "shift_no_video"
+    if src.get("lyric_video"):   # the picture is the lyric picture (api_lyricvideo): its lines follow the audio
+        return "shift_lyric_picture"
     if ctx.song_busy(song_id):
         return "song_busy"
     for entry in song_dir.iterdir():

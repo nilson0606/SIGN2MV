@@ -5,6 +5,7 @@ import { $, el, toast, confirmDialog, choiceDialog, fmtDate, fmtTime, fmtBytes }
 import { bus, state, selectSong, songById, mediaUrl, reloadJobs } from './app-state.js';
 import { jobBox } from './jobview.js';
 import { diagStart, diagNote, diagStop } from './diag.js';   // TEMPORARY, see diag.js
+import { lyricVideoBody, lyricVideoInfo } from './lyric-video.js';
 
 let filter = '';
 let sizes = {};   // song_id -> bytes on disk
@@ -51,6 +52,8 @@ export async function openFinished(songId) {
 }
 $('#open-finished')?.addEventListener('click', () => openFinished());
 bus.addEventListener('job-finished', () => loadSizes());
+// a lyric picture became the song's picture (also when the page was reloaded while it was being made)
+bus.addEventListener('job-finished', (e) => { if (e.detail && e.detail.kind === 'lyricvideo' && e.detail.status === 'succeeded') loadSongs(); });
 bus.addEventListener('settings', (e) => { setText($('#library-path'), 'lib.location', e.detail.library_dir || ''); });
 bus.addEventListener('song-selected', () => { renderList(); renderDetail(); });
 onLanguageChange(() => { renderList(); renderDetail(); });
@@ -114,9 +117,21 @@ function renderDetail() {
       el('button', { class: 'btn', onclick: go('mv') }, t('lib.go_mv')),
       el('button', { class: 'btn', onclick: go('cover') }, t('lib.go_cover'))));
   }
+  let lyricSection = null;
+  if (song.source && song.source.audio) {
+    lyricSection = fold('lyricvideo', t('lv.title'), el('span', { class: 'muted small' }, lyricVideoInfo(song)), false,
+      ...lyricVideoBody(song));
+    if (!song.source.video) {
+      // a song without a picture shows no words in sing & record: say where they can be added
+      parts.push(el('div', { class: 'banner info row', style: 'align-items:center;gap:10px' },
+        el('span', { class: 'grow' }, t('lv.tip_no_picture')),
+        el('button', { class: 'btn small', onclick: () => { lyricSection.open = true; lyricSection.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, t('lv.tip_open'))));
+    }
+  }
   parts.push(importSection(song));
   if (song.source) {
     parts.push(sourceSection(song));
+    if (lyricSection) parts.push(lyricSection);
     parts.push(stemsSection(song));
   }
   parts.push(storageSection(song));
@@ -279,6 +294,7 @@ function sourceSection(song) {
     t(`lib.source.${s.type}`), fmtTime(s.duration),
     s.video_size && s.video_size[0] ? `${s.video_size[0]}×${s.video_size[1]}` : t('lib.no_video'),
   ];
+  if (s.lyric_video) info.push(t('lv.info_on'));
   if (s.original_name) info.push(s.original_name);
   const bust = (url) => `${url}?v=${encodeURIComponent(s.shifted_at || s.imported_at || '')}`;   // a shifted source keeps its file names
   const media = s.video
@@ -291,7 +307,8 @@ function sourceSection(song) {
     player,
     media,
     s.audio ? el('div', { class: 'row' }, mp3Button(song)) : null,
-    media ? shiftBox(song, media, player, bust(mediaUrl(song.song_id, s.audio))) : null);
+    // the lyric picture's lines follow the audio: nothing to shift against
+    media && !s.lyric_video ? shiftBox(song, media, player, bust(mediaUrl(song.song_id, s.audio))) : null);
 }
 
 // 「音軌平移」: the song audio against the picture, up to ±2 s from the originally imported audio, for a song

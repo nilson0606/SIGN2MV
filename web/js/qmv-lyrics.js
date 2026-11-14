@@ -17,7 +17,8 @@ function parse(text) {   // 1:23.45, 83.45 or 1：23.45
   return /^\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
 }
 
-export function lyricsEditor() {
+// keys: other heading / hint texts (the library's lyric picture uses the same editor and the same saved lines)
+export function lyricsEditor(keys = {}) {
   let songId = null;
   let source = null;
   let lines = [];
@@ -51,8 +52,8 @@ export function lyricsEditor() {
     el('div', { class: 'row' }, addBtn, saveBtn, clearBtn), table);
 
   function texts() {
-    head.textContent = t('qmvl.title');
-    hint.textContent = t('qmvl.hint');
+    head.textContent = t(keys.title || 'qmvl.title');
+    hint.textContent = t(keys.hint || 'qmvl.hint');
     area.placeholder = t('qmvl.placeholder');
     pasteBtn.textContent = t('qmvl.paste');
     alignBtn.textContent = t('qmvl.align');

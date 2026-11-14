@@ -1,7 +1,7 @@
 """Disk usage of the library, per song and per category.
 
 Categories of a song folder (see docs/ARCHITECTURE for the layout):
-  source   source/                 original video + audio
+  source   source/ + lyricvideo/   original video + audio, and the picture with lyrics made for it
   stems    stems/ + keys/          separation layers and key copies (cache, deletable one by one)
   cover    cover/versions + cover renders     finished covers
   cover_cache cover/rvc, midi, patches, tmp, preview   voice-conversion cache for quick remix
@@ -60,7 +60,7 @@ def song_usage(song_dir: Path, recordings: list[Path] | None = None) -> dict[str
         return {"categories": cats, "counts": counts, "total": 0}
     for child in song_dir.iterdir():
         name = child.name
-        if name == "source":
+        if name in ("source", "lyricvideo"):   # lyricvideo: the song's picture with lyrics (api_lyricvideo)
             cats["source"] += _size(child)
         elif name in ("stems", "keys"):
             cats["stems"] += _size(child)

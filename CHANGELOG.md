@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Library: 「字幕畫面」 (lyric picture) for a song whose picture has no lyrics, or that is audio only. Paste the
+  lyrics, time them (the quick MV's editor, matching and saved lines), choose 「純歌詞畫面」 (a dark card with the
+  line in the middle) or 「字幕疊在原本的畫面上」 (along the bottom of the imported picture), and the result becomes
+  the song's picture, so that Sing & Record shows the words. One line shows at a time, 0.7 s before it is sung
+  (the full MV's lead; 0 to 3 s). Only the picture is new: `source/audio.wav` is not touched, so stems, key
+  versions, covers and takes stay valid (over the original picture the sound stream is copied as it is). The
+  imported picture is kept and can be put back; the lyric picture is kept too and can be used again. It lives in
+  `songs/<id>/lyricvideo/`; `source.json` points `video` at it and remembers the imported one. A lyric picture
+  that is gone from the disk, or made for a source that has since been replaced, is ignored. The audio cannot
+  be shifted while it is in use.
+- Library and Sing & Record: an audio-only song says that lyrics can be added this way (a notice under the
+  song's title with a button to the section, and a line in the waveform view).
 - MV: a project without any photo is rendered as a plain lyric video: one dark background for every line (no
   "Scene 05 · title" placeholder in the middle, which also showed a leftover line of text) and no transition
   frames, each line simply follows the last. Transitions between identical backgrounds were 77 % of a render
