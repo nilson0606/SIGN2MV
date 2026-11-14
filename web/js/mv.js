@@ -152,7 +152,7 @@ const quick = (() => {
     labels.artist.textContent = t('qmv.artist');
     labels.list.textContent = t(scope === 'all' ? 'qmv.list_all' : 'qmv.list');
     makeBtn.textContent = t('qmv.make');
-    const sv = styleSel.value || pref('style', 'card');
+    const sv = styleSel.value || pref('style', 'studio');   // the look with lyric subtitles; a look picked before is kept
     styleSel.replaceChildren(el('option', { value: 'card' }, t('qmv.style_card')), el('option', { value: 'studio' }, t('qmv.style_studio')));
     styleSel.value = sv;
     const rv = resSel.value || pref('res', '1080p');
