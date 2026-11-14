@@ -2,29 +2,22 @@
 
 ## Unreleased
 
-- Simple cards, second generation (`app/mvstudio/cardworld.py`): a card is no longer one of 34 fixed scenes
-  but put together from parts: one of 16 places, a light (dawn to night) and weather, who is in the picture
-  and how (15 ways), a small thing that goes with the words (27), and how close the picture is. Each song
-  has a world of its own (five places, the lights it moves through, palette, line, border, and its two
-  people), chosen away from the worlds of the songs before it, which the library remembers in
-  `cards_history.json`; no two cards of a song are the same. A few English words are known besides the
-  Chinese ones. Taking the cards out and making them again gives another set. Cards made before keep their
-  scenes (and what is added to them matches) until they are taken out.
-- Full MV: 「🎨 產生簡易圖卡」 (simple cards) in the photo step. For every part of the timeline that shows no
-  photo (lyric lines, intro, interludes, outro) the app draws a 1920x1080 comic-style picture card itself
-  (`app/mvstudio/cards.py`, Pillow only, nothing fetched; about half a second a card). A card is chosen per
-  line by Chinese keywords (rain, star, luck, goodbye, ...); other lines take turns through general scenes,
-  never the same scene twice in a row, and a scene used again comes back in another light or mirrored. Only
-  empty parts are filled and a photo is never written over; cards are made only when the button is pressed,
-  and each is a photo like any other afterwards. One tone per song (清新／暖色復古／夜藍／黑白漫畫): choosing
-  another tone asks before redrawing the cards that are there. 「🧹 移除簡易圖卡」 takes out the cards only
-  (photos and the timeline stay). Which photos are cards is kept in the project's `cards.json` by content
-  fingerprint, so a photo put over a card is never taken for one. Each song has a look of its own, from a
-  seed made of the project's name: the figures (hair cut and colour, clothes), a slight turn of the landscape
-  colours, where the small things are, which way round each scene is and which of its two lights comes first,
-  and which of the general scenes the song uses (11 of 16). A scene that comes back in a song has four looks
-  before one repeats. The seed is kept with the cards, so cards added later match; with no card left the
-  song starts with its own again.
+## 2026.11.15
+
+- Full MV: 「🎨 產生簡易圖卡」 (simple cards) in the photo step, for an MV without photos. For every part of
+  the timeline that shows no photo (lyric lines, intro, interludes, outro) the app draws a 1920x1080
+  comic-style picture card itself (`app/mvstudio/cardworld.py`, Pillow only, nothing fetched; about a third
+  of a second a card). A card is put together from parts: one of 16 places, a light (dawn to night) and
+  weather, who is in the picture and how (15 ways), a small thing that goes with the words (27), and how
+  close the picture is; Chinese keywords and a few English ones in the line decide what they can, the rest
+  follows the song. Each song has a world of its own (five places, the lights it moves through, palette,
+  line, border, and its two people), chosen away from the worlds of the songs before it, which the library
+  remembers in `cards_history.json`; no two cards of a song are the same. Only empty parts are filled and a
+  photo is never written over; cards are made only when the button is pressed, and each is a photo like any
+  other afterwards. One tone per song (清新／暖色復古／夜藍／黑白漫畫): choosing another tone asks before
+  redrawing the cards that are there. 「🧹 移除簡易圖卡」 takes out the cards only (photos and the timeline
+  stay), and making them again gives another set. Which photos are cards is kept in the project's
+  `cards.json` by content fingerprint, so a photo put over a card is never taken for one.
 - Library: a YouTube import whose video could not be downloaded (the audio arrived, the video did not) used
   to end as a plain "done" with an audio-only song. It now says so, and the song shows a notice with
   「重新下載影片」: only the picture is fetched and put beside the audio the song already has, so stems,
@@ -85,6 +78,7 @@
   missing last chorus is left over at the end.
 - `app/t2s_chars.txt`: Traditional → Simplified characters from OpenCC (Apache-2.0), only for comparing lyrics
   with recognized text (see THIRD_PARTY.md).
+
 ## 2026.11.13
 
 - Library: 「準備分軌」 stops a running 「音軌平移」 preview first (on the GPU machine the window's drawing stopped
