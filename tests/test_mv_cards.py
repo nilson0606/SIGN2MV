@@ -246,3 +246,36 @@ def test_every_place_person_and_thing_draws():
     assert cardworld.draw(a, wd, 5).tobytes() == cardworld.draw(a, wd, 5).tobytes()
     assert cardworld.draw(a, wd, 5).tobytes() != cardworld.draw(a, cardworld.make_world(4), 5).tobytes()
     assert cards.draw(a, 0, "manga", 5, wd).size == (1920, 1080) and cards.valid_card(a) and cards.valid_card("sea") and not cards.valid_card("x")
+
+
+def test_the_standard_grade_has_more_places_and_shots_and_leaves_the_simple_one_alone():
+    simple = cardworld.make_world(9)
+    assert "grade" not in simple and set(simple["places"]) <= set(cardworld.PLACES) and len(simple["places"]) == 5
+    lines = [("intro", "")] + [("lyric", t) for t in ("雨落在窗外的小巷", "夕陽下我們牽著手", "na na na", "寫一封信給你", "向著夢想奔跑",
+                                                      "咖啡店的午後", "擁抱著你", "追著夜空的流星", "la la la", "時間停在那一年")] * 4 + [("outro", "")]
+    assert all(cardworld.parse(sp)[5] in cardworld.FRAMES for sp in cardworld.plan(lines, 5, simple))
+    shots, places = set(), set()
+    recent = []
+    for i in range(6):
+        seed = cards.song_seed(f"std{i}")
+        wd = cardworld.choose_world(seed, recent, "standard")
+        assert cardworld.valid_world(wd) and wd["grade"] == "standard" and len(wd["places"]) == 8
+        specs = cardworld.plan_standard(lines, seed, wd)
+        assert len(set(specs)) == len(specs) == len(lines) and specs == cardworld.plan_standard(lines, seed, wd)
+        got = [cardworld.parse(sp) for sp in specs]
+        assert all(got) and got[0][5] not in cardworld.FRAMES_STD and got[-1][5] not in cardworld.FRAMES_STD
+        assert got[6][0] == "cafe" and got[7][3] == "duo_hug" and got[5][3] == "solo_run"
+        shots |= {g[5] for g in got}
+        places |= {g[0] for g in got}
+        recent.append(wd)
+    assert shots >= set(cardworld.FRAMES_STD) and len(places & set(cardworld.PLACES_STD)) >= 8
+    wd = cardworld.make_world(3, "standard")
+    for i, place in enumerate(cardworld.PLACES_STD):
+        im = cardworld.draw(cardworld.card(place, list(cardworld.LIGHTS)[i % 7], "clear", cardworld.SUBJECTS_STD[i % 2], "none", "mid", "c", 0), wd, 5)
+        assert im.size == (1920, 1080) and im.mode == "RGB" and len(set(im.resize((48, 27)).getdata())) > 20, place
+    for i, shot in enumerate(cardworld.FRAMES_STD):
+        for prop in ("none", "letter", "hearts", "clock", "frames", "thread"):
+            cardworld.draw(cardworld.card("sea", "sunset", "clear", "duo_hands" if i % 2 else "solo_front", prop, shot, "c", i), wd, 5)
+    a = cardworld.card("sea", "sunset", "clear", "duo_hands", "none", "sil", "c", 0)
+    assert cardworld.draw(a, wd, 5).tobytes() == cardworld.draw(a, wd, 5).tobytes()
+    assert cardworld.draw(a, simple, 5).size == (1920, 1080)      # a simple world draws such a card as a plain one

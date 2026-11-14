@@ -16,7 +16,7 @@ import math
 import random
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from PIL import Image, ImageDraw, ImageEnhance
+from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter
 
 W, H, S = 1920, 1080, 2
 SKIN = (255, 224, 204)
@@ -46,6 +46,12 @@ PROPS = ("none", "stars", "shooting", "bigmoon", "hearts", "letter", "plane", "b
          "tears", "dots", "ask", "call", "notes", "lantern", "kite", "rainbow", "fireflies", "umbrella", "bike", "thread", "wings",
          "frames", "clock", "bubbles")
 FRAMES = ("wide", "mid", "close")
+# The standard grade (world["grade"] == "standard") has more of everything: places, ways to stand, and shots
+# that are not "people in front of a view": against the light, over a shoulder, two hands, things on a table.
+PLACES_STD = ("cafe", "busstop", "library", "train", "market", "snowtown", "garden", "alley", "field", "fair", "stairs", "riverbank")
+SUBJECTS_STD = ("solo_run", "duo_hug")
+FRAMES_STD = ("sil", "over", "hands", "still")
+INDOOR_STD = ("cafe", "library", "train")
 POSES = ("l", "c", "r")
 LINES = {"ink": ((50, 60, 92), 4), "brown": ((96, 68, 60), 5), "soft": (None, 3), "fine": ((74, 80, 100), 3)}
 HAIR_COLORS = ((92, 70, 70), (52, 48, 62), (134, 88, 62), (182, 134, 88), (116, 62, 70), (70, 84, 110))
@@ -65,25 +71,31 @@ LIGHT_ARCS = (("day", "golden", "sunset", "dusk"), ("dawn", "day", "golden"), ("
 
 
 # ---------------------------------------------------------------------------------------------- the world
-def make_world(seed: int) -> Dict[str, Any]:
-    r = random.Random(f"world:{int(seed)}")
-    out_places = [p for p in PLACES if p not in INDOOR]
-    places = r.sample(out_places, 4) + [r.choice(INDOOR)]
+def make_world(seed: int, grade: str = "simple") -> Dict[str, Any]:
+    std = grade == "standard"
+    r = random.Random(f"world:{int(seed)}:{grade}" if std else f"world:{int(seed)}")
+    indoor = INDOOR + (INDOOR_STD if std else ())
+    out_places = [p for p in PLACES + (PLACES_STD if std else ()) if p not in indoor]
+    places = (r.sample(out_places, 6) + r.sample(indoor, 2)) if std else (r.sample(out_places, 4) + [r.choice(INDOOR)])
     hue, sat = r.choice(PALETTES)
 
     def person(cuts, wears):
         return {"hair": list(r.choice(HAIR_COLORS)), "cut": r.choice(cuts), "wear": r.choice(wears), "top": list(r.choice(LIGHT_CLOTH)),
                 "low": list(r.choice(CLOTH)), "extra": r.choice(EXTRAS), "extra_col": list(r.choice(CLOTH))}
-    return {"v": 2, "places": places, "lights": list(r.choice(LIGHT_ARCS)), "hue": hue, "sat": sat, "line": r.choice(sorted(LINES)),
-            "border": r.choice(BORDERS), "lead": r.choice(("girl", "boy")), "girl": person(GIRL_CUTS, GIRL_WEAR),
-            "boy": person(BOY_CUTS, BOY_WEAR), "head": r.choice((1.0, 1.12, 1.24)), "ambient": r.choice(AMBIENT),
-            "subjects": r.sample(SUBJECTS[1:14], 13), "frames": r.sample(["wide", "wide", "mid", "mid", "mid", "close"], 6)}
+    wd = {"v": 2, "places": places, "lights": list(r.choice(LIGHT_ARCS)), "hue": hue, "sat": sat, "line": r.choice(sorted(LINES)),
+          "border": r.choice(BORDERS), "lead": r.choice(("girl", "boy")), "girl": person(GIRL_CUTS, GIRL_WEAR),
+          "boy": person(BOY_CUTS, BOY_WEAR), "head": r.choice((1.0, 1.12, 1.24)), "ambient": r.choice(AMBIENT),
+          "subjects": r.sample(SUBJECTS[1:14], 13), "frames": r.sample(["wide", "wide", "mid", "mid", "mid", "close"], 6)}
+    if std:      # taller people with smaller heads, and the extra ways to stand among the others
+        wd.update(grade="standard", head=r.choice((0.8, 0.86, 0.92)), tall=r.choice((38, 46, 54)),
+                  subjects=r.sample(SUBJECTS[1:14] + SUBJECTS_STD, 15), border=r.choice(("plain", "plain", "round", "film", "comic")))
+    return wd
 
 
 def world_distance(a: Dict[str, Any], b: Dict[str, Any]) -> float:
     """How unlike two songs' worlds are (larger: more unlike)."""
     d = 0.0
-    d += 3.0 * (5 - len(set(a.get("places", [])) & set(b.get("places", []))))
+    d += 3.0 * (min(len(a.get("places", [])), len(b.get("places", []))) - len(set(a.get("places", [])) & set(b.get("places", []))))
     d += 2.5 if a.get("line") != b.get("line") else 0
     d += 2.0 if (a.get("hue"), a.get("sat")) != (b.get("hue"), b.get("sat")) else 0
     d += 1.5 if a.get("lights") != b.get("lights") else 0
@@ -95,11 +107,11 @@ def world_distance(a: Dict[str, Any], b: Dict[str, Any]) -> float:
     return d
 
 
-def choose_world(seed: int, recent: Sequence[Dict[str, Any]] = ()) -> Dict[str, Any]:
+def choose_world(seed: int, recent: Sequence[Dict[str, Any]] = (), grade: str = "simple") -> Dict[str, Any]:
     """The song's world: of two dozen that its seed gives, the one least like the worlds of the songs before
     it (the nearest of them counts most), so a new song does not look like the last one."""
     recent = [w for w in recent if isinstance(w, dict) and w.get("v") == 2][-6:]
-    cands = [make_world(int(seed) * 32 + i) for i in range(24)]
+    cands = [make_world(int(seed) * 32 + i, grade) for i in range(24)]
     if not recent:
         return cands[0]
 
@@ -111,9 +123,10 @@ def choose_world(seed: int, recent: Sequence[Dict[str, Any]] = ()) -> Dict[str, 
 
 def valid_world(wd: Any) -> bool:
     try:
-        return (wd.get("v") == 2 and len(wd["places"]) >= 1 and all(p in PLACES for p in wd["places"])
+        return (wd.get("v") == 2 and len(wd["places"]) >= 1 and all(p in PLACES + PLACES_STD for p in wd["places"])
                 and all(x in LIGHTS for x in wd["lights"]) and wd["line"] in LINES and wd["border"] in BORDERS
-                and wd["lead"] in ("girl", "boy") and all(s in SUBJECTS for s in wd["subjects"]) and all(f in FRAMES for f in wd["frames"])
+                and wd.get("grade", "simple") in ("simple", "standard") and float(wd.get("tall", 0)) >= 0
+                and wd["lead"] in ("girl", "boy") and all(s in SUBJECTS + SUBJECTS_STD for s in wd["subjects"]) and all(f in FRAMES for f in wd["frames"])
                 and wd["girl"]["cut"] in GIRL_CUTS and wd["boy"]["cut"] in BOY_CUTS and float(wd["head"]) > 0)
     except Exception:  # noqa: BLE001
         return False
@@ -213,8 +226,9 @@ def card(place, light, weather, subject, prop, frame, pos, n) -> str:
 
 def parse(spec: str) -> Optional[Tuple[str, str, str, str, str, str, str, int]]:
     p = str(spec or "").split("|")
-    if (len(p) == 9 and p[0] == "w2" and p[1] in PLACES and p[2] in LIGHTS and p[3] in WEATHERS and p[4] in SUBJECTS
-            and p[5] in PROPS and p[6] in FRAMES and p[7] in POSES and p[8].isdigit() and len(p[8]) <= 4):
+    if (len(p) == 9 and p[0] == "w2" and p[1] in PLACES + PLACES_STD and p[2] in LIGHTS and p[3] in WEATHERS
+            and p[4] in SUBJECTS + SUBJECTS_STD and p[5] in PROPS and p[6] in FRAMES + FRAMES_STD and p[7] in POSES
+            and p[8].isdigit() and len(p[8]) <= 4):
         return p[1], p[2], p[3], p[4], p[5], p[6], p[7], int(p[8])
     return None
 
@@ -307,6 +321,10 @@ class K:
         self.hue, self.sat = float(world["hue"]), float(world["sat"])
         self.dark = light in ("night", "dusk")
         self.sky3 = [self.pal(col) for col in self.L["sky"]]
+        self.flat = None      # set: everything is painted in this one colour (people against the light)
+        self.mood = "smile"   # the faces: smile | sad | closed | wow
+        self.rim = 0          # -1 / 1: light from the left / right draws a bright edge on people
+        self.std = world.get("grade") == "standard"
 
     def pal(self, col):
         r, g, b = col[:3]
@@ -316,6 +334,8 @@ class K:
         return (int(round(r)), int(round(g)), int(round(b)))
 
     def c(self, col, skin=False, e=False):
+        if self.flat and len(col) == 3:
+            return self.flat
         if e:
             return tuple(col)
         base = tuple(col[:3]) if skin else self.pal(col)
@@ -327,7 +347,14 @@ class K:
         return _mix(self.c(col), self.sky3[2], k)
 
     def edge(self, fill):
+        if self.flat:
+            return self.flat
         return self.ink if self.ink else tuple(int(v * 0.6) for v in fill[:3])
+
+    def blur(self, radius=7):
+        """Put what is painted so far out of focus (what comes after it stays sharp)."""
+        small = self.im.resize((W // 2, H // 2), Image.BILINEAR).filter(ImageFilter.GaussianBlur(radius))
+        self.im.paste(small.resize((W * S, H * S), Image.BILINEAR))
 
     def ell(self, x, y, rx, ry, fill, line=True, skin=False, e=False, raw=False):
         f = tuple(fill) if raw else self.c(fill, skin, e)
@@ -803,7 +830,8 @@ def figure(k, who, x, y, s, face="front", arms="down", sit=False, walk=False):
     hd = float(k.w["head"])
     hair, top, low, ecol = tuple(p["hair"]), tuple(p["top"]), tuple(p["low"]), tuple(p["extra_col"])
     cut, wear, extra = p["cut"], p["wear"], p["extra"]
-    b = y + (48 * s if sit else 0)             # where the feet would be standing: the body hangs from here
+    tall = float(k.w.get("tall", 0) or 0)
+    b = y + (48 * s if sit else -tall * s)     # where the feet would be standing: the body hangs from here
     hy, hr = b - (222 + 38 * hd) * s, 46 * hd * s
     back = face == "back"
     if wear == "hoodie":
@@ -820,6 +848,8 @@ def figure(k, who, x, y, s, face="front", arms="down", sit=False, walk=False):
     fl, fr = (x - 24 * s, y), (x + 24 * s, y)
     if walk:
         fl, fr = (x - 52 * s, y - 4 * s), (x + 46 * s, y)
+        if walk > 1:
+            fl, fr = (x - 88 * s, y - 30 * s), (x + 70 * s, y)
     leg = SKIN if girl else low
     k.limb([(x - 22 * s, b - 112 * s), fl], leg, 13 * s, skin=girl); k.limb([(x + 22 * s, b - 112 * s), fr], leg, 13 * s, skin=girl)
     for fx, fy in (fl, fr):
@@ -860,20 +890,30 @@ def figure(k, who, x, y, s, face="front", arms="down", sit=False, walk=False):
         k.d.pieslice([P(x - hr * 1.05), P(hy - hr * 1.09), P(x + hr * 1.05), P(hy + hr * 0.86)], 180, 360, fill=hc, outline=k.edge(hc), width=P(k.lw))
         if not girl and cut == "fringe": k.poly([(x - hr * 0.9, hy - hr * 0.1), (x + hr * 0.2, hy - hr * 0.1), (x - hr * 0.5, hy + hr * 0.3)], hair, line=False)
         dx = {"front": 0, "left": -9, "right": 9}[face] * hd * s
-        for e in (-16, 16): k.ell(x + e * hd * s + dx, hy + hr * 0.14, 5 * hd * s, 7 * hd * s, (46, 50, 74), line=False)
-        for e in (-27, 27): k.ell(x + e * hd * s + dx, hy + hr * 0.44, 9 * hd * s, 6 * hd * s, (255, 168, 168, 150), line=False, e=True)
-        k.d.arc([P(x - 8 * hd * s + dx), P(hy + hr * 0.36), P(x + 8 * hd * s + dx), P(hy + hr * 0.62)], 20, 160, fill=(120, 70, 80), width=P(3))
+        mood = k.mood
+        for e in (-16, 16):
+            if mood == "closed": k.d.arc([P(x + e * hd * s + dx - 8 * hd * s), P(hy + hr * 0.02), P(x + e * hd * s + dx + 8 * hd * s), P(hy + hr * 0.26)], 20, 160, fill=(46, 50, 74), width=P(max(2, 3 * s)))
+            else: k.ell(x + e * hd * s + dx, hy + hr * 0.14, (6.5 if mood == "wow" else 5) * hd * s, (9 if mood == "wow" else 7) * hd * s, (46, 50, 74), line=False)
+        if not k.flat:
+            for e in (-27, 27): k.ell(x + e * hd * s + dx, hy + hr * 0.44, 9 * hd * s, 6 * hd * s, (255, 168, 168, 150), line=False, e=True)
+            if mood == "sad": k.d.arc([P(x - 8 * hd * s + dx), P(hy + hr * 0.5), P(x + 8 * hd * s + dx), P(hy + hr * 0.76)], 200, 340, fill=(120, 70, 80), width=P(max(2, 3 * s)))
+            elif mood == "wow": k.ell(x + dx, hy + hr * 0.56, 5 * hd * s, 6 * hd * s, (150, 80, 90), line=False)
+            else: k.d.arc([P(x - 8 * hd * s + dx), P(hy + hr * 0.36), P(x + 8 * hd * s + dx), P(hy + hr * 0.62)], 20, 160, fill=(120, 70, 80), width=P(max(2, 3 * s)))
         if extra == "glasses":
             for e in (-16, 16): k.d.ellipse([P(x + e * hd * s + dx - 13 * hd * s), P(hy + hr * 0.14 - 12 * hd * s), P(x + e * hd * s + dx + 13 * hd * s), P(hy + hr * 0.14 + 12 * hd * s)], outline=(60, 66, 90), width=P(3))
             k.stroke([(x - 3 * hd * s + dx, hy + hr * 0.14), (x + 3 * hd * s + dx, hy + hr * 0.14)], (60, 66, 90), 3, raw=True)
     if girl and cut == "bun": k.ell(x, hy - hr * 1.12, hr * 0.44, hr * 0.4, hair)
     if not girl and cut == "spiky":
-        for i in (-1, 0, 1): k.poly([(x + i * hr * 0.5 - hr * 0.3, hy - hr * 0.8), (x + i * hr * 0.62, hy - hr * 1.44), (x + i * hr * 0.5 + hr * 0.3, hy - hr * 0.8)], hair, line=False)
+        for i in (-2, -1, 0, 1, 2): k.poly([(x + i * hr * 0.36 - hr * 0.24, hy - hr * 0.84), (x + i * hr * 0.42, hy - hr * (1.3 - abs(i) * 0.08)), (x + i * hr * 0.36 + hr * 0.24, hy - hr * 0.84)], hair, line=False)
     if extra == "hat":
         k.ell(x, hy - hr * 0.62, hr * 1.36, hr * 0.26, ecol); k.d.pieslice([P(x - hr * 0.92), P(hy - hr * 1.5), P(x + hr * 0.92), P(hy + hr * 0.2)], 180, 360, fill=k.c(ecol), outline=k.edge(k.c(ecol)), width=P(k.lw))
     elif extra == "ribbon" and girl:
         rx, ry = x + hr * 0.62, hy - hr * 0.9
         k.poly([(rx, ry), (rx - 26 * s, ry - 18 * s), (rx - 26 * s, ry + 18 * s)], ecol); k.poly([(rx, ry), (rx + 26 * s, ry - 18 * s), (rx + 26 * s, ry + 18 * s)], ecol)
+    if k.rim:                                  # the light behind: a bright edge on that side
+        a0, a1 = (-70, 70) if k.rim > 0 else (110, 250)
+        k.d.arc([P(x - hr * 1.04), P(hy - hr * 1.06), P(x + hr * 1.04), P(hy + hr * 1.0)], a0, a1, fill=(255, 244, 214, 230), width=P(max(3, 5 * s)))
+        k.d.line([(P(x + k.rim * 43 * s), P(b - 214 * s)), (P(x + k.rim * 43 * s), P(b - 150 * s))], fill=(255, 244, 214, 210), width=P(max(3, 5 * s)))
     return {"x": x, "y": y, "s": s, "head": (x, hy, hr), "hands": hands, "top": b - 222 * s}
 
 
@@ -898,6 +938,9 @@ def people(k, subject, pos, frame, ground, n):
     if subject == "solo_back": return [figure(k, lead, x, y, s, "back"), None]
     if subject == "other_back": return [None, figure(k, other, x, y, s, "back")]
     if subject == "solo_walk": return [figure(k, lead, x, y, s, "left" if pos == "r" else "right", "fwd_l" if pos == "r" else "fwd_r", walk=True), None]
+    if subject == "solo_run": return [figure(k, lead, x, y, s, "left" if pos == "r" else "right", "out", walk=2), None]
+    if subject == "duo_hug":
+        return [figure(k, lead, 960 - 52 * s, y, s, "right", "hold_r"), figure(k, other, 960 + 52 * s, y, s, "left", "hold_l")]
     if subject == "solo_reach": return [figure(k, lead, x, y, s, "front" if flip else "back", "up"), None]
     if subject == "solo_open": return [figure(k, lead, x, y, s, "front" if flip else "back", "out"), None]
     if subject == "solo_wave": return [figure(k, lead, x, y, s, "front", "wave"), None]
@@ -1135,28 +1178,486 @@ def draw(spec: str, world: Dict[str, Any], seed: int = 0) -> Image.Image:
     place, light, wth, subject, prop, frame, pos, n = got
     import zlib
     k = K(world, light, zlib.crc32(spec.encode()) + int(seed) % 999983)
+    std = k.std
+    if frame in FRAMES_STD and not std:
+        frame = "mid"
     k.sky()
+    sun = None
     if wth == "clear" and place != "forest":
-        k.orb(horizon=680)
+        sun = k.orb(horizon=680, side=("l" if pos == "r" else "r") if frame == "sil" else None)
     if place != "forest":
         k.clouds()
     thing(k, prop, "back", None, 0)
     info = PLACE_FN[place](k) or {}
     ground = float(info.get("ground", 900))
-    probe = {"l": 560, "c": 960, "r": 1360}[pos]
-    who = None
-    if prop in ("bike", "wings", "clover") and subject != "none":
-        # these go behind the person, who is not there yet: work out where the person will be
-        s = {"wide": 0.82, "mid": 1.14, "close": 2.2}[frame]
-        y = 1130 if frame == "close" else ground + (6 if frame == "wide" else 28)
-        b = y + (48 * s if subject.endswith("sit") else 0)
-        who = [{"x": probe if not subject.startswith("duo") else 960 - 84 * s, "y": y, "s": s, "top": b - 222 * s}, None]
-    thing(k, prop, "mid", who, ground)
-    if frame == "close":
-        PLACE_FN[place](k, True)
-    who = people(k, subject, pos, frame, ground, n)
-    if frame != "close":
-        PLACE_FN[place](k, True)
-    thing(k, prop, "front", who, ground)
+    if std:
+        k.mood = MOODS.get(prop, "sad" if subject in SAD_SUBJECTS else "smile")
+        if sun and place not in INDOOR + INDOOR_STD and light in ("golden", "sunset", "dawn", "dusk", "night"):
+            k.rim = 1 if sun[0] > 960 else -1
+    if frame == "still":
+        k.blur(9)
+        shot_still(k, prop, n)
+        thing(k, prop if prop in ("petals", "leaves", "fireflies", "bubbles", "notes") else "none", "front", [None, None], ground)
+    elif frame == "hands":
+        k.blur(9)
+        shot_hands(k, subject, prop, n)
+        thing(k, prop if prop in ("petals", "leaves", "fireflies", "bubbles") else "none", "front", [None, None], ground)
+    else:
+        shot = "mid" if frame in ("sil", "over") else frame
+        probe = {"l": 560, "c": 960, "r": 1360}[pos]
+        who = None
+        if prop in ("bike", "wings", "clover") and subject != "none":
+            # these go behind the person, who is not there yet: work out where the person will be
+            s = {"wide": 0.82, "mid": 1.14, "close": 2.2}[shot]
+            y = 1130 if shot == "close" else ground + (6 if shot == "wide" else 28)
+            b = y + (48 * s if subject.endswith("sit") else -float(world.get("tall", 0) or 0) * s)
+            who = [{"x": probe if not subject.startswith("duo") else 960 - 84 * s, "y": y, "s": s, "top": b - 222 * s}, None]
+        thing(k, prop, "mid", who, ground)
+        if frame == "sil":       # against the light: the ground and the people are dark shapes
+            k.d.rectangle([0, P(ground - 40), W * S, H * S], fill=(24, 22, 46, 150))
+            k.flat = _mix((26, 24, 48), k.sky3[0], 0.12)
+        if shot == "close" or frame == "over":
+            PLACE_FN[place](k, True)
+        if frame == "over":
+            k.blur(5)
+        who = people(k, subject, pos, shot, ground, n)
+        if shot != "close" and frame != "over":
+            PLACE_FN[place](k, True)
+        k.flat = None
+        if frame == "over":      # someone's shoulder and head in front, looking on
+            k.blur(3)
+            watcher = "boy" if world["lead"] == "girl" else "girl"
+            rim, k.rim = k.rim, 0
+            figure(k, watcher, 330 if pos != "l" else 1590, 1900, 4.2, "back")
+            k.rim = rim
+        thing(k, prop, "front", who, ground)
     weather(k, wth)
-    return _finish(k, world["border"])
+    im = _finish(k, world["border"])
+    return _finish_standard(im, zlib.crc32(spec.encode())) if std else im
+
+
+# ------------------------------------------------------------------------- the standard grade: more places
+def pl_cafe(k, front=False):
+    if front:
+        k.rect(-10, 990, W + 10, H + 20, (176, 128, 100)); k.rect(-10, 968, W + 10, 996, (206, 156, 122), r=6)
+        return None
+    wall = k.r.choice(((250, 236, 214), (236, 226, 214), (240, 232, 226)))
+    k.rect(-10, -10, W + 10, 120, wall, line=False); k.rect(-10, 700, W + 10, 880, wall, line=False)
+    for x in (-10, 930, 1870):
+        k.rect(x, 110, x + 60, 710, wall, line=False)
+    for x0, x1 in ((50, 930), (990, 1870)):
+        k.rect(x0, 120, x1, 700, (255, 255, 255, 26)); k.stroke([(x0, 250), (x1, 250)], None, k.lw)
+    k.rect(-10, 700, W + 10, 726, (206, 156, 122))
+    for x in (300, 760, 1220, 1680):
+        k.stroke([(x, -10), (x, 150)], (90, 84, 96), 4)
+        k.d.ellipse([P(x - 120), P(120), P(x + 120), P(360)], fill=(255, 232, 170, 30))
+        k.poly([(x - 46, 210), (x + 46, 210), (x + 24, 150), (x - 24, 150)], (240, 190, 120)); k.ell(x, 214, 22, 12, (255, 244, 190), e=True)
+    k.band(880, H, (214, 180, 150), (190, 152, 124)); k.stroke([(0, 880), (W, 880)], None, k.lw)
+    for x in (k.r.uniform(160, 330), k.r.uniform(1560, 1740)):
+        k.rect(x - 110, 760, x + 110, 782, (206, 156, 122), r=6); k.rect(x - 10, 782, x + 10, 900, (150, 110, 92))
+        k.rect(x - 34, 716, x - 6, 760, (255, 255, 255), r=6); k.rect(x + 20, 728, x + 60, 760, (240, 150, 130), r=6)
+    return {"ground": 950}
+
+
+def pl_busstop(k, front=False):
+    if front:
+        return None
+    k.ridge(690, 34, (140, 196, 176), far=0.55)
+    for i in range(7):
+        k.tree(i * 320 - 60 + k.r.uniform(-60, 60), 800, k.r.uniform(0.8, 1.1), far=0.45)
+    k.band(800, 880, (226, 224, 226), (204, 202, 210)); k.band(880, H, (150, 154, 170), (122, 126, 150))
+    k.stroke([(0, 800), (W, 800)], None, k.lw); k.stroke([(0, 880), (W, 880)], None, k.lw)
+    for x in range(40, W, 280):
+        k.rect(x, 976, x + 130, 990, (240, 240, 244), line=False)
+    x = k.r.choice((520, 1400))
+    k.rect(x - 250, 470, x + 250, 500, (120, 150, 190), r=8)
+    for sx in (-236, 236):
+        k.rect(x + sx - 8, 500, x + sx + 8, 860, (120, 128, 150))
+    k.rect(x - 228, 520, x + 228, 760, (220, 240, 250, 90), r=4); k.rect(x - 180, 800, x + 180, 818, (206, 156, 122), r=5)
+    sx = x + (330 if x < 960 else -330)
+    k.rect(sx - 6, 520, sx + 6, 860, (120, 128, 150)); k.ell(sx, 500, 44, 44, (250, 214, 96)); k.rect(sx - 22, 492, sx + 22, 508, (96, 110, 150), line=False)
+    k.lamp(W - x + k.r.uniform(-120, 120), 860, 400)
+    return {"ground": 866}
+
+
+def pl_library(k, front=False):
+    if front:
+        return None
+    k.rect(-10, -10, W + 10, 890, (238, 226, 208), line=False)
+    wx = k.r.choice((660, 960, 1260))
+    cols = ((214, 110, 104), (96, 150, 190), (232, 180, 90), (120, 176, 130), (150, 120, 190), (236, 228, 214), (84, 96, 130))
+    for x0 in range(-60, W, 300):
+        if abs(x0 + 130 - wx) < 200:
+            continue
+        k.rect(x0, 120, x0 + 260, 880, (176, 128, 100))
+        for sh in range(5):
+            y1 = 250 + sh * 150
+            k.rect(x0 + 14, y1 - 116, x0 + 246, y1, (120, 86, 72), line=False)
+            bx = x0 + 18
+            while bx < x0 + 232:
+                bw, bh = k.r.uniform(12, 26), k.r.uniform(74, 110)
+                k.rect(bx, y1 - bh, bx + bw, y1, k.r.choice(cols), line=False, r=2)
+                bx += bw + 2
+    k.rect(wx - 170, 150, wx + 170, 700, (255, 255, 255, 30)); k.stroke([(wx, 150), (wx, 700)], None, k.lw)
+    k.rect(wx - 190, 700, wx + 190, 724, (206, 156, 122))
+    k.d.polygon([(P(wx - 170), P(700)), (P(wx + 170), P(700)), (P(wx + 480), P(H)), (P(wx - 480), P(H))], fill=(255, 244, 200, 30))
+    k.band(880, H, (206, 170, 134), (176, 140, 110)); k.stroke([(0, 880), (W, 880)], None, k.lw)
+    return {"ground": 950}
+
+
+def pl_train(k, front=False):
+    if front:
+        return None
+    k.ridge(560, 40, (140, 196, 176), far=0.5); k.ridge(640, 26, (150, 206, 150), far=0.25)
+    for _ in range(5):
+        x = k.r.uniform(0, W)
+        k.rect(x, 590, x + 60, 650, k.far((250, 236, 220), 0.3), line=False, raw=True)
+    wall = k.r.choice(((236, 238, 240), (240, 232, 220), (226, 236, 232)))
+    k.rect(-10, -10, W + 10, 200, wall, line=False); k.rect(-10, 660, W + 10, 900, wall, line=False)
+    for x in (-10, 600, 1260, 1880):
+        k.rect(x, 190, x + 60, 670, wall, line=False)
+    for x0, x1 in ((50, 600), (660, 1260), (1320, 1880)):
+        k.rect(x0, 200, x1, 660, (255, 255, 255, 24), r=30)
+    k.stroke([(0, 120), (W, 120)], (150, 156, 170), 8)
+    for x in range(120, W, 160):
+        k.stroke([(x, 120), (x, 190)], (150, 156, 170), 4); k.d.ellipse([P(x - 22), P(190), P(x + 22), P(234)], outline=k.c((240, 240, 244)), width=P(7))
+    seat = k.r.choice(((96, 150, 190), (120, 170, 130), (190, 110, 110), (150, 120, 180)))
+    k.rect(-10, 700, W + 10, 790, seat, r=20); k.rect(-10, 790, W + 10, 880, _mix(seat, (30, 30, 50), 0.2))
+    k.band(880, H, (196, 198, 204), (160, 164, 176)); k.stroke([(0, 880), (W, 880)], None, k.lw)
+    return {"ground": 960}
+
+
+def pl_market(k, front=False):
+    if front:
+        return None
+    for i in range(12):
+        x, h = i * 170 - 30, k.r.uniform(200, 420)
+        k.rect(x, 720 - h, x + 150, 740, k.far((110, 120, 160), 0.4), line=False, raw=True)
+        k.windows(x + 18, 730 - h + 14, x + 132, 700, lit=0.4)
+    k.stroke([(0, 300), (480, 380), (960, 300), (1440, 380), (W, 300)], (90, 84, 96), 3)
+    for i in range(16):
+        x = 60 + i * 120
+        y = 300 + (80 if (i // 4) % 2 == 0 else -80) * (((i % 4) + 0.5) / 4 if (i // 4) % 2 == 0 else 1 - ((i % 4) + 0.5) / 4) + (0 if (i // 4) % 2 == 0 else 80)
+        col = ((255, 120, 110), (255, 214, 110), (150, 220, 170), (150, 190, 255))[i % 4]
+        k.d.ellipse([P(x - 60), P(y - 40), P(x + 60), P(y + 80)], fill=col + (36,))
+        k.ell(x, y + 22, 18, 24, col, e=True)
+    x = -40
+    while x < W:
+        wd, col = k.r.uniform(300, 400), k.r.choice(((226, 96, 96), (236, 170, 70), (80, 150, 170), (150, 110, 180)))
+        k.rect(x + 20, 560, x + wd - 20, 840, (255, 240, 200), e=True)
+        for i in range(int(wd // 50)):
+            k.rect(x + 34 + i * 50, 700, x + 70 + i * 50, 740, k.r.choice(((255, 150, 130), (255, 220, 120), (170, 220, 150), (255, 255, 255))), line=False, r=8, e=True)
+        k.rect(x + 10, 740, x + wd - 10, 850, (176, 128, 100)); k.poly([(x, 560), (x + wd, 560), (x + wd - 30, 480), (x + 30, 480)], col)
+        for i in range(int(wd // 60)):
+            k.poly([(x + i * 60, 560), (x + i * 60 + 30, 590), (x + i * 60 + 60, 560)], col, line=False)
+        x += wd
+    k.band(850, H, (150, 146, 160), (116, 114, 136)); k.stroke([(0, 850), (W, 850)], None, k.lw)
+    return {"ground": 930}
+
+
+def pl_snowtown(k, front=False):
+    if front:
+        for _ in range(60):
+            x, y, rr = k.r.uniform(0, W), k.r.uniform(0, H), k.r.uniform(4, 11)
+            k.d.ellipse([P(x - rr), P(y - rr), P(x + rr), P(y + rr)], fill=(255, 255, 255, k.r.randint(150, 240)))
+        return None
+    k.ridge(650, 44, (226, 236, 246), far=0.3)
+    for i in range(6):
+        k.tree(i * 400 + k.r.uniform(-80, 80), 790, k.r.uniform(0.7, 1.0), col=(120, 170, 160), far=0.3, kind="pine")
+    x = -30
+    while x < W:
+        wd, h = k.r.uniform(200, 300), k.r.uniform(130, 210)
+        col = k.r.choice(((236, 200, 180), (214, 190, 170), (226, 214, 190), (200, 180, 190)))
+        k.rect(x + 20, 800 - h, x + wd - 20, 810, col)
+        k.poly([(x, 800 - h), (x + wd / 2, 800 - h - 110), (x + wd, 800 - h)], (255, 255, 255))
+        k.rect(x + wd / 2 - 24, 800 - h + 40, x + wd / 2 + 24, 800 - h + 96, (255, 232, 150) if k.dark else (190, 220, 240), r=4, e=k.dark)
+        k.rect(x + 40, 740, x + 84, 810, (150, 104, 88), r=4)
+        x += wd + k.r.uniform(10, 60)
+    k.band(800, H, (255, 255, 255), (220, 232, 246)); k.ridge(800, 10, (255, 255, 255), rough=0.9)
+    k.lamp(k.r.choice((380, 1540)), 880, 380)
+    return {"ground": 900}
+
+
+def pl_garden(k, front=False):
+    if front:
+        return pl_flowers(k, True)
+    k.ridge(680, 30, (140, 200, 170), far=0.55)
+    for i in range(8):
+        k.tree(i * 280 - 40 + k.r.uniform(-50, 50), 780, k.r.uniform(0.8, 1.0), far=0.4, col=k.r.choice(((118, 190, 132), (255, 196, 214))))
+    k.band(780, H, (176, 226, 164), (130, 196, 134)); k.stroke([(0, 780), (W, 780)], None, max(2, k.lw - 1))
+    for x in range(0, W + 1, 70):
+        k.rect(x - 9, 720, x + 9, 800, (255, 252, 244), r=6)
+    k.rect(-10, 742, W + 10, 756, (255, 252, 244))
+    ax = k.r.uniform(700, 1220)
+    k.d.arc([P(ax - 240), P(330), P(ax + 240), P(1290)], 180, 360, fill=k.c((150, 110, 92)), width=P(18))
+    for i in range(26):
+        a = math.pi + i * math.pi / 25
+        x, y = ax + math.cos(a) * 240, 810 + math.sin(a) * 480
+        k.ell(x, y, 26, 22, (104, 180, 124), line=False); k.ell(x + k.r.uniform(-12, 12), y + k.r.uniform(-12, 12), 13, 13, k.r.choice(((255, 150, 170), (255, 222, 110), (255, 255, 255), (200, 160, 240))), line=False)
+    k.poly([(ax - 150, 780), (ax + 150, 780), (ax + 420, H + 20), (ax - 420, H + 20)], (240, 226, 196), line=False)
+    return {"ground": 900}
+
+
+def pl_alley(k, front=False):
+    if front:
+        return None
+    k.rect(700, 300, 1220, 820, k.far((170, 180, 200), 0.5), line=False, raw=True)
+    for side in (0, 1):
+        x0, x1 = (-10, 620) if side == 0 else (1300, W + 10)
+        k.rect(x0, -10, x1, 840, k.r.choice(((236, 220, 200), (220, 226, 232), (240, 228, 214), (226, 214, 226))))
+        k.windows(x0 + 70, 110, x1 - 70, 520, cw=96, ch=120, gap=70, lit=0.6)
+        dx = x1 - 190 if side == 0 else x0 + 60
+        k.rect(dx, 590, dx + 130, 840, (150, 110, 92), r=6); k.poly([(dx - 30, 590), (dx + 160, 590), (dx + 140, 540), (dx - 10, 540)], k.r.choice(((226, 110, 110), (96, 160, 170), (232, 180, 90))))
+        px = x0 + 80 if side == 0 else x1 - 150
+        k.rect(px, 760, px + 70, 840, (220, 130, 100), r=8)
+        for a in (-0.5, 0, 0.5):
+            k.ell(px + 35 + math.sin(a) * 40, 720 - math.cos(a) * 10, 22, 46, (110, 186, 130))
+    for y in (200, 330):
+        k.stroke([(620, y), (960, y + 60), (1300, y - 10)], (90, 84, 96), 3)
+    for i in range(6):
+        k.rect(700 + i * 86, 262 + (i % 2) * 14 + 20, 760 + i * 86, 340 + (i % 2) * 14 + 20, k.r.choice(((255, 255, 255), (250, 200, 196), (190, 220, 236), (250, 232, 170))), r=4)
+    k.band(820, H, (196, 190, 190), (160, 156, 164)); k.stroke([(0, 838), (W, 838)], None, k.lw)
+    k.poly([(700, 820), (1220, 820), (1560, H + 20), (360, H + 20)], (214, 208, 204), line=False)
+    return {"ground": 920}
+
+
+def pl_field(k, front=False):
+    if front:
+        for _ in range(110):
+            x, y = k.r.uniform(0, W), k.r.uniform(960, H + 20)
+            k.stroke([(x, y), (x + k.r.uniform(-14, 14), y - k.r.uniform(60, 130))], (226, 190, 96), 5)
+        return None
+    k.ridge(660, 36, (140, 196, 176), far=0.6)
+    mx = k.r.choice((380, 1540))
+    k.poly([(mx - 34, 720), (mx - 20, 560), (mx + 20, 560), (mx + 34, 720)], k.far((250, 240, 226), 0.25), raw=True)
+    for i in range(4):
+        a = i * math.pi / 2 + 0.5
+        k.poly([(mx, 560), (mx + math.cos(a) * 130 - math.sin(a) * 18, 560 + math.sin(a) * 130 + math.cos(a) * 18), (mx + math.cos(a) * 130 + math.sin(a) * 18, 560 + math.sin(a) * 130 - math.cos(a) * 18)], k.far((236, 226, 214), 0.2), raw=True)
+    k.band(720, H, (244, 222, 140), (214, 180, 96))
+    for row in range(12):
+        y = 730 + row * row * 2.6
+        k.stroke([(0, y), (W, y)], (206, 170, 90, 120), 2 + row * 0.5)
+    k.poly([(900, 720), (1000, 720), (1300, H + 20), (640, H + 20)], (226, 206, 170), line=False)
+    sx = W - mx
+    k.stroke([(sx, 880), (sx, 700)], (150, 110, 92), 8); k.stroke([(sx - 70, 740), (sx + 70, 740)], (150, 110, 92), 8)
+    k.ell(sx, 690, 26, 26, (250, 232, 190)); k.poly([(sx - 44, 676), (sx + 44, 676), (sx, 630)], (214, 150, 90))
+    return {"ground": 900}
+
+
+def pl_fair(k, front=False):
+    if front:
+        return None
+    fx, fy, rr = k.r.choice((560, 1360)), 430, 300
+    k.d.ellipse([P(fx - rr), P(fy - rr), P(fx + rr), P(fy + rr)], outline=k.far((150, 160, 200), 0.2), width=P(10))
+    for i in range(12):
+        a = i * math.pi / 6
+        k.d.line([(P(fx), P(fy)), (P(fx + math.cos(a) * rr), P(fy + math.sin(a) * rr))], fill=k.far((150, 160, 200), 0.3), width=P(5))
+        cx, cy = fx + math.cos(a) * rr, fy + math.sin(a) * rr
+        k.rect(cx - 30, cy - 6, cx + 30, cy + 44, ((255, 150, 150), (255, 220, 120), (150, 214, 190), (170, 190, 255))[i % 4], r=10, e=k.dark)
+    k.poly([(fx - 120, 820), (fx, fy), (fx + 120, 820)], k.far((130, 140, 180), 0.2), line=False, raw=True)
+    x = -20
+    while x < W:
+        wd = k.r.uniform(240, 340)
+        if abs(x + wd / 2 - fx) > 260:
+            col = k.r.choice(((232, 110, 110), (96, 160, 200), (236, 180, 80), (150, 120, 190)))
+            k.rect(x + 30, 660, x + wd - 30, 830, (255, 248, 230))
+            for i in range(6):
+                k.poly([(x + 10 + i * (wd - 20) / 6, 660), (x + wd / 2, 540), (x + 10 + (i + 1) * (wd - 20) / 6, 660)], col if i % 2 == 0 else (255, 255, 255))
+            k.stroke([(x + wd / 2, 540), (x + wd / 2, 500)], None, 4); k.poly([(x + wd / 2, 500), (x + wd / 2 + 40, 512), (x + wd / 2, 524)], col)
+        x += wd
+    k.stroke([(0, 600), (W / 2, 660), (W, 600)], (90, 84, 96), 3)
+    for i in range(20):
+        t = i / 19
+        x, y = t * W, 600 + math.sin(t * math.pi) * 60
+        k.ell(x, y + 14, 12, 16, ((255, 120, 110), (255, 214, 110), (150, 220, 170), (150, 190, 255))[i % 4], line=False, e=True)
+    k.band(830, H, (232, 214, 190), (204, 184, 160)); k.stroke([(0, 830), (W, 830)], None, k.lw)
+    return {"ground": 910}
+
+
+def pl_stairs(k, front=False):
+    if front:
+        return None
+    k.ridge(600, 40, (130, 190, 160), far=0.5)
+    for i in range(7):
+        k.tree(k.r.uniform(-40, 520) if i % 2 else k.r.uniform(1400, W + 40), k.r.uniform(700, 860), k.r.uniform(1.0, 1.5), col=k.r.choice(((104, 176, 124), (118, 190, 132), (250, 190, 110), (232, 120, 110))))
+    k.band(860, H, (170, 214, 150), (126, 186, 126))
+    for i in range(12):
+        t = i / 11
+        y, half = 470 + t * t * 520 + t * 90, 120 + t * 420
+        k.rect(960 - half, y, 960 + half, y + 30 + t * 60, _mix((226, 222, 216), (190, 186, 190), i % 2 * 0.5 + 0.1))
+    for sx in (-1, 1):
+        for i in range(4):
+            t = (i + 0.5) / 4
+            x, y = 960 + sx * (170 + t * 430), 500 + t * t * 500 + t * 90
+            sz = 0.5 + t * 0.9
+            k.rect(x - 8 * sz, y - 150 * sz, x + 8 * sz, y, (120, 100, 96)); k.rect(x - 34 * sz, y - 210 * sz, x + 34 * sz, y - 150 * sz, (255, 232, 160) if k.dark else (250, 244, 232), r=6, e=k.dark)
+            k.poly([(x - 46 * sz, y - 210 * sz), (x + 46 * sz, y - 210 * sz), (x, y - 250 * sz)], (190, 90, 90))
+            if k.dark:
+                k.d.ellipse([P(x - 110 * sz), P(y - 290 * sz), P(x + 110 * sz), P(y - 70 * sz)], fill=(255, 226, 150, 34))
+    return {"ground": 1010}
+
+
+def pl_riverbank(k, front=False):
+    if front:
+        return pl_meadow(k, True)
+    for i in range(12):
+        x, h = i * 170 + k.r.uniform(-30, 30), k.r.uniform(70, 230)
+        k.rect(x, 640 - h, x + 130, 650, k.far((130, 140, 176), 0.6), line=False, raw=True)
+    k.band(640, 760, (170, 216, 238), (112, 176, 216))
+    for i in range(7):
+        y, x = 656 + i * 15, k.r.uniform(0, W - 300)
+        k.stroke([(x, y), (x + k.r.uniform(100, 300), y)], (255, 255, 255, 110), 3)
+    k.rect(-10, 560, W + 10, 584, k.far((150, 150, 170), 0.3), line=False, raw=True)
+    for x in range(100, W, 330):
+        k.rect(x, 584, x + 30, 660, k.far((150, 150, 170), 0.3), line=False, raw=True)
+    pts = [(x, 740 + (x / W) * 130 * (1 if k.r is None else 1)) for x in range(-30, W + 60, 60)]
+    k.poly(pts + [(W + 30, H + 30), (-30, H + 30)], (160, 214, 150))
+    k.poly([(-30, 930), (W + 30, 990), (W + 30, 1040), (-30, 990)], (226, 214, 196), line=False)
+    k.tree(k.r.choice((200, 1700)), 900, 1.2)
+    return {"ground": 920}
+
+
+PLACE_FN.update({"cafe": pl_cafe, "busstop": pl_busstop, "library": pl_library, "train": pl_train, "market": pl_market,
+                 "snowtown": pl_snowtown, "garden": pl_garden, "alley": pl_alley, "field": pl_field, "fair": pl_fair,
+                 "stairs": pl_stairs, "riverbank": pl_riverbank})
+HINTS_STD = (
+    _row(("咖啡", "coffee", "cafe"), place="cafe"),
+    _row(("公車", "巴士", "站牌", "bus"), place="busstop"),
+    _row(("書", "圖書館", "故事", "book", "story"), place="library"),
+    _row(("車廂", "電車", "捷運", "地鐵"), place="train"),
+    _row(("夜市", "燈火", "熱鬧", "人群", "crowd"), place="market"),
+    _row(("雪", "冬", "聖誕", "snow", "winter", "christmas"), place="snowtown", weather="snow"),
+    _row(("花園", "玫瑰", "garden", "rose"), place="garden"),
+    _row(("巷", "轉角", "角落", "老街", "corner"), place="alley"),
+    _row(("田", "稻", "麥", "故鄉", "家鄉", "field"), place="field"),
+    _row(("摩天輪", "遊樂", "約會", "煙火", "date"), place="fair"),
+    _row(("階梯", "樓梯", "石階", "祈", "廟"), place="stairs"),
+    _row(("河岸", "河邊", "堤", "岸"), place="riverbank"),
+    _row(("跑", "追", "奔", "run", "running", "chase"), subject="solo_run"),
+    _row(("擁抱", "抱", "懷裡", "hug", "arms"), subject="duo_hug"),
+)
+MOODS = {"tears": "sad", "hearts": "closed", "call": "wow", "ask": "wow", "shooting": "wow", "notes": "closed", "umbrella": "sad"}
+SAD_SUBJECTS = ("duo_apart", "solo_back", "other_back")
+
+
+def plan_standard(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, Any]) -> List[str]:
+    """plan() for a standard world: the same walk through the song, with the extra places and stances its
+    words can call for, and about one card in four as another kind of shot: against the light, over a
+    shoulder, two hands, or things on a table."""
+    global HINTS
+    keep = HINTS
+    HINTS = HINTS_STD + HINTS          # the standard words first: they win over the simple ones
+    try:
+        specs = plan(parts, seed, world)
+    finally:
+        HINTS = keep
+    r = random.Random(f"shots:{int(seed)}")
+    out: List[str] = []
+    seen = set()
+    since = 2
+    for (kind, _), spec in zip(parts, specs):
+        place, light, wth, subject, prop, frame, pos, n = parse(spec)  # type: ignore[misc]
+        if kind not in ("intro", "outro"):
+            since += 1
+            shot = ""
+            outdoor = place not in INDOOR + INDOOR_STD
+            if since >= 3 and r.random() < 0.6:
+                if subject == "none" or prop in ("letter", "clock", "frames"):
+                    shot = "still"
+                elif outdoor and place != "forest" and wth == "clear" and light in ("sunset", "golden", "dawn", "dusk") and prop in ("none", "birds", "hearts", "thread", "leaves", "petals"):
+                    shot = "sil"
+                elif subject.startswith("duo") and subject != "duo_apart" and prop in ("none", "hearts", "thread", "petals", "leaves", "bubbles", "fireflies", "stars"):
+                    shot = "hands"
+                elif subject.startswith("solo") and subject not in ("solo_sit", "solo_run") and prop in ("none", "stars", "shooting", "bigmoon", "birds", "rainbow", "lantern", "kite", "plane", "balloons"):
+                    shot = "over"
+            if shot:
+                frame, since = shot, 0
+        spec = card(place, light, wth, subject, prop, frame, pos, n)
+        while spec in seen:
+            n += 1
+            spec = card(place, light, wth, subject, prop, frame, pos, n)
+        seen.add(spec)
+        out.append(spec)
+    return out
+
+
+# ---- the other kinds of shot
+def _hand(k, x, y, s, direction, sleeve):
+    """A forearm coming in from the side (direction 1: from the left) with its hand at (x, y)."""
+    k.limb([(x - direction * 900 * s, y + 260 * s), (x - direction * 110 * s, y + 20 * s)], sleeve, 150 * s)
+    k.limb([(x - direction * 150 * s, y + 30 * s), (x - direction * 40 * s, y)], SKIN, 104 * s, skin=True)
+    k.ell(x, y, 66 * s, 58 * s, SKIN, skin=True)
+    for i in range(4):
+        k.limb([(x + direction * 30 * s, y - 34 * s + i * 24 * s), (x + direction * (96 - abs(i - 1.5) * 10) * s, y - 30 * s + i * 24 * s)], SKIN, 22 * s, skin=True)
+    k.limb([(x - direction * 10 * s, y - 50 * s), (x + direction * 40 * s, y - 78 * s)], SKIN, 24 * s, skin=True)
+
+
+def shot_hands(k, subject, prop, n):
+    lead = k.w["lead"]
+    other = "boy" if lead == "girl" else "girl"
+    sl = [tuple(k.w[w]["extra_col"]) if k.w[w]["wear"] in ("hoodie", "jacket") else tuple(k.w[w]["top"]) for w in (lead, other)]
+    gap = {"duo_hands": 46, "duo_hug": 30, "duo_face": 150, "duo_sit": 60}.get(subject, 110) + (n % 3) * 30
+    y = 600 + (n % 2) * 40
+    _hand(k, 960 - gap, y, 1.0, 1, sl[0]); _hand(k, 960 + gap, y + 16, 1.0, -1, sl[1])
+    if prop == "thread" or n % 4 == 3:
+        pts = [(960 - gap + 70 + (2 * gap - 140) * t, y + 60 + math.sin(t * math.pi) * (90 if gap > 80 else 40)) for t in [i / 24 for i in range(25)]]
+        k.stroke(pts, (232, 70, 90), 7, e=True)
+    if prop == "hearts":
+        _heart(k, 960, y - 230, 2.4)
+        for dx, dy, sz in ((-210, -150, 1.0), (190, -300, 1.2), (60, -400, 0.8)): _heart(k, 960 + dx, y + dy, sz, (255, 170, 190))
+
+
+def shot_still(k, prop, n):
+    """Things on a table in front of the place (which is out of focus)."""
+    wood = k.r.choice(((206, 156, 122), (176, 128, 100), (226, 190, 150)))
+    k.band(600, H, wood, _mix(wood, (60, 40, 40), 0.25)); k.stroke([(0, 600), (W, 600)], None, k.lw)
+    for i in range(6):
+        k.stroke([(0, 660 + i * 80), (W, 660 + i * 80)], _mix(wood, (60, 40, 40), 0.18), 3, raw=True)
+    x = 960 + ((n % 3) - 1) * 200
+    k.d.ellipse([P(x - 560), P(900), P(x + 560), P(1010)], fill=(40, 24, 30, 40))
+    if prop == "letter":
+        k.poly([(x - 420, 800), (x + 200, 690), (x + 360, 900), (x - 280, 1020)], (255, 252, 242), e=True)
+        k.stroke([(x - 420, 800), (x - 20, 890), (x + 200, 690)], None, k.lw); _heart(k, x - 14, 868, 1.9)
+        k.limb([(x + 440, 940), (x + 760, 740)], (84, 96, 130), 30); k.poly([(x + 424, 954), (x + 456, 926), (x + 396, 984)], (60, 60, 70))
+    elif prop == "clock":
+        y = 700
+        for sx in (-1, 1):
+            k.ell(x + sx * 170, y - 220, 78, 66, (240, 120, 120)); k.limb([(x + sx * 150, y + 210), (x + sx * 200, y + 270)], (150, 110, 92), 26)
+        k.ell(x, y, 250, 250, (240, 120, 120)); k.ell(x, y, 204, 204, (255, 252, 244), e=True)
+        for i in range(12):
+            a = i * math.pi / 6
+            k.stroke([(x + math.cos(a) * 168, y + math.sin(a) * 168), (x + math.cos(a) * 188, y + math.sin(a) * 188)], (60, 68, 100), 9, raw=True)
+        a1, a2 = k.r.uniform(0, 6.28), k.r.uniform(0, 6.28)
+        k.stroke([(x, y), (x + math.cos(a1) * 100, y + math.sin(a1) * 100)], (60, 68, 100), 18, raw=True); k.stroke([(x, y), (x + math.cos(a2) * 154, y + math.sin(a2) * 154)], (60, 68, 100), 10, raw=True)
+        k.ell(x, y, 16, 16, (240, 120, 120), line=False)
+    elif prop == "frames":
+        k.poly([(x - 290, 960), (x - 250, 420), (x + 270, 420), (x + 310, 960)], (255, 252, 244), e=True)
+        k.rect(x - 216, 470, x + 236, 880, k.sky3[1], raw=True); k.ell(x + 130, 560, 44, 44, (255, 240, 160), line=False, e=True)
+        k.rect(x - 216, 800, x + 236, 880, (150, 206, 150), line=False)
+        for dx, who in ((-90, "girl"), (80, "boy")):
+            k.rect(x + dx - 84, 800, x + dx + 84, 880, tuple(k.w[who]["top"]), r=30)
+            k.ell(x + dx, 730, 70, 70, SKIN, skin=True); k.d.pieslice([P(x + dx - 74), P(654), P(x + dx + 74), P(790)], 180, 360, fill=k.c(tuple(k.w[who]["hair"])))
+            for e in (-24, 24): k.ell(x + dx + e, 742, 7, 10, (46, 50, 74), line=False)
+            k.d.arc([P(x + dx - 16), P(756), P(x + dx + 16), P(784)], 20, 160, fill=(120, 70, 80), width=P(4))
+    else:
+        cx = x - 280
+        k.ell(cx, 940, 250, 56, (255, 255, 255), e=True); k.rect(cx - 160, 680, cx + 160, 930, (255, 255, 255), r=70, e=True)
+        k.ell(cx, 690, 160, 42, (150, 100, 80), e=True); k.d.arc([P(cx + 110), P(730), P(cx + 280), P(880)], -90, 90, fill=k.edge((255, 255, 255)), width=P(20))
+        for i in range(3):
+            pts = [(cx - 80 + i * 80 + math.sin(t * 5 + i) * 24, 650 - t * 300) for t in [j / 14 for j in range(15)]]
+            k.stroke(pts, (255, 255, 255, 150), 14, e=True)
+        bx = x + 330
+        cover = k.r.choice(((214, 110, 104), (96, 150, 190), (120, 176, 130), (160, 132, 204)))
+        k.poly([(bx - 330, 900), (bx + 310, 800), (bx + 380, 980), (bx - 260, 1080)], cover)
+        k.poly([(bx - 306, 924), (bx + 322, 824), (bx + 336, 866), (bx - 292, 966)], (255, 252, 244), line=False, e=True)
+        if prop == "hearts": _heart(k, cx, 810, 2.4)
+
+
+def _finish_standard(im: Image.Image, seed: int) -> Image.Image:
+    """Light that spills from the bright parts, and a little grain (the same grain for the same card)."""
+    small = im.resize((W // 4, H // 4), Image.BILINEAR).point(lambda v: max(0, v - 176) * 3)
+    glow = small.filter(ImageFilter.GaussianBlur(9)).resize((W, H), Image.BILINEAR)
+    im = ImageChops.screen(im, ImageEnhance.Brightness(glow).enhance(0.5))
+    noise = Image.frombytes("L", (W // 2, H // 2), random.Random(seed).randbytes((W // 2) * (H // 2)))
+    grain = noise.point(lambda v: 128 + (v - 128) // 5).resize((W, H), Image.BILINEAR).convert("RGB")
+    return Image.blend(im, ImageChops.overlay(im, grain), 0.16)
