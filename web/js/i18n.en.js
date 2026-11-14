@@ -674,7 +674,7 @@ export default {
   "theme.day": "Day",
   "theme.hint": "Change the look: console → classic → day (colours only; everything works the same)",
   "qmvl.title": "Lyric subtitles (optional)",
-  "qmvl.hint": "Paste the lyrics (one line each, or LRC with [mm:ss.xx]) and press Time the lines. Whisper listens to the song's separated vocals once; a cover or a take keeps the song's timing, so the same times fit. Then tune each line below. Empty = no subtitles.",
+  "qmvl.hint": "Paste the lyrics (one line each, or LRC with [mm:ss.xx]) and press Time the lines. Whisper listens to the song's separated vocals once; a cover or a take keeps the song's timing, so the same times fit. To check or change a line's time, open \"Adjust the line times by hand\" below. Empty = no subtitles.",
   "qmvl.placeholder": "Lyrics, one line each (or LRC)",
   "qmvl.paste": "📋 Paste clipboard",
   "qmvl.align": "🎙️ Time the lines",

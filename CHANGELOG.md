@@ -11,7 +11,7 @@
   imported picture is kept and can be put back; the lyric picture is kept too and can be used again. It lives in
   `songs/<id>/lyricvideo/`; `source.json` points `video` at it and remembers the imported one. A lyric picture
   that is gone from the disk, or made for a source that has since been replaced, is ignored. The audio cannot
-  be shifted while it is in use. The per-line timing panel starts folded there (「手動調整字幕時間」).
+  be shifted while it is in use. The per-line timing panel starts folded, there and in the quick MV (「手動調整字幕時間」).
 - Library and Sing & Record: an audio-only song says that lyrics can be added this way (a notice under the
   song's title with a button to the section, and a line in the waveform view).
 - MV: a project without any photo is rendered as a plain lyric video: one dark background for every line (no

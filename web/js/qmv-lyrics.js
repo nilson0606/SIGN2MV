@@ -17,8 +17,8 @@ function parse(text) {   // 1:23.45, 83.45 or 1：23.45
   return /^\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
 }
 
-// keys: other heading / hint texts (the library's lyric picture uses the same editor and the same saved lines);
-// keys.fold: the per-line panel (player, buttons, lines) starts folded under a one-line summary
+// keys: other heading / hint texts (the library's lyric picture uses the same editor and the same saved lines).
+// The per-line panel (player, buttons, lines) starts folded under a one-line summary.
 export function lyricsEditor(keys = {}) {
   let songId = null;
   let source = null;
@@ -51,9 +51,7 @@ export function lyricsEditor(keys = {}) {
   const box = el('div', { class: 'qmv-lyrics' },
     head, hint,
     el('div', { class: 'row' }, pasteBtn, alignBtn, evenBtn), area, status, jb.el,
-    ...(keys.fold
-      ? [el('details', { class: 'qmv-adjust' }, el('summary', { style: 'cursor:pointer;margin:6px 0' }, foldTitle), ...adjust)]
-      : adjust));
+    el('details', { class: 'qmv-adjust' }, el('summary', { style: 'cursor:pointer;margin:6px 0' }, foldTitle), ...adjust));
 
   function texts() {
     head.textContent = t(keys.title || 'qmvl.title');
