@@ -6,6 +6,7 @@ import { bus, pages, registerPage } from './app-state.js';
 import { logView } from './joblog.js';
 import { stageText, queuedText, elapsedText } from './jobview.js';
 import { srvText, onServerTextReady } from './srvtext.js';
+import { diagWatch } from './diag.js';   // TEMPORARY, see diag.js
 
 let bannerDismissed = '';   // version banner closed for this mismatch
 
@@ -287,6 +288,7 @@ registerPage('home', { onShow: () => loadStatus() });
   // Later stages add their own pages; give their modules a chance to load first.
   await Promise.allSettled([import('./workspaces.js')]);
   showPage(last);
+  diagWatch();   // TEMPORARY, see diag.js
   setInterval(loadJobs, 1000);
   setInterval(() => loadStatus(), 15000);
 })();
