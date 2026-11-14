@@ -129,3 +129,69 @@ def test_importing_a_project_brings_its_photos(client, root, tmp_path):
     assert res["status"] == "ok" and res["copied"]["photos"] == 2
     data, shown = state(client, res["project"]["slug"])
     assert shown == [1, 2] and data["not_imported"]["waiting"] == 0
+
+
+def _aligned_project(client, root, secs=24):
+    sid, slug, pdir = project(client, root, secs)
+    lines, starts, words = sing([VERSE, CHORUS], t0=2.0, gap=0.3, between=1.0, per_char=0.2)
+    (pdir / "whisper.json").write_text(json.dumps({
+        "pipeline": "vocals_v1", "duration": float(secs), "lead_requested": False,
+        "audio_file": str(pdir.parent.parent / "source" / "audio.wav"),
+        "segments": [{"start": words[0]["start"], "end": words[-1]["end"], "text": "x", "words": words}]}), encoding="utf-8")
+    res = client.post("/api/mv/paste_lyrics", json={"slug": slug, "lyrics_text": "\n".join(lines), "mode": "whisper_align"}).json()
+    assert res["status"] == "ok" and len(res["project"]["timeline"]) == 10
+    return sid, slug, pdir
+
+
+def test_render_without_photos_is_a_lyric_video(client, root, monkeypatch):
+    """No photo anywhere: one plain background for every line and no transition frames (they were three
+    quarters of the render time); with a single photo the render works as before."""
+    import subprocess
+    import time
+
+    import pytest
+    fonts = sorted(__import__("pathlib").Path("/usr/share/fonts/opentype/noto").glob("NotoSansCJK-Regular.ttc"))
+    if not fonts:
+        pytest.skip("no CJK font in this environment")
+    monkeypatch.setenv("SIGN2MV_MV_FONT", str(fonts[0]))
+    monkeypatch.setenv("SIGN2MV_FORCE_CPU", "1")
+    sid, slug, pdir = _aligned_project(client, root)
+
+    def render():
+        t0 = time.time()
+        out = core.execute_mv_render_pipeline(core.load_project_dict(slug))
+        assert out.get("status") == "ok", out
+        dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+                                    out["output_mv"]], capture_output=True, text=True, check=True).stdout)
+        return out["output_mv"], dur, time.time() - t0
+
+    def frame(mv, at):
+        png_path = pdir / "probe.png"
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(at), "-i", mv, "-frames:v", "1", str(png_path)], check=True)
+        with Image.open(png_path) as im:
+            return im.convert("RGB").copy()
+
+    tl = core.load_project_dict(slug)["timeline"]
+    mv, dur, plain_s = render()
+    assert abs(dur - 24) < 0.3
+    assert not list((pdir / "frames").glob("trans_*.png")) and len(list((pdir / "frames").glob("base_*.png"))) == 10
+    # the middle of the picture is the bare gradient on every lyric line: no "Scene 03" label, no leftover text
+    mid = [frame(mv, (s["start"] + s["end"]) / 2).crop((560, 440, 1360, 640)) for s in (tl[2], tl[3], tl[7])]
+    want = core.create_plain_background(1920, 1080).crop((560, 440, 1360, 640))
+    for got in mid:
+        diff = max(abs(a - b) for pa, pb in zip(got.getdata(), want.getdata()) for a, b in zip(pa, pb))
+        assert diff <= 12, diff
+    # the line changes at its start time (a cut): just before it the previous line is still complete
+    box = (300, 850, 1620, 1000)
+    before, after = frame(mv, tl[3]["start"] - 0.12).crop(box), frame(mv, tl[3]["start"] + 0.12).crop(box)
+    held = frame(mv, tl[3]["start"] - 0.6).crop(box)
+    def far(a, b):
+        return sum(1 for pa, pb in zip(a.getdata(), b.getdata()) if max(abs(x - y) for x, y in zip(pa, pb)) > 60)
+    assert far(before, after) > 800 and far(before, held) < far(before, after) / 4
+
+    # one photo: transitions and the placeholder for the other cards are back
+    up = client.post("/api/mv/upload_scene", data={"slug": slug, "scene_id": "2"}, files={"file": ("a.png", png("red"), "image/png")}).json()
+    assert up["status"] == "ok"
+    mv, dur, photo_s = render()
+    assert abs(dur - 24) < 0.3 and len(list((pdir / "frames").glob("trans_*.png"))) > 50
+    assert plain_s < photo_s

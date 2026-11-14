@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- MV: a project without any photo is rendered as a plain lyric video: one dark background for every line (no
+  "Scene 05 · title" placeholder in the middle, which also showed a leftover line of text) and no transition
+  frames, each line simply follows the last. Transitions between identical backgrounds were 77 % of a render
+  (3 min 41 s of 4 min 46 s for a 4:23 song on an RTX 4060). With even one photo nothing changes.
 - MV: after the first render of a project, 「播放成品 MV」 stayed off until the project was opened again. During
   a render every control is switched off and gets its earlier state back at the end; the button had been off
   (no MV yet) and was switched off again right after the render had enabled it.

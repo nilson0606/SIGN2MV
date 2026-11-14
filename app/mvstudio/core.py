@@ -611,10 +611,39 @@ def list_instrumental_photos(illust_dir: str, timeline: List[Dict[str, Any]]) ->
     return out
 
 
+def project_has_photos(proj: Dict[str, Any]) -> bool:
+    """Does any part of the timeline have a photo (its scene's or its own)?"""
+    return any(seg_photo_path(proj, seg) for seg in (proj.get("timeline") or []))
+
+
+def create_plain_background(w: int, h: int) -> Image.Image:
+    """The dark gradient of the no-photo placeholder, without its "Scene 05 · title" label."""
+    img = Image.new("RGB", (w, h), (14, 20, 34))
+    draw = ImageDraw.Draw(img)
+    for y in range(h):
+        draw.line([(0, y), (w, y)], fill=(int(14 + 24 * (y / h)), int(20 + 28 * (y / h)), int(34 + 45 * (y / h))))
+    return img
+
+
 def render_background(proj: Dict[str, Any], seg: Dict[str, Any], bg_cache: Optional[Dict[Any, Image.Image]] = None) -> Image.Image:
-    """這一段的照片（1920x1080 RGB）；沒有照片時用深色底＋場景名"""
+    """這一段的照片（1920x1080 RGB）；沒有照片時用深色底＋場景名。
+    [SIGN2MV] A project without any photo is a lyric video: every part gets the same plain background (the
+    "Scene 05" label is a hint that one card lacks its photo, not something to show on every card)."""
     sc_id = int(seg.get("scene", 1))
     img_path = seg_photo_path(proj, seg)
+    if not img_path:
+        if bg_cache is None:
+            lyric_video = not project_has_photos(proj)
+        else:
+            if "__has_photos" not in bg_cache:
+                bg_cache["__has_photos"] = project_has_photos(proj)
+            lyric_video = not bg_cache["__has_photos"]
+        if lyric_video:
+            if bg_cache is None:
+                return create_plain_background(FRAME_W, FRAME_H)
+            if "__plain" not in bg_cache:
+                bg_cache["__plain"] = create_plain_background(FRAME_W, FRAME_H)
+            return bg_cache["__plain"]
     ck = img_path or sc_id
     if bg_cache is not None and ck in bg_cache:
         return bg_cache[ck]
@@ -1317,6 +1346,12 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
     new_sigs = {}
     total_segs = len(timeline)
     ov_cache: Dict[int, Image.Image] = {}
+    # [SIGN2MV 2026-11-14] A project without any photo is a lyric video on one plain background. Transitions
+    # between identical backgrounds only cost time (77 % of a 4 min 46 s render on the RTX 4060 machine: 43
+    # pairs x 18 frames drawn and saved one by one), so they are left out: each line simply follows the last.
+    lyric_video = not project_has_photos(proj)
+    if lyric_video:
+        header_sig += "|lyric_video"
 
     def _overlay(i: int) -> Image.Image:
         if i not in ov_cache:
@@ -1387,6 +1422,12 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
         _check_cancel()
         curr_path, curr_sc, curr_scp, st, et, dur, curr_sig = base_frames[idx]
         if idx < len(base_frames) - 1:
+            if lyric_video:
+                if idx == 0:
+                    update_progress(True, "render", 65, "✨ [階段 2/4] 沒有照片：不做轉場，歌詞直接換句", "")
+                concat_lines.append(f"file '{curr_path}'\n")
+                concat_lines.append(f"duration {dur:.4f}\n")
+                continue
             style = plan[idx]
             style_label = dict(TRANSITION_STYLES).get(style, style)
             pct = 30 + int((idx + 1) / total_trans_pairs * 35)
@@ -1452,7 +1493,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
     for _i, _bf in enumerate(base_frames):
         _d = _bf[5]
         positions.append((_pos, _pos + _d))
-        _pos += (max(0.05, _d - TRANS_DURATION) + TRANS_DURATION) if _i < len(base_frames) - 1 else _d
+        _pos += (max(0.05, _d - TRANS_DURATION) + TRANS_DURATION) if _i < len(base_frames) - 1 and not lyric_video else _d
     spec_ranges = spectrum_ranges(timeline, positions) if proj.get("spectrum_enabled", True) else []
 
     # 金字條影片：跟照片串同樣的時間切法；停留時照每個字的時間換圖，轉場期間是空的（轉場畫面自己帶金字）
@@ -1485,7 +1526,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
             if i % 8 == 0:
                 _check_cancel()
             d = base_frames[i][5]
-            hold = d if i == last_i else max(0.05, d - TRANS_DURATION)
+            hold = d if (i == last_i or lyric_video) else max(0.05, d - TRANS_DURATION)
             cur_t, cur_n = 0.0, 0
             for tm, n in kara_steps.get(i, []):
                 o = min(max(0.0, tm - float(timeline[i]["start"])), hold)
@@ -1494,7 +1535,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
                     cur_t = o
                 cur_n = n
             _kadd(_strip(i, cur_n), hold - cur_t)
-            if i != last_i:
+            if i != last_i and not lyric_video:
                 _kadd(empty_p, TRANS_DURATION)
         k_lines.append(f"file '{empty_p}'\n")
         kara_concat = os.path.join(frames_dir, "karaoke_concat.txt")
