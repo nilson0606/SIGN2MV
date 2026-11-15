@@ -60,6 +60,8 @@
 - MV page: on wide screens Step 3 (lyrics) is on the left and Step 2 (photo cards) on the right, under the preview,
   for timing; the messages that said left/right say so the other way round. The live subtitles have their own seek
   bar with the time (still the master player's sound, which is now labelled as such).
+- MV page: the 「合成單幀預覽」 button is gone (a card's 👁️ 預覽 shows the composed frame by itself); 「🎵 即時對字幕」 is
+  a solid cyan button that lights up while it is on.
 
 ## 2026.11.15
 

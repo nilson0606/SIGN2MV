@@ -766,7 +766,7 @@ def compose_frame(bg: Image.Image, ov: Image.Image) -> Image.Image:
 
 
 def render_single_styled_frame(proj: Dict[str, Any], seg: Dict[str, Any], bg_cache: Optional[Dict[int, Image.Image]] = None) -> Image.Image:
-    """單張畫面（照片＋文字層）；給合成與「合成單幀預覽」用"""
+    """單張畫面（照片＋文字層）；給合成與卡片上的「👁️ 預覽」用"""
     return compose_frame(render_background(proj, seg, bg_cache), render_overlay_rgba(proj, seg))
 
 
