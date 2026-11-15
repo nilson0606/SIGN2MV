@@ -1,5 +1,5 @@
 """Simple picture cards for an MV without photos: flat, light "fresh comic" scenes drawn here, one per
-part of the timeline (the MV page's 「產生簡易圖卡」). Nothing is fetched; a card is a 1920x1080 picture made
+part of the timeline (the MV page's 「圖卡抽抽樂」). Nothing is fetched; a card is a 1920x1080 picture made
 with Pillow at twice the size and scaled down.
 
 pick() chooses a scene for every part: a line with a known word (rain, star, luck, goodbye, ...) gets the

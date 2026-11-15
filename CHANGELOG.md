@@ -51,6 +51,8 @@
   stretch; `app/relisten.py`, `workers/mv_whisper.py` input "windows"); the MV page does the same between its
   anchors. What is heard again is kept apart (`<whisper json>.relisten.json`) and only used with anchors:
   without anchors both pages time the lines exactly as before.
+- MV page: 「產生簡易圖卡」 is now 「🎨 圖卡抽抽樂」 (Card lottery). With cards already there it asks whether to clear
+  them and draw a new set (in the drawing and tone now chosen); the separate remove button is gone.
 
 ## 2026.11.15
 

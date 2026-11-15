@@ -1060,7 +1060,7 @@
             <button class="btn btn-sm" id="btnAddSceneSlot" onclick="addNewSceneSlot()" title="在畫廊最後方新增一個空白照片槽位">＋ 新增照片槽位</button>
             <!-- [SIGN2MV] simple picture cards: drawn by the app for the parts that have no photo -->
             <span class="cards-tools" style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:6px; padding:3px 8px; border:1px dashed rgba(125,211,252,0.45); border-radius:8px; white-space:nowrap;">
-              <button class="btn btn-sm" id="btnSimpleCards" style="border-color:#38bdf8; color:#bae6fd; flex:0 0 auto;" onclick="makeSimpleCards()" title="沒有照片的畫面，由程式依歌詞畫一張簡單的圖卡補上。不需要網路，不會動你放的照片；畫好的圖卡跟一般照片一樣，可以再換成自己的照片">🎨 產生簡易圖卡</button>
+              <button class="btn btn-sm" id="btnSimpleCards" style="border-color:#38bdf8; color:#bae6fd; flex:0 0 auto;" onclick="makeSimpleCards()" title="沒有照片的畫面，由程式依歌詞抽一組簡單的圖卡補上。已經有圖卡時會先問你要不要清掉重抽。不需要網路，不會動你放的照片；畫好的圖卡跟一般照片一樣，可以再換成自己的照片">🎨 圖卡抽抽樂</button>
               <label for="selCardGrade" style="font-size:12px; color:var(--text-muted); flex:0 0 auto;">畫法</label>
               <select id="selCardGrade" title="簡易：畫面單純；標準：場景和元素更多，還有逆光、特寫、靜物等鏡頭，畫得比較久；高級：整首歌像一支分鏡，副歌回到同一個地點、一次比一次近，天色越來越晚，同一樣東西反覆出現" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto;" onchange="try { localStorage.setItem('sign2mv.cards.grade', this.value); } catch (e) {}">
                 <option value="simple">簡易</option>
@@ -1074,7 +1074,6 @@
                 <option value="night">夜藍</option>
                 <option value="manga">黑白漫畫</option>
               </select>
-              <button class="btn btn-sm" id="btnRemoveCards" style="display:none; border-color:#64748b; color:#cbd5e1; flex:0 0 auto;" onclick="removeSimpleCards()" title="只移除程式畫的簡易圖卡；你放的照片和時間軸都會留著">🧹 移除簡易圖卡 (<span id="cardsCount">0</span>)</button>
             </span>
           </div>
         </div>
@@ -4058,9 +4057,6 @@
 
     function cardsShow(state) {
       const n = (state.cards || []).length;
-      const btn = document.getElementById('btnRemoveCards'), cnt = document.getElementById('cardsCount');
-      if (cnt) cnt.textContent = String(n);
-      if (btn) btn.style.display = n ? '' : 'none';
       const sel = document.getElementById('selCardTone');
       if (sel && !cardsBusy && state.tone && CARD_TONES[state.tone]) sel.value = state.tone;
       const gsel = document.getElementById('selCardGrade');   // while cards are there, show how they were drawn
@@ -4097,7 +4093,7 @@
 
     function cardsLock(on) {
       cardsBusy = on;
-      ['btnSimpleCards', 'selCardTone', 'selCardGrade', 'btnRemoveCards'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = on; });
+      ['btnSimpleCards', 'selCardTone', 'selCardGrade'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = on; });
     }
 
     async function makeSimpleCards() {
@@ -4105,44 +4101,32 @@
       if (isRenderingInProgress) { showToast('正在輸出 MV，等它完成再產生簡易圖卡', true); return; }
       const slug = currentSlug, sel = document.getElementById('selCardTone');
       const tone = sel ? sel.value : 'fresh';
-      const grade = cardGrade();
       let state;
       try { state = await cardsCall('plan'); } catch (e) { setInlineStatus('step2StatusBox', 'err', `❌ 簡易圖卡沒有畫：${e.message}`); return; }
-      if ((state.cards || []).length && state.grade !== grade) {
-        // another way of drawing: the cards that are there are taken out and all drawn anew
-        const gsel = document.getElementById('selCardGrade');
-        if (!confirm(`這首歌已經有 ${state.cards.length} 張「${CARD_GRADES[state.grade] || state.grade}」畫法的圖卡。\n要換成「${CARD_GRADES[grade]}」嗎？會先移除這些圖卡，再全部重新畫（你放的照片不會動）。\n\n按「取消」就不做任何事。`)) {
-          if (gsel && CARD_GRADES[state.grade]) gsel.value = state.grade;
-          return;
-        }
-        try { await cardsCall('remove'); state = await cardsCall('plan'); } catch (e) { setInlineStatus('step2StatusBox', 'err', `❌ 簡易圖卡沒有畫：${e.message}`); return; }
+      if ((state.cards || []).length) {
+        // a draw of the lottery: the cards that are there are cleared first and a new set is drawn
+        if (!confirm(`這首歌已經有 ${state.cards.length} 張圖卡。\n要清除它們、重新抽一組嗎？（你放的照片和時間軸都不會動）\n\n按「取消」就不做任何事。`)) return;
+        try { const gone = await cardsCall('remove'); cardsTakePhotos(gone); state = await cardsCall('plan'); }
+        catch (e) { setInlineStatus('step2StatusBox', 'err', `❌ 簡易圖卡沒有畫：${e.message}`); return; }
       }
       if (!state.timeline) {
-        setInlineStatus('step2StatusBox', 'err', '⚠️ 還沒有時間軸：請先到 Step 3 貼上歌詞並對齊，再產生簡易圖卡（圖卡是依每一句歌詞挑的）。');
+        setInlineStatus('step2StatusBox', 'err', '⚠️ 還沒有時間軸：請先到 Step 3 貼上歌詞並對齊，再按圖卡抽抽樂（圖卡是依每一句歌詞挑的）。');
         return;
       }
-      let redo = (state.cards || []).filter(c => c.tone !== tone);
-      if (redo.length) {
-        const was = CARD_TONES[redo[0].tone] || redo[0].tone;
-        if (!confirm(`這首歌已經有 ${redo.length} 張「${was}」色調的簡易圖卡。\n要把它們一起換成「${CARD_TONES[tone]}」嗎？（你放的照片不會動）\n\n按「取消」就不做任何事，色調維持「${was}」。`)) {
-          if (sel) sel.value = redo[0].tone;
-          return;
-        }
-      }
-      const todo = redo.map(c => ({ slot: c.slot, redraw: true })).concat((state.empty || []).map(c => ({ slot: c.slot, redraw: false })));
+      const todo = (state.empty || []).map(c => ({ slot: c.slot, redraw: false }));
       if (!todo.length) {
         setInlineStatus('step2StatusBox', 'ok', '✅ 每個畫面都已經有照片或圖卡，沒有需要補的。');
         cardsShow(state);
         return;
       }
       cardsLock(true); cardsStop = false;
-      let done = 0, redrawn = 0, failed = '';
+      let done = 0, failed = '';
       setInlineStatus('step2StatusBox', 'work', `<span id="cardsProgress">🎨 正在畫簡易圖卡… 0／${todo.length}</span> <button class="btn btn-sm btn-abort-action" style="margin-left:10px;" onclick="cardsStop = true; this.disabled = true;">停止</button>`);
       for (const item of todo) {
         if (cardsStop || slug !== currentSlug) break;
         try {
           await cardsCall('draw', { slug, slot: item.slot, tone, redraw: item.redraw });
-          done += 1; if (item.redraw) redrawn += 1;
+          done += 1;
         } catch (e) {
           // a slot that got a photo in the meantime is simply skipped; anything else ends the run
           if (!/已經有照片|已經不是簡易圖卡/.test(e.message)) { failed = e.message; break; }
@@ -4157,28 +4141,10 @@
         cardsTakePhotos(now); cardsShow(now);
       } catch (e) { await loadProject(currentSlug, true); }
       const name = CARD_TONES[tone];
-      if (failed) setInlineStatus('step2StatusBox', 'err', `❌ 簡易圖卡沒有畫完：${failed}（已畫好 ${done} 張，再按一次會接著畫）`);
-      else if (cardsStop) setInlineStatus('step2StatusBox', 'ok', `⏹️ 已停止，畫好 ${done} 張簡易圖卡（共 ${todo.length} 張）。再按一次「產生簡易圖卡」會接著畫剩下的。`);
-      else if (redrawn) setInlineStatus('step2StatusBox', 'ok', `✅ 簡易圖卡已經是「${name}」色調：重畫 ${redrawn} 張，新補 ${done - redrawn} 張。你放的照片沒有動。`);
+      if (failed) setInlineStatus('step2StatusBox', 'err', `❌ 簡易圖卡沒有畫完：${failed}（已畫好 ${done} 張）`);
+      else if (cardsStop) setInlineStatus('step2StatusBox', 'ok', `⏹️ 已停止，畫好 ${done} 張簡易圖卡（共 ${todo.length} 張）。`);
       else setInlineStatus('step2StatusBox', 'ok', `✅ 已補上 ${done} 張「${name}」簡易圖卡。每一張都跟一般照片一樣，可以點它換成自己的照片。`);
       if (!failed) showToast(`✔ 簡易圖卡完成（${done} 張）`);
-    }
-
-    async function removeSimpleCards() {
-      if (!currentSlug || cardsBusy) return;
-      if (isRenderingInProgress) { showToast('正在輸出 MV，等它完成再移除簡易圖卡', true); return; }
-      const n = parseInt(document.getElementById('cardsCount').textContent, 10) || 0;
-      if (!confirm(`要移除這首歌的 ${n} 張簡易圖卡嗎？\n只移除程式畫的圖卡；你放的照片和時間軸都會留著。`)) return;
-      cardsLock(true);
-      try {
-        const data = await cardsCall('remove');
-        cardsTakePhotos(data);
-        setInlineStatus('step2StatusBox', 'ok', `🧹 已移除 ${data.removed} 張簡易圖卡。你放的照片和時間軸都還在。再按「產生簡易圖卡」會換一組新的樣子。`);
-      } catch (e) {
-        setInlineStatus('step2StatusBox', 'err', `❌ 移除簡易圖卡失敗：${e.message}`);
-      }
-      cardsLock(false);
-      refreshCardsUi();
     }
 
     async function clearAllSceneImages() {
