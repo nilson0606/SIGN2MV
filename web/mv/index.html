@@ -1149,6 +1149,16 @@
           <br>👉 也可以在右邊照片卡的下拉選「🌟 前奏／🎻 間奏／🎬 尾奏」，這裡會自動加上那一行。前奏、尾奏沒寫的話，程式會自動做，照片用第一句／最後一句的。
           <br>🔢 沒寫 [Scene NN] 的行照「第幾行」對照片（前奏／間奏／尾奏行也算一張）：第 1 行＝Scene 01、第 2 行＝Scene 02……
         </div>
+        <!-- [Claude 2026-11-15] 使用者要求：帶入歌曲庫時間、LRC 全部定錨放在歌詞框正上方 -->
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:8px;">
+            <button class="btn" id="btnLibraryTimes" onclick="importLibraryTimes()" style="border-color:#34d399; color:#a7f3d0;" title="把歌曲庫裡這首歌調好的字幕時間（歌詞畫面／快速 MV 的「手動調整字幕時間」）整份帶過來，歌曲庫錨住的句子在這裡也會是定錨">
+              📚 從歌曲庫帶入調好的時間
+            </button>
+            <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:12.5px;" title="貼的是含 [分:秒] 時間碼的歌詞（LRC）時，解析完把每一句都定錨：之後重跑 Whisper 對齊也不會動這些時間，Whisper 只用來讓字幕逐字變金。要微調某一句，先按那張卡片的 🔒 解鎖">
+              <input type="checkbox" id="chkLrcLockAll" onchange="try { localStorage.setItem('sign2mv.mv.lrcLockAll', this.checked ? '1' : '0'); } catch (e) {}" style="width:16px; height:16px; accent-color:#22c55e;" />
+              <span style="color:#86efac; font-weight:800;">🔒 LRC 時間全部定錨</span>
+            </label>
+        </div>
         <textarea id="inpPasteLyrics" class="lyrics-textarea" placeholder="在此貼上整首歌詞（一行一句）...&#10;例如：&#10;是幸福是不幸 環境來造成&#10;恩恩怨怨分未清 何必抱不平"></textarea>
 
         <!-- Golden Rule #3 & #4 Parameter Bar: 0.40s Cosine Crossfade + -0.70s Early Lead -->
@@ -1223,16 +1233,9 @@
           <button class="btn" id="btnPasteReplaceText" onclick="applyPastedLyrics('replace_text_only', false)">
             ✏️ 僅替換歌詞文字 (保留目前秒數)
           </button>
-          <button class="btn" id="btnLibraryTimes" onclick="importLibraryTimes()" style="border-color:#34d399; color:#a7f3d0;" title="把歌曲庫裡這首歌調好的字幕時間（歌詞畫面／快速 MV 的「手動調整字幕時間」）整份帶過來，歌曲庫錨住的句子在這裡也會是定錨">
-            📚 從歌曲庫帶入調好的時間
-          </button>
           <button class="btn" id="btnPasteLrc" onclick="applyLrcPaste()">
             ⏱️ 解析 [分:秒] 時間碼 / 均分時間
           </button>
-          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:12.5px;" title="貼的是含 [分:秒] 時間碼的歌詞（LRC）時，解析完把每一句都定錨：之後重跑 Whisper 對齊也不會動這些時間，Whisper 只用來讓字幕逐字變金。要微調某一句，先按那張卡片的 🔒 解鎖">
-            <input type="checkbox" id="chkLrcLockAll" onchange="try { localStorage.setItem('sign2mv.mv.lrcLockAll', this.checked ? '1' : '0'); } catch (e) {}" style="width:16px; height:16px; accent-color:#22c55e;" />
-            <span style="color:#86efac; font-weight:800;">🔒 LRC 時間全部定錨</span>
-          </label>
           <button class="btn btn-sm" style="border-color:rgba(148,163,184,0.4); color:#cbd5e1;" onclick="unlockAllSegments()" title="解除所有卡片的定錨鎖定，讓 Whisper 重新對齊全部段落">
             🔓 全部解除定錨
           </button>
