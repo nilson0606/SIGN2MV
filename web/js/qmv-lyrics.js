@@ -109,9 +109,8 @@ export function lyricsEditor(keys = {}) {
         el('button', { class: 'btn small', title: t('qmvl.set_start'), onclick: () => {
           const d = ln.end - ln.start; ln.start = r2(player.currentTime || 0); ln.end = r2(ln.start + d); lines.sort((a, b) => a.start - b.start); render();
         } }, '📍'),
-        en, tx,
-        el('button', { class: 'btn small danger', title: t('common.delete'), onclick: () => { lines.splice(i, 1); render(); } }, '🗑'),
-        lockBtn);
+        en, lockBtn, tx,
+        el('button', { class: 'btn small danger', title: t('common.delete'), onclick: () => { lines.splice(i, 1); render(); } }, '🗑'));
       if (lk) {      // an anchor: nothing about its time can be changed until it is freed
         [st, en].forEach((x) => { x.readOnly = true; x.title = t('qmvl.locked_tip'); });
         row.querySelectorAll('button').forEach((b) => { if (b !== lockBtn && b.textContent !== '▶') b.disabled = true; });
