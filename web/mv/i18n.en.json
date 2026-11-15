@@ -623,10 +623,10 @@
   "高級": "Premium",
   "簡易：畫面單純；標準：場景和元素更多，還有逆光、特寫、靜物等鏡頭，畫得比較久；高級：整首歌像一支分鏡，副歌回到同一個地點、一次比一次近，天色越來越晚，同一樣東西反覆出現": "Simple: plain pictures. Standard: many more places and things, and shots against the light, close-ups and still lifes; takes longer to draw. Premium: the whole song as one storyboard: every chorus goes back to one place, nearer each time, the day grows late, and one thing keeps coming back",
   "按「取消」就不做任何事。": "Cancel does nothing.",
-  "🎨 圖卡抽抽樂": "🎨 Card lottery",
   "沒有照片的畫面，由程式依歌詞抽一組簡單的圖卡補上。已經有圖卡時會先問你要不要清掉重抽。不需要網路，不會動你放的照片；畫好的圖卡跟一般照片一樣，可以再換成自己的照片": "Draws a set of simple cards from the lyrics for the parts that have no photo. When there are cards already, it asks first whether to clear them and draw again. No network is needed and your photos are not touched; a card is a photo like any other and can be replaced by your own",
   "要清除它們、重新抽一組嗎？（你放的照片和時間軸都不會動）": "Clear them and draw a new set? (Your photos and the timeline are not touched.)",
-  "⚠️ 還沒有時間軸：請先到 Step 3 貼上歌詞並對齊，再按圖卡抽抽樂（圖卡是依每一句歌詞挑的）。": "⚠️ No timeline yet: paste the lyrics and align them in Step 3 first, then press Card lottery (a card is chosen for each line)."
+  "⚠️ 還沒有時間軸：請先到 Step 3 貼上歌詞並對齊，再按圖卡抽抽樂（圖卡是依每一句歌詞挑的）。": "⚠️ No timeline yet: paste the lyrics and align them in Step 3 first, then press Card lottery (a card is chosen for each line).",
+  "🎲 圖卡抽抽樂": "🎲 Card lottery"
  },
  "patterns": [
   {
