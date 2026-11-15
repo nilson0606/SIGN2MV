@@ -103,7 +103,7 @@ const quick = (() => {
     studioNote, lyr.el);
   function fillStudio(_sourceChanged, force) {
     const src = data && data.sources.find((x) => x.id === srcSel.value);
-    if (src && songId) lyr.load(songId, src.id, mediaUrl(songId, src.path));
+    if (src && songId) lyr.load(songId, src.id, mediaUrl(songId, src.path), [data.defaults && data.defaults.title, src.id === 'original' ? '' : src.title].filter(Boolean).join(' - '));
     const d = (src && src.studio) || {};
     for (const [k, inp] of Object.entries(studioIn)) {
       if (force || !inp.dataset.edited) { inp.value = d[k] || ''; delete inp.dataset.edited; }   // keep what the user typed

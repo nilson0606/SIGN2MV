@@ -626,7 +626,12 @@
   "沒有照片的畫面，由程式依歌詞抽一組簡單的圖卡補上。已經有圖卡時會先問你要不要清掉重抽。不需要網路，不會動你放的照片；畫好的圖卡跟一般照片一樣，可以再換成自己的照片": "Draws a set of simple cards from the lyrics for the parts that have no photo. When there are cards already, it asks first whether to clear them and draw again. No network is needed and your photos are not touched; a card is a photo like any other and can be replaced by your own",
   "要清除它們、重新抽一組嗎？（你放的照片和時間軸都不會動）": "Clear them and draw a new set? (Your photos and the timeline are not touched.)",
   "⚠️ 還沒有時間軸：請先到 Step 3 貼上歌詞並對齊，再按圖卡抽抽樂（圖卡是依每一句歌詞挑的）。": "⚠️ No timeline yet: paste the lyrics and align them in Step 3 first, then press Card lottery (a card is chosen for each line).",
-  "🎲 圖卡抽抽樂": "🎲 Card lottery"
+  "🎲 圖卡抽抽樂": "🎲 Card lottery",
+  "📚 從歌曲庫帶入調好的時間": "📚 Bring in the library timing",
+  "把歌曲庫裡這首歌調好的字幕時間（歌詞畫面／快速 MV 的「手動調整字幕時間」）整份帶過來，歌曲庫錨住的句子在這裡也會是定錨": "Takes over the subtitle timing made for this song in the library (“Adjust the subtitle times” of the lyric picture or quick MV); lines anchored there are anchored here too",
+  "這個 MV 專案沒有對應的歌曲庫歌曲": "This MV project has no song in the library",
+  "⚠️ 歌曲庫裡這首歌還沒有調好時間的字幕：請先到歌曲庫的「歌詞畫面」或「快速 MV」用「手動調整字幕時間」對好並儲存，再回來按一次。": "⚠️ This song has no timed subtitles in the library yet: time them with “Adjust the subtitle times” in the library’s lyric picture or quick MV, save, and press this again.",
+  "你放的照片和自己加的間奏都會留著。": "Your photos and the interludes you added stay."
  },
  "patterns": [
   {
@@ -1764,6 +1769,30 @@
   {
    "zh": "⏹️ 已停止，畫好 {0} 張簡易圖卡（共 {1} 張）。",
    "en": "⏹️ Stopped with {0} of {1} simple cards drawn."
+  },
+  {
+   "zh": "❌ 讀不到歌曲庫的字幕時間：{0}",
+   "en": "❌ Could not read the library timing: {0}"
+  },
+  {
+   "zh": "要用歌曲庫調好的 {0} 句時間，取代目前的字幕和時間嗎？",
+   "en": "Replace the current subtitles and times with the {0} lines timed in the library?"
+  },
+  {
+   "zh": "MV 這邊的 {0} 個定錨會先解除。",
+   "en": "The {0} anchor(s) on this page are freed first."
+  },
+  {
+   "zh": "歌曲庫錨住的 {0} 句，在這裡也會是定錨。",
+   "en": "The {0} line(s) anchored in the library are anchored here too."
+  },
+  {
+   "zh": "📚 已帶入歌曲庫調好的 {0} 句時間（照樣套用提前進字），其中 {1} 句是定錨。請用 ▶ 確認，不準的直接在左邊照片卡片微調。",
+   "en": "📚 The {0} lines timed in the library are in (with the usual early start), {1} of them anchored. Check them with ▶ and fine-tune any card on the left."
+  },
+  {
+   "zh": "📚 已帶入歌曲庫調好的 {0} 句時間（照樣套用提前進字）。請用 ▶ 確認，不準的直接在左邊照片卡片微調。",
+   "en": "📚 The {0} lines timed in the library are in (with the usual early start). Check them with ▶ and fine-tune any card on the left."
   }
  ]
 }

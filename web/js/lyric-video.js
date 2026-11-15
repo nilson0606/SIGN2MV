@@ -89,7 +89,7 @@ export function lyricVideoBody(song, opts = {}) {
   onBtn.addEventListener('click', () => use(true));
   [plain, overlay].forEach((r) => r.addEventListener('change', () => keep('style', overlay.checked ? 'overlay' : 'plain')));
 
-  editor.load(sid, 'original', mediaUrl(sid, s.audio));
+  editor.load(sid, 'original', mediaUrl(sid, s.audio), song.title || s.title || '');
   load();
   return [
     el('p', { class: 'muted small' }, t('lv.note')),

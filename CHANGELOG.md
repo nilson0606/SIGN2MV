@@ -53,6 +53,10 @@
   without anchors both pages time the lines exactly as before.
 - MV page: 「產生簡易圖卡」 is now 「🎲 圖卡抽抽樂」 (Card lottery). With cards already there it asks whether to clear
   them and draw a new set (in the drawing and tone now chosen); the separate remove button is gone.
+- Library lyric timing: 「⬇ 下載 LRC」 saves the timed lines as an LRC file (named after the song). MV page Step 3:
+  「📚 從歌曲庫帶入調好的時間」 takes over the library timing (of the MV's cover or take if it has its own, else
+  the original's) through the LRC path (early start, intro/outro and the user's interludes as usual), keeps each
+  line's photo when the line count is the same, and anchors the lines anchored in the library.
 
 ## 2026.11.15
 

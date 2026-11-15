@@ -1206,6 +1206,9 @@
           <button class="btn" id="btnPasteReplaceText" onclick="applyPastedLyrics('replace_text_only', false)">
             ✏️ 僅替換歌詞文字 (保留目前秒數)
           </button>
+          <button class="btn" id="btnLibraryTimes" onclick="importLibraryTimes()" style="border-color:#34d399; color:#a7f3d0;" title="把歌曲庫裡這首歌調好的字幕時間（歌詞畫面／快速 MV 的「手動調整字幕時間」）整份帶過來，歌曲庫錨住的句子在這裡也會是定錨">
+            📚 從歌曲庫帶入調好的時間
+          </button>
           <button class="btn" id="btnPasteLrc" onclick="applyPastedLyrics('lrc_or_even', false)">
             ⏱️ 解析 [分:秒] 時間碼 / 均分時間
           </button>
@@ -2792,6 +2795,7 @@
           `);
           setInlineStatus('step2StatusBox', 'ok', `✅ <strong>已將 ${lyricSegs.length} 段歌詞與時間填入下方照片卡片！</strong> 點擊任一卡片的 <code>-0.5</code> / <code>+0.5</code> / <code>+2s</code> 或直接改時間，前後張會自動連動銜接。`);
           showToast(`✅ 時間軸已完成配置！已將 ${lyricSegs.length} 段時間填入左側照片卡片。`);
+          return true;
         } else {
           const errMsg = (data && data.detail) ? data.detail : '對齊回應異常';
           await applyClientSideFallbackTimeline(text, earlyLead, errMsg);
@@ -2807,6 +2811,59 @@
         }
         if (btnForce) btnForce.disabled = false;
       }
+    }
+
+    // [Claude 2026-11-15] 歌曲庫調好的字幕時間（quickmv/lyrics/<來源>.json）整份帶進來：
+    // 寫成 LRC 走「解析時間碼」同一條路（提前進字、前奏尾奏、使用者間奏照舊），之後把歌曲庫錨住的句子設成定錨
+    async function importLibraryTimes() {
+      if (!currentProject) await initStudio();
+      if (!currentProject || !currentProject.song_id) { showToast('這個 MV 專案沒有對應的歌曲庫歌曲', true); return; }
+      syncProjectFields();
+      const sid = currentProject.song_id;
+      const mRender = String(currentProject.audio_file || '').match(/renders[\\/](r[a-f0-9]{12})[\\/]/);
+      const get = async (src) => {
+        const r = await fetch(`/api/songs/${encodeURIComponent(sid)}/quickmv/lyrics?source=${src}`);
+        const d = r.ok ? await r.json() : {};
+        return (d.lines || []).filter(x => x && String(x.text || '').trim() && isFinite(parseFloat(x.start)))
+          .map(x => ({ start: parseFloat(x.start), end: parseFloat(x.end), text: String(x.text).trim(), locked: x.locked === true }))
+          .sort((a, b) => a.start - b.start);
+      };
+      let lines = [];
+      try {
+        if (mRender) lines = await get(mRender[1]);
+        if (!lines.length) lines = await get('original');   // 翻唱／唱錄沿用原曲的時間（跟歌曲庫一樣）
+      } catch (e) {
+        setInlineStatus('step3StatusBox', 'err', `❌ 讀不到歌曲庫的字幕時間：${e.message}`);
+        return;
+      }
+      if (!lines.length) {
+        setInlineStatus('step3StatusBox', 'warn', '⚠️ 歌曲庫裡這首歌還沒有調好時間的字幕：請先到歌曲庫的「歌詞畫面」或「快速 MV」用「手動調整字幕時間」對好並儲存，再回來按一次。');
+        return;
+      }
+      const tl = currentProject.timeline || [];
+      const nLocked = lines.filter(x => x.locked).length;
+      const mvLocked = tl.filter(s => s.locked).length;
+      let msg = `要用歌曲庫調好的 ${lines.length} 句時間，取代目前的字幕和時間嗎？`;
+      if (mvLocked) msg += `\nMV 這邊的 ${mvLocked} 個定錨會先解除。`;
+      if (nLocked) msg += `\n歌曲庫錨住的 ${nLocked} 句，在這裡也會是定錨。`;
+      msg += '\n你放的照片和自己加的間奏都會留著。';
+      if (!confirm(msg)) return;
+      // 句數一樣時沿用目前每一句用的照片（Scene 編號）
+      const oldLyrics = tl.filter(s => s.type === 'lyric');
+      const scenes = oldLyrics.length === lines.length ? oldLyrics.map(s => parseInt(s.scene) || 1) : null;
+      const stamp = (sec) => { const m = Math.floor(sec / 60); return `[${String(m).padStart(2, '0')}:${(sec - m * 60).toFixed(2).padStart(5, '0')}]`; };
+      document.getElementById('inpPasteLyrics').value = lines
+        .map((x, i) => `${stamp(x.start)} ${scenes ? `[Scene ${String(scenes[i]).padStart(2, '0')}] ` : ''}${x.text}`).join('\n');
+      tl.forEach(s => { s.locked = false; });
+      if (!(await applyPastedLyrics('lrc_or_even', false))) return;   // 失敗時那邊已經說明了
+      const now = (currentProject && currentProject.timeline) || [];
+      const segs = now.filter(s => s.type === 'lyric' || s.type === 'interlude');
+      let anchored = 0;
+      if (segs.length === lines.length) {
+        lines.forEach((x, i) => { if (x.locked) { segs[i].locked = true; anchored += 1; } });
+        if (anchored) { renderSceneGallery(); renderTimelineTable(); scheduleAutoSave(); }
+      }
+      setInlineStatus('step3StatusBox', 'ok', `📚 已帶入歌曲庫調好的 ${lines.length} 句時間（照樣套用提前進字）${anchored ? `，其中 ${anchored} 句是定錨` : ''}。請用 ▶ 確認，不準的直接在左邊照片卡片微調。`);
     }
 
     function syncProjectFields() {

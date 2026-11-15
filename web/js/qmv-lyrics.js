@@ -25,6 +25,7 @@ function parse(text) {   // 1:23.45, 83.45 or 1：23.45
 export function lyricsEditor(keys = {}) {
   let songId = null;
   let source = null;
+  let fileName = '';
   let lines = [];
   let stopAt = null;
   const area = el('textarea', { rows: 6, style: 'width:100%' });
@@ -49,9 +50,19 @@ export function lyricsEditor(keys = {}) {
   } });
   const saveBtn = el('button', { class: 'btn small', onclick: () => save(true) });
   const clearBtn = el('button', { class: 'btn small danger', onclick: () => { lines = []; render(); } });
+  // the timed lines as an LRC file ([mm:ss.xx] text; a last empty stamp marks where the last line ends)
+  const lrcBtn = el('button', { class: 'btn small', onclick: () => {
+    if (!lines.length) { toast(t('qmvl.lrc_empty'), true); return; }
+    const stamp = (sec) => { const v = Math.max(0, Number(sec) || 0), m = Math.floor(v / 60); return `[${String(m).padStart(2, '0')}:${(v - m * 60).toFixed(2).padStart(5, '0')}]`; };
+    const sorted = [...lines].sort((a, b) => a.start - b.start);
+    const body = sorted.map((x) => `${stamp(x.start)}${x.text}`).concat([stamp(sorted[sorted.length - 1].end)]).join('\r\n') + '\r\n';
+    const a = el('a', { href: URL.createObjectURL(new Blob(['\ufeff' + body], { type: 'text/plain;charset=utf-8' })),
+      download: `${(fileName || 'lyrics').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'lyrics'}.lrc` });
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } });
   const unlockBtn = el('button', { class: 'btn small', onclick: () => { lines.forEach((x) => { delete x.locked; }); render(); save(false); } });
   const anchorHint = el('p', { class: 'muted small', style: 'margin:4px 0' });
-  const adjust = [anchorHint, player, el('div', { class: 'row' }, addBtn, saveBtn, unlockBtn, clearBtn), table];
+  const adjust = [anchorHint, player, el('div', { class: 'row' }, addBtn, saveBtn, lrcBtn, unlockBtn, clearBtn), table];
   const foldTitle = el('span', {});
   const box = el('div', { class: 'qmv-lyrics' },
     head, hint,
@@ -69,6 +80,8 @@ export function lyricsEditor(keys = {}) {
     saveBtn.textContent = t('qmvl.save');
     clearBtn.textContent = t('qmvl.clear');
     unlockBtn.textContent = t('qmvl.unlock_all');
+    lrcBtn.textContent = t('qmvl.download_lrc');
+    lrcBtn.title = t('qmvl.download_lrc_tip');
     anchorHint.textContent = t('qmvl.anchor_hint');
     render();
   }
@@ -170,7 +183,8 @@ export function lyricsEditor(keys = {}) {
     } catch (err) { toast(errorText(err), true); }
   }
 
-  async function load(sid, src, audioUrl) {
+  async function load(sid, src, audioUrl, name = '') {
+    fileName = name || fileName;
     if (sid === songId && src === source) return;
     songId = sid; source = src; lines = []; area.value = ''; status.textContent = '';
     player.src = audioUrl || '';
