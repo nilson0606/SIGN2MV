@@ -44,6 +44,13 @@
   takes something that belongs to the place (a dog in town, gulls by the sea, fireflies at night); a premium
   song has sixteen places instead of ten. The last card is the first place again, small against the moon.
 - Manual (zh-TW and en): the simple cards section says what the three ways of drawing are and what Premium does.
+- Library lyric timing (lyric picture, quick MV subtitles): lines can be anchored (🔒) as on the MV page. Timing the
+  lines again keeps the anchors and matches the lines between two anchors, word by word, only to what was heard
+  between them. Where Whisper heard none of the lines between two placed lines, it listens again to just that
+  stretch of the separated voice, with those lines as its prompt and without its silence filter (once per
+  stretch; `app/relisten.py`, `workers/mv_whisper.py` input "windows"); the MV page does the same between its
+  anchors. What is heard again is kept apart (`<whisper json>.relisten.json`) and only used with anchors:
+  without anchors both pages time the lines exactly as before.
 
 ## 2026.11.15
 

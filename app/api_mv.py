@@ -29,6 +29,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 
+from . import quick_lyrics, relisten
 from . import settings as settings_mod
 from . import stems as stems_mod
 from .context import Context
@@ -160,6 +161,7 @@ def router(ctx: Context) -> APIRouter:
                 data = json.load(f)
             return (data.get("segments", data) if isinstance(data, dict) else data), "cache"
         payload = whisper_payload(proj, lead_only)
+        relisten.forget(w_json)      # what was heard again belongs to the result that is about to be replaced
         jid = start_job("mv_whisper", "mv_whisper.py", payload, f"Whisper: {proj.get('title') or proj['name']}",
                         proj["song_id"], 3600)
         job = await wait_job(jid)
@@ -175,6 +177,33 @@ def router(ctx: Context) -> APIRouter:
         with open(w_json, "r", encoding="utf-8") as f:
             data = json.load(f)
         return data.get("segments", []), (job.get("result") or {}).get("source", "faster-whisper")
+
+    async def relisten_gaps(proj: Dict[str, Any], w_segs: List[Dict[str, Any]], anchors: List[Dict[str, Any]],
+                            lines: List[str], total_dur: float) -> tuple:
+        """Only with anchors (app/relisten.py): the Whisper words with what was heard again put in, after
+        Whisper listened again to the stretches between placed lines where lines were not heard at all.
+        Returns (segments, note for the page or "")."""
+        w_json = proj["whisper_json"]
+        relisten.collect(w_json)
+        segs = relisten.merged({"segments": w_segs}, w_json)
+        rep = quick_lyrics.anchored_report(lines, segs, anchors, total_dur)
+        wins = relisten.windows(rep["gaps"], w_json)
+        if not wins:
+            return segs, ""
+        pl = whisper_payload(proj, bool(proj.get("whisper_lead_only", False)))
+        if not os.path.exists(pl["voice"]):
+            return segs, ""
+        local_update(True, "whisper", 70, f"🎙️ 空檔重聽：Whisper 只重聽 {len(wins)} 段兩個錨之間沒聽到的地方…",
+                     "、".join(f"{int(w['start']) // 60}:{int(w['start']) % 60:02d}–{int(w['end']) // 60}:{int(w['end']) % 60:02d}" for w in wins))
+        jid = start_job("mv_relisten", "mv_whisper.py", relisten.payload(wins, pl["voice"], w_json),
+                        f"Whisper（空檔重聽）: {proj.get('title') or proj['name']}", proj["song_id"], 1800)
+        job = await wait_job(jid)
+        if job["status"] != "succeeded":
+            return segs, "⚠️ 空檔重聽沒有完成，先照原本聽到的字對齊。"
+        relisten.collect(w_json)
+        heard = int((job.get("result") or {}).get("words") or 0)
+        return (relisten.merged({"segments": w_segs}, w_json),
+                f"🎙️ 空檔重聽：Whisper 只重聽了 {len(wins)} 段兩個錨之間沒聽到的地方，聽到 {heard} 個字。")
 
     # ------------------------------------------------------------------ progress / cancel / busy
     @r.get("/api/mv/transitions")
@@ -745,6 +774,14 @@ def router(ctx: Context) -> APIRouter:
                             fallback_used = True
                             warning_notes.append(f"⚠️ Whisper 語音分析中途發生異常（{w_err}），系統已自動啟動容錯保底機制，為您填滿全部 {target_sc_max} 張照片的連續時間軸，您可直接微調秒數！")
                             w_segs = []
+                    lyric_anchors = [s for s in (existing_tl or []) if s.get("locked") and s.get("type", "lyric") == "lyric"
+                                     and not str(s.get("text", "")).startswith("～")]
+                    if w_segs and lyric_anchors and clean_lines:
+                        # only with anchors: what Whisper heard again between them (without anchors: as before)
+                        w_segs, heard_note = await relisten_gaps(
+                            proj, w_segs, lyric_anchors, [t for t in clean_lines if not str(t).startswith("～")], total_dur)
+                        if heard_note:
+                            warning_notes.append(heard_note)
                     if w_segs:
                         if not clean_lines:
                             local_update(True, "whisper", 85, f"⚡ [階段 3/3] 正在依 Whisper 聲學自動切分並配對左側 {target_sc_max} 張分鏡圖...",

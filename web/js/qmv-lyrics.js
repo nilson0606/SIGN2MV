@@ -1,5 +1,8 @@
 // Lyric subtitles for the quick MV studio look: the old AI cover "dynamic lyric MV" and its
 // per-line timing panel (▶ this line, ±0.5 s, start = player time, delete, add a line, save).
+// A line can be anchored (🔒, as on the MV page): its time is kept when the lines are timed again, the
+// lines between two anchors are matched only to what was heard between them, and a stretch between
+// anchors where lines were not heard at all is listened to again by Whisper (app/relisten.py).
 import { api } from './api.js';
 import { el, toast } from './ui.js';
 import { t, errorText } from './i18n.js';
@@ -46,7 +49,9 @@ export function lyricsEditor(keys = {}) {
   } });
   const saveBtn = el('button', { class: 'btn small', onclick: () => save(true) });
   const clearBtn = el('button', { class: 'btn small danger', onclick: () => { lines = []; render(); } });
-  const adjust = [player, el('div', { class: 'row' }, addBtn, saveBtn, clearBtn), table];
+  const unlockBtn = el('button', { class: 'btn small', onclick: () => { lines.forEach((x) => { delete x.locked; }); render(); save(false); } });
+  const anchorHint = el('p', { class: 'muted small', style: 'margin:4px 0' });
+  const adjust = [anchorHint, player, el('div', { class: 'row' }, addBtn, saveBtn, unlockBtn, clearBtn), table];
   const foldTitle = el('span', {});
   const box = el('div', { class: 'qmv-lyrics' },
     head, hint,
@@ -63,13 +68,17 @@ export function lyricsEditor(keys = {}) {
     addBtn.textContent = t('qmvl.add');
     saveBtn.textContent = t('qmvl.save');
     clearBtn.textContent = t('qmvl.clear');
+    unlockBtn.textContent = t('qmvl.unlock_all');
+    anchorHint.textContent = t('qmvl.anchor_hint');
     render();
   }
 
   function render() {
     foldTitle.textContent = t('qmvl.adjust', lines.length);
+    unlockBtn.disabled = !lines.some((x) => x.locked);
     if (!lines.length) { table.replaceChildren(el('div', { class: 'empty small' }, t('qmvl.none'))); return; }
     table.replaceChildren(...lines.map((ln, i) => {
+      const lk = !!ln.locked;
       const st = el('input', { type: 'text', value: fmt(ln.start), style: 'width:84px', onchange: () => {
         const v = parse(st.value);
         if (Number.isFinite(v) && v >= 0) { const d = ln.end - ln.start; ln.start = r2(v); if (ln.end <= ln.start) ln.end = r2(ln.start + Math.max(d, 0.5)); }
@@ -83,7 +92,12 @@ export function lyricsEditor(keys = {}) {
       } });
       const tx = el('input', { type: 'text', value: ln.text, maxlength: 120, style: 'flex:1;min-width:160px', onchange: () => { ln.text = tx.value.trim() || ln.text; } });
       const nudge = (d) => () => { ln.start = r2(Math.max(0, ln.start + d)); ln.end = r2(Math.max(ln.start + 0.3, ln.end + d)); render(); };
-      return el('div', { class: 'item', style: 'flex-wrap:wrap;gap:6px' },
+      const lockBtn = el('button', {
+        class: 'btn small', title: t(lk ? 'qmvl.locked_tip' : 'qmvl.lock_tip'),
+        style: lk ? 'border-color:#86efac;color:#86efac;background:rgba(34,197,94,0.18);font-weight:700' : '',
+        onclick: () => { if (ln.locked) delete ln.locked; else ln.locked = true; render(); save(false); },
+      }, t(lk ? 'qmvl.locked' : 'qmvl.lock'));
+      const row = el('div', { class: 'item', style: 'flex-wrap:wrap;gap:6px' + (lk ? ';border-color:rgba(34,197,94,0.65);background:rgba(34,197,94,0.06)' : '') },
         el('span', { class: 'muted small', style: 'width:26px' }, String(i + 1)),
         el('button', { class: 'btn small', title: t('qmvl.play_line'), onclick: () => {
           if (!player.src) return;
@@ -96,31 +110,49 @@ export function lyricsEditor(keys = {}) {
           const d = ln.end - ln.start; ln.start = r2(player.currentTime || 0); ln.end = r2(ln.start + d); lines.sort((a, b) => a.start - b.start); render();
         } }, '📍'),
         en, tx,
-        el('button', { class: 'btn small danger', title: t('common.delete'), onclick: () => { lines.splice(i, 1); render(); } }, '🗑'));
+        el('button', { class: 'btn small danger', title: t('common.delete'), onclick: () => { lines.splice(i, 1); render(); } }, '🗑'),
+        lockBtn);
+      if (lk) {      // an anchor: nothing about its time can be changed until it is freed
+        [st, en].forEach((x) => { x.readOnly = true; x.title = t('qmvl.locked_tip'); });
+        row.querySelectorAll('button').forEach((b) => { if (b !== lockBtn && b.textContent !== '▶') b.disabled = true; });
+      }
+      return row;
     }));
   }
 
-  async function align(even, retried = false) {
+  // round: how many Whisper jobs this press has waited for (the first listening, then one listening again)
+  async function align(even, round = 0, again = true) {
     if (!songId) return;
     if (!area.value.trim()) { toast(t('qmvl.need_text'), true); return; }
     // keys.beforeAlign: a last question before Whisper is asked (it separates the vocals first); LRC lines
     // carry their own times and "even" only spreads the lines, so neither separates anything
-    if (!even && !retried && keys.beforeAlign && !/^\s*\[\d{1,3}:\d{2}/m.test(area.value) && !(await keys.beforeAlign())) return;
+    if (!even && !round && keys.beforeAlign && !/^\s*\[\d{1,3}:\d{2}/m.test(area.value) && !(await keys.beforeAlign())) return;
     alignBtn.disabled = evenBtn.disabled = true;
     try {
-      const res = await api.post(`/api/songs/${songId}/quickmv/lyrics/align`, { text: area.value, even });
-      if (res.job && !retried) {
-        status.textContent = t('qmvl.whisper_running');
+      const res = await api.post(`/api/songs/${songId}/quickmv/lyrics/align`,
+        { text: area.value, even, lines: lines.map((x) => ({ ...x })), relisten: again });
+      if (res.job && round < 3) {
+        status.textContent = res.relisten ? t('qmvl.relisten_running', res.relisten) : t('qmvl.whisper_running');
         const fin = await jb.follow(res.job);
-        if (fin.status !== 'succeeded') { status.textContent = t('qmvl.whisper_failed'); return; }
+        if (fin.status !== 'succeeded') {
+          if (!res.relisten) { status.textContent = t('qmvl.whisper_failed'); return; }
+          toast(t('qmvl.relisten_failed'), true);
+          alignBtn.disabled = evenBtn.disabled = false;
+          await align(false, round + 1, false);      // place the lines by what was heard before
+          return;
+        }
         alignBtn.disabled = evenBtn.disabled = false;
-        await align(false, true);
+        await align(false, round + 1, again);
         return;
       }
       lines = res.lines || [];
-      status.textContent = t(`qmvl.mode_${res.mode}`, res.matched ?? lines.length, res.total || lines.length);
+      status.textContent = t(`qmvl.mode_${res.mode}`, res.matched ?? lines.length, res.total || lines.length, res.anchors || 0);
+      const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+      if (res.relistened) status.textContent += ' ' + t('qmvl.relistened', res.relistened);
+      if (res.missing && res.missing.length) {
+        status.textContent += ' ' + t('qmvl.missing', res.missing.map((u) => `${mmss(u.start)}–${mmss(u.end)}`).join(', '));
+      }
       if (res.unsung && res.unsung.length) {
-        const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
         status.textContent += ' ' + t('qmvl.unsung', res.unsung.map((u) => `${mmss(u.start)}–${mmss(u.end)}`).join(', '));
       }
       render();

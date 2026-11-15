@@ -16,6 +16,12 @@ Input JSON:
   used: "vocals" | "lead", audio_file: the MV audio (cache identity), w_json: output path,
   prompt, lead_requested, models_dir
 Progress messages are the ones the MV page shows (stage = title, message = detail).
+
+With "windows" in the input (app/relisten.py) it listens again to just those stretches of the separated
+voice instead: input {windows: [{start, end, prompt}], voice, out}; each stretch is cut out and given to
+Whisper with its lines of the lyrics as the prompt and without the silence filter, the word times are put
+back on the song's clock and trimmed to where the voice is, and the result goes to "out"
+({windows: [{start, end, prompt, segments}]}) for the server to merge.
 """
 from __future__ import annotations
 
@@ -214,10 +220,63 @@ def refine_words_with_activity(segs, act, hop: float = 0.02):
     return out, trimmed, dropped
 
 
+def _clock(sec: float) -> str:
+    return f"{int(sec) // 60}:{int(sec) % 60:02d}"
+
+
+def relisten(data: dict, device: str) -> None:
+    voice = data["voice"]
+    wins = data["windows"]
+    say(5, "🎙️ 空檔重聽：載入 Whisper 模型…", Path(voice).name)
+    model, dev = load_model(device)
+    audio = load_audio_16k(voice)
+    act = vocal_activity(voice)
+    out, heard = [], 0
+    for n, w in enumerate(wins):
+        st, et = float(w["start"]), float(w["end"])
+        say(10 + 85 * n / len(wins), f"🎙️ 空檔重聽 {n + 1}/{len(wins)}：{_clock(st)}–{_clock(et)}", str(w.get("prompt", ""))[:26])
+        clip = audio[int(st * 16000):int(et * 16000)]
+        opts = {"beam_size": 5, "word_timestamps": True, "vad_filter": False, "condition_on_previous_text": False,
+                "initial_prompt": str(w.get("prompt") or "")[:220] or None}
+        try:
+            gen, _info = model.transcribe(clip, **opts)
+            raw = list(gen)
+        except Exception as exc:  # noqa: BLE001
+            if dev != "cuda":
+                raise
+            say(10 + 85 * n / len(wins), "🎙️ 空檔重聽：CUDA 推理中斷，切換 CPU…", str(exc)[:60])
+            model, dev = load_model("cpu")
+            gen, _info = model.transcribe(clip, **opts)
+            raw = list(gen)
+        segs = [{"start": round(st + float(s.start), 2), "end": round(st + float(s.end), 2), "text": (s.text or "").strip(),
+                 "words": [{"word": x.word, "start": round(st + float(x.start), 2), "end": round(st + float(x.end), 2),
+                            "probability": round(float(getattr(x, "probability", 1.0)), 3)} for x in (s.words or [])]}
+                for s in raw]
+        if act:
+            segs, _t, _d = refine_words_with_activity(segs, act)
+        heard += sum(len(s.get("words") or []) for s in segs)
+        out.append({"start": st, "end": et, "prompt": w.get("prompt", ""), "segments": segs})
+    dst = Path(data["out"])
+    tmp = dst.with_name(dst.name + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump({"windows": out}, fh, ensure_ascii=False, indent=1)
+    os.replace(tmp, dst)
+    say(98, f"🎙️ 空檔重聽完成：{len(out)} 段，聽到 {heard} 個字", "")
+    protocol.result({"windows": len(out), "words": heard, "device": dev})
+
+
 def main() -> None:
     data = protocol.read_input()
     add_torch_dll_dir()
     device = pick_device(data.get("device", "auto"))
+    if data.get("windows"):
+        try:
+            relisten(data, device)
+        except FileNotFoundError as exc:
+            protocol.fail("model_missing", str(exc))
+        except Exception as exc:  # noqa: BLE001
+            protocol.fail("whisper_failed", str(exc)[-800:])
+        return
     audio_file = data["audio_file"]
     w_json = Path(data["w_json"])
     try:

@@ -118,7 +118,74 @@ def clean_lines(value: Any, total: float | None = None) -> list[dict] | None:
         text = re.sub(r"[\x00-\x1f\x7f]", " ", str(x.get("text") or "")).strip()[:120]
         if not text or st < 0 or et <= st or (total and st >= total):
             continue
-        out.append({"start": round(st, 2), "end": round(min(et, total) if total else et, 2), "text": text})
+        ln = {"start": round(st, 2), "end": round(min(et, total) if total else et, 2), "text": text}
+        if x.get("locked") is True:
+            ln["locked"] = True          # an anchor: aligning again leaves it where it is
+        out.append(ln)
     out.sort(key=lambda x: x["start"])
     return out
+
+
+def anchored_report(lines: list[str], segments: list[Any], anchors: list[dict], total: float) -> dict:
+    """align_report() around anchors (lines the user locked): an anchor keeps its time; the lines between
+    two anchors are matched one character / word at a time only to the words heard between them, so a
+    match somewhere else cannot pull them away. Also returns "gaps": stretches between placed lines where
+    lines of the lyrics were not heard (for app/relisten.py: Whisper can listen to just those again)."""
+    words = _words(segments)
+    fixed: dict[int, dict] = {}
+    k = 0
+    for a in sorted(anchors, key=lambda x: float(x["start"])):          # each anchor to its line, in order
+        key = lyric_align.tokens(a.get("text", ""))
+        j = next((j for j in range(k, len(lines)) if key and lyric_align.tokens(lines[j]) == key), None)
+        if j is not None:
+            fixed[j] = a
+            k = j + 1
+    spans: list[tuple[float, float, bool]] = [(0.0, 0.0, False)] * len(lines)
+    unsung: list[dict] = []
+    placed = 0
+    i = 0
+    while i < len(lines):
+        if i in fixed:
+            spans[i] = (float(fixed[i]["start"]), float(fixed[i]["end"]), True)
+            placed += 1
+            i += 1
+            continue
+        j = i
+        while j < len(lines) and j not in fixed:
+            j += 1
+        lo = float(fixed[i - 1]["end"]) if i > 0 else 0.0
+        hi = float(fixed[j]["start"]) if j < len(lines) else float(total)
+        inside = [w for w in words if float(w["start"]) >= lo - 0.05 and float(w["end"]) <= hi + 0.05]
+        found = lyric_align.align_lines(lines[i:j], inside)
+        placed += sum(1 for x in found["spans"] if x)
+        unsung += found["unsung"]
+        first = inside[0]["start"] if inside and i == 0 else lo
+        for n, sp in enumerate(lyric_align.fill_unplaced(found["spans"], lines[i:j], first, hi, inside)):
+            spans[i + n] = sp
+        i = j
+    out = []
+    for i, (st, et, ok) in enumerate(spans):
+        if i in fixed:
+            out.append({"start": round(st, 2), "end": round(et, 2), "text": lines[i], "locked": True})
+            continue
+        nxt = spans[i + 1][0] if i + 1 < len(spans) else None
+        end = et + 0.5 if ok else min(et, st + 8.0)
+        if nxt is not None and (nxt - et < 1.0 or end > nxt):
+            end = nxt
+        out.append({"start": round(st, 2), "end": round(max(end, st + 0.3), 2), "text": lines[i]})
+    gaps = []
+    i = 0
+    while i < len(spans):                     # runs of lines that were not heard, and the time around them
+        if spans[i][2]:
+            i += 1
+            continue
+        j = i
+        while j < len(spans) and not spans[j][2]:
+            j += 1
+        lo = spans[i - 1][1] if i > 0 else 0.0
+        hi = spans[j][0] if j < len(spans) else float(total)
+        if i > 0 or j < len(spans):           # only between placed lines (an anchor, or a line that was heard)
+            gaps.append({"start": round(lo, 2), "end": round(hi, 2), "lines": lines[i:j]})
+        i = j
+    return {"lines": out, "placed": placed, "unsung": unsung, "gaps": gaps}
 

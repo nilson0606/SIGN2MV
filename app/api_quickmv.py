@@ -26,7 +26,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse
 
-from . import quick_lyrics
+from . import relisten, quick_lyrics
 from . import renders as renders_mod
 from . import stems as stems_mod
 from . import settings as settings_mod
@@ -295,31 +295,51 @@ def router(ctx: Context) -> APIRouter:
         if body.get("even") is True:
             return {"lines": quick_lyrics.spread(plain, total), "mode": "even"}
         wf = whisper_file(sdir)
+        src = song.get("source") or {}
+        layers, tracks = ["?"], {}
+        if src.get("audio"):
+            # use a separation the song already has (any model), else Demucs like the MV workspace
+            layers, tracks = stems_mod.plan(sdir, song, {"model": "demucs"})
+            for m in stems_mod.SEPARATORS:
+                ly, tr = stems_mod.plan(sdir, song, {"model": m})
+                if not ly:
+                    layers, tracks = ly, tr
+                    break
         if wf.is_file() and body.get("refresh") is not True:
             try:
                 data = json.loads(wf.read_text(encoding="utf-8"))
                 segs = data.get("segments", []) if isinstance(data, dict) else data
             except (OSError, ValueError):
-                segs = []
+                data, segs = {}, []
+            anchors = [x for x in (quick_lyrics.clean_lines(body.get("lines") or [], total) or []) if x.get("locked")]
+            if anchors:
+                # lines the user locked stay; the lines between two of them are matched only to what was heard
+                # between them; a stretch where lines were not heard at all is listened to again (once)
+                relisten.collect(wf)
+                rep = quick_lyrics.anchored_report(plain, relisten.merged(data, wf), anchors, total)
+                wins = relisten.windows(rep["gaps"], wf) if body.get("relisten") is not False and not layers else []
+                if wins:
+                    job = ctx.submit(kind="quickmv_relisten", lane="gpu", script="mv_whisper.py",
+                                     input=relisten.payload(wins, sdir / tracks["vocals"], wf),
+                                     title=f"lyrics timing (listen again): {song['title']}", song_id=song_id,
+                                     timeout_s=1800, dedupe="quickmv_whisper")
+                    return {"job": job, "relisten": len(wins)}
+                return {"lines": rep["lines"], "mode": "anchored", "matched": rep["placed"], "total": len(plain),
+                        "anchors": sum(1 for x in rep["lines"] if x.get("locked")), "unsung": rep["unsung"][:8],
+                        "missing": [{"start": g["start"], "end": g["end"], "lines": len(g["lines"])} for g in rep["gaps"]][:8],
+                        "relistened": len(relisten.done(wf))}
             rep = quick_lyrics.align_report(plain, segs)
             if rep["placed"] >= 1:
                 return {"lines": rep["lines"], "mode": "whisper", "matched": rep["placed"], "total": len(plain),
                         "unsung": rep["unsung"][:8]}
             return {"lines": quick_lyrics.spread(plain, total), "mode": "even", "whisper_empty": True}
-        src = song.get("source") or {}
         if not src.get("audio"):
             return err("song_has_no_audio")
-        # use a separation the song already has (any model), else Demucs like the MV workspace
-        layers, tracks = stems_mod.plan(sdir, song, {"model": "demucs"})
-        for m in stems_mod.SEPARATORS:
-            ly, tr = stems_mod.plan(sdir, song, {"model": m})
-            if not ly:
-                layers, tracks = ly, tr
-                break
         payload = {"song_dir": str(sdir), "layers": layers, "convert": None, "voice": str(sdir / tracks["voice"]),
                    "vocals": str(sdir / tracks["vocals"]), "used": "vocals", "audio_file": str(sdir / src["audio"]),
                    "w_json": str(wf), "prompt": str(song.get("title") or "")[:220], "lead_requested": False}
         wf.parent.mkdir(parents=True, exist_ok=True)
+        relisten.forget(wf)          # what was heard again belongs to the result that is about to be replaced
         job = ctx.submit(kind="quickmv_whisper", lane="gpu", script="mv_whisper.py", input=payload,
                          title=f"lyrics timing: {song['title']}", song_id=song_id, timeout_s=3600,
                          dedupe="quickmv_whisper")
