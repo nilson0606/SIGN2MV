@@ -516,3 +516,61 @@ def test_an_emoji_card_is_drawn():
     layers = card_emoji._layers("e_cloud", 64)
     cover = layers[0][1]
     assert cover[32, 32] and not cover[2, 2] and 0.25 < cover.mean() < 0.8
+
+
+def test_what_a_line_does_with_its_thing():
+    from app.mvstudio import cardphrase, cardstory as cs
+    rows = cs._rows()
+    things = [(ws, w) for ws, w in rows if w.get("prop") and w["prop"] not in cs.NOT_A_THING]
+    places = [(ws, w) for ws, w in rows if w.get("place") or w.get("terrain") or w.get("landmark")]
+
+    def read(t):
+        r = cardphrase.read(cardworld._simple(t), things, cs._negated, cardworld._simple, places)
+        return (r["act"], r["thing"]) if r else None
+    assert read("我想留一張紙給妳") == ("give", "letter")          # the thing before 給
+    assert read("送你一束玫瑰") == ("give", "rose")                 # the thing after 送你
+    assert read("忙著追逐天空中的流星") == ("toward", "shooting")
+    assert read("我聽見雨滴落在青青草地")[0] == "listen"
+    assert read("我看不見你") is None                               # 看不見: not done
+    assert read("回到過去") is None and read("往事只能回味") is None   # 往 in 往事
+    assert read("給我勇氣") is None                                 # a feeling is nothing to hand over
+    assert cardphrase.read(cardworld._simple("與你相遇"), things, cs._negated, cardworld._simple, places)["with"]
+    # in a song: handing over the thing, under it, towards it
+    parts = [("lyric", "我想摘兩顆星給妳"), ("lyric", "我們在星空下"), ("lyric", "朝著氣球跑去")]
+    w = cs.prepare(cardworld.make_world(3, "premium"), parts, "")
+    got = [cardworld.parse(sp) for sp in cs.plan_premium(parts, 3, w, "")[0]]
+    assert got[0][3] == "duo_face" and got[0][5] == "give" and got[0][4] in card_icons_table()
+    for sp in cs.plan_premium(parts, 3, w, "")[0]:
+        assert cardworld.draw(sp, w, 1).size == (1920, 1080)
+    for frame, prop, subject in (("under", "e_umbrella", "duo_front"), ("toward", "e_balloon", "solo_away"), ("give", "envelope", "duo_face")):
+        assert cardworld.draw(cardworld.card("road", "day", "clear", subject, prop, frame, "l", 0), w, 2).size == (1920, 1080)
+
+
+def card_icons_table():
+    from app.mvstudio import card_icons
+    return card_icons.TABLE
+
+
+def test_the_grammar_of_a_line_gives_a_face_a_count_and_who():
+    pytest = __import__("pytest")
+    pytest.importorskip("jieba")
+    from app.mvstudio import cardgrammar as cg, cardstory as cs
+    rows = cs._rows()
+    r = cg.read("我想摘兩顆星給妳", rows)
+    assert r["who"] == "我" and r["to"] == "你" and [t["n"] for t in r["things"] if t["word"] == "星"] == [2]
+    assert cg.read("沒有地球太陽還是會繞會繞", rows)["who"] == "太陽"          # the noun before the verb; 沒有 does nothing
+    assert cg.read("所有的雲都跑到我這裡", rows)["who"] == "雲" and cg.read("害怕破壞完美的平衡點", rows)["who"] == "我"
+    assert cg.read("看不見妳的笑", rows)["face"] == "" and cg.read("害怕破壞完美的平衡點", rows)["face"] == "擔心"
+    # in a card: the tenth field, drawn; a card without it is as before
+    sp = cardworld.card("road", "day", "clear", "duo_face", "e_glowing_star", "give", "c", 0, "shy", 2, "m")
+    assert sp.endswith("|shy.2.m") and cardworld.parse(sp) and cardworld.extras(sp) == ("shy", 2, "m")
+    assert cardworld.card("road", "day", "clear", "solo_front", "none", "mid", "c", 0).count("|") == 8
+    assert cardworld.parse(sp[:-7] + "nope.2.m") is None and cardworld.parse(sp[:-1] + "x") is None
+    w = cs.prepare(cardworld.make_world(3, "premium"), [("lyric", "x")], "")
+    for face in cardworld.FACES:
+        assert cardworld.draw(cardworld.card("road", "day", "clear", "solo_front", "none", "close", "c", 0, face, 1, "o"), w, 1).size == (1920, 1080)
+    assert cardworld.draw(sp, w, 1).size == (1920, 1080)
+    parts = [("lyric", "我想摘兩顆星給妳"), ("lyric", "你張開了雙翼"), ("lyric", "害怕破壞完美的平衡點")]
+    w = cs.prepare(cardworld.make_world(3, "premium"), parts, "")
+    got = [cardworld.extras(sp) for sp in cs.plan_premium(parts, 3, w, "")[0]]
+    assert got[0][1] == 2 and got[1][2] == "o" and got[2][0] == "worry"

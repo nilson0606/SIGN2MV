@@ -99,11 +99,18 @@ def shapes(body: str):
     if re.search(r"Gradient|clipPath|<use|transform|stroke|opacity|mask", body):
         return None
     out = []
-    for tag, attrs in re.findall(r"<(\w+)([^>]*)/?>", body):
+    stack = ["#000"]            # the fill a <g> gives the shapes inside it
+    for close, tag, attrs, selfclose in re.findall(r"<(/?)(\w+)([^>]*?)(/?)>", body):
+        if close:
+            if tag == "g" and len(stack) > 1:
+                stack.pop()
+            continue
         a = dict(re.findall(r'([\w:-]+)="([^"]*)"', attrs))
         if tag in ("g", "defs"):
+            if tag == "g" and not selfclose:
+                stack.append(a.get("fill", stack[-1]) if a.get("fill") != "none" else stack[-1])
             continue
-        fill = a.get("fill", "#000")
+        fill = a.get("fill", stack[-1])
         if fill == "none":
             continue
         if not re.fullmatch(r"#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}", fill):

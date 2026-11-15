@@ -75,6 +75,17 @@
   not a no. No sun or rainbow in a dusk or night card. The simple cards are as before; drawn cards stay as they are.
 - MV page: no more 「畫法」 menu; the card lottery always draws the former premium way (one song-long storyboard).
   The server still knows the simple and standard ways, so cards drawn with them stay as they are.
+- Picture cards: what a line does with its thing (`cardphrase`): a verb and the thing near it (送你／給妳／把…給, 拿著／抱著,
+  看著／望著, 等, 騎／搭, 寫, 聽, 追／走向／往), a thing before 下 (星空下), 和你／跟你／與你 (the two of them) and
+  從…到… (a way to go). Three new layouts: handing the thing to the other one, the thing large over their heads,
+  and the thing on the horizon they walk towards. Only nearby words in the same clause count; 看不見, 往事 and
+  feelings (勇氣, 幸福 …) do not. Emoji shapes take their group's colour (the glowing star was black).
+- Picture cards: a line's grammar (`cardgrammar`, with jieba, MIT, new in the server's requirements; without it
+  the cards are as before): who does it (我 when the line leaves it out; a noun can), to whom, the verbs, the nouns
+  with their number and what they are like, where, how, when, the tone and the face. First use in the cards, as an
+  optional tenth field of a card ("face.count.who"): sixteen faces instead of four (laughing, wry, a tear, crying,
+  angry, shy, in love, worried, missing someone, lonely, sleepy, firm …), several of a thing (兩顆星 is two stars),
+  and the other one alone when the line is about 你／她 only.
 
 ## 2026.11.15
 

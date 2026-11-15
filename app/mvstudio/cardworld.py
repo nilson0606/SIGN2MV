@@ -14,6 +14,7 @@ from __future__ import annotations
 import colorsys
 import math
 import random
+import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter
@@ -65,7 +66,10 @@ SUBJECTS_PREM = ("solo_hips", "solo_think", "solo_cover", "solo_heart", "solo_ch
                  "solo_jump", "solo_crouch", "solo_ground", "solo_away", "solo_give", "solo_look",
                  "duo_walk", "duo_run", "duo_backs", "duo_lean", "duo_cheer", "duo_point", "duo_follow", "duo_wave", "duo_dance",
                  "duo_ground", "duo_stars", "duo_comfort", "duo_far", "other_front", "other_away")
-FRAMES_PREM = ("far", "mirror", "moon", "split", "window", "photo", "globe", "memory", "tilt")
+FRAMES_PREM = ("far", "mirror", "moon", "split", "window", "photo", "globe", "memory", "tilt",
+               "give", "under", "toward")    # [2026-11-15] what a line does with its thing (cardphrase): handing it
+# to the other one, standing under it, walking towards it far ahead
+ACT_FRAMES = ("give", "under", "toward")
 POST_FRAMES = ("split", "window", "photo", "globe", "memory", "tilt")
 VIEWS = ("near", "centre", "small")       # a put-together place can end in one of these: how its landmark is seen
 POSES = ("l", "c", "r")
@@ -259,12 +263,37 @@ def _hints(line: str, rows, longest: bool = False) -> Dict[str, str]:
     return got
 
 
-def card(place, light, weather, subject, prop, frame, pos, n) -> str:
-    return "|".join(("w2", place, light, weather, subject, prop, frame, pos, str(int(n))))
+# [2026-11-16] what a line's grammar adds (cardgrammar), as an optional tenth field "face.count.who":
+# the face of the people (FACES, "-" = as the card would have it), how many of its thing (1-5), and who a
+# card with one person shows ("m" the song's lead, "o" the other one). Cards without the field are as before.
+FACES = ("smile", "sad", "closed", "wow", "laugh", "wry", "tear", "cry", "angry", "shy", "love", "worry", "miss", "lonely",
+         "sleepy", "firm")
+_EXTRA = re.compile(r"^(-|[a-z]+)\.([1-5])\.([mo])$")
+
+
+def card(place, light, weather, subject, prop, frame, pos, n, face: str = "", count: int = 1, who: str = "m") -> str:
+    spec = "|".join(("w2", place, light, weather, subject, prop, frame, pos, str(int(n))))
+    if (face in FACES) or count > 1 or who == "o":
+        spec += f"|{face if face in FACES else '-'}.{max(1, min(5, int(count)))}.{'o' if who == 'o' else 'm'}"
+    return spec
+
+
+def extras(spec: str) -> Tuple[str, int, str]:
+    """(face or "", count, who) of a card."""
+    p = str(spec or "").split("|")
+    m = _EXTRA.match(p[9]) if len(p) == 10 else None
+    if not m or (m.group(1) != "-" and m.group(1) not in FACES):
+        return "", 1, "m"
+    return ("" if m.group(1) == "-" else m.group(1)), int(m.group(2)), m.group(3)
 
 
 def parse(spec: str) -> Optional[Tuple[str, str, str, str, str, str, str, int]]:
     p = str(spec or "").split("|")
+    if len(p) == 10:
+        m = _EXTRA.match(p[9])
+        if not m or (m.group(1) != "-" and m.group(1) not in FACES):
+            return None
+        p = p[:9]
     if (len(p) == 9 and p[0] == "w2" and valid_place(p[1]) and p[2] in LIGHTS and p[3] in WEATHERS
             and p[4] in SUBJECTS + SUBJECTS_STD + SUBJECTS_PREM and (p[5] in PROPS + PROPS_STD or p[5] in card_icons.TABLE)
             and p[6] in FRAMES + FRAMES_STD + FRAMES_PREM and p[7] in POSES
@@ -366,7 +395,9 @@ class K:
         self.dark = light in ("night", "dusk")
         self.sky3 = [self.pal(col) for col in self.L["sky"]]
         self.flat = None      # set: everything is painted in this one colour (people against the light)
-        self.mood = "smile"   # the faces: smile | sad | closed | wow
+        self.mood = "smile"   # the faces: FACES
+        self.count = 1        # how many of the card's thing (card_icons.draw_icon)
+        self.who = "m"        # "o": a card with one person shows the other one
         self.rim = 0          # -1 / 1: light from the left / right draws a bright edge on people
         self.std = world.get("grade") in ("standard", "premium")
 
@@ -950,14 +981,50 @@ def figure(k, who, x, y, s, face="front", arms="down", sit=False, walk=False, sh
         if not girl and cut == "fringe": k.poly([(x - hr * 0.9, hy - hr * 0.1), (x + hr * 0.2, hy - hr * 0.1), (x - hr * 0.5, hy + hr * 0.3)], hair, line=False)
         dx = {"front": 0, "left": -9, "right": 9}[face] * hd * s
         mood = k.mood
+        ink, lip, u = (46, 50, 74), (120, 70, 80), hd * s
+        lwf = P(max(2, 3 * s))
+        ex = lambda e: x + e * u + dx                                   # noqa: E731
+        ey = hy + hr * 0.14
+
+        def arc(cx, cy, w, h, a0_, a1_, col=ink):
+            k.d.arc([P(cx - w), P(cy - h), P(cx + w), P(cy + h)], a0_, a1_, fill=col, width=lwf)
+
+        def brow(e, inner, outer):                                      # a brow: its inner and outer end, up (-) or down (+)
+            k.stroke([(ex(e) - (e / 16) * 9 * u, ey - 15 * u + inner * u), (ex(e) + (e / 16) * 9 * u, ey - 15 * u + outer * u)], ink, max(2, 3 * s), raw=True)
         for e in (-16, 16):
-            if mood == "closed": k.d.arc([P(x + e * hd * s + dx - 8 * hd * s), P(hy + hr * 0.02), P(x + e * hd * s + dx + 8 * hd * s), P(hy + hr * 0.26)], 20, 160, fill=(46, 50, 74), width=P(max(2, 3 * s)))
-            else: k.ell(x + e * hd * s + dx, hy + hr * 0.14, (6.5 if mood == "wow" else 5) * hd * s, (9 if mood == "wow" else 7) * hd * s, (46, 50, 74), line=False)
+            if mood in ("closed", "miss", "love"): arc(ex(e), ey, 8 * u, 6.5 * u, 20, 160)          # closed, at rest
+            elif mood in ("laugh", "shy"): arc(ex(e), ey + 4 * u, 8 * u, 7 * u, 200, 340)             # closed, smiling
+            elif mood == "sleepy": k.stroke([(ex(e) - 7 * u, ey + 2 * u), (ex(e) + 7 * u, ey + 2 * u)], ink, max(2, 3 * s), raw=True)
+            elif mood == "lonely": k.ell(ex(e), ey + 4 * u, 5 * u, 5 * u, ink, line=False)             # looking down
+            else: k.ell(ex(e), ey, (6.5 if mood == "wow" else 5) * u, (9 if mood == "wow" else 7) * u, ink, line=False)
+            if mood == "angry": brow(e, 5, -3)
+            elif mood in ("worry", "wry", "cry", "tear", "miss"): brow(e, -4, 3)
+            elif mood == "firm": brow(e, 1, -1)
         if not k.flat:
-            for e in (-27, 27): k.ell(x + e * hd * s + dx, hy + hr * 0.44, 9 * hd * s, 6 * hd * s, (255, 168, 168, 150), line=False, e=True)
-            if mood == "sad": k.d.arc([P(x - 8 * hd * s + dx), P(hy + hr * 0.5), P(x + 8 * hd * s + dx), P(hy + hr * 0.76)], 200, 340, fill=(120, 70, 80), width=P(max(2, 3 * s)))
-            elif mood == "wow": k.ell(x + dx, hy + hr * 0.56, 5 * hd * s, 6 * hd * s, (150, 80, 90), line=False)
-            else: k.d.arc([P(x - 8 * hd * s + dx), P(hy + hr * 0.36), P(x + 8 * hd * s + dx), P(hy + hr * 0.62)], 20, 160, fill=(120, 70, 80), width=P(max(2, 3 * s)))
+            strong = mood in ("shy", "love")
+            for e in (-27, 27): k.ell(ex(e), hy + hr * 0.44, (12 if strong else 9) * u, (8 if strong else 6) * u, (255, 140, 150, 210) if strong else (255, 168, 168, 150), line=False, e=True)
+            my = hy + hr * 0.5
+            if mood in ("sad", "cry", "tear", "worry", "angry"): arc(x + dx, my + hr * 0.13, 8 * u, hr * 0.13, 200, 340, lip)
+            elif mood == "wow": k.ell(x + dx, hy + hr * 0.56, 5 * u, 6 * u, (150, 80, 90), line=False)
+            elif mood == "laugh": k.d.pieslice([P(x + dx - 11 * u), P(my - 11 * u), P(x + dx + 11 * u), P(my + 11 * u)], 0, 180, fill=(150, 70, 80))
+            elif mood in ("firm", "lonely", "sleepy"): k.stroke([(x + dx - 6 * u, my + 3 * u), (x + dx + 6 * u, my + 3 * u)], lip, max(2, 3 * s), raw=True)
+            elif mood == "miss": arc(x + dx, my + hr * 0.06, 5 * u, hr * 0.08, 20, 160, lip)
+            elif mood == "wry": k.stroke([(x + dx - 8 * u, my + 4 * u), (x + dx, my + 1 * u), (x + dx + 8 * u, my - 3 * u)], lip, max(2, 3 * s), raw=True)
+            else: arc(x + dx, my - hr * 0.01, 8 * u, hr * 0.13, 20, 160, lip)
+            if mood in ("cry", "tear"):                                 # tears
+                for e in ((-16, 16) if mood == "cry" else (16,)):
+                    tx, ty = ex(e) + (e / 16) * 3 * u, ey + 10 * u
+                    k.poly([(tx, ty), (tx - 4 * u, ty + 9 * u), (tx + 4 * u, ty + 9 * u)], (150, 205, 255), line=False, e=True)
+                    k.ell(tx, ty + 10 * u, 4.2 * u, 4.2 * u, (150, 205, 255), line=False, e=True)
+                    if mood == "cry": k.ell(tx, ty + 24 * u, 3.4 * u, 4.6 * u, (150, 205, 255), line=False, e=True)
+            elif mood == "worry":                                       # a drop of sweat at the temple
+                tx, ty = x + dx + 36 * u, hy - hr * 0.3
+                k.poly([(tx, ty - 9 * u), (tx - 4 * u, ty), (tx + 4 * u, ty)], (170, 215, 255), line=False, e=True)
+                k.ell(tx, ty + 1 * u, 4.4 * u, 4.4 * u, (170, 215, 255), line=False, e=True)
+            elif mood == "love":                                        # a small heart by the head
+                tx, ty = x + dx + 40 * u, hy - hr * 0.55
+                for sx in (-1, 1): k.ell(tx + sx * 4 * u, ty, 5 * u, 5 * u, (255, 110, 140), line=False, e=True)
+                k.poly([(tx - 9 * u, ty + 1.5 * u), (tx + 9 * u, ty + 1.5 * u), (tx, ty + 12 * u)], (255, 110, 140), line=False, e=True)
         if extra == "glasses":
             for e in (-16, 16): k.d.ellipse([P(x + e * hd * s + dx - 13 * hd * s), P(hy + hr * 0.14 - 12 * hd * s), P(x + e * hd * s + dx + 13 * hd * s), P(hy + hr * 0.14 + 12 * hd * s)], outline=(60, 66, 90), width=P(3))
             k.stroke([(x - 3 * hd * s + dx, hy + hr * 0.14), (x + 3 * hd * s + dx, hy + hr * 0.14)], (60, 66, 90), 3, raw=True)
@@ -987,6 +1054,8 @@ def people(k, subject, pos, frame, ground, n):
     """Put the people of the subject in the picture. Returns [lead, other] (either can be None)."""
     lead = k.w["lead"]
     other = "boy" if lead == "girl" else "girl"
+    if k.who == "o" and not subject.startswith("duo"):
+        lead, other = other, lead      # the line is about the other one
     s = {"far": 0.5, "wide": 0.82, "mid": 1.14, "close": 2.2}[frame]
     y = 1130 if frame == "close" else ground + {"far": 2, "wide": 6}.get(frame, 28)
     x = {"l": 560, "c": 960, "r": 1360}[pos]
@@ -1312,10 +1381,17 @@ def _paint(spec: str, world: Dict[str, Any], seed: int = 0) -> "K":
     k.sky()
     if std:
         k.mood = MOODS.get(prop, "sad" if subject in SAD_SUBJECTS else "smile")
+        face, k.count, k.who = extras(spec)
+        if face:
+            k.mood = face
     if frame == "moon":
         shot_moon(k, place, subject, prop, n)
         weather(k, wth)
         return k
+    act = frame if frame in ACT_FRAMES and prop in card_icons.TABLE else ""
+    drawn = prop
+    if act:                      # the thing is painted where the line says, not where its family would put it
+        prop = "none"
     sun = None
     if wth == "clear" and place != "forest":
         sun = k.orb(horizon=680, side=("l" if pos == "r" else "r") if frame == "sil" else None)
@@ -1338,7 +1414,11 @@ def _paint(spec: str, world: Dict[str, Any], seed: int = 0) -> "K":
         shot_hands(k, subject, prop, n)
         thing(k, prop if prop in ("petals", "leaves", "fireflies", "bubbles") else "none", "front", [None, None], ground)
     else:
-        shot = "mid" if frame in ("sil", "over") else ("wide" if frame == "mirror" else frame)
+        shot = "mid" if frame in ("sil", "over", "give", "toward") else ("wide" if frame in ("mirror", "under") else frame)
+        if act == "toward":      # far ahead, on the horizon beside them: where they are going
+            tx = 960 if (pos != "c" and not subject.startswith("duo")) else 1380
+            k.d.ellipse([P(tx - 150), P(ground - 420), P(tx + 150), P(ground - 150)], fill=(255, 255, 255, 46))
+            card_icons.draw_icon(k, drawn, tx, ground - 190, 180, shine=False)
         probe = {"l": 560, "c": 960, "r": 1360}[pos]
         who = None
         if prop in ("bike", "wings", "clover") and subject != "none":
@@ -1356,6 +1436,25 @@ def _paint(spec: str, world: Dict[str, Any], seed: int = 0) -> "K":
         if frame == "over":
             k.blur(5)
         who = people(k, subject, pos, shot, ground, n)
+        if act == "under":       # large over their heads
+            heads = [f["head"] for f in who if f]
+            top = min((hy - hr for _hx, hy, hr in heads), default=ground - 300)
+            cx = sum(hx for hx, _hy, _hr in heads) / len(heads) if heads else 960
+            size = max(220, min(460, top - 60))
+            k.d.ellipse([P(cx - size * 0.7), P(top - 40 - size * 1.05), P(cx + size * 0.7), P(top - 10)], fill=(255, 255, 255, 46))
+            card_icons.draw_icon(k, drawn, cx, top - 40, size)
+        elif act == "give":      # between the two of them, at the height of their hands
+            a, b = (who + [None, None])[:2]
+            if a and b:
+                ha = min(a["hands"], key=lambda h: abs(h[0] - b["head"][0]))
+                hb = min(b["hands"], key=lambda h: abs(h[0] - a["head"][0]))
+                x, y = (ha[0] * 0.55 + hb[0] * 0.45), max(ha[1], hb[1]) + 34 * a["s"]
+                card_icons.draw_icon(k, drawn, x, y, max(120, 150 * a["s"]))
+            else:
+                one = a or b
+                if one:
+                    hx, hy = one["hands"][1]
+                    card_icons.draw_icon(k, drawn, hx, hy + 30 * one["s"], max(120, 140 * one["s"]))
         if frame == "mirror":    # the view again in the water at their feet
             _mirror(k, ground + 20)
         if shot != "close" and frame != "over":
@@ -2592,6 +2691,8 @@ def thing_standard(k, prop, phase, who, ground):
     side = 1 if hx < 960 else -1
     bx, by = hx + side * (150 + 130 * sc), ground - 10       # a spot on the ground beside the person
     icon = card_icons.TABLE.get(prop)
+    if icon and k.dark and prop.startswith(("e_sun", "e_rainbow")):
+        return                    # no sun (or rainbow) in a dusk or night sky, not even its glow
     if icon:
         fam = icon[0]
         if not one and fam in ("hold", "bubble", "side"):

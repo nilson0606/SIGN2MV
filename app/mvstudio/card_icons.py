@@ -263,5 +263,14 @@ def draw_shapes(k, prims, ox: float, oy: float, z: float, shine: bool = True, li
 def draw_icon(k, name: str, x: float, y: float, size: float, shine: bool = True) -> None:
     """Paint the icon with its bottom middle at (x, y), `size` wide and high. shine: its own colours,
     whatever the light of the card (False: it stands in the card's light like everything else)."""
+    n = int(getattr(k, "count", 1) or 1)
+    if n > 1 and size >= 120:           # [2026-11-16] the line says how many (兩顆星): side by side, a little smaller
+        each = size * {2: 0.74, 3: 0.62, 4: 0.54}.get(n, 0.5)
+        for i in range(n):
+            off = (i - (n - 1) / 2) * each * 0.86
+            lift = each * 0.22 if (i % 2 and n > 2) else 0
+            z = each / 100.0
+            draw_shapes(k, TABLE[name][2], x + off - 50 * z, y - lift - 100 * z, z, shine)
+        return
     z = size / 100.0
     draw_shapes(k, TABLE[name][2], x - 50 * z, y - 100 * z, z, shine)

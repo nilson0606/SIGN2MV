@@ -7,6 +7,7 @@ click==8.5.0              # via uvicorn
 fastapi==0.162.0          # via -r installer/requirements/server.txt
 h11==0.16.0               # via uvicorn
 idna==3.20                # via anyio
+jieba==0.42.1             # via -r installer/requirements/server.txt
 numpy==2.3.5              # via -r installer/requirements/server.txt
 opentelemetry-api==1.45.1  # via fastapi
 pillow==12.0.0            # via -r installer/requirements/server.txt

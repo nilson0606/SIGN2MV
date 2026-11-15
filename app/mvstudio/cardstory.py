@@ -23,7 +23,7 @@ import re
 from collections import Counter
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from . import card_icons
+from . import card_icons, cardgrammar, cardphrase
 from . import cardworld as cw
 
 ORDER = ("dawn", "day", "golden", "sunset", "dusk", "night")
@@ -273,6 +273,20 @@ def feeling(line: str) -> int:
 NOT_A_THING = ("none", "dots", "ask", "call", "tears", "notes")
 
 
+ICON_TWIN = {"stars": "e_glowing_star", "hearts": "hearti", "letter": "envelope", "phone": "e_mobile_phone", "wine": "e_wine_glass",
+             "clock": "e_alarm_clock", "hourglass": "e_hourglass_done", "diary": "e_notebook", "cranes": "cranebird", "plane": "e_airplane",
+             "balloons": "e_balloon", "clover": "e_four_leaf_clover", "bike": "e_bicycle", "butterfly": "e_butterfly", "birds": "e_dove",
+             "notes": "e_musical_notes", "paperboat": "e_sailboat", "bigmoon": "e_full_moon", "frames": "e_framed_picture"}
+
+
+def icon_for(prop: str) -> str:
+    """The small picture (card_icons) of a thing that is otherwise drawn by hand, or the thing itself."""
+    for name in (ICON_TWIN.get(prop, ""), prop + "i", "e_" + prop):
+        if name and name in card_icons.TABLE:
+            return name
+    return prop
+
+
 def title_keep(title: str) -> Optional[Tuple[str, str, Tuple[str, ...]]]:
     """[2026-11-15] The thing a song's name is about (〈彩虹〉: a rainbow), as a KEEPSAKES entry: the name says
     what the song is, so its thing comes before what the lines say most often. None when the name names no thing."""
@@ -374,6 +388,8 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
     st = story(parts, world, title)
     secs, arc, keep = st["secs"], st["arc"], st["keep"]
     rows = _rows()
+    phrase_rows = [(ws, what) for ws, what in rows if what.get("prop") and what["prop"] not in NOT_A_THING]
+    place_rows = [(ws, what) for ws, what in rows if what.get("place") or what.get("terrain") or what.get("landmark")]
     r = random.Random(f"premium:{int(seed)}")
     lyr = [i for i, (k, _) in enumerate(parts) if k not in ("intro", "outro", "interlude")]
     at = {i: n / max(1, len(lyr)) for n, i in enumerate(lyr)}
@@ -580,8 +596,71 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
             shot = "tilt"
         elif says(line, shot_words["globe"]) and sc["again"] % 2 == 1:
             shot = "globe"
+        # ---- [2026-11-15] what the line does with its thing (a verb or a preposition and the thing: cardphrase)
+        act = cardphrase.read(line, phrase_rows, _negated, cw._simple, place_rows)
+        if act and keep and act["thing"] and act["thing"] != keep[0] and says(line, keep[2]):
+            # the song's own thing, when the line names it, comes first: it is what is handed over or held (a
+            # thing of the sky, a rainbow, stays in the sky)
+            if card_icons.TABLE.get(keep[0], ("",))[0] == "sky" or keep[0] in ("rainbow", "stars", "kite", "balloons", "birds"):
+                act = None
+            else:
+                act = {**act, "thing": keep[0]}
+        if act:
+            a, th = act["act"], str(act["thing"])
+            duo = subject.startswith("duo")
+            if act["with"] and not duo:
+                subject, duo = ("duo_walk" if a == "toward" else "duo_front"), True
+            fam = card_icons.TABLE.get(th, ("",))[0]
+            skyish = fam == "sky" or th in ("stars", "shooting", "bigmoon", "birds", "rainbow", "kite", "plane", "balloons", "lantern")
+            if a == "give" and th:
+                prop, subject, shot = th, "duo_face", "give"
+            elif a == "hold" and th:
+                prop = th
+                if not duo:
+                    subject = "solo_front"
+                shot = "close" if fam == "hold" else "still"
+            elif a == "under" and th:
+                if th == "bigmoon":
+                    shot, prop = "moon", "none"
+                elif th in ("umbrella", "umbrellai"):
+                    prop = "umbrella"
+                else:
+                    prop, shot = th, "under"
+                    if not duo:
+                        subject = "solo_front"
+            elif a == "look" and th:
+                prop, subject = th, ("duo_back" if duo else "solo_back")
+                shot = "wide" if skyish else "toward"
+            elif a == "toward":
+                subject = "duo_walk" if duo else "solo_away"
+                if th and not skyish:
+                    prop, shot = th, "toward"
+                else:
+                    prop, shot = (th or prop), "far"
+            elif a == "write":
+                prop, shot = (th or "letter"), "still"
+            elif a == "listen":
+                prop = th or "notes"
+                if not duo:
+                    subject = "solo_think"
+            elif a == "wait":
+                prop = th or prop
+                if not duo:
+                    subject = "solo_front" if th else "solo_sit"
+            elif a == "ride" and th:
+                prop = th
+                if not duo:
+                    subject = "solo_walk"
+            if act["way"] and shot not in ("give", "under", "toward"):
+                subject, shot = ("duo_walk" if duo else "solo_walk"), "far"
+        if shot in cw.ACT_FRAMES and prop not in card_icons.TABLE:
+            prop = icon_for(prop)   # a hand-drawn thing has a small picture to hand over or stand under
         duo = subject.startswith("duo")
         # a shot that does not suit the card gives way
+        if shot == "give" and (not duo or prop not in card_icons.TABLE):
+            shot = "mid"
+        if shot in ("under", "toward") and prop not in card_icons.TABLE:
+            shot = "wide" if shot == "under" else "far"
         if shot == "moon" and not (outdoor and weather == "clear" and light in ("golden", "sunset", "dusk", "night", "dawn")):
             shot = "wide"
         if shot == "mirror" and not outdoor:
@@ -621,9 +700,26 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
                 pl = cw.with_view(pl, None, view)
         here += 1
         pos = "c" if duo else cw.POSES[(i + seed) % 3]
-        spec, n = cw.card(pl, light, weather, subject, prop, shot, pos, 0), 0
+        if shot == "toward" and not duo and pos == "c":
+            pos = "l"               # beside the middle, where the thing they go to is
+        # ---- [2026-11-16] the line's grammar (cardgrammar; nothing without jieba): the face it asks for, how many
+        # of its thing, and whether a card with one person shows the other one (你 / 她 does it, not 我)
+        face, count, who = "", 1, "m"
+        g = cardgrammar.read(line, rows) if kind not in ("intro", "outro", "interlude") else None
+        if g:
+            face = cardgrammar.FACE_KEY.get(str(g["face"]), "")
+            for th in g["things"]:
+                if th["n"] > 1 and prop in card_icons.TABLE:
+                    named = hints(cardgrammar.simple(th["word"]), phrase_rows).get("prop")
+                    if named and prop in (named, icon_for(named)):
+                        count = int(th["n"])
+                        break
+            doers = set(str(g["who"]).split("、")) if g["who"] else set()
+            if doers and doers <= {"你", "他", "她", "你們", "他們", "她們"} and not duo and "我" not in line:
+                who = "o"
+        spec, n = cw.card(pl, light, weather, subject, prop, shot, pos, 0, face, count, who), 0
         while spec in seen:
             n += 1
-            spec = cw.card(pl, light, weather, subject, prop, shot, pos if duo else cw.POSES[(i + n) % 3], n)
+            spec = cw.card(pl, light, weather, subject, prop, shot, pos if duo else cw.POSES[(i + n) % 3], n, face, count, who)
         put(spec)
     return out, st
