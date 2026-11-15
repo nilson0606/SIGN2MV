@@ -67,6 +67,10 @@ Both projects are by the same author as SIGN2MV and are covered by this project'
 - `web/mv/pinyin.json`: the most common Mandarin reading of each Chinese character (toneless), generated with
   [pypinyin](https://github.com/mozillazg/python-pinyin) 0.55 (MIT; its data comes from
   [pinyin-data](https://github.com/mozillazg/pinyin-data), MIT). It only suggests an MV project code from the song name.
+- `app/mvstudio/card_emoji.json.gz`: about 500 pictures of things from
+  [Fluent Emoji Flat](https://github.com/microsoft/fluentui-emoji) (Microsoft, MIT), as their SVG shapes, with each
+  one's Traditional Chinese name and keywords from the [Unicode CLDR](https://cldr.unicode.org/) annotations (zh-Hant,
+  Unicode License v3). Made by `tools/build_card_emoji.py`; the picture cards use them as extra things.
 
 ## FFmpeg (GPL)
 

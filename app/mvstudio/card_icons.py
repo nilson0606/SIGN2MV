@@ -226,6 +226,11 @@ def _load() -> Dict[str, Tuple[str, Tuple[str, ...], List[tuple]]]:
             out[name] = (fam, tuple(w for w in words.split(",") if w), parse_shapes(shapes))
         except Exception as e:  # noqa: BLE001
             raise ValueError(f"icon line: {line!r}: {e!r}") from e
+    # [2026-11-15] the emoji (card_emoji) come last: a line gets one only when no hand-made icon has its word
+    from . import card_emoji
+    for name, (fam, words) in card_emoji.ENTRIES.items():
+        if fam in FAMILIES and name not in out:
+            out[name] = (fam, words, [("emoji", name)])
     return out
 
 
@@ -246,6 +251,9 @@ def draw_shapes(k, prims, ox: float, oy: float, z: float, shine: bool = True, li
             k.stroke([(ox + px * z, oy + py * z) for px, py in pr[1]], pr[2], max(1.5, pr[3] * z), e=shine)
         elif pr[0] == "w":
             k.rect(ox + pr[1] * z, oy + pr[2] * z, ox + pr[3] * z, oy + pr[4] * z, (255, 232, 150) if lit else (198, 226, 244), r=0.6 * z, e=lit)
+        elif pr[0] == "emoji":
+            from . import card_emoji
+            card_emoji.draw(k, pr[1], ox, oy, z, shine)
         elif pr[0] == "g" and lit:
             x, y, rr = ox + pr[1] * z, oy + pr[2] * z, pr[3] * z
             for i in range(12, 0, -1):         # (the canvas is twice the size)

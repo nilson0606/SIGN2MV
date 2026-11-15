@@ -68,6 +68,11 @@
 - MV page: 「🔒 LRC 時間全部定錨」 (on by default, remembered) anchors every line parsed from pasted LRC timecodes, so
   a later Whisper alignment keeps those times; without timecodes (even split) nothing is anchored. The last LRC line no
   longer ends past the song.
+- Picture cards (standard and premium): the song's name comes first: when it names a thing (〈彩虹〉: a rainbow,
+  〈小雨〉: an umbrella), that is the premium song's thing and what a standard line that says the name shows.
+  About 500 more things from Fluent Emoji Flat with Chinese words from Unicode CLDR (`card_emoji`), used only when
+  nothing hand-drawn has a line's word; a line that says 雲／陰天 has a cloudy sky; 有沒有／能不能 … is a question,
+  not a no. No sun or rainbow in a dusk or night card. The simple cards are as before; drawn cards stay as they are.
 
 ## 2026.11.15
 

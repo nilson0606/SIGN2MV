@@ -41,7 +41,7 @@ LIGHTS: Dict[str, Dict[str, Any]] = {
 PLACES = ("meadow", "sea", "rooftop", "street", "school", "classroom", "station", "park", "bridge", "forest", "lake", "room",
           "flowers", "road", "pier", "hill")
 INDOOR = ("classroom", "room")
-WEATHERS = ("clear", "rain", "snow")
+WEATHERS = ("clear", "rain", "snow", "cloudy")   # cloudy: [2026-11-15] the sky full of clouds, no sun (standard and premium words)
 SUBJECTS = ("none", "solo_front", "solo_back", "solo_walk", "solo_sit", "solo_reach", "solo_open", "solo_wave", "duo_front",
             "duo_back", "duo_sit", "duo_apart", "duo_hands", "duo_face", "other_back")
 PROPS = ("none", "stars", "shooting", "bigmoon", "hearts", "letter", "plane", "birds", "balloons", "clover", "petals", "leaves",
@@ -248,6 +248,12 @@ def _hints(line: str, rows, longest: bool = False) -> Dict[str, str]:
         hit = [len(w) for w in ws if ((w in words) if w.isascii() else (w in line))]
         if hit:
             for k, v in what.items():
+                if k == "prop" and k in got and str(v).startswith("e_") and got[k] not in ("dots", "ask", "call"):
+                    continue        # an emoji only when nothing else has named a thing (they come last); "?" or "..." is no thing
+                if k == "prop" and k in got and str(v).startswith("e_"):
+                    if not str(got[k]).startswith("e_"):
+                        got[k], size[k] = v, max(hit)
+                    continue
                 if k not in got or (longest and max(hit) > size[k]):
                     got[k], size[k] = v, max(hit)
     return got
@@ -1314,7 +1320,7 @@ def _paint(spec: str, world: Dict[str, Any], seed: int = 0) -> "K":
     if wth == "clear" and place != "forest":
         sun = k.orb(horizon=680, side=("l" if pos == "r" else "r") if frame == "sil" else None)
     if place != "forest":
-        k.clouds()
+        k.clouds(k.r.randint(7, 10) if wth == "cloudy" else None)
     thing(k, prop, "back", None, 0)
     if prop in PROPS_STD or prop in card_icons.TABLE:
         thing_standard(k, prop, "back", None, 0)
@@ -1700,6 +1706,7 @@ PLACE_FN.update({"cafe": pl_cafe, "busstop": pl_busstop, "library": pl_library, 
                  "snowtown": pl_snowtown, "garden": pl_garden, "alley": pl_alley, "field": pl_field, "fair": pl_fair,
                  "stairs": pl_stairs, "riverbank": pl_riverbank})
 HINTS_STD = (
+    _row(("雲", "陰天", "烏雲", "多雲", "雲朵", "cloud", "clouds", "cloudy"), weather="cloudy"),
     _row(("咖啡", "coffee", "cafe"), place="cafe"),
     _row(("公車", "巴士", "bus"), place="busstop"),
     _row(("書", "圖書館", "故事", "book", "story"), place="library"),
@@ -1798,25 +1805,37 @@ HINTS_STD = (
 # card_parts' terrains and landmarks: their words go first (they are longer, so "湖畔" is the lake, not the peaks)
 HINTS_STD = (tuple(_row(words, terrain=name) for name, words in card_parts.TERRAIN_WORDS.items())
              + tuple(_row(words, landmark=name) for name, words in card_parts.LANDMARK_WORDS.items()) + HINTS_STD)
-ICON_HINTS = tuple(_row(words, prop=name) for name, (_fam, words, _shapes) in card_icons.TABLE.items())
+ICON_HINTS = tuple(_row(words, prop=name) for name, (_fam, words, shapes) in card_icons.TABLE.items() if shapes[:1] != [("emoji", name)])
+# [2026-11-15] the emoji (card_emoji) come after every other row, the simple grade's too: a line gets one only
+# when nothing hand-drawn has its word
+EMOJI_HINTS = tuple(_row(words, prop=name) for name, (_fam, words, shapes) in card_icons.TABLE.items() if shapes[:1] == [("emoji", name)])
 MOODS = {"tears": "sad", "hearts": "closed", "call": "wow", "ask": "wow", "shooting": "wow", "notes": "closed", "umbrella": "sad",
          "broken": "sad", "raincloud": "sad", "fireworks": "wow", "thought": "closed", "dream": "closed", "guitar": "closed", "suitcase": "sad"}
 SAD_SUBJECTS = ("duo_apart", "solo_back", "other_back")
 
 
-def plan_standard(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, Any]) -> List[str]:
+def plan_standard(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, Any], title: str = "") -> List[str]:
     """plan() for a standard world: the same walk through the song, with the extra places and stances its
     words can call for, and about one card in four as another kind of shot: against the light, over a
     shoulder, two hands, or things on a table."""
     global HINTS
     keep = HINTS
-    HINTS = HINTS_STD + ICON_HINTS + HINTS          # the standard words first: they win over the simple ones
+    HINTS = HINTS_STD + ICON_HINTS + HINTS + EMOJI_HINTS   # the standard words first: they win over the simple ones
     try:
         specs = plan(parts, seed, world)
     finally:
         HINTS = keep
     r = random.Random(f"shots:{int(seed)}")
-    rows = [(tuple(_simple(w) for w in ws), what) for ws, what in HINTS_STD + ICON_HINTS + keep if "prop" in what]
+    rows = [(tuple(_simple(w) for w in ws), what) for ws, what in HINTS_STD + ICON_HINTS + keep + EMOJI_HINTS if "prop" in what]
+    # [2026-11-15] the thing the song's name names (〈彩虹〉: the rainbow) is what a line that says the name shows
+    named, named_words = "", ()
+    t = _simple(title)
+    if t:
+        for ws, what in rows:
+            hit = tuple(w for w in ws if not w.isascii() and len(w) >= 2 and w in t)
+            if hit and what["prop"] not in ("none", "dots", "ask", "call", "tears", "notes"):
+                named, named_words = what["prop"], hit
+                break
     out: List[str] = []
     seen = set()
     sung: Dict[str, int] = {}
@@ -1836,10 +1855,14 @@ def plan_standard(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, 
                         alts.append(what["prop"])
                 duo = subject.startswith("duo")
                 alts = [a for a in alts if not (a in SOLO_ONLY and duo) and not (a in DUO_ONLY and not duo) and a not in ("bike", "umbrella", "wings")]
+                if any(not a.startswith("e_") for a in alts):
+                    alts = [a for a in alts if not a.startswith("e_")]     # an emoji is not "another thing" beside a drawn one
                 if len(alts) > 1:
                     prop = alts[again % len(alts)]
                 elif again % 2 == 1 and prop not in SOLO_ONLY + DUO_ONLY:
                     prop = "none"
+            if named and any(w in line for w in named_words) and not (again and again % 2 == 1):
+                prop = named
         if kind not in ("intro", "outro"):
             since += 1
             shot = ""

@@ -1361,7 +1361,7 @@ def router(ctx: Context) -> APIRouter:
             world = cardstory.prepare(world, parts, str(proj.get("title") or ""))
             picks = [(spec, 0) for spec in cardstory.plan_premium(parts, seed, world, str(proj.get("title") or ""))[0]]
         elif world and world.get("grade") == "standard":
-            picks = [(spec, 0) for spec in cardworld.plan_standard(parts, seed, world)]
+            picks = [(spec, 0) for spec in cardworld.plan_standard(parts, seed, world, str(proj.get("title") or ""))]
         elif world:
             picks = [(spec, 0) for spec in cardworld.plan(parts, seed, world)]
         else:

@@ -213,6 +213,8 @@ def _negated(line: str, j: int) -> bool:
     if _NEG is None:
         _NEG = tuple(cw._simple(w) for w in NEG)
     before = line[max(0, j - 3):j]
+    if before.endswith(("有没有", "是不是", "会不会", "能不能", "要不要")):
+        return False            # a question ("有沒有口罩"), not a no
     return " " not in before and any(w in before for w in _NEG)
 
 
@@ -251,6 +253,12 @@ def hints(line: str, rows) -> Dict[str, str]:
         n = said(line, ws) if line else 0
         if n:
             for k, v in what.items():
+                if k == "prop" and k in got and str(v).startswith("e_") and got[k] not in ("dots", "ask", "call"):
+                    continue        # an emoji only when nothing else has named a thing (they come last); "?" or "..." is no thing
+                if k == "prop" and k in got and str(v).startswith("e_"):
+                    if not str(got[k]).startswith("e_"):
+                        got[k], size[k] = v, n
+                    continue
                 if k not in got or n > size[k]:
                     got[k], size[k] = v, n
     return got
@@ -262,6 +270,28 @@ def feeling(line: str) -> int:
 
 
 # -------------------------------------------------------------------------------------------- the story
+NOT_A_THING = ("none", "dots", "ask", "call", "tears", "notes")
+
+
+def title_keep(title: str) -> Optional[Tuple[str, str, Tuple[str, ...]]]:
+    """[2026-11-15] The thing a song's name is about (〈彩虹〉: a rainbow), as a KEEPSAKES entry: the name says
+    what the song is, so its thing comes before what the lines say most often. None when the name names no thing."""
+    t = cw._simple(title or "")
+    if not t:
+        return None
+    for prop, still, words in KEEPSAKES:
+        ws = tuple(cw._simple(w) for w in words)
+        hit = tuple(w for w in ws if says(t, (w,)))
+        if hit:
+            return prop, still, hit
+    rows = [(ws, what) for ws, what in _rows() if what.get("prop") and what["prop"] not in NOT_A_THING]
+    prop = hints(t, rows).get("prop")
+    if not prop:
+        return None
+    hit = tuple(w for ws, what in rows if what["prop"] == prop for w in ws if says(t, (w,)))
+    return prop, prop, tuple(dict.fromkeys(hit))
+
+
 def story(parts: Sequence[Tuple[str, str]], world: Dict[str, Any], title: str = "") -> Dict[str, Any]:
     """What stays the same through the song: its sections, its thing, its chorus place, where it starts."""
     secs = sections(parts, title)
@@ -270,8 +300,13 @@ def story(parts: Sequence[Tuple[str, str]], world: Dict[str, Any], title: str = 
     for n, (prop, still, words) in enumerate(KEEPSAKES):
         ws = tuple(cw._simple(w) for w in words)
         score.append((sum(1 for ln in lines if says(ln, ws)), -n, prop, still, ws))
+    named = title_keep(title)
     if "keep" in world:      # chosen when the song's cards were first drawn: it stays, whatever the words say now
         keep = next((sc[2:] for sc in score if sc[2] == world["keep"]), None)
+        if keep is None and named and named[0] == world["keep"]:
+            keep = named
+    elif named:              # the song's name names a thing: that is the song's thing
+        keep = named
     else:
         best = max(score)
         keep = best[2:] if best[0] >= 1 else None
@@ -306,7 +341,7 @@ def story(parts: Sequence[Tuple[str, str]], world: Dict[str, Any], title: str = 
 def _rows():
     # the standard grade's words, without its last three rows (the feeling of a line): that is feeling() here
     poses = tuple((ws, {"subject": subject}) for ws, subject in POSE_WORDS)
-    return [(tuple(cw._simple(w) for w in ws), what) for ws, what in poses + cw.HINTS_STD[:-3] + cw.ICON_HINTS + cw.HINTS]
+    return [(tuple(cw._simple(w) for w in ws), what) for ws, what in poses + cw.HINTS_STD[:-3] + cw.ICON_HINTS + cw.HINTS + cw.EMOJI_HINTS]
 
 
 def kind_of(place: str) -> str:
@@ -380,7 +415,7 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
             spec, n = "", 0
             while not spec or spec in seen:
                 spec = cw.card(st["home"], "night", "clear", "duo_back" if happy else "solo_back",
-                               keep[0] if keep and keep[0] not in ("umbrella",) else "stars", "moon" if n == 0 else "wide", "c", n)
+                               keep[0] if keep and keep[0] not in ("umbrella", "rainbow") else "stars", "moon" if n == 0 else "wide", "c", n)
                 n += 1
             put(spec)
             continue
@@ -483,6 +518,8 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
             for ws, what in rows:
                 if "prop" in what and what["prop"] not in alts and says(line, ws):
                     alts.append(what["prop"])
+            if any(not a.startswith("e_") for a in alts):
+                alts = [a for a in alts if not a.startswith("e_")]         # an emoji is not "another thing" beside a drawn one
             if len(alts) > 1:
                 prop = alts[sc["again"] % len(alts)]
             elif sc["again"] % 2:

@@ -481,3 +481,38 @@ def test_more_parts_shots_and_ways_to_stand():
     assert {"memory", "photo"} & {g[5] for g in got} and "moon" in {g[5] for g in got}
     for a, b in zip(got, got[1:]):
         assert not (a[5] == b[5] and a[5] in cardworld.FRAMES_STD + cardworld.FRAMES_PREM), (a, b)
+
+
+def test_the_song_name_comes_first_and_emoji_only_when_nothing_else_has_the_word():
+    from app.mvstudio import card_emoji, card_icons, cardstory
+    # 〈彩虹〉: the rainbow is the song's thing in premium, and what a standard line that says 彩虹 shows
+    assert cardstory.title_keep("彩虹")[0] == "rainbow" and cardstory.title_keep("小雨")[0] == "umbrella"
+    assert cardstory.title_keep("找一個字代替") is None
+    parts = [("intro", "～ 前奏 ～"), ("lyric", "哪裡有彩虹告訴我 能不能把我的願望還給我"), ("lyric", "所有的雲都跑到我這裡"),
+             ("lyric", "有沒有口罩一個給我"), ("outro", "～ 尾奏 ～")]
+    wd = cardworld.make_world(11, "standard")
+    got = [cardworld.parse(sp) for sp in cardworld.plan_standard(parts, 11, wd, "彩虹")]
+    assert got[1][4] == "rainbow" and got[2][2] == "cloudy" and got[3][4] == "e_face_with_medical_mask"
+    pw = cardstory.prepare(cardworld.make_world(11, "premium"), parts, "彩虹")
+    assert pw["keep"] == "rainbow"
+    specs = cardstory.plan_premium(parts, 11, pw, "彩虹")[0]
+    assert any(cardworld.parse(sp)[4] == "rainbow" for sp in specs)
+    # the emoji are in the icon table after the hand-made ones, and their words after every other row
+    names = list(card_icons.TABLE)
+    assert len(card_emoji.ENTRIES) > 400 and names.index("e_rainbow") > max(names.index(n) for n in names if not n.startswith("e_"))
+    assert all(what["prop"].startswith("e_") for _ws, what in cardworld.EMOJI_HINTS)
+    assert not any(what.get("prop", "").startswith("e_") for _ws, what in cardworld.ICON_HINTS)
+
+
+def test_an_emoji_card_is_drawn():
+    from app.mvstudio import card_emoji
+    wd = cardworld.make_world(4, "standard")
+    for prop in ("e_teddy_bear", "e_cloud", "e_red_apple"):
+        spec = cardworld.card("road", "day", "cloudy", "solo_front", prop, "still", "c", 0)
+        assert cardworld.valid_card(spec) if hasattr(cardworld, "valid_card") else cardworld.parse(spec)
+        im = cardworld.draw(spec, wd, 1)
+        assert im.size == (1920, 1080)
+    # the shapes are filled as SVG fills them: the cloud's outline and inside, and nothing outside it
+    layers = card_emoji._layers("e_cloud", 64)
+    cover = layers[0][1]
+    assert cover[32, 32] and not cover[2, 2] and 0.25 < cover.mean() < 0.8
