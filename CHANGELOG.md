@@ -73,6 +73,8 @@
   About 500 more things from Fluent Emoji Flat with Chinese words from Unicode CLDR (`card_emoji`), used only when
   nothing hand-drawn has a line's word; a line that says 雲／陰天 has a cloudy sky; 有沒有／能不能 … is a question,
   not a no. No sun or rainbow in a dusk or night card. The simple cards are as before; drawn cards stay as they are.
+- MV page: no more 「畫法」 menu; the card lottery always draws the former premium way (one song-long storyboard).
+  The server still knows the simple and standard ways, so cards drawn with them stay as they are.
 
 ## 2026.11.15
 
