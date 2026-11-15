@@ -574,3 +574,23 @@ def test_the_grammar_of_a_line_gives_a_face_a_count_and_who():
     w = cs.prepare(cardworld.make_world(3, "premium"), parts, "")
     got = [cardworld.extras(sp) for sp in cs.plan_premium(parts, 3, w, "")[0]]
     assert got[0][1] == 2 and got[1][2] == "o" and got[2][0] == "worry"
+
+
+def test_who_does_it_in_a_line():
+    """[2026-11-16] Who a line is about: more than one doer, and the ones who are not (whose, where, with whom)."""
+    pytest = __import__("pytest")
+    pytest.importorskip("jieba")
+    from app.mvstudio import cardgrammar as cg, cardstory as cs
+    rows = cs._rows()
+    who = lambda t: cg.read(t, rows)["who"]  # noqa: E731
+    assert who("我走回從前你往未來飛") == "我、你" and who("我知道你會懂") == "我、你"      # a second doer inside the clause
+    assert who("你和我走過那條街") == "你、我" and who("原來我們和愛情曾經靠得那麼近") == "我們"
+    r = cg.read("與你相遇 好幸運", rows)
+    assert r["who"] == "我" and r["to"] == "你" and who("為妳翹課的那一天") == "我"       # with / for whom is not who does it
+    assert who("妳說依賴 是我們的阻礙") == "你、我"                                      # 我們的: whose
+    assert who("是誰風裏雨裏一直默默守護在原地") == "誰" and who("是你讓我看見彩虹") == "你、我"
+    assert who("但偏偏 風漸漸 把距離吹得好遠") == "風" and who("但偏偏 雨漸漸 大到我看妳不見") == "雨、我"
+    assert who("我們有始有終 就走到世界盡頭") == "我們"                                  # 就: the same ones go on
+    assert who("原來你是我最想留住的幸運") == "你" and who("也是我現在正服下的毒藥") == "我"
+    assert who("想你想到失眠") == "我" and who("放在你眺望我的夜裡") == "我"             # 想你想到: not 你; …的夜裡 says which night
+    assert cg.read("大到我看妳不見", rows)["to"] == "你"

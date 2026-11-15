@@ -86,6 +86,10 @@
   optional tenth field of a card ("face.count.who"): sixteen faces instead of four (laughing, wry, a tear, crying,
   angry, shy, in love, worried, missing someone, lonely, sleepy, firm …), several of a thing (兩顆星 is two stars),
   and the other one alone when the line is about 你／她 only.
+- Picture cards, who a line is about: more than one doer in a line (我走回從前你往未來飛, 聽你分享, 你和我), the
+  one before 是 (你是我最想留住的幸運) and after it (是你給我勇氣, 是誰…); a thing with only an adverb hands itself to
+  what follows (雨漸漸 大到…, 風漸漸 把距離吹得好遠); 就／才／也／又 go on with the last one (我們… 就走到…). Not who
+  does it: whose (我們的阻礙), where (風裏雨裏), with or for whom (與你相遇, 為妳翹課: 我, to 你).
 
 ## 2026.11.15
 

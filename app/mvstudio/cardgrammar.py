@@ -3,7 +3,7 @@ like), where, how, when, in what tone, with what face.
 
 The words are cut and tagged by jieba (MIT; offline), which knows every word the cards know as one word (so
 路燈 is not 燈). The line is turned into simplified characters one by one for jieba, so the parts can be shown
-in the line's own characters. Nothing here draws yet: read() gives the reading, for people to look over.
+in the line's own characters. cardstory takes the face, the number of a thing and who a card shows from it.
 """
 from __future__ import annotations
 
@@ -43,6 +43,156 @@ def how_many(count: str) -> int:
         if ch in count:
             return n
     return 1
+
+
+# who does it ------------------------------------------------------------------------------------------------
+NOT_DOER_AFTER = ("与", "和", "跟", "同", "把", "将", "被", "为", "对", "给", "替", "向", "往", "朝", "比", "像", "在", "从")
+JOIN = ("与", "和", "跟", "同")
+HANDLED = ("把", "将", "被")
+STARTS_DOING = ("往", "向", "朝", "给", "把", "被", "在", "从", "跟", "陪", "对", "为", "替", "和", "与")   # 你往未來飛, 你給我勇氣
+CARRY_ON = ("就", "才", "也", "又", "还", "却", "便", "再", "更", "仍", "依然", "仍然", "还是", "也是", "就是", "于是", "然后")
+NOT_WHO = ("来不及", "习惯", "等待", "笑着", "从前", "以后", "时候")
+RESULT = ("不见", "不到", "不了", "不着", "不起", "不住", "不完", "不动", "不下", "不上", "不出", "不开", "不清", "得见", "得到",
+          "得了", "得起", "得着")      # 看妳不見: how the seeing ends, not what 妳 does
+_LIGHT = ("d", "c", "zg", "t")          # words a doer can stand behind: 你[也許][明天]來
+
+
+def _who(toks: Sequence[Tuple[str, str, str]], verbs_at: Sequence[int], act_at: Sequence[int]) -> Tuple[str, str]:
+    """Who does it, and to whom. Per clause (a space ends one): the pronoun or noun before the first action verb;
+    a clause with a verb and no one named is "我" (lyrics leave it out). Not a doer: whose (我的), where (雨裏),
+    with or for whom (與你, 為你), what is handled (把距離). More doers: 你和我, a second one inside the clause
+    (我走回從前 你往未來飛; 聽 我說), the one before 是 (你是我最想留住的幸運). A clause that names no one goes
+    on with the last one when it opens with 就/才/也/又, and a clause that is only a thing and an adverb (雨漸漸)
+    hands its thing to the next one."""
+    n = len(toks)
+
+    def light(j: int) -> bool:
+        w, f, _o = toks[j]
+        return f in _LIGHT or w in FUNC_ADV or w in IF or w in NEG
+
+    def named(j: int) -> str:
+        w, f, o = toks[j]
+        nxt = toks[j + 1] if j + 1 < n else ("", "x", "")
+        prv = toks[j - 1] if j > 0 else ("", "x", "")
+        if nxt[0] in ("的", "之") or prv[0] in NOT_DOER_AFTER:
+            return ""
+        if prv[0] == "有" and j > 1 and toks[j - 2][0] in ("哪里", "哪儿", "何处"):
+            return ""           # 哪裡有彩虹: what is asked for
+        if w in PRONOUNS:
+            return PRONOUNS[w]
+        if nxt[1] == "f":
+            return ""           # 風裏, 路燈下: a place
+        if (f in ("n", "nz", "ns") and w not in ASK and w not in FUNC_ADV and len(w) <= 2 and w not in NOT_WHO
+                and not any(ch in w for ch in "你我他她")):        # 想你 is a card's word, not someone
+            return "人" if w == "个人" else o
+        return ""
+
+    def joined(j: int) -> List[str]:    # 你和我: both
+        if j + 2 < n and toks[j][0] in PRONOUNS and toks[j + 1][0] in JOIN and toks[j + 2][0] in PRONOUNS:
+            return [PRONOUNS[toks[j + 2][0]]]
+        return []
+
+    who: List[str] = []
+    to = ""
+    last = ""       # the last clause's doer
+    carry = ""      # 雨漸漸: a thing waiting for what it does
+    clause: List[int] = []
+    for i in range(n + 1):
+        if i < n and toks[i][1] != "x":
+            clause.append(i)
+            continue
+        if not clause:
+            continue
+        vs = [j for j in clause if j in act_at]
+        opens = next((j for j in clause if toks[j][1] != "c"), clause[0])
+        goes_on = toks[opens][0] in CARRY_ON
+        found: List[str] = []
+        seconds: List[int] = []
+        done = False
+        # the one before 是, when 是 comes before anything is done
+        be = next((j for j in clause if toks[j][0] == "是" and (not vs or j < vs[0])), -1)
+        if be >= 0:
+            j = be - 1
+            while j >= clause[0] and light(j):
+                j -= 1
+            topic = named(j) if j >= clause[0] else ""
+            told = any(toks[k][0] == "的" and toks[k - 1][1].startswith("v") for k in clause if k > be + 1)    # 是 我…留住的 幸運
+            if topic:
+                found = [topic] + joined(j)
+                done = told or not vs
+            elif told and goes_on and last:
+                found, done = [last], True
+            elif not vs and be + 1 <= clause[-1] and toks[be + 1][0] in PRONOUNS and named(be + 1):
+                found, done = [named(be + 1)], True         # 一幕幕都是你: the one the line shows
+        if not done and not vs:
+            if any(j in verbs_at for j in clause):          # 沒有地球: nothing is done there
+                clause = []
+                continue
+            for j in clause:        # no verb found: the one it opens with (你張開了雙翼, 她會有多幸運), or 雨 in 雨漸漸
+                if light(j):
+                    continue
+                name = named(j)
+                if not name:
+                    break
+                rest = [k for k in clause if k > j]
+                if toks[j][0] in PRONOUNS:
+                    found = found or [name] + joined(j)
+                elif rest and all(toks[k][1] in ("d", "zg", "a", "ad", "z") or toks[k][0] in FUNC_ADV for k in rest):
+                    found = found or [name]
+                    if all(toks[k][1] in ("d", "zg", "ad") for k in rest):      # only an adverb after it: it waits
+                        who.extend(found)
+                        last, carry, clause = found[0], name, []
+                break
+            if not clause:
+                continue
+        elif not done:
+            handled = max([j for j in clause if j < vs[0] and toks[j][0] in HANDLED], default=-1)
+            stop = handled if handled >= 0 else vs[0]
+            for j in reversed([j for j in clause if j < stop]):
+                name = named(j)
+                if name:
+                    found = found or [name] + joined(j)
+                    if toks[j][0] not in PRONOUNS and j > clause[0] and toks[j - 1][0] in JOIN:
+                        continue        # 我們和愛情: the one before 和 is who
+                    if toks[j][0] not in PRONOUNS and any(named(k) and toks[k][0] in PRONOUNS for k in clause if k < j):
+                        found = []      # a pronoun further back is who (我們 和 愛情 靠得…)
+                        continue
+                    break
+            if not found:
+                found = [carry or (last if goes_on and last else "") or "我"]
+            if be == opens and be + 1 < vs[0] and toks[be + 1][0] in PRONOUNS and named(be + 1):
+                found = [named(be + 1)] + [x for x in found if x != named(be + 1)]     # 是你讓我看見彩虹: 你, then 我
+            # a second doer inside the clause: a pronoun after the first verb, with something it does after it
+            for j in clause:
+                if j <= vs[0] or toks[j][0] not in PRONOUNS or not named(j):
+                    continue
+                k = j + 1
+                while k <= clause[-1] and (light(k) or toks[k][0] in ASK):
+                    k += 1
+                if k > clause[-1]:
+                    continue
+                w, f, _o = toks[k]
+                before = toks[j - 1][0]
+                after = [toks[m][0] for m in clause if m > k][:2]
+                if "的" in after and (after[0] == "的" or after[0] in PRONOUNS or len(after[0]) <= 2):
+                    continue        # 你眺望我的夜裡: it says which night
+                does = f.startswith("v") and f != "vn" and w != before and w != "是" and w not in RESULT   # 想你想到…: not 你
+                if does or (w in STARTS_DOING and k < clause[-1]):
+                    found.append(named(j))
+                    seconds.append(j)
+        if found:
+            who.extend(found)
+            last = found[0]
+        carry = ""
+        if vs:
+            for j in clause:
+                if j > vs[0] and toks[j][0] in PRONOUNS and j not in seconds and not to:
+                    to = PRONOUNS[toks[j][0]]
+        for j in clause:        # 與你相遇, 跟你說: with whom
+            if not to and toks[j][0] in PRONOUNS and j > 0 and toks[j - 1][0] in JOIN and PRONOUNS[toks[j][0]] not in found:
+                to = PRONOUNS[toks[j][0]]
+        clause = []
+    return "、".join(dict.fromkeys(who)), to
 
 
 _JIEBA = None
@@ -108,41 +258,7 @@ def read(line: str, rows=(), things: Optional[Dict[str, str]] = None) -> Optiona
     verbs_at = [i for i, (w, f, _o) in enumerate(toks) if f.startswith("v") and w not in MODAL and w not in COPULA]
     act_at = [i for i in verbs_at if toks[i][0] not in ("没有", "没", "无")]     # 沒有地球: nothing is done there
     first_v = verbs_at[0] if verbs_at else len(toks)
-    # who: per clause, the pronoun or noun just before its first verb; a clause with a verb and no one named
-    # is "我" (lyrics leave it out). to: the first pronoun after a verb.
-    who: List[str] = []
-    clause: List[int] = []
-    for i in range(len(toks) + 1):
-        if i < len(toks) and toks[i][1] != "x":
-            clause.append(i)
-            continue
-        vs = [j for j in clause if j in act_at]
-        if not vs and any(j in verbs_at for j in clause):
-            clause = []
-            continue
-        if not vs:              # no verb found: whoever the clause names first (你張開了雙翼, 她會有多幸運)
-            first = PRONOUNS.get(toks[clause[0]][0], "") if clause else ""
-            if first:
-                who.append(first)
-        if vs:
-            subj = ""
-            for j in reversed([j for j in clause if j < vs[0]]):
-                w, f, o = toks[j]
-                if w in ("把", "将", "被", "让", "为"):
-                    break       # what follows 把 is what is handled, not who does it
-                if w in PRONOUNS:
-                    subj = PRONOUNS[w]; break
-                if (f in ("n", "nz", "ns") and w not in ASK and w not in FUNC_ADV and len(w) <= 2
-                        and w not in ("来不及", "习惯", "等待", "笑着", "从前", "以后", "时候")):
-                    subj = o; break
-            if subj and any(toks[j][0] in ("把", "将") for j in clause if j < vs[0]) and subj not in PRONOUNS.values():
-                subj = ""
-            who.append(subj or "我")
-            for j in clause:
-                if j > vs[0] and toks[j][0] in PRONOUNS and not out["to"]:
-                    out["to"] = PRONOUNS[toks[j][0]]
-        clause = []
-    out["who"] = "、".join(dict.fromkeys(who))
+    out["who"], out["to"] = _who(toks, verbs_at, act_at)
     # what is done (with a no in front of it)
     for i in verbs_at:
         w, f, o = toks[i]
