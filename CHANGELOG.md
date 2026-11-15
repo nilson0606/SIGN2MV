@@ -65,6 +65,9 @@
 - New MV project: the project code is filled in from the song name's pinyin (`web/mv/pinyin.json`, made with
   pypinyin, MIT; your own code is kept), and photo slots default to 0: no empty slots until the lyrics are aligned,
   then one per line (`slots_follow_lines`; projects with a number keep the old 12-slot minimum).
+- MV page: 「🔒 LRC 時間全部定錨」 (on by default, remembered) anchors every line parsed from pasted LRC timecodes, so
+  a later Whisper alignment keeps those times; without timecodes (even split) nothing is anchored. The last LRC line no
+  longer ends past the song.
 
 ## 2026.11.15
 

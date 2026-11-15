@@ -638,6 +638,8 @@ def router(ctx: Context) -> APIRouter:
                     new_tl[-1]["end"] = adj_st
                 nxt_raw = parsed_lrc[i + 1][0] if i + 1 < len(parsed_lrc) else max(adj_st + 6.0, total_dur - 15.0)
                 et = max(adj_st + 0.5, round(nxt_raw + (early_lead if apply_lead_lrc else 0.0), 2))
+                if et > total_dur > adj_st + 0.5:   # [Claude 2026-11-15] 最後一句不超過歌曲長度（不然尾奏卡會是負的）
+                    et = round(total_dur, 2)
                 new_tl.append({"scene": sc_num, "start": adj_st, "end": et, "text": txt, "type": tp,
                                "note": f"LRC 匯入 (已套用 {early_lead}s 提前進字)" if (apply_lead_lrc and tp == "lyric") else "LRC 時間碼匯入"})
             if new_tl[-1]["type"] != "outro" and new_tl[-1]["end"] < total_dur:

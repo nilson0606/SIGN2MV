@@ -637,7 +637,9 @@
   "例如：nanduyequ（會自動用歌名的拼音）": "e.g. nanduyequ (filled in from the song name’s pinyin)",
   "自動用歌名的拼音；破音字可能不對，可以自己改（自己改過就不會再被蓋掉，清空會恢復自動）": "Filled in from the song name’s pinyin; a character with several readings may be off, so edit it if needed (your own code is not overwritten; clear it to go back to automatic)",
   "0＝先不開，對齊歌詞後一句一格": "0 = none yet; one per line after aligning",
-  "0：先不開照片槽位，貼歌詞對齊後每一句自動有一格（也可以之後用「＋ 新增照片槽位」加）": "0: no photo slots yet; after the lyrics are aligned every line gets one (you can also add slots later with “＋ Add photo slot”)"
+  "0：先不開照片槽位，貼歌詞對齊後每一句自動有一格（也可以之後用「＋ 新增照片槽位」加）": "0: no photo slots yet; after the lyrics are aligned every line gets one (you can also add slots later with “＋ Add photo slot”)",
+  "🔒 LRC 時間全部定錨": "🔒 Anchor all LRC times",
+  "貼的是含 [分:秒] 時間碼的歌詞（LRC）時，解析完把每一句都定錨：之後重跑 Whisper 對齊也不會動這些時間，Whisper 只用來讓字幕逐字變金。要微調某一句，先按那張卡片的 🔒 解鎖": "When the pasted lyrics carry [mm:ss] timecodes (LRC), every line is anchored after parsing: aligning with Whisper again keeps these times, and Whisper only colours the subtitles word by word. To fine-tune a line, first unlock its card with 🔒"
  },
  "patterns": [
   {
@@ -1803,6 +1805,10 @@
   {
    "zh": "🎉 已建立《{0}》專案！請確認「Step 1」的音檔，再到「Step 3」貼歌詞對齊：每一句會自動有一格照片卡片。",
    "en": "🎉 Project “{0}” created! Check the audio in Step 1, then paste and align the lyrics in Step 3: every line gets its own photo card."
+  },
+  {
+   "zh": "⏱️ 已照 LRC 時間碼排好 {0} 句，而且全部定錨：之後重跑 Whisper 也不會動這些時間（Whisper 只用來讓字幕逐字變金）。要微調某一句，先按那張卡片的 🔒 解鎖；全部解開用「🔓 全部解除定錨」。",
+   "en": "⏱️ {0} lines placed by the LRC timecodes, all anchored: aligning with Whisper again keeps these times (Whisper only colours the subtitles word by word). To fine-tune a line, unlock its card with 🔒 first; “🔓 Free all anchors” frees them all."
   }
  ]
 }

@@ -1226,9 +1226,13 @@
           <button class="btn" id="btnLibraryTimes" onclick="importLibraryTimes()" style="border-color:#34d399; color:#a7f3d0;" title="把歌曲庫裡這首歌調好的字幕時間（歌詞畫面／快速 MV 的「手動調整字幕時間」）整份帶過來，歌曲庫錨住的句子在這裡也會是定錨">
             📚 從歌曲庫帶入調好的時間
           </button>
-          <button class="btn" id="btnPasteLrc" onclick="applyPastedLyrics('lrc_or_even', false)">
+          <button class="btn" id="btnPasteLrc" onclick="applyLrcPaste()">
             ⏱️ 解析 [分:秒] 時間碼 / 均分時間
           </button>
+          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:12.5px;" title="貼的是含 [分:秒] 時間碼的歌詞（LRC）時，解析完把每一句都定錨：之後重跑 Whisper 對齊也不會動這些時間，Whisper 只用來讓字幕逐字變金。要微調某一句，先按那張卡片的 🔒 解鎖">
+            <input type="checkbox" id="chkLrcLockAll" onchange="try { localStorage.setItem('sign2mv.mv.lrcLockAll', this.checked ? '1' : '0'); } catch (e) {}" style="width:16px; height:16px; accent-color:#22c55e;" />
+            <span style="color:#86efac; font-weight:800;">🔒 LRC 時間全部定錨</span>
+          </label>
           <button class="btn btn-sm" style="border-color:rgba(148,163,184,0.4); color:#cbd5e1;" onclick="unlockAllSegments()" title="解除所有卡片的定錨鎖定，讓 Whisper 重新對齊全部段落">
             🔓 全部解除定錨
           </button>
@@ -2828,6 +2832,26 @@
         }
         if (btnForce) btnForce.disabled = false;
       }
+    }
+
+    // [Claude 2026-11-15] 貼 LRC 解析：勾了「LRC 時間全部定錨」而且真的有 [分:秒] 時間碼時，解析完每一句都定錨，
+    // 之後重跑 Whisper 也照這些時間（Whisper 只拿來逐字變金）；沒有時間碼（均分）就不鎖
+    (() => {
+      const box = document.getElementById('chkLrcLockAll');
+      let on = true;
+      try { on = localStorage.getItem('sign2mv.mv.lrcLockAll') !== '0'; } catch (e) {}
+      if (box) box.checked = on;
+    })();
+    async function applyLrcPaste() {
+      const text = document.getElementById('inpPasteLyrics').value || '';
+      const timed = /^\s*\[\d+:\d+(?:\.\d+)?\]/m.test(text);
+      const lockAll = timed && !!(document.getElementById('chkLrcLockAll') || {}).checked;
+      if (lockAll && currentProject && currentProject.timeline) currentProject.timeline.forEach(s => { s.locked = false; });   // 舊的定錨不擋新的時間
+      if (!(await applyPastedLyrics('lrc_or_even', false)) || !lockAll) return;
+      const segs = ((currentProject && currentProject.timeline) || []).filter(s => s.type === 'lyric' || s.type === 'interlude');
+      segs.forEach(s => { s.locked = true; });
+      renderSceneGallery(); renderTimelineTable(); scheduleAutoSave();
+      setInlineStatus('step3StatusBox', 'ok', `⏱️ 已照 LRC 時間碼排好 ${segs.length} 句，而且全部定錨：之後重跑 Whisper 也不會動這些時間（Whisper 只用來讓字幕逐字變金）。要微調某一句，先按那張卡片的 🔒 解鎖；全部解開用「🔓 全部解除定錨」。`);
     }
 
     // [Claude 2026-11-15] 歌曲庫調好的字幕時間（quickmv/lyrics/<來源>.json）整份帶進來：
