@@ -57,6 +57,9 @@
   「📚 從歌曲庫帶入調好的時間」 takes over the library timing (of the MV's cover or take if it has its own, else
   the original's) through the LRC path (early start, intro/outro and the user's interludes as usual), keeps each
   line's photo when the line count is the same, and anchors the lines anchored in the library.
+- MV page: on wide screens Step 3 (lyrics) is on the left and Step 2 (photo cards) on the right, under the preview,
+  for timing; the messages that said left/right say so the other way round. The live subtitles have their own seek
+  bar with the time (still the master player's sound, which is now labelled as such).
 
 ## 2026.11.15
 

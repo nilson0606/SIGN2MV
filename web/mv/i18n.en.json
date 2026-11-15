@@ -43,10 +43,10 @@
   "⏳ NVENC 1080p 60fps 渲染中...": "⏳ Rendering NVENC 1080p 60fps...",
   "⏳ 正在上傳並將": "⏳ Uploading",
   "⏳ 正在依檔名順序批次上傳": "⏳ Batch uploading in filename order:",
-  "⏳ 正在分析與配置左側分鏡時間軸...": "⏳ Analyzing and laying out the scene timeline on the left...",
-  "⏳ 正在分析音頻並自動填入左側分鏡時間...": "⏳ Analyzing the audio and filling in the scene times on the left...",
+  "⏳ 正在分析與配置右側分鏡時間軸...": "⏳ Analyzing and laying out the scene timeline on the right...",
+  "⏳ 正在分析音頻並自動填入右側分鏡時間...": "⏳ Analyzing the audio and filling in the scene times on the right...",
   "⏳ 正在執行任務...": "⏳ Running task...",
-  "⏳ 正在執行自動對齊並填入左側分鏡時間...": "⏳ Auto-aligning and filling in the scene times on the left...",
+  "⏳ 正在執行自動對齊並填入右側分鏡時間...": "⏳ Auto-aligning and filling in the scene times on the right...",
   "⏳ 正在建立專案...": "⏳ Creating project...",
   "⏳ 正在用 Whisper 逐字時間找人聲停頓...": "⏳ Finding vocal pauses from Whisper word timing...",
   "⏸ 暫停": "⏸ Pause",
@@ -68,7 +68,7 @@
   "⚠️ 對齊沒有完成，時間軸保持原樣：等待逾時或已手動強制跳出": "⚠️ Alignment did not finish; timeline unchanged: Timed out or force-stopped",
   "⚠️ 對齊沒有完成，時間軸沒有變更": "⚠️ Alignment did not finish; the timeline was not changed",
   "⚠️ 對齊沒有完成，目前的時間軸保持原樣": "⚠️ Alignment did not finish; the current timeline is unchanged",
-  "⚠️ 提醒：您尚未在上方「Step 1」選擇母帶音檔！系統已先幫左側照片自動分配預設連續時間軸（您可先微調秒數）；若要使用 Whisper 語音辨識對齊，請先在 Step 1 下拉選單挑選音檔後再按一次！": "⚠️ Note: no audio selected in \"Step 1\" above! A default continuous timeline was assigned to the photos on the left (you can fine-tune the times). To align with Whisper, pick an audio file in the Step 1 dropdown and press it again!",
+  "⚠️ 提醒：您尚未在上方「Step 1」選擇母帶音檔！系統已先幫右側照片自動分配預設連續時間軸（您可先微調秒數）；若要使用 Whisper 語音辨識對齊，請先在 Step 1 下拉選單挑選音檔後再按一次！": "⚠️ Note: no audio selected in \"Step 1\" above! A default continuous timeline was assigned to the photos on the right (you can fine-tune the times). To align with Whisper, pick an audio file in the Step 1 dropdown and press it again!",
   "⚠️ 時間軸沒有變更": "⚠️ Timeline not changed",
   "⚠️ 目前尚未渲染成品 MV 影片，請先點擊上方紅色「🎬 啟動 1080p 60fps NVENC 極速渲染」按鈕！": "⚠️ No finished MV yet. Click the red \"🎬 Start 1080p 60fps NVENC fast render\" button above first!",
   "⚠️ 目前尚未綁定母帶音檔！請從上方「從現有音檔庫快速選擇」下拉選單挑選音檔，或點擊「📥 點擊置入音檔」": "⚠️ No audio linked yet! Pick a file from the \"quick select from existing audio\" dropdown above, or click \"📥 Click to add audio\"",
@@ -227,7 +227,7 @@
   "對齊回應異常": "Unexpected alignment response",
   "對齊異常自動保底": "Automatic fallback after an alignment problem",
   "導演分鏡 / 對齊備註": "Director / alignment notes",
-  "尚未分配歌詞時間（請在右側貼上歌詞並點擊「⚡ 貼上並依 Whisper 自動對齊」）": "No lyric timing yet (paste lyrics on the right and click \"⚡ Paste & auto-align with Whisper\")",
+  "尚未分配歌詞時間（請在左側貼上歌詞並點擊「⚡ 貼上並依 Whisper 自動對齊」）": "No lyric timing yet (paste lyrics on the left and click \"⚡ Paste & auto-align with Whisper\")",
   "尚未渲染 MV 影片（渲染完成後即可在此下載）": "No MV rendered yet (download it here after rendering)",
   "尚未渲染成品 MP4": "No MP4 rendered yet",
   "尾奏": "Outro",
@@ -238,7 +238,7 @@
   "已定錨鎖定（重跑 Whisper 對齊時此段時間絕對不動，點擊解除）": "Locked (this section keeps its time when Whisper re-aligns; click to unlock)",
   "已由使用者取消": "Canceled by user",
   "已由使用者取消 Whisper 語音辨識": "Whisper recognition canceled by user",
-  "已自動填入左側照片卡片": "Photo cards on the left filled in",
+  "已自動填入右側照片卡片": "Photo cards on the right filled in",
   "已解鎖並恢復所有介面按鈕": "All buttons unlocked and restored",
   "幕次": "Scene",
   "待命中": "Idle",
@@ -249,7 +249,7 @@
   "從目前播放位置加一段 8 秒間奏（可再改時間）": "Add an 8 s interlude at the current playback position (you can change the time later)",
   "從電腦直接置入新音檔（支援點擊或拖曳）": "Add a new audio file from your computer (click or drag)",
   "忽略快取，強制重新跑一次 Whisper 語音辨識並對齊（已定錨段落依然保留不動）": "Ignore the cache and rerun Whisper recognition and alignment (locked sections stay unchanged)",
-  "您現在可以直接在左側任一張照片調整「起 / 迄」時間（改一張前後自動連動銜接）！": "You can now adjust start/end times on any photo on the left (neighbors follow automatically)!",
+  "您現在可以直接在右側任一張照片調整「起 / 迄」時間（改一張前後自動連動銜接）！": "You can now adjust start/end times on any photo on the right (neighbors follow automatically)!",
   "您現在可直接點擊任一卡片的": "You can now click any card's",
   "或修改歌詞！": "or edit the lyrics!",
   "或直接改時間，前後張會自動連動銜接。": "or edit the time directly; neighboring cards follow automatically.",
@@ -319,7 +319,7 @@
   "片尾名牌卡": "Outro title card",
   "片尾名牌卡底部落款 (Outro Card)": "Outro title card signature (Outro Card)",
   "片尾榮譽名牌卡": "Outro title card",
-  "現在您可以直接在左側任一張照片調整「起 / 迄」時間，前一張結尾與後一張開頭會自動同步銜接！": "You can now adjust start/end times on any photo on the left; the previous card's end and the next card's start follow automatically!",
+  "現在您可以直接在右側任一張照片調整「起 / 迄」時間，前一張結尾與後一張開頭會自動同步銜接！": "You can now adjust start/end times on any photo on the right; the previous card's end and the next card's start follow automatically!",
   "用 Whisper 辨識到的每個字的時間，找出人聲停很久的地方": "Use the per-word timing from Whisper to find long vocal pauses",
   "由上往下擦除": "Wipe top to bottom",
   "由右往左擦除": "Wipe right to left",
@@ -388,13 +388,13 @@
   "這首歌的音檔（原曲／唱錄／翻唱成品）": "This song's audio (original / recording / finished cover)",
   "選取一張圖片直接放入下一個空白槽位": "Pick one photo and put it in the next empty slot",
   "選擇這張照片要顯示在哪一句歌詞，或當前奏／間奏／尾奏": "Choose which lyric line this photo shows on, or use it as intro / interlude / outro",
-  "還沒有 Whisper 辨識結果：請先在右側按「⚡ 貼上並依 Whisper 自動對齊」跑一次，再來找間奏": "No Whisper results yet: click \"⚡ Paste & auto-align with Whisper\" on the right once, then look for interludes",
-  "還沒有前奏卡：請先在右側貼歌詞對齊，程式會自動做出前奏卡": "No intro card yet: paste lyrics on the right and align; the intro card is created automatically",
-  "還沒有尾奏卡：請先在右側貼歌詞對齊，程式會自動做出尾奏卡": "No outro card yet: paste lyrics on the right and align; the outro card is created automatically",
+  "還沒有 Whisper 辨識結果：請先在左側按「⚡ 貼上並依 Whisper 自動對齊」跑一次，再來找間奏": "No Whisper results yet: click \"⚡ Paste & auto-align with Whisper\" on the left once, then look for interludes",
+  "還沒有前奏卡：請先在左側貼歌詞對齊，程式會自動做出前奏卡": "No intro card yet: paste lyrics on the left and align; the intro card is created automatically",
+  "還沒有尾奏卡：請先在左側貼歌詞對齊，程式會自動做出尾奏卡": "No outro card yet: paste lyrics on the left and align; the outro card is created automatically",
   "還沒有時間軸": "No timeline yet",
   "還沒有時間軸可以匯出：請先貼歌詞對齊": "No timeline to export yet: paste lyrics and align first",
-  "還沒有時間軸（先在右側貼歌詞對齊），之後這裡會出現前奏、尾奏，也可以加間奏。": "No timeline yet (paste lyrics on the right and align first). The intro and outro will then appear here, and you can add interludes.",
-  "還沒有時間軸：請先在右側貼歌詞對齊，再加間奏": "No timeline yet: paste lyrics on the right and align first, then add interludes",
+  "還沒有時間軸（先在左側貼歌詞對齊），之後這裡會出現前奏、尾奏，也可以加間奏。": "No timeline yet (paste lyrics on the left and align first). The intro and outro will then appear here, and you can add interludes.",
+  "還沒有時間軸：請先在左側貼歌詞對齊，再加間奏": "No timeline yet: paste lyrics on the left and align first, then add interludes",
   "還沒有時間軸：請先貼歌詞對齊": "No timeline yet: paste lyrics and align first",
   "還沒有時間軸：請先貼歌詞對齊，再加間奏": "No timeline yet: paste lyrics and align first, then add interludes",
   "還沒有選擇母帶音檔，無法用 Whisper 對齊；請先在 Step 1 選音檔": "No audio selected, so Whisper cannot align; select an audio file in Step 1 first",
@@ -449,20 +449,20 @@
   "（沒放就沿用該段 Scene 的照片）。用「＋ 新增間奏」加的間奏，重新對齊歌詞時會保留，前後歌詞自動讓開。": "(otherwise it uses that Scene's photo). Interludes added with \"＋ Add interlude\" are kept when you re-align the lyrics; the lyrics around them move aside automatically.",
   "（片尾）": "(ending)",
   "（自動轉 1920x1080）": "(auto-resized to 1920x1080)",
-  "）！接下來請在右側貼上歌詞並點擊「⚡ 貼上並依 Whisper 自動對齊」。": ")! Next, paste lyrics on the right and click \"⚡ Paste & auto-align with Whisper\".",
+  "）！接下來請在左側貼上歌詞並點擊「⚡ 貼上並依 Whisper 自動對齊」。": ")! Next, paste lyrics on the left and click \"⚡ Paste & auto-align with Whisper\".",
   "＋ 前面插一張": "＋ Insert before",
   "＋ 放入單張照片": "＋ Add one photo",
   "＋ 新增時間軸段落": "＋ Add timeline section",
   "＋ 新增照片槽位": "＋ Add photo slot",
   "＋ 新增間奏": "＋ Add interlude",
   "＋ 新建歌曲 MV 專案": "＋ New song MV project",
-  "，系統會分析音頻並自動填入左側每張照片的時間與歌詞。": "; the audio is analyzed and the time and lyric of every photo on the left are filled in automatically.",
+  "，系統會分析音頻並自動填入右側每張照片的時間與歌詞。": "; the audio is analyzed and the time and lyric of every photo on the right are filled in automatically.",
   "，請放入新分鏡圖片後，至 Step 3 重新執行對齊。": "; add new scene photos, then run alignment again in Step 3.",
   "：共配置": ": laid out",
   "：圖庫已全刪光，請重新放入分鏡圖並點擊「⚡ 貼上並依 Whisper 自動對齊」重新生成時間軸！": ": the gallery was cleared. Add scene photos again and click \"⚡ Paste & auto-align with Whisper\" to rebuild the timeline!",
-  "：已為左側全部": ": filled every",
+  "：已為右側全部": ": filled every",
   "：建立後先用這首歌的原曲音訊（或從唱錄／翻唱帶過來的成品）。要換成唱錄或翻唱成品，到「": ": the new project starts with this song's original track (or the finished take passed over from recording / cover). To switch to a recording or finished cover, use the dropdown in \"",
-  "：畫面字幕會變成「～ 前奏 ～」這類字樣，右側歌詞也會跟著加上": ": the on-screen subtitle becomes text like \"～ 前奏 ～\", and the lyrics on the right get a matching line",
+  "：畫面字幕會變成「～ 前奏 ～」這類字樣，左側歌詞也會跟著加上": ": the on-screen subtitle becomes text like \"～ 前奏 ～\", and the lyrics on the left get a matching line",
   "：請在上方貼入歌詞（一行一句），再點擊": ": paste the lyrics above (one line per lyric), then click",
   "～ 末句結束": "～ last line ends at",
   "🌟 前奏": "🌟 Intro",
@@ -504,11 +504,11 @@
   "🎼 前奏／間奏／尾奏請寫成": "🎼 Write intro/interlude/outro lines as",
   "🎼 卡片下拉可選": "🎼 The card dropdown can set",
   "👁️ 預覽": "👁️ Preview",
-  "👈 也可以在左邊照片卡的下拉選「🌟 前奏／🎻 間奏／🎬 尾奏」，這裡會自動加上那一行。前奏、尾奏沒寫的話，程式會自動做，照片用第一句／最後一句的。": "👈 You can also pick \"🌟 Intro／🎻 Interlude／🎬 Outro\" in a photo card's dropdown on the left and the line is added here automatically. If you leave out the intro or outro, they are created automatically using the photo of the first / last line.",
-  "👉 若您想直接讓 AI 聽音辨識填入左側照片時間，請點左邊金色的「": "👉 To let AI listen to the audio and fill in the photo times on the left, click the gold \"",
+  "👉 也可以在右邊照片卡的下拉選「🌟 前奏／🎻 間奏／🎬 尾奏」，這裡會自動加上那一行。前奏、尾奏沒寫的話，程式會自動做，照片用第一句／最後一句的。": "👉 You can also pick \"🌟 Intro／🎻 Interlude／🎬 Outro\" in a photo card's dropdown on the right and the line is added here automatically. If you leave out the intro or outro, they are created automatically using the photo of the first / last line.",
+  "👉 若您想直接讓 AI 聽音辨識填入右側照片時間，請點左邊金色的「": "👉 To let AI listen to the audio and fill in the photo times on the right, click the gold \"",
   "💡 一行一句歌詞貼在下方（支援純文字、`[Scene 05] 歌詞` 指定照片格式、或 `[00:23.22] 歌詞` 時間碼格式）：": "💡 Paste one lyric line per row below (plain text, `[Scene 05] lyric` to pick a photo, or `[00:23.22] lyric` timecodes):",
   "💡 可直接輸入分秒（如 `02:29`、`03:13`）或秒數，點「🎧」可從該句切入前 0.5 秒試聽，點「+2s」可拉長間奏前或片尾字幕餘韻。": "💡 Enter mm:ss (e.g. `02:29`, `03:13`) or seconds. Click \"🎧\" to listen from 0.5 s before the line, or \"+2s\" to extend the tail before an interlude or at the ending.",
-  "💡 提醒：因原本尚未建立時間軸，系統已自動為您貼上的歌詞配置連續時間軸並填入左側照片卡片！": "💡 Note: since there was no timeline yet, a continuous timeline was created for your pasted lyrics and filled into the photo cards on the left!",
+  "💡 提醒：因原本尚未建立時間軸，系統已自動為您貼上的歌詞配置連續時間軸並填入右側照片卡片！": "💡 Note: since there was no timeline yet, a continuous timeline was created for your pasted lyrics and filled into the photo cards on the right!",
   "💡 每張照片卡片可直接": "💡 On each photo card you can",
   "💡 每段可放一張": "💡 Each section can have its own",
   "💡 請先貼上歌詞，或點擊金色「⚡ 貼上並依 Whisper 自動對齊」按鈕！": "💡 Paste lyrics first, or click the gold \"⚡ Paste & auto-align with Whisper\" button!",
@@ -575,7 +575,7 @@
   "還沒有 MV 專案：按「＋ 新建歌曲 MV 專案」開始。": "No MV project yet: press \"＋ New song MV project\" to start.",
   "請貼入歌詞": "Paste the lyrics",
   "請貼入歌詞或執行 Whisper": "Paste the lyrics or run Whisper",
-  "⚠️ 提醒：您尚未在上方「Step 1」選擇母帶音檔！系統已先幫左側照片自動分配預設連續時間軸（您可先微調秒數）；": "⚠️ Note: no master audio is chosen in Step 1 above yet. The photos on the left got a default back-to-back timeline (you can adjust the seconds);",
+  "⚠️ 提醒：您尚未在上方「Step 1」選擇母帶音檔！系統已先幫右側照片自動分配預設連續時間軸（您可先微調秒數）；": "⚠️ Note: no master audio is chosen in Step 1 above yet. The photos on the right got a default back-to-back timeline (you can adjust the seconds);",
   "若要使用 Whisper 語音辨識對齊，請先在 Step 1 下拉選單挑選音檔後再按一次！": "to align with Whisper speech recognition, pick the audio in the Step 1 list first and press the button again.",
   "若台語/國語同音字有誤差，您可直接在卡片上改字，或貼上正確歌詞後點「✏️ 僅替換歌詞文字（保留時間）」。": "If a word was heard as a wrong homophone (Taiwanese / Mandarin), fix it on the card, or paste the correct lyrics and click “✏️ Replace lyric text only (keep timing)”.",
   "分鏡畫面預覽": "Scene preview",
@@ -631,7 +631,10 @@
   "把歌曲庫裡這首歌調好的字幕時間（歌詞畫面／快速 MV 的「手動調整字幕時間」）整份帶過來，歌曲庫錨住的句子在這裡也會是定錨": "Takes over the subtitle timing made for this song in the library (“Adjust the subtitle times” of the lyric picture or quick MV); lines anchored there are anchored here too",
   "這個 MV 專案沒有對應的歌曲庫歌曲": "This MV project has no song in the library",
   "⚠️ 歌曲庫裡這首歌還沒有調好時間的字幕：請先到歌曲庫的「歌詞畫面」或「快速 MV」用「手動調整字幕時間」對好並儲存，再回來按一次。": "⚠️ This song has no timed subtitles in the library yet: time them with “Adjust the subtitle times” in the library’s lyric picture or quick MV, save, and press this again.",
-  "你放的照片和自己加的間奏都會留著。": "Your photos and the interludes you added stay."
+  "你放的照片和自己加的間奏都會留著。": "Your photos and the interludes you added stay.",
+  "拖曳跳到歌曲任一位置（跟左上的母帶播放器是同一個聲音，所以那邊也會跟著動）": "Drag to jump anywhere in the song (it is the same sound as the master player at the top left, so that one moves too)",
+  "右邊「即時對字幕」用的也是這個聲音，所以兩邊的進度會一起動": "“Live subtitles” on the right plays this same sound, so both move together",
+  "🎧 母帶播放器（跟即時對字幕同一個聲音）": "🎧 Master player (the same sound as the live subtitles)"
  },
  "patterns": [
   {
@@ -643,8 +646,8 @@
    "en": "⚠️ {0} stretch(es) of singing have no line in the pasted lyrics: {1}. A repeated section may be missing from the lyrics; add it and align again."
   },
   {
-   "zh": "💡 提醒：因右側字幕框尚未貼入自訂歌詞，系統已自動用 Whisper 聽音辨識出的詞句填滿左側 {0} 張照片的時間與字幕！若台語/國語同音字有誤差，您可直接在卡片上改字，或貼上正確歌詞後點「✏️ 僅替換歌詞文字（保留時間）」。",
-   "en": "💡 Note: no lyrics were pasted in the subtitle box on the right, so the words recognized by Whisper were used to fill the times and subtitles of the {0} photos on the left! If Taiwanese/Mandarin homophones are wrong, edit the text on the cards, or paste the correct lyrics and click \"✏️ Replace lyric text only (keep times)\"."
+   "zh": "💡 提醒：因左側字幕框尚未貼入自訂歌詞，系統已自動用 Whisper 聽音辨識出的詞句填滿右側 {0} 張照片的時間與字幕！若台語/國語同音字有誤差，您可直接在卡片上改字，或貼上正確歌詞後點「✏️ 僅替換歌詞文字（保留時間）」。",
+   "en": "💡 Note: no lyrics were pasted in the subtitle box on the left, so the words recognized by Whisper were used to fill the times and subtitles of the {0} photos on the right! If Taiwanese/Mandarin homophones are wrong, edit the text on the cards, or paste the correct lyrics and click \"✏️ Replace lyric text only (keep times)\"."
   },
   {
    "zh": "{0} 沒有加 ～。\n不加的話會被當成一句歌詞：前奏卡會被擠到幾乎沒有、最後一句會被提早切掉、間奏會逐字變金還出現頻譜。\n\n按「確定」幫你改成「～ 間奏 ～」這種寫法再對齊；\n按「取消」先不對齊，讓你自己改。",
@@ -691,8 +694,8 @@
    "en": "✔ Audio ready: {0}Hz / {1}ch / length {2}s ({3}) / {4} MB · ⚠️ Warning: no backing track in the intro (RMS={5}); this looks like a dry vocal-only file!"
   },
   {
-   "zh": "⚠️ Whisper 未偵測到有效人聲片段，系統已自動啟動保底機制，幫左側 {0} 張照片分配連續時間軸，您可直接微調秒數！",
-   "en": "⚠️ Whisper found no usable vocal segments; the fallback assigned a continuous timeline to the {0} photos on the left. You can fine-tune the times!"
+   "zh": "⚠️ Whisper 未偵測到有效人聲片段，系統已自動啟動保底機制，幫右側 {0} 張照片分配連續時間軸，您可直接微調秒數！",
+   "en": "⚠️ Whisper found no usable vocal segments; the fallback assigned a continuous timeline to the {0} photos on the right. You can fine-tune the times!"
   },
   {
    "zh": "成品 MV 正被其他程式開著（例如影片播放器），無法覆寫：{0}。新的 MV 已做好，在 {1}；關掉播放後再合成一次即可。（{2}）",
@@ -743,8 +746,8 @@
    "en": "🎉 Created project \"{0}\" ({1} photo slots)! Check the audio in \"Step 1\" and add scene photos in \"Step 2\"."
   },
   {
-   "zh": "💡 提醒：您尚未貼入歌詞，系統已先為左側 {0} 張照片平均分配連續時間軸，您可直接微調時間或輸入歌詞！",
-   "en": "💡 Note: no lyrics pasted yet, so an evenly spaced continuous timeline was assigned to the {0} photos on the left. Fine-tune the times or enter lyrics!"
+   "zh": "💡 提醒：您尚未貼入歌詞，系統已先為右側 {0} 張照片平均分配連續時間軸，您可直接微調時間或輸入歌詞！",
+   "en": "💡 Note: no lyrics pasted yet, so an evenly spaced continuous timeline was assigned to the {0} photos on the right. Fine-tune the times or enter lyrics!"
   },
   {
    "zh": "➕ 已在第 {0} 格插入空白照片格，後面的照片往後讓一號；點這格放照片，再用下拉或歌詞指定給哪一句。",
@@ -755,12 +758,12 @@
    "en": "✅ Whisper auto-align succeeded! (took {0}s ｜ source: Whisper cache (instant))"
   },
   {
-   "zh": "⚡ [階段 3/3] 正在依 Whisper 聲學自動切分並配對左側 {0} 張分鏡圖...",
-   "en": "⚡ [Stage 3/3] Splitting by Whisper timing and matching the {0} scene photos on the left..."
+   "zh": "⚡ [階段 3/3] 正在依 Whisper 聲學自動切分並配對右側 {0} 張分鏡圖...",
+   "en": "⚡ [Stage 3/3] Splitting by Whisper timing and matching the {0} scene photos on the right..."
   },
   {
-   "zh": "⚡ [階段 3/3] 正在執行全局字詞流 DP 對齊 ({0} 句歌詞 ↔ 左側分鏡)...",
-   "en": "⚡ [Stage 3/3] Running global word-stream DP alignment ({0} lyric lines ↔ scenes on the left)..."
+   "zh": "⚡ [階段 3/3] 正在執行全局字詞流 DP 對齊 ({0} 句歌詞 ↔ 右側分鏡)...",
+   "en": "⚡ [Stage 3/3] Running global word-stream DP alignment ({0} lyric lines ↔ scenes on the right)..."
   },
   {
    "zh": "在 {0} ~ {1} 加一段間奏？\n（前後的段落會自動讓開；加好後可以再改時間、放專屬照片）",
@@ -795,8 +798,8 @@
    "en": "{0} falls inside locked Scene {1} ({2} ~ {3}); move the playback position elsewhere or unlock it first"
   },
   {
-   "zh": "🗑️ 已刪除 {0}，後面的照片往前補號；時間軸與右側歌詞的照片編號已跟著改。",
-   "en": "🗑️ Deleted {0}; later photos shifted up, and the photo numbers in the timeline and the lyrics on the right were updated."
+   "zh": "🗑️ 已刪除 {0}，後面的照片往前補號；時間軸與左側歌詞的照片編號已跟著改。",
+   "en": "🗑️ Deleted {0}; later photos shifted up, and the photo numbers in the timeline and the lyrics on the left were updated."
   },
   {
    "zh": "🎙️ [階段 2/3] Whisper{0} 逐字聲學定位中 ({1}s / {2}s)",
@@ -879,8 +882,8 @@
    "en": "✔ Assigned the Scene {0} photo to lyric section {1}: \"{2}\"!"
   },
   {
-   "zh": "✅ 時間軸已完成配置！已將 {0} 段時間填入左側照片卡片。",
-   "en": "✅ Timeline ready! Filled {0} section times into the photo cards on the left."
+   "zh": "✅ 時間軸已完成配置！已將 {0} 段時間填入右側照片卡片。",
+   "en": "✅ Timeline ready! Filled {0} section times into the photo cards on the right."
   },
   {
    "zh": "✔ 已將間奏前與片尾前共 {0} 處歌詞尾韻往後延展 +{1}s！",
@@ -967,8 +970,8 @@
    "en": "Delete interlude \"{0}\" ({1} ~ {2})?\nIts time will be merged into the next section."
   },
   {
-   "zh": "還沒有{0}卡：請先在右側貼歌詞對齊，程式會自動做出{1}卡",
-   "en": "No {0} card yet: paste lyrics on the right and align; the {1} card is created automatically"
+   "zh": "還沒有{0}卡：請先在左側貼歌詞對齊，程式會自動做出{1}卡",
+   "en": "No {0} card yet: paste lyrics on the left and align; the {1} card is created automatically"
   },
   {
    "zh": "➔ 前一張 (Scene {0}) 結束時間已自動改為",
@@ -1587,8 +1590,8 @@
    "en": "❌ Could not open the folder: {0}"
   },
   {
-   "zh": "💡 提醒：因右側字幕框尚未貼入自訂歌詞，系統已自動用 Whisper 聽音辨識出的詞句填滿左側 {0} 張照片的時間與字幕！",
-   "en": "💡 Note: no lyrics were pasted in the box on the right, so the {0} photos on the left got their timing and captions from what Whisper heard."
+   "zh": "💡 提醒：因左側字幕框尚未貼入自訂歌詞，系統已自動用 Whisper 聽音辨識出的詞句填滿右側 {0} 張照片的時間與字幕！",
+   "en": "💡 Note: no lyrics were pasted in the box on the left, so the {0} photos on the right got their timing and captions from what Whisper heard."
   },
   {
    "zh": "{0}. 交叉淡化",
@@ -1787,12 +1790,12 @@
    "en": "The {0} line(s) anchored in the library are anchored here too."
   },
   {
-   "zh": "📚 已帶入歌曲庫調好的 {0} 句時間（照樣套用提前進字），其中 {1} 句是定錨。請用 ▶ 確認，不準的直接在左邊照片卡片微調。",
-   "en": "📚 The {0} lines timed in the library are in (with the usual early start), {1} of them anchored. Check them with ▶ and fine-tune any card on the left."
+   "zh": "📚 已帶入歌曲庫調好的 {0} 句時間（照樣套用提前進字），其中 {1} 句是定錨。請用 ▶ 確認，不準的直接在右邊照片卡片微調。",
+   "en": "📚 The {0} lines timed in the library are in (with the usual early start), {1} of them anchored. Check them with ▶ and fine-tune any card on the right."
   },
   {
-   "zh": "📚 已帶入歌曲庫調好的 {0} 句時間（照樣套用提前進字）。請用 ▶ 確認，不準的直接在左邊照片卡片微調。",
-   "en": "📚 The {0} lines timed in the library are in (with the usual early start). Check them with ▶ and fine-tune any card on the left."
+   "zh": "📚 已帶入歌曲庫調好的 {0} 句時間（照樣套用提前進字）。請用 ▶ 確認，不準的直接在右邊照片卡片微調。",
+   "en": "📚 The {0} lines timed in the library are in (with the usual early start). Check them with ▶ and fine-tune any card on the right."
   }
  ]
 }

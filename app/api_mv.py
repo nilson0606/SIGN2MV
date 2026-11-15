@@ -688,7 +688,7 @@ def router(ctx: Context) -> APIRouter:
                 saved = save_project_dict(proj)
                 return {"status": "ok", "mode_used": "replace_text_only_init", "count": len(proj["timeline"]),
                         "lyric_count": len(line_pairs),
-                        "warning": "💡 提醒：因原本尚未建立時間軸，系統已自動為您貼上的歌詞配置連續時間軸並填入左側照片卡片！",
+                        "warning": "💡 提醒：因原本尚未建立時間軸，系統已自動為您貼上的歌詞配置連續時間軸並填入右側照片卡片！",
                         "project": saved}
             replaced = 0
             for idx_pos, (sc_num, line_txt) in zip(lyric_indices, filtered_pairs):
@@ -739,7 +739,7 @@ def router(ctx: Context) -> APIRouter:
                     if has_existing_lyrics:
                         return _keep_timeline("還沒有選擇母帶音檔，無法用 Whisper 對齊；請先在 Step 1 選音檔", 400)
                     fallback_used = True
-                    warning_notes.append("⚠️ 提醒：您尚未在上方「Step 1」選擇母帶音檔！系統已先幫左側照片自動分配預設連續時間軸（您可先微調秒數）；"
+                    warning_notes.append("⚠️ 提醒：您尚未在上方「Step 1」選擇母帶音檔！系統已先幫右側照片自動分配預設連續時間軸（您可先微調秒數）；"
                                          "若要使用 Whisper 語音辨識對齊，請先在 Step 1 下拉選單挑選音檔後再按一次！")
                     new_tl = _align(existing_timeline=existing_tl, line_pairs=line_pairs, w_segs=[], total_dur=total_dur,
                                     early_lead=early_lead, tail_ext=tail_ext, title=proj.get("title", ""), target_scene_count=target_sc_max)
@@ -784,16 +784,16 @@ def router(ctx: Context) -> APIRouter:
                             warning_notes.append(heard_note)
                     if w_segs:
                         if not clean_lines:
-                            local_update(True, "whisper", 85, f"⚡ [階段 3/3] 正在依 Whisper 聲學自動切分並配對左側 {target_sc_max} 張分鏡圖...",
+                            local_update(True, "whisper", 85, f"⚡ [階段 3/3] 正在依 Whisper 聲學自動切分並配對右側 {target_sc_max} 張分鏡圖...",
                                          f"套用 {early_lead}s 提前進字與無縫轉場銜接")
-                            warning_notes.append(f"💡 提醒：因右側字幕框尚未貼入自訂歌詞，系統已自動用 Whisper 聽音辨識出的詞句填滿左側 {target_sc_max} 張照片的時間與字幕！"
+                            warning_notes.append(f"💡 提醒：因左側字幕框尚未貼入自訂歌詞，系統已自動用 Whisper 聽音辨識出的詞句填滿右側 {target_sc_max} 張照片的時間與字幕！"
                                                  "若台語/國語同音字有誤差，您可直接在卡片上改字，或貼上正確歌詞後點「✏️ 僅替換歌詞文字（保留時間）」。")
                             new_tl = auto_generate_timeline_from_whisper_only(w_segs=w_segs, total_dur=total_dur, early_lead=early_lead,
                                                                               tail_ext=tail_ext, title=proj.get("title", ""), target_scene_count=target_sc_max)
                             if existing_tl:
                                 new_tl = apply_anchor_locks(new_tl, existing_tl, total_dur, w_segs, early_lead, tail_ext, proj.get("title", ""))
                         else:
-                            local_update(True, "whisper", 85, f"⚡ [階段 3/3] 正在執行全局字詞流 DP 對齊 ({len(clean_lines)} 句歌詞 ↔ 左側分鏡)...",
+                            local_update(True, "whisper", 85, f"⚡ [階段 3/3] 正在執行全局字詞流 DP 對齊 ({len(clean_lines)} 句歌詞 ↔ 右側分鏡)...",
                                          f"套用 {early_lead}s 提前進字與 +{tail_ext}s 尾韻延展（嚴格定錨約束）")
                             new_tl = _align(existing_timeline=existing_tl, line_pairs=line_pairs, w_segs=w_segs, total_dur=total_dur,
                                             early_lead=early_lead, tail_ext=tail_ext, title=proj.get("title", ""), target_scene_count=target_sc_max)
@@ -809,12 +809,12 @@ def router(ctx: Context) -> APIRouter:
                             return _keep_timeline("Whisper 沒有偵測到人聲")
                         fallback_used = True
                         if not warning_notes:
-                            warning_notes.append(f"⚠️ Whisper 未偵測到有效人聲片段，系統已自動啟動保底機制，幫左側 {target_sc_max} 張照片分配連續時間軸，您可直接微調秒數！")
+                            warning_notes.append(f"⚠️ Whisper 未偵測到有效人聲片段，系統已自動啟動保底機制，幫右側 {target_sc_max} 張照片分配連續時間軸，您可直接微調秒數！")
                         new_tl = _align(existing_timeline=existing_tl, line_pairs=line_pairs, w_segs=[], total_dur=total_dur,
                                         early_lead=early_lead, tail_ext=tail_ext, title=proj.get("title", ""), target_scene_count=target_sc_max)
             else:
                 if not clean_lines:
-                    warning_notes.append(f"💡 提醒：您尚未貼入歌詞，系統已先為左側 {target_sc_max} 張照片平均分配連續時間軸，您可直接微調時間或輸入歌詞！")
+                    warning_notes.append(f"💡 提醒：您尚未貼入歌詞，系統已先為右側 {target_sc_max} 張照片平均分配連續時間軸，您可直接微調時間或輸入歌詞！")
                 new_tl = _align(existing_timeline=existing_tl, line_pairs=line_pairs, w_segs=[], total_dur=total_dur,
                                 early_lead=early_lead, tail_ext=tail_ext, title=proj.get("title", ""), target_scene_count=target_sc_max)
 
@@ -1230,7 +1230,7 @@ def router(ctx: Context) -> APIRouter:
             return jerr(404, str(exc))
         words = load_whisper_words(proj)
         if not words:
-            return jerr(409, "還沒有 Whisper 辨識結果：請先在右側按「⚡ 貼上並依 Whisper 自動對齊」跑一次，再來找間奏")
+            return jerr(409, "還沒有 Whisper 辨識結果：請先在左側按「⚡ 貼上並依 Whisper 自動對齊」跑一次，再來找間奏")
         try:
             min_gap = max(2.0, min(60.0, float(body.get("min_gap", 8.0))))
         except (TypeError, ValueError):

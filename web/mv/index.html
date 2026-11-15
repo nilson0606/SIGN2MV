@@ -338,6 +338,10 @@
       padding: 2px 8px; border-radius: 6px; pointer-events: none; }
     #liveControls { display: none; margin-top: 8px; gap: 6px; flex-wrap: wrap; align-items: center; }
     #liveControls .live-info { font-size: 12.5px; color: var(--text-muted); }
+    /* [Claude 2026-11-15] 即時對字幕自己的進度拉桿（聲音還是母帶那一個） */
+    #liveSeekRow { flex: 1 1 100%; display: flex; align-items: center; gap: 10px; }
+    #liveSeek { flex: 1; accent-color: var(--gold); cursor: pointer; }
+    #liveSeekTime { font-family: monospace; font-size: 13px; color: var(--gold-bright); white-space: nowrap; }
 
     .preview-box img, .preview-box video {
       width: 100%;
@@ -345,14 +349,19 @@
       object-fit: contain;
     }
 
-    /* Scene Gallery & Lyrics Paste 2-Col Grid */
+    /* Scene Gallery & Lyrics Paste 2-Col Grid
+       [Claude 2026-11-15] 使用者要求：寬螢幕時 Step 3（歌詞）在左、Step 2（照片卡片）在右，照片卡片就在預覽畫面正下方，方便對時間；
+       窄螢幕一欄時照 Step 2 → Step 3 的順序 */
     .mid-grid {
       display: grid;
-      grid-template-columns: 1.25fr 0.75fr;
+      grid-template-columns: 0.75fr 1.25fr;
       gap: 20px;
     }
+    .mid-grid > .panel:first-child { order: 2; }
+    .mid-grid > .panel:last-child { order: 1; }
     @media (max-width: 1200px) {
       .mid-grid { grid-template-columns: 1fr; }
+      .mid-grid > .panel:first-child, .mid-grid > .panel:last-child { order: 0; }
     }
 
     .scene-gallery-grid {
@@ -989,6 +998,7 @@
         <div class="audio-deck" id="audioDropZone" title="也可直接將 .wav / .mp3 / .m4a 音檔拖曳到此處置入">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
             <span style="font-size:12.5px; color:var(--gold); font-weight:700;" id="audioProbeInfo">母帶音源載入中...</span>
+            <span style="font-size:12px; color:var(--text-muted);" title="右邊「即時對字幕」用的也是這個聲音，所以兩邊的進度會一起動">🎧 母帶播放器（跟即時對字幕同一個聲音）</span>
             <span style="font-size:12px; color:#86efac;">📥 支援直接將電腦音檔拖曳（Drag & Drop）到此播放框置入</span>
           </div>
           <div class="audio-row">
@@ -1024,6 +1034,10 @@
           </div>
         </div>
         <div id="liveControls">
+          <div id="liveSeekRow">
+            <input type="range" id="liveSeek" min="0" max="0" step="0.01" value="0" title="拖曳跳到歌曲任一位置（跟左上的母帶播放器是同一個聲音，所以那邊也會跟著動）" />
+            <span id="liveSeekTime">00:00.00 / 00:00.00</span>
+          </div>
           <button class="btn btn-sm btn-gold" id="btnLivePlay" onclick="liveTogglePlay()">▶ 播放</button>
           <button class="btn btn-sm" onclick="liveSeekBy(-3)">⏪ 3 秒</button>
           <button class="btn btn-sm" onclick="liveSeekBy(3)">3 秒 ⏩</button>
@@ -1040,7 +1054,7 @@
 
     <!-- Step 2: Scene Image Gallery (Drag & Drop / Batch Upload) AND Paste Lyrics -->
     <div class="mid-grid">
-      <!-- Left: Visual Scene Gallery & Photo-to-Lyric Binding Workbench -->
+      <!-- Right on wide screens (CSS order): Visual Scene Gallery & Photo-to-Lyric Binding Workbench -->
       <div class="panel">
         <div class="panel-header">
           <div class="panel-title">🖼️ Step 2｜分鏡照片畫廊 ＆「照片指定歌詞」工作台 <span id="galleryCountBadge" style="font-size:12.5px; color:var(--gold-bright); font-weight:700; margin-left:6px;"></span></div>
@@ -1079,7 +1093,7 @@
         </div>
         <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">
           💡 每張照片卡片可直接<strong>拖曳/點擊換圖</strong>（支援一次拖曳或批次選取<strong>多張分鏡圖</strong>依序自動填入），並在卡片下方<strong>調整起迄時間（改一張前後張自動連動銜接）</strong>或修改歌詞！
-          <br>🎼 卡片下拉可選 <strong>🌟 前奏／🎻 間奏／🎬 尾奏</strong>：畫面字幕會變成「～ 前奏 ～」這類字樣，右側歌詞也會跟著加上 <strong>[Scene NN] ～ X奏 ～</strong>。
+          <br>🎼 卡片下拉可選 <strong>🌟 前奏／🎻 間奏／🎬 尾奏</strong>：畫面字幕會變成「～ 前奏 ～」這類字樣，左側歌詞也會跟著加上 <strong>[Scene NN] ～ X奏 ～</strong>。
         </div>
         <div id="step2StatusBox" class="inline-status-box" style="display:none; margin-bottom:10px;"></div>
         <div class="scene-gallery-grid" id="sceneGalleryGrid">
@@ -1105,7 +1119,7 @@
         </div>
       </div>
 
-      <!-- Right: Paste Full Lyrics / Subtitles Panel -->
+      <!-- Left on wide screens (CSS order): Paste Full Lyrics / Subtitles Panel -->
       <div class="panel">
         <div class="panel-header">
           <div class="panel-title">📝 Step 3｜一鍵貼上整首歌詞 / 字幕區</div>
@@ -1129,7 +1143,7 @@
         <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">
           💡 一行一句歌詞貼在下方（支援純文字、`[Scene 05] 歌詞` 指定照片格式、或 `[00:23.22] 歌詞` 時間碼格式）：
           <br>🎼 前奏／間奏／尾奏請寫成 <strong style="color:var(--gold);">[Scene 01] ～ 前奏 ～</strong>、<strong style="color:var(--gold);">[Scene 07] ～ 間奏 ～</strong>、<strong style="color:var(--gold);">[Scene 20] ～ 尾奏 ～</strong>（前後一定要加 ～，半形 ~ 也可以；Scene 編號＝用哪張照片）。
-          <br>👈 也可以在左邊照片卡的下拉選「🌟 前奏／🎻 間奏／🎬 尾奏」，這裡會自動加上那一行。前奏、尾奏沒寫的話，程式會自動做，照片用第一句／最後一句的。
+          <br>👉 也可以在右邊照片卡的下拉選「🌟 前奏／🎻 間奏／🎬 尾奏」，這裡會自動加上那一行。前奏、尾奏沒寫的話，程式會自動做，照片用第一句／最後一句的。
           <br>🔢 沒寫 [Scene NN] 的行照「第幾行」對照片（前奏／間奏／尾奏行也算一張）：第 1 行＝Scene 01、第 2 行＝Scene 02……
         </div>
         <textarea id="inpPasteLyrics" class="lyrics-textarea" placeholder="在此貼上整首歌詞（一行一句）...&#10;例如：&#10;是幸福是不幸 環境來造成&#10;恩恩怨怨分未清 何必抱不平"></textarea>
@@ -1219,7 +1233,7 @@
 
         <!-- Inline Status & Live Progress Box right below Whisper buttons -->
         <div id="step3StatusBox" class="inline-status-box" style="display:block;">
-          💡 <strong>操作狀態待命</strong>：請在上方貼入歌詞（一行一句），再點擊 <strong>「⚡ 貼上並依 Whisper 自動對齊」</strong>，系統會分析音頻並自動填入左側每張照片的時間與歌詞。
+          💡 <strong>操作狀態待命</strong>：請在上方貼入歌詞（一行一句），再點擊 <strong>「⚡ 貼上並依 Whisper 自動對齊」</strong>，系統會分析音頻並自動填入右側每張照片的時間與歌詞。
         </div>
       </div>
     </div>
@@ -1783,7 +1797,7 @@
             </div>
             ` : `
             <div style="font-size:11.5px; color:#9ca9be; background:#090d16; padding:5px 8px; border-radius:6px; border:1px dashed var(--border);">
-              尚未分配歌詞時間（請在右側貼上歌詞並點擊「⚡ 貼上並依 Whisper 自動對齊」）
+              尚未分配歌詞時間（請在左側貼上歌詞並點擊「⚡ 貼上並依 Whisper 自動對齊」）
             </div>
             `}
             <select class="scene-lyric-select" onchange="onSceneSelect(${sc.scene_id}, this.value)" title="選擇這張照片要顯示在哪一句歌詞，或當前奏／間奏／尾奏">
@@ -1824,7 +1838,7 @@
       let ivNo = 0;
       tl.forEach((seg, idx) => { if (INST_TYPES.includes(seg.type)) items.push({ seg, idx, no: (seg.type === 'interlude' || seg.type === 'solo') ? ++ivNo : 0 }); });
       if (!items.length) {
-        grid.innerHTML = `<div style="font-size:12px; color:#9ca9be; background:#090d16; padding:8px 10px; border-radius:6px; border:1px dashed var(--border);">還沒有時間軸（先在右側貼歌詞對齊），之後這裡會出現前奏、尾奏，也可以加間奏。</div>`;
+        grid.innerHTML = `<div style="font-size:12px; color:#9ca9be; background:#090d16; padding:8px 10px; border-radius:6px; border:1px dashed var(--border);">還沒有時間軸（先在左側貼歌詞對齊），之後這裡會出現前奏、尾奏，也可以加間奏。</div>`;
         return;
       }
       grid.innerHTML = '';
@@ -1949,7 +1963,7 @@
       scheduleAutoSave();
     }
     async function addInterlude() {
-      if (!currentProject || !(currentProject.timeline || []).length) { showToast('還沒有時間軸：請先在右側貼歌詞對齊，再加間奏', true); return; }
+      if (!currentProject || !(currentProject.timeline || []).length) { showToast('還沒有時間軸：請先在左側貼歌詞對齊，再加間奏', true); return; }
       const tl = currentProject.timeline;
       const total = parseFloat(tl[tl.length - 1].end) || 0;
       let st = +(audioEl.currentTime || 0).toFixed(2);
@@ -2294,7 +2308,7 @@
       if (role === 'intro' || role === 'outro') {
         const seg = role === 'intro' ? tl.find(s => s.type === 'intro') : [...tl].reverse().find(s => s.type === 'outro');
         const name = role === 'intro' ? '前奏' : '尾奏';
-        if (!seg) { showToast(`還沒有${name}卡：請先在右側貼歌詞對齊，程式會自動做出${name}卡`, true); renderSceneGallery(); return; }
+        if (!seg) { showToast(`還沒有${name}卡：請先在左側貼歌詞對齊，程式會自動做出${name}卡`, true); renderSceneGallery(); return; }
         seg.scene = sid;
         const own = instrumentPhotos[instKey(seg)];
         exportLyricsToBox('scene_tag');
@@ -2652,8 +2666,8 @@
         <div style="font-size:14px; font-weight:800; color:#fde68a; margin-bottom:4px;">
           ⚡ 已自動完成保底時間軸配置（原因：${reason}）
         </div>
-        <div>• <strong>絕不卡死保護</strong>：已為左側全部 <strong>${nScenes} 張照片卡片 (Scene 01 ~ ${String(nScenes).padStart(2, '0')})</strong> 自動填滿連續「起 / 迄」時間軸！</div>
-        <div style="color:#86efac; margin-top:4px;">💡 <strong>您現在可以直接在左側任一張照片調整「起 / 迄」時間（改一張前後自動連動銜接）！</strong></div>
+        <div>• <strong>絕不卡死保護</strong>：已為右側全部 <strong>${nScenes} 張照片卡片 (Scene 01 ~ ${String(nScenes).padStart(2, '0')})</strong> 自動填滿連續「起 / 迄」時間軸！</div>
+        <div style="color:#86efac; margin-top:4px;">💡 <strong>您現在可以直接在右側任一張照片調整「起 / 迄」時間（改一張前後自動連動銜接）！</strong></div>
       `;
       setInlineStatus('step3StatusBox', 'warn', msg);
       setInlineStatus('step2StatusBox', 'ok', `✅ <strong>已自動為下方 ${nScenes} 張照片卡片填入連續時間軸！</strong> 您現在可直接點擊任一卡片的 <code>-0.5</code> / <code>+0.5</code> / <code>+2s</code> 或直接改時間，前後張會自動連動銜接。`);
@@ -2705,7 +2719,7 @@
         }
       }
       if (!text && mode === 'replace_text_only') {
-        const err = '⚠️ <strong>提醒：字幕框目前是空的！</strong><br>👉 若您想直接讓 AI 聽音辨識填入左側照片時間，請點左邊金色的「<strong>⚡ 貼上並依 Whisper 自動對齊</strong>」；若只想換文字，請先在上方框內貼上歌詞。';
+        const err = '⚠️ <strong>提醒：字幕框目前是空的！</strong><br>👉 若您想直接讓 AI 聽音辨識填入右側照片時間，請點左邊金色的「<strong>⚡ 貼上並依 Whisper 自動對齊</strong>」；若只想換文字，請先在上方框內貼上歌詞。';
         setInlineStatus('step3StatusBox', 'warn', err);
         showToast('💡 請先貼上歌詞，或點擊金色「⚡ 貼上並依 Whisper 自動對齊」按鈕！', true);
         return;
@@ -2716,7 +2730,7 @@
       const origMainTxt = btnMain ? btnMain.innerHTML : '';
       if (btnMain) {
         btnMain.disabled = true;
-        btnMain.innerHTML = '⏳ 正在分析與配置左側分鏡時間軸...';
+        btnMain.innerHTML = '⏳ 正在分析與配置右側分鏡時間軸...';
       }
       if (btnForce) btnForce.disabled = true;
 
@@ -2725,7 +2739,7 @@
         forceWhisper ? '🎙️ 正在強制重跑 Whisper 語音辨識與對齊...' : '🎙️ 正在執行 Whisper 聲學對齊與字幕時間軸計算...',
         'step3StatusBox'
       );
-      showToast(text ? `⏳ 正在執行自動對齊並填入左側分鏡時間...` : `⏳ 正在分析音頻並自動填入左側分鏡時間...`);
+      showToast(text ? `⏳ 正在執行自動對齊並填入右側分鏡時間...` : `⏳ 正在分析音頻並自動填入右側分鏡時間...`);
 
       const earlyLead = readEarlyLeadInput();
       const tailExt = parseFloat(document.getElementById('inpTailExtend').value) || 2.50;
@@ -2788,13 +2802,13 @@
             <div style="font-size:14px; font-weight:800; color:${data.fallback_used ? '#fde68a' : '#86efac'}; margin-bottom:4px;">
               ${data.fallback_used ? '⚡ 時間軸保底配置完成（已填入全部卡片，可直接微調）' : '✅ Whisper 自動對齊成功！'} (耗時 ${elapsed}s ｜ 來源：${srcBadge})
             </div>
-            <div>• <strong>已自動填入左側照片卡片</strong>：共配置 <strong>${lyricSegs.length} 張分鏡卡片時間</strong>（含開場卡與片尾卡共 ${data.count} 段無縫時間軸）</div>
+            <div>• <strong>已自動填入右側照片卡片</strong>：共配置 <strong>${lyricSegs.length} 張分鏡卡片時間</strong>（含開場卡與片尾卡共 ${data.count} 段無縫時間軸）</div>
             <div>• <strong>時間軸分佈</strong>：${rangeInfo}（已套用 <code>${earlyLead}s</code> 提前進字）</div>
             ${warnHtml}
-            <div style="color:var(--gold-bright); margin-top:5px;">💡 <strong>現在您可以直接在左側任一張照片調整「起 / 迄」時間，前一張結尾與後一張開頭會自動同步銜接！</strong></div>
+            <div style="color:var(--gold-bright); margin-top:5px;">💡 <strong>現在您可以直接在右側任一張照片調整「起 / 迄」時間，前一張結尾與後一張開頭會自動同步銜接！</strong></div>
           `);
           setInlineStatus('step2StatusBox', 'ok', `✅ <strong>已將 ${lyricSegs.length} 段歌詞與時間填入下方照片卡片！</strong> 點擊任一卡片的 <code>-0.5</code> / <code>+0.5</code> / <code>+2s</code> 或直接改時間，前後張會自動連動銜接。`);
-          showToast(`✅ 時間軸已完成配置！已將 ${lyricSegs.length} 段時間填入左側照片卡片。`);
+          showToast(`✅ 時間軸已完成配置！已將 ${lyricSegs.length} 段時間填入右側照片卡片。`);
           return true;
         } else {
           const errMsg = (data && data.detail) ? data.detail : '對齊回應異常';
@@ -2863,7 +2877,7 @@
         lines.forEach((x, i) => { if (x.locked) { segs[i].locked = true; anchored += 1; } });
         if (anchored) { renderSceneGallery(); renderTimelineTable(); scheduleAutoSave(); }
       }
-      setInlineStatus('step3StatusBox', 'ok', `📚 已帶入歌曲庫調好的 ${lines.length} 句時間（照樣套用提前進字）${anchored ? `，其中 ${anchored} 句是定錨` : ''}。請用 ▶ 確認，不準的直接在左邊照片卡片微調。`);
+      setInlineStatus('step3StatusBox', 'ok', `📚 已帶入歌曲庫調好的 ${lines.length} 句時間（照樣套用提前進字）${anchored ? `，其中 ${anchored} 句是定錨` : ''}。請用 ▶ 確認，不準的直接在右邊照片卡片微調。`);
     }
 
     function syncProjectFields() {
@@ -3511,7 +3525,29 @@
       hud.textContent = `${secToMmss(t)}　第 ${segIdx + 1} 段 · Scene ${String(seg.scene).padStart(2, '0')}${seg.locked ? ' 🔒' : ''}${transNote}`;
       info.textContent = `第 ${segIdx + 1} 段 ${secToMmss(seg.start)} ~ ${secToMmss(seg.end)}：「${seg.text || ''}」　下一個轉場：${nseg ? (samePhoto ? '同一張照片（只換字幕）' : transitionLabel(cur.style)) : '（片尾）'}`;
       const pb = document.getElementById('btnLivePlay'); if (pb) pb.textContent = audioEl.paused ? '▶ 播放' : '⏸ 暫停';
+      liveSeekShow(t);
     }
+    let liveSeekDragging = false;
+    function liveSeekShow(t) {
+      const bar = document.getElementById('liveSeek'), lab = document.getElementById('liveSeekTime');
+      if (!bar || !lab) return;
+      const dur = isFinite(audioEl.duration) ? audioEl.duration : 0;
+      if (String(bar.max) !== String(dur)) bar.max = dur;
+      if (!liveSeekDragging) bar.value = t;
+      lab.textContent = `${secToMmss(liveSeekDragging ? parseFloat(bar.value) : t)} / ${secToMmss(dur)}`;
+    }
+    (() => {
+      const bar = document.getElementById('liveSeek');
+      if (!bar) return;
+      bar.addEventListener('pointerdown', () => { liveSeekDragging = true; });
+      bar.addEventListener('input', () => {
+        if (!audioEl.src) return;
+        audioEl.currentTime = parseFloat(bar.value) || 0;
+        if (audioEl.paused) liveRenderAt(audioEl.currentTime);   // 暫停時拖曳也看得到那個時間的畫面
+      });
+      const done = () => { liveSeekDragging = false; };
+      bar.addEventListener('change', done); bar.addEventListener('pointerup', done); bar.addEventListener('pointercancel', done);
+    })();
     function liveLoop() {
       cancelAnimationFrame(liveRaf);
       const tick = () => { if (!liveMode) return; liveRenderAt(audioEl.currentTime || 0); liveRaf = requestAnimationFrame(tick); };
@@ -4040,7 +4076,7 @@
           const placed = (data.scenes || []).map(x => parseInt(x.scene_id));
           const endSc = placed.length ? Math.max(...placed) : startScene + data.count - 1;
           if (data.skipped && data.skipped.length) showToast(`⚠️ 照片最多 99 張，有 ${data.skipped.length} 張沒放：${data.skipped.slice(0, 3).join('、')}${data.skipped.length > 3 ? '…' : ''}`, true);
-          const msg = `✅ 已依檔名順序成功放入 <strong>${data.count} 張分鏡圖</strong>（<strong>Scene ${String(startScene).padStart(2, '0')} ~ Scene ${String(endSc).padStart(2, '0')}</strong>）！接下來請在右側貼上歌詞並點擊「⚡ 貼上並依 Whisper 自動對齊」。`;
+          const msg = `✅ 已依檔名順序成功放入 <strong>${data.count} 張分鏡圖</strong>（<strong>Scene ${String(startScene).padStart(2, '0')} ~ Scene ${String(endSc).padStart(2, '0')}</strong>）！接下來請在左側貼上歌詞並點擊「⚡ 貼上並依 Whisper 自動對齊」。`;
           setInlineStatus('step2StatusBox', 'ok', msg);
           showToast(`✔ 已依序放入 ${data.count} 張分鏡圖 (Scene ${String(startScene).padStart(2, '0')} ~ ${String(endSc).padStart(2, '0')})！`);
         } else {
@@ -4267,7 +4303,7 @@
       try {
         const data = await postSceneOp('/api/mv/scenes/delete_shift', { slug: currentSlug, scene_ids: ids, project: currentProject });
         applySceneShiftResult(data, n => { let m = n; for (const d of [...ids].sort((a, b) => b - a)) { if (m > d) m -= 1; else if (m === d) m = Math.max(1, d - 1); } return m; });
-        setInlineStatus('step2StatusBox', 'ok', `🗑️ 已刪除 ${names}，後面的照片往前補號；時間軸與右側歌詞的照片編號已跟著改。`);
+        setInlineStatus('step2StatusBox', 'ok', `🗑️ 已刪除 ${names}，後面的照片往前補號；時間軸與左側歌詞的照片編號已跟著改。`);
         showToast(`🗑️ 已刪除 ${names}，後面的照片往前補號`);
       } catch (e) { showToast(`❌ 刪除失敗：${e.message}`, true); }
     }
