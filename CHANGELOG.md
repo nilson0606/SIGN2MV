@@ -12,6 +12,10 @@
   things on a table, with the place out of focus behind. Glow and a little grain on every card. The word
   table is about three times as large and a line's feeling decides light and stance when it names nothing.
   The page remembers the way chosen last; cards of the other way are removed (after a question) and drawn anew.
+  163 small icons (`app/mvstudio/card_icons.py`, one line of shapes and words each: flowers, gifts, animals,
+  instruments, vehicles, furniture, food, symbols) bring the things a line can call for to more than 200;
+  an icon goes in the sky, beside the person, in the hand, in a thought cloud, in the air, or on the table
+  of a still life. A line sung again shows another of the things its words name.
 
 ## 2026.11.15
 

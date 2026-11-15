@@ -5,7 +5,7 @@ import io
 
 from PIL import Image
 
-from app.mvstudio import cards, cardworld, core
+from app.mvstudio import card_icons, cards, cardworld, core
 from test_mv_photos import _aligned_project, png, state
 
 
@@ -315,3 +315,31 @@ def test_the_page_can_ask_for_the_standard_grade_and_change_between_the_two(clie
     assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == len(plan["empty"])
     again = _post(client, "/api/mv/cards/plan", slug=slug, grade="simple").json()
     assert again["grade"] == "simple" and "grade" not in again["world"] and len(again["empty"]) == len(plan["empty"])
+
+
+def test_icons_more_than_two_hundred_things_and_a_line_sung_again_shows_another():
+    things = set(cardworld.PROPS[1:]) | set(cardworld.PROPS_STD) | set(card_icons.NAMES)
+    assert len(card_icons.NAMES) >= 160 and len(things) >= 200
+    assert not set(card_icons.NAMES) & (set(cardworld.PROPS) | set(cardworld.PROPS_STD))
+    assert all(fam in card_icons.FAMILIES and words and shapes for fam, words, shapes in card_icons.TABLE.values())
+    wd = cardworld.make_world(8, "standard")
+    lines = [("lyric", "送你一束玫瑰"), ("lyric", "火箭飛向太空"), ("lyric", "靈感突然出現"), ("lyric", "雪花輕輕落下"), ("lyric", "抱著我的泰迪熊")]
+    got = [cardworld.parse(sp) for sp in cardworld.plan_standard(lines, 3, wd)]
+    assert [g[4] for g in got] == ["rose", "rocket", "bulb", "snowflake", "teddy"]
+    assert not any(cardworld.parse(sp)[4] in card_icons.TABLE for sp in cardworld.plan(lines, 3, cardworld.make_world(8)))   # simple: as before
+    # every family in a card with one person, two, and nobody, and on the table
+    for fam in card_icons.FAMILIES:
+        name = next(n for n in card_icons.NAMES if card_icons.TABLE[n][0] == fam)
+        for subject, frame in (("solo_front", "mid"), ("duo_face", "wide"), ("none", "wide"), ("none", "still")):
+            im = cardworld.draw(cardworld.card("grass.bigtree.none", "day", "clear", subject, name, frame, "l", 0), wd, 5)
+            assert im.size == (1920, 1080)
+    kk = cardworld.K(wd, "day", 1)
+    for name in card_icons.NAMES:
+        card_icons.draw_icon(kk, name, 300, 400, 200)
+    # the same line six times: not six times the same thing
+    again = [("lyric", "想你的夜裡寫一封信")] * 6
+    props = [cardworld.parse(sp)[4] for sp in cardworld.plan_standard(again, 3, wd)]
+    assert props == ["thought", "letter"] * 3, props
+    once = [("lyric", "把蛋糕切開")] * 4
+    props = [cardworld.parse(sp)[4] for sp in cardworld.plan_standard(once, 3, wd)]
+    assert props[0] == "cake" and props[1] == "none" and props[2] == "cake", props

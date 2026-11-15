@@ -18,6 +18,8 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter
 
+from . import card_icons
+
 W, H, S = 1920, 1080, 2
 SKIN = (255, 224, 204)
 
@@ -240,7 +242,8 @@ def card(place, light, weather, subject, prop, frame, pos, n) -> str:
 def parse(spec: str) -> Optional[Tuple[str, str, str, str, str, str, str, int]]:
     p = str(spec or "").split("|")
     if (len(p) == 9 and p[0] == "w2" and valid_place(p[1]) and p[2] in LIGHTS and p[3] in WEATHERS
-            and p[4] in SUBJECTS + SUBJECTS_STD and p[5] in PROPS + PROPS_STD and p[6] in FRAMES + FRAMES_STD and p[7] in POSES
+            and p[4] in SUBJECTS + SUBJECTS_STD and (p[5] in PROPS + PROPS_STD or p[5] in card_icons.TABLE)
+            and p[6] in FRAMES + FRAMES_STD and p[7] in POSES
             and p[8].isdigit() and len(p[8]) <= 4):
         return p[1], p[2], p[3], p[4], p[5], p[6], p[7], int(p[8])
     return None
@@ -1205,7 +1208,7 @@ def draw(spec: str, world: Dict[str, Any], seed: int = 0) -> Image.Image:
     if place != "forest":
         k.clouds()
     thing(k, prop, "back", None, 0)
-    if prop in PROPS_STD:
+    if prop in PROPS_STD or prop in card_icons.TABLE:
         thing_standard(k, prop, "back", None, 0)
     info = paint_place(k, place) or {}
     ground = float(info.get("ground", 900))
@@ -1250,7 +1253,7 @@ def draw(spec: str, world: Dict[str, Any], seed: int = 0) -> Image.Image:
             figure(k, watcher, 330 if pos != "l" else 1590, 1900, 4.2, "back")
             k.rim = rim
         thing(k, prop, "front", who, ground)
-        if prop in PROPS_STD:
+        if prop in PROPS_STD or prop in card_icons.TABLE:
             thing_standard(k, prop, "front", who, ground)
     weather(k, wth)
     im = _finish(k, world["border"])
@@ -1568,17 +1571,17 @@ HINTS_STD = (
     _row(("販賣機",), landmark="vending"),
     _row(("郵筒", "寄"), landmark="mailbox"),
     _row(("單車", "腳踏車"), landmark="bicycle"),
-    _row(("車", "開往", "公路", "drive", "car"), landmark="car"),
+    _row(("汽車", "開車", "開往", "公路", "車窗", "drive", "car"), landmark="car"),
     _row(("列車", "火車", "鐵軌", "train"), landmark="trainpass"),
     _row(("橋", "bridge"), landmark="farbridge", terrain="river"),
     _row(("鐵塔", "電波", "廣播", "radio"), landmark="radiotower"),
     _row(("農", "穀倉", "故鄉", "家鄉", "老家", "hometown"), landmark="barn", terrain="wheat"),
-    _row(("小屋", "木屋", "炊煙", "家", "home"), landmark="cabin"),
+    _row(("小屋", "木屋", "炊煙", "回家", "家門", "home"), landmark="cabin"),
     _row(("城堡", "王子", "公主", "童話", "castle", "fairy"), landmark="castle"),
     _row(("熱氣球",), landmark="hotair"),
     _row(("帆", "船", "航", "sail", "boat"), landmark="sailboats", terrain="coast"),
     _row(("天文", "宇宙", "星球", "universe"), landmark="observatory", light="night"),
-    _row(("溫室", "種", "發芽", "grow"), landmark="greenhouse"),
+    _row(("溫室", "栽", "灌溉", "grow"), landmark="greenhouse"),
     _row(("舞台", "演唱", "掌聲", "聚光", "stage"), landmark="stage"),
     _row(("旋轉木馬", "遊樂園", "樂園"), landmark="carousel"),
     _row(("雪人",), landmark="snowman", terrain="snow", weather="snow"),
@@ -1601,7 +1604,7 @@ HINTS_STD = (
     _row(("雪", "冬", "聖誕", "snow", "winter", "christmas"), terrain="snow", weather="snow"),
     _row(("田", "稻", "麥", "field"), terrain="wheat"),
     _row(("河", "溪", "river"), terrain="river"),
-    _row(("沙漠", "荒", "desert"), terrain="dunes"),
+    _row(("沙漠", "荒漠", "荒野", "desert"), terrain="dunes"),
     _row(("懸崖", "盡頭", "天涯", "海角", "edge"), terrain="cliff"),
     _row(("草原", "原野", "草地"), terrain="grass"),
     # stances
@@ -1627,7 +1630,7 @@ HINTS_STD = (
     _row(("腳印", "足跡", "走過", "一步", "footprints", "steps"), prop="footprints"),
     _row(("門", "打開", "door", "open"), prop="door"),
     _row(("烏雲", "陰天", "憂鬱", "悲傷", "難過", "sad", "blue"), prop="raincloud"),
-    _row(("光", "希望", "曙光", "勇氣", "相信", "light", "hope", "believe", "brave"), prop="rays"),
+    _row(("光芒", "一道光", "曙光", "希望", "勇氣", "相信", "light", "hope", "believe", "brave"), prop="rays"),
     _row(("煙火", "煙花", "慶祝", "新年", "fireworks"), prop="fireworks", light="night"),
     _row(("紙船", "漂流", "drift"), prop="paperboat"),
     _row(("蝴蝶", "butterfly"), prop="butterfly"),
@@ -1637,6 +1640,7 @@ HINTS_STD = (
     _row(("快樂", "幸福", "開心", "笑", "甜", "美好", "溫暖", "happy", "smile", "sweet", "warm"), light="day", subject="solo_wave"),
     _row(("我們", "一起", "陪", "身邊", "together"), subject="duo_sit"),
 )
+ICON_HINTS = tuple(_row(words, prop=name) for name, (_fam, words, _shapes) in card_icons.TABLE.items())
 MOODS = {"tears": "sad", "hearts": "closed", "call": "wow", "ask": "wow", "shooting": "wow", "notes": "closed", "umbrella": "sad",
          "broken": "sad", "raincloud": "sad", "fireworks": "wow", "thought": "closed", "dream": "closed", "guitar": "closed", "suitcase": "sad"}
 SAD_SUBJECTS = ("duo_apart", "solo_back", "other_back")
@@ -1648,23 +1652,43 @@ def plan_standard(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, 
     shoulder, two hands, or things on a table."""
     global HINTS
     keep = HINTS
-    HINTS = HINTS_STD + HINTS          # the standard words first: they win over the simple ones
+    HINTS = HINTS_STD + ICON_HINTS + HINTS          # the standard words first: they win over the simple ones
     try:
         specs = plan(parts, seed, world)
     finally:
         HINTS = keep
     r = random.Random(f"shots:{int(seed)}")
+    rows = [(tuple(_simple(w) for w in ws), what) for ws, what in HINTS_STD + ICON_HINTS + keep if "prop" in what]
     out: List[str] = []
     seen = set()
+    sung: Dict[str, int] = {}
     since = 2
-    for (kind, _), spec in zip(parts, specs):
+    for (kind, text), spec in zip(parts, specs):
         place, light, wth, subject, prop, frame, pos, n = parse(spec)  # type: ignore[misc]
+        if kind not in ("intro", "outro", "interlude"):
+            # the same line again: another of the things its words name (or, with only one, every other time none)
+            line = _simple(text)
+            again = sung.get(line, 0)
+            sung[line] = again + 1
+            if again:
+                words = set("".join(ch if ch.isalpha() and ch.isascii() else " " for ch in line).split())
+                alts: List[str] = []
+                for ws, what in rows:
+                    if what["prop"] not in alts and any((w in words) if w.isascii() else (w in line) for w in ws):
+                        alts.append(what["prop"])
+                duo = subject.startswith("duo")
+                alts = [a for a in alts if not (a in SOLO_ONLY and duo) and not (a in DUO_ONLY and not duo) and a not in ("bike", "umbrella", "wings")]
+                if len(alts) > 1:
+                    prop = alts[again % len(alts)]
+                elif again % 2 == 1 and prop not in SOLO_ONLY + DUO_ONLY:
+                    prop = "none"
         if kind not in ("intro", "outro"):
             since += 1
             shot = ""
             outdoor = place not in INDOOR + INDOOR_STD
             if since >= 3 and r.random() < 0.6:
-                if subject == "none" or prop in ("letter", "clock", "frames", "hourglass", "calendar", "key", "candle", "diary"):
+                if subject == "none" or prop in ("letter", "clock", "frames", "hourglass", "calendar", "key", "candle", "diary") or (
+                        prop in card_icons.TABLE and card_icons.TABLE[prop][0] in ("hold", "side") and r.random() < 0.5):
                     shot = "still"
                 elif outdoor and place != "forest" and not place.startswith(("woods.", "skyline.")) and wth == "clear" and light in ("sunset", "golden", "dawn", "dusk") and prop in ("none", "birds", "hearts", "thread", "leaves", "petals"):
                     shot = "sil"
@@ -1717,7 +1741,9 @@ def shot_still(k, prop, n):
         k.stroke([(0, 660 + i * 80), (W, 660 + i * 80)], _mix(wood, (60, 40, 40), 0.18), 3, raw=True)
     x = 960 + ((n % 3) - 1) * 200
     k.d.ellipse([P(x - 560), P(900), P(x + 560), P(1010)], fill=(40, 24, 30, 40))
-    if prop == "letter":
+    if prop in card_icons.TABLE:
+        card_icons.draw_icon(k, prop, x, 990, 470)
+    elif prop == "letter":
         k.poly([(x - 420, 800), (x + 200, 690), (x + 360, 900), (x - 280, 1020)], (255, 252, 242), e=True)
         k.stroke([(x - 420, 800), (x - 20, 890), (x + 200, 690)], None, k.lw); _heart(k, x - 14, 868, 1.9)
         k.limb([(x + 440, 940), (x + 760, 740)], (84, 96, 130), 30); k.poly([(x + 424, 954), (x + 456, 926), (x + 396, 984)], (60, 60, 70))
@@ -2348,6 +2374,35 @@ def thing_standard(k, prop, phase, who, ground):
     sc = one["s"] if one else 1.0
     side = 1 if hx < 960 else -1
     bx, by = hx + side * (150 + 130 * sc), ground - 10       # a spot on the ground beside the person
+    icon = card_icons.TABLE.get(prop)
+    if icon:
+        fam = icon[0]
+        if not one and fam in ("hold", "bubble", "side"):
+            fam = "sky" if fam != "side" else "ground"       # nobody to hold it or think of it
+        if phase == "back" and fam == "sky" and icon[0] == "sky":
+            x, y = r.choice((430, 1490)), r.uniform(330, 430)
+            k.d.ellipse([P(x - 230), P(y - 380), P(x + 230), P(y + 80)], fill=(255, 255, 255, 34))
+            card_icons.draw_icon(k, prop, x, y, 300)
+        elif phase == "front" and fam == "sky" and icon[0] != "sky":
+            x, y = r.choice((430, 1490)), r.uniform(380, 460)
+            k.d.ellipse([P(x - 210), P(y - 350), P(x + 210), P(y + 70)], fill=(255, 255, 255, 60))
+            card_icons.draw_icon(k, prop, x, y, 270)
+        elif phase == "front" and fam == "ground":
+            card_icons.draw_icon(k, prop, 960 + r.choice((-1, 1)) * 330, ground + 40, 280, shine=False)
+        elif phase == "front" and fam == "side":
+            card_icons.draw_icon(k, prop, bx, by + 20, max(170, 250 * sc), shine=False)
+        elif phase == "front" and fam == "hold":
+            x, y = one["hands"][1] if side > 0 else one["hands"][0]
+            card_icons.draw_icon(k, prop, x, y + 30 * sc, max(110, 130 * sc))
+        elif phase == "front" and fam == "bubble":
+            x, y = hx + side * (hr + 210), max(190, hy - hr - 150)
+            for i, rr in enumerate((14, 22)): k.ell(x - side * (150 - i * 34), y + 150 - i * 38, rr, rr, (255, 255, 255), e=True)
+            for dx, dy, rr in ((-90, 10, 86), (0, -36, 104), (96, 6, 88), (0, 46, 96)): k.ell(x + dx, y + dy, rr, rr * 0.82, (255, 255, 255), line=False, e=True)
+            card_icons.draw_icon(k, prop, x, y + 74, 150)
+        elif phase == "front" and fam == "rain":
+            for _ in range(16):
+                card_icons.draw_icon(k, prop, r.uniform(60, W - 60), r.uniform(120, H - 40), r.uniform(46, 110))
+        return
     if phase == "back":
         if prop == "rays":
             cx = r.uniform(500, 1400)
