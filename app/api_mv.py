@@ -33,7 +33,7 @@ from . import settings as settings_mod
 from . import stems as stems_mod
 from .context import Context
 from .library import LibraryError
-from .mvstudio import align, cards, cardworld, core
+from .mvstudio import align, cards, cardstory, cardworld, core
 from .mvstudio.align import (align_timeline_with_anchors_and_whisper, apply_anchor_locks, unsung_sections,
                              auto_generate_timeline_from_whisper_only, build_guaranteed_fallback_timeline,
                              enforce_anchor_invariants, WHISPER_PIPELINE)
@@ -1273,7 +1273,7 @@ def router(ctx: Context) -> APIRouter:
         return Path(instrumental_photo_path(illust_dir, m.group(2)))
 
     def card_grade(body: Dict[str, Any]) -> str:
-        return "standard" if body.get("grade") == "standard" else "simple"
+        return body.get("grade") if body.get("grade") in ("standard", "premium") else "simple"
 
     def card_state(proj: Dict[str, Any], grade: str = "simple") -> Dict[str, Any]:
         """What the cards button would do now. "empty": the parts of the timeline that show no photo, each with
@@ -1314,7 +1314,11 @@ def router(ctx: Context) -> APIRouter:
             seed = cards.song_seed(f"{slug}#{rnd}" if rnd else slug)
             # (the song's own last world is among them too, so cards made again do not look like the ones taken out)
             world = cardworld.choose_world(seed, [h["world"] for h in cards.read_history(core.LIBRARY_ROOT)], grade)
-        if world and world.get("grade") == "standard":
+        if world and world.get("grade") == "premium":
+            # the whole song as one story; what stays the same through it (its thing) goes into the world
+            world = cardstory.prepare(world, parts, str(proj.get("title") or ""))
+            picks = [(spec, 0) for spec in cardstory.plan_premium(parts, seed, world, str(proj.get("title") or ""))[0]]
+        elif world and world.get("grade") == "standard":
             picks = [(spec, 0) for spec in cardworld.plan_standard(parts, seed, world)]
         elif world:
             picks = [(spec, 0) for spec in cardworld.plan(parts, seed, world)]

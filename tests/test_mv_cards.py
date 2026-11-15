@@ -343,3 +343,65 @@ def test_icons_more_than_two_hundred_things_and_a_line_sung_again_shows_another(
     once = [("lyric", "把蛋糕切開")] * 4
     props = [cardworld.parse(sp)[4] for sp in cardworld.plan_standard(once, 3, wd)]
     assert props[0] == "cake" and props[1] == "none" and props[2] == "cake", props
+
+
+def test_premium_tells_the_song_as_one_story():
+    from app.mvstudio import cardstory
+    verse = ["清晨的街道很安靜", "我一個人走過轉角", "陽光照在窗台上", "想起你說過的話"]
+    pre = ["也許有一天", "我們會再見面"]
+    chorus = ["我們在雨中的約定", "撐著同一把傘", "你笑著說不分開", "直到星星都睡了"]
+    bridge = ["後來我搬到遠方", "沒有下雨的城市", "每天看著天空"]
+    lines = ([("intro", "")] + [("lyric", t) for t in verse + pre + chorus] + [("interlude", "")]
+             + [("lyric", t) for t in bridge + pre + chorus + chorus] + [("outro", "")])
+    secs = cardstory.sections(lines, "雨中的約定")
+    assert [s["sec"] for s in secs] == (["intro"] + ["verse"] * 4 + ["pre"] * 2 + ["chorus"] * 4 + ["interlude"] + ["bridge"] * 3
+                                        + ["pre"] * 2 + ["chorus"] * 8 + ["outro"])
+    assert [s["turn"] for s, (k, _) in zip(secs, lines) if s["sec"] == "chorus"] == [0] * 4 + [1] * 4 + [2] * 4
+    wd = cardworld.make_world(11, "premium")
+    assert wd["grade"] == "premium" and cardworld.valid_world(wd)
+    wd = cardstory.prepare(wd, lines, "雨中的約定")
+    assert wd["keep"] == "umbrella" and wd["keep_col"] and cardworld.valid_world(wd)
+    specs, st = cardstory.plan_premium(lines, 11, wd, "雨中的約定")
+    assert specs == cardstory.plan_premium(lines, 11, wd, "雨中的約定")[0]
+    assert len(specs) == len(lines) and len(set(specs)) == len(specs) and all(cardworld.parse(sp) for sp in specs)
+    got = [cardworld.parse(sp) for sp in specs]
+    ch = [g for g, s in zip(got, secs) if s["sec"] == "chorus"]
+    assert len({g[0] for g in ch}) == 1                          # every chorus at the song's one chorus place
+    assert all(g[3].startswith("duo") for g, s in zip(got, secs) if s["sec"] == "chorus" and s["turn"] == 0 and g[4] not in ("tears",))
+    order = cardstory.ORDER
+    turn_light = {}
+    for g, s in zip(got, secs):
+        if s["sec"] == "chorus" and g[1] != "overcast":
+            turn_light.setdefault(s["turn"], set()).add(g[1])
+    assert all(len(v) == 1 for v in turn_light.values())         # a chorus keeps its light ...
+    ls = [order.index(next(iter(turn_light[t]))) for t in sorted(turn_light)]
+    assert ls == sorted(ls) and ls[0] < ls[-1]                   # ... and each one comes later
+    assert all(g[4] in ("umbrella", "umbrellai") for g, s in zip(got, secs) if s["sec"] in ("verse", "pre", "chorus", "bridge") and s["k"] == 0)
+    assert got[0][0] == got[-1][0] == st["home"] and got[-1][1] == "night"     # the last card goes back to the first place, at night
+    b = next(g for g, (k, t) in zip(got, lines) if t == "沒有下雨的城市")
+    assert b[2] == "clear"                                       # "no rain": no rain
+    for sp in specs[:3] + specs[-3:]:
+        assert cardworld.draw(sp, wd, 1).size == (1920, 1080)
+    # a verse sung again before the chorus is not the chorus; the title says where the chorus starts
+    v2 = [("lyric", t) for t in ("第一段的話", "第二段的話", "又唱一次的主歌", "還是那段主歌", "唱出歌名雨中的約定", "副歌第二句")]
+    song = v2 + v2[2:] + v2[4:]
+    secs = cardstory.sections(song, "雨中的約定")
+    assert [s["sec"] for s in secs] == ["verse", "verse", "pre", "pre", "chorus", "chorus", "pre", "pre", "chorus", "chorus", "chorus", "chorus"]
+    assert [s["turn"] for s in secs if s["sec"] == "chorus"] == [0, 0, 1, 1, 2, 2]
+    # nothing in the words: the lead wears a red scarf all through
+    plain = cardstory.prepare(cardworld.make_world(12, "premium"), [("lyric", "啦啦啦"), ("lyric", "嗯嗯嗯")])
+    assert plain["keep"] == "" and plain[plain["lead"]]["extra"] == "scarf"
+
+
+def test_the_page_can_ask_for_the_premium_grade(client, root):
+    sid, slug, pdir = _aligned_project(client, root)
+    plan = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium").json()
+    assert plan["grade"] == "premium" and plan["world"]["grade"] == "premium" and "keep" in plan["world"] and plan["cards"] == []
+    assert plan == _post(client, "/api/mv/cards/plan", slug=slug, grade="premium").json()
+    for e in plan["empty"]:
+        assert _post(client, "/api/mv/cards/draw", slug=slug, slot=e["slot"], tone="fresh", grade="premium").status_code == 200
+    for g in ("simple", "standard", "premium"):
+        st = _post(client, "/api/mv/cards/done", slug=slug, grade=g).json()
+        assert st["grade"] == "premium" and st["world"] == plan["world"] and len(st["cards"]) == len(plan["empty"]) and st["empty"] == []
+    assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == len(plan["empty"])
+    assert _post(client, "/api/mv/cards/plan", slug=slug, grade="standard").json()["world"]["grade"] == "standard"

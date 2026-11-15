@@ -626,7 +626,8 @@
   "畫法": "Drawing",
   "簡易": "Simple",
   "標準": "Standard",
-  "簡易：畫面單純；標準：場景和元素更多，還有逆光、特寫、靜物等鏡頭，畫得比較久": "Simple: plain pictures. Standard: many more places and things, and shots against the light, close-ups and still lifes; takes longer to draw",
+  "高級": "Premium",
+  "簡易：畫面單純；標準：場景和元素更多，還有逆光、特寫、靜物等鏡頭，畫得比較久；高級：整首歌像一支分鏡，副歌回到同一個地點、一次比一次近，天色越來越晚，同一樣東西反覆出現": "Simple: plain pictures. Standard: many more places and things, and shots against the light, close-ups and still lifes; takes longer to draw. Premium: the whole song as one storyboard: every chorus goes back to one place, nearer each time, the day grows late, and one thing keeps coming back",
   "按「取消」就不做任何事。": "Cancel does nothing."
  },
  "patterns": [

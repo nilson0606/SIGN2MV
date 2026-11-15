@@ -77,7 +77,7 @@ LIGHT_ARCS = (("day", "golden", "sunset", "dusk"), ("dawn", "day", "golden"), ("
 
 # ---------------------------------------------------------------------------------------------- the world
 def make_world(seed: int, grade: str = "simple") -> Dict[str, Any]:
-    std = grade == "standard"
+    std = grade in ("standard", "premium")    # the premium grade draws with the standard grade's parts
     r = random.Random(f"world:{int(seed)}:{grade}" if std else f"world:{int(seed)}")
     indoor = INDOOR + (INDOOR_STD if std else ())
     out_places = [p for p in PLACES + (PLACES_STD if std else ()) if p not in indoor]
@@ -99,7 +99,7 @@ def make_world(seed: int, grade: str = "simple") -> Dict[str, Any]:
           "boy": person(BOY_CUTS, BOY_WEAR), "head": r.choice((1.0, 1.12, 1.24)), "ambient": r.choice(AMBIENT),
           "subjects": r.sample(SUBJECTS[1:14], 13), "frames": r.sample(["wide", "wide", "mid", "mid", "mid", "close"], 6)}
     if std:      # taller people with smaller heads, and the extra ways to stand among the others
-        wd.update(grade="standard", head=r.choice((0.8, 0.86, 0.92)), tall=r.choice((38, 46, 54)),
+        wd.update(grade=grade, head=r.choice((0.8, 0.86, 0.92)), tall=r.choice((38, 46, 54)),
                   subjects=r.sample(SUBJECTS[1:14] + SUBJECTS_STD, 15), border=r.choice(("plain", "plain", "round", "film", "comic")))
     return wd
 
@@ -140,7 +140,7 @@ def valid_world(wd: Any) -> bool:
     try:
         return (wd.get("v") == 2 and len(wd["places"]) >= 1 and all(valid_place(p) for p in wd["places"])
                 and all(x in LIGHTS for x in wd["lights"]) and wd["line"] in LINES and wd["border"] in BORDERS
-                and wd.get("grade", "simple") in ("simple", "standard") and float(wd.get("tall", 0)) >= 0
+                and wd.get("grade", "simple") in ("simple", "standard", "premium") and float(wd.get("tall", 0)) >= 0
                 and wd["lead"] in ("girl", "boy") and all(s in SUBJECTS + SUBJECTS_STD for s in wd["subjects"]) and all(f in FRAMES for f in wd["frames"])
                 and wd["girl"]["cut"] in GIRL_CUTS and wd["boy"]["cut"] in BOY_CUTS and float(wd["head"]) > 0)
     except Exception:  # noqa: BLE001
@@ -277,7 +277,7 @@ def plan(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, Any]) -> 
                 place, stay = order[0], r.choice((2, 2, 3))
             stay -= 1
             pl = h.get("place", place)
-            if (h.get("terrain") or h.get("landmark")) and world.get("grade") == "standard" and h.get("place") not in PLACES_STD + rooms:
+            if (h.get("terrain") or h.get("landmark")) and world.get("grade") in ("standard", "premium") and h.get("place") not in PLACES_STD + rooms:
                 # the standard grade's own words win over the simple grade's place for the same line
                 pl = compose(place, h.get("terrain"), h.get("landmark"), world)
             light = h.get("light") or lights[min(len(lights) - 1, li * len(lights) // n_lines)]
@@ -344,7 +344,7 @@ class K:
         self.flat = None      # set: everything is painted in this one colour (people against the light)
         self.mood = "smile"   # the faces: smile | sad | closed | wow
         self.rim = 0          # -1 / 1: light from the left / right draws a bright edge on people
-        self.std = world.get("grade") == "standard"
+        self.std = world.get("grade") in ("standard", "premium")
 
     def pal(self, col):
         r, g, b = col[:3]
@@ -1132,7 +1132,7 @@ def thing(k, prop, phase, who, ground):
         k.poly([(x, y - 80), (x + 56, y), (x, y + 70), (x - 56, y)], (255, 150, 130), e=True); k.stroke([(x, y - 80), (x, y + 70)], None, 3); k.stroke([(x - 56, y), (x + 56, y)], None, 3)
     elif prop == "umbrella" and one:
         hx, hy_, hr = one["head"]
-        s, col = one["s"], r.choice(((255, 150, 160), (255, 214, 110), (140, 190, 250), (160, 220, 180)))
+        s, col = one["s"], tuple(k.w["keep_col"]) if k.w.get("keep_col") else r.choice(((255, 150, 160), (255, 214, 110), (140, 190, 250), (160, 220, 180)))
         k.stroke([(hx + hr * 0.9, hy_ + hr * 2.4), (hx + hr * 0.9, hy_ - hr * 1.6)], None, 5 * s)
         k.d.pieslice([P(hx + hr * 0.9 - 170 * s), P(hy_ - hr * 1.6 - 120 * s), P(hx + hr * 0.9 + 170 * s), P(hy_ - hr * 1.6 + 120 * s)], 180, 360, fill=col, outline=k.edge(col), width=P(k.lw))
     elif prop == "thread" and who and who[0] and who[1]:

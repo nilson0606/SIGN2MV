@@ -1062,9 +1062,10 @@
             <span class="cards-tools" style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:6px; padding:3px 8px; border:1px dashed rgba(125,211,252,0.45); border-radius:8px; white-space:nowrap;">
               <button class="btn btn-sm" id="btnSimpleCards" style="border-color:#38bdf8; color:#bae6fd; flex:0 0 auto;" onclick="makeSimpleCards()" title="沒有照片的畫面，由程式依歌詞畫一張簡單的圖卡補上。不需要網路，不會動你放的照片；畫好的圖卡跟一般照片一樣，可以再換成自己的照片">🎨 產生簡易圖卡</button>
               <label for="selCardGrade" style="font-size:12px; color:var(--text-muted); flex:0 0 auto;">畫法</label>
-              <select id="selCardGrade" title="簡易：畫面單純；標準：場景和元素更多，還有逆光、特寫、靜物等鏡頭，畫得比較久" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto;" onchange="try { localStorage.setItem('sign2mv.cards.grade', this.value); } catch (e) {}">
+              <select id="selCardGrade" title="簡易：畫面單純；標準：場景和元素更多，還有逆光、特寫、靜物等鏡頭，畫得比較久；高級：整首歌像一支分鏡，副歌回到同一個地點、一次比一次近，天色越來越晚，同一樣東西反覆出現" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto;" onchange="try { localStorage.setItem('sign2mv.cards.grade', this.value); } catch (e) {}">
                 <option value="simple">簡易</option>
                 <option value="standard">標準</option>
+                <option value="premium">高級</option>
               </select>
               <label for="selCardTone" style="font-size:12px; color:var(--text-muted); flex:0 0 auto;">色調</label>
               <select id="selCardTone" title="整首歌的簡易圖卡用同一種色調" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto;">
@@ -4034,7 +4035,7 @@
     // The app draws a card for every part of the timeline that shows no photo (never over a photo). One
     // tone for the whole song: choosing another tone offers to draw the cards that are there again.
     const CARD_TONES = { fresh: '清新', warm: '暖色復古', night: '夜藍', manga: '黑白漫畫' };
-    const CARD_GRADES = { simple: '簡易', standard: '標準' };
+    const CARD_GRADES = { simple: '簡易', standard: '標準', premium: '高級' };
     function cardGrade() {
       const sel = document.getElementById('selCardGrade');
       return sel && CARD_GRADES[sel.value] ? sel.value : 'simple';

@@ -16,6 +16,16 @@
   instruments, vehicles, furniture, food, symbols) bring the things a line can call for to more than 200;
   an icon goes in the sky, beside the person, in the hand, in a thought cloud, in the air, or on the table
   of a still life. A line sung again shows another of the things its words name.
+- Simple cards: a third way of drawing, 「畫法：高級」 (`app/mvstudio/cardstory.py`): the whole song told as
+  one story, drawn with the standard grade's parts. The sections (verse, the lines leading into the chorus,
+  the chorus and each time round, the bridge) are found from how the lines repeat and where the title is
+  sung. One person in the verses, the two of them in the choruses (nearer each time round, closest in the
+  last), apart in the bridge; a line's own words still win, and a sad line in a chorus keeps both people but
+  apart. The day only goes on: each chorus keeps one light, later than the one before. Every chorus goes back
+  to the song's one chorus place. One thing of the song's own (an umbrella, a letter, a cat, ... from the
+  words it sings most; else a red scarf on the lead) comes back at the start of every section, in one colour,
+  and is kept in the project's cards.json. The last card goes back to the first place, at night. A word right
+  after 沒有 / 不再 / 別 ... is not drawn.
 
 ## 2026.11.15
 
