@@ -90,6 +90,12 @@
   one before 是 (你是我最想留住的幸運) and after it (是你給我勇氣, 是誰…); a thing with only an adverb hands itself to
   what follows (雨漸漸 大到…, 風漸漸 把距離吹得好遠); 就／才／也／又 go on with the last one (我們… 就走到…). Not who
   does it: whose (我們的阻礙), where (風裏雨裏), with or for whom (與你相遇, 為妳翹課: 我, to 你).
+- Picture cards, which words of a line are nouns: jieba gives a word one tag wherever it stands (願望 and 解藥 as
+  verbs, 幸運 an adjective, 張開 and 鐘聲 names). A word is now a noun by where it stands as well: after 的 (我的願望,
+  妳的笑), after a number and its counter (一種解藥), after 把, before 是 or after a verb when the cards have a thing
+  for it (回憶都是我, 遇見愛), and a "name" only with such a sign (拍著沙灘; 張開了雙翼 is done). 飛, 問, 淋, 流,
+  記, 藏, 等 are verbs. The cards' own words that jieba does not know are things unless made like something done
+  (不要了, 等了, 敬你).
 
 ## 2026.11.15
 

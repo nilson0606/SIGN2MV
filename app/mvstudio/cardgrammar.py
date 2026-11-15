@@ -45,6 +45,76 @@ def how_many(count: str) -> int:
     return 1
 
 
+# what is a noun here -----------------------------------------------------------------------------------------
+# jieba gives a word one tag wherever it stands (愿望 v, 解药 v, 幸运 a, 钟声 nr); where it stands says more.
+COUNTERS = "个种颗张朵片首封杯壶条只座场段份句滴道束盏件本双对群阵丝缕抹粒枚页幕位名棵株辆艘架扇面块根支枝瓶碗盘盒包袋串圈层声口把"
+TAKES_A_VERB = MODAL + ("开始", "继续", "停止", "学会", "学着", "喜欢", "害怕", "决定", "忘了", "忘记", "记得", "试着", "试过", "懂得",
+                        "舍不得", "来不及", "忍不住", "习惯", "假装", "打算", "准备", "希望", "不敢", "不愿", "不肯", "不想", "不要",
+                        "不会", "不能", "不用", "不必", "是", "有", "没有", "像", "去", "来", "让", "叫", "使")
+ONE_CHAR_VERBS = {"飞": "v", "问": "v", "淋": "v", "流": "v", "记": "v", "藏": "v", "等": "v"}      # jieba: n, n, n, n, n, j, u
+_NOT_A_NOUN = ("告诉", "没有", "不要", "不能", "不会", "不用", "不想", "不必", "不见", "不到", "不了")
+_CAN_BE = ("v", "vn", "a", "an", "i", "l", "vg", "ag", "d", "m", "z", "b")
+
+
+def _counter(tok: Tuple[str, str, str]) -> bool:
+    w, f, _o = tok
+    return f in ("m", "q", "mq") and w[-1] in COUNTERS and w not in ("一把", "一口", "一面", "一道", "一声") or (f == "q" and w in COUNTERS)
+
+
+def _nouns(toks: Sequence[Tuple[str, str, str]], known) -> Tuple[List[int], List[int]]:
+    """Where the nouns are: the words tagged so (a name too, when it is a word jieba knows), and a word of
+    another tag standing where a noun stands: after 的 (我的願望, 妳的笑), after a number and its counter (一種解藥),
+    before 是 or after a verb when it is one of the cards' things (回憶都是我; 遇見愛), and 生命 / 微笑 (vn)
+    unless something is being done (忙著微笑). Second: the words jieba takes for a name that are done here (張開了)."""
+    n = len(toks)
+    at: List[int] = []
+    done: List[int] = []
+    for i, (w, f, _o) in enumerate(toks):
+        if f == "x" or w in PRONOUNS or w in ASK or w in _NOT_A_NOUN:
+            continue
+        prv = toks[i - 1] if i > 0 else ("", "x", "")
+        nxt = toks[i + 1] if i + 1 < n else ("", "x", "")
+        if any(ch in w for ch in "你我他她") and len(w) > 1:
+            continue            # 我会, 想你: not a thing
+        if f in ("nr", "nrt", "nrfg"):      # a "name": jieba's guess for 張開, 呼喚, 消失 as much as for 鐘聲, 蒲公英
+            if len(w) < 2 or not known(w):
+                continue
+            if w in _THINGS or prv[0] == "的" or _counter(prv) or nxt[1] == "f":
+                at.append(i)
+            elif (nxt[0] in ("了", "着", "过") or nxt[0] in PRONOUNS or prv[1] in ("d", "ad") or prv[0] in MODAL or prv[0] in NEG
+                  or (nxt[1].startswith("n") and (prv[1] == "x" or prv[0] in PRONOUNS))):
+                done.append(i)      # 張開了, 張開雙翼, 呼喚我
+            elif prv[0] in ("着", "了") or prv[1] == "v":
+                at.append(i)        # 拍著沙灘; 這麼安靜 and 青青草地 are neither
+            continue
+        if f.startswith("n") or f == "s":
+            at.append(i)
+            continue
+        if f not in _CAN_BE or w in FUNC_ADV or w in NEG or w in IF or w in MODAL or w in COPULA or prv[0] in NEG:
+            continue
+        modifies = nxt[1].startswith("n") or nxt[0] == "的"        # 美麗的…, 幸運 兒: it says what the next one is like
+        how = i > 1 and (toks[i - 2][1] in ("d", "ad", "z") or (toks[i - 2][1] in ("i", "l") and f.startswith("v")))
+        if prv[0] == "的" and not modifies and f != "m" and not how:
+            at.append(i)        # 我的願望; not 慢慢的走, 理所當然的忘記
+        elif _counter(prv) and not modifies and f not in ("m", "d"):
+            at.append(i)        # 一種解藥
+        elif prv[0] in ("把", "将") and f in ("v", "vn", "a") and nxt[1].startswith("v") and w not in MODAL:
+            at.append(i)        # 把回憶鎖進抽屜
+        elif f == "vn" and nxt[0] != "的" and prv[0] not in ("着", "了", "在", "正", "正在") and prv[0] not in MODAL \
+                and prv[1] not in ("d", "ad") and nxt[0] not in ("着", "了", "过"):
+            at.append(i)        # 生命, 生活細節; not 忙著微笑
+        elif w in _THINGS and f in ("v", "a", "i", "l"):
+            j = i + 1
+            while j < n and (toks[j][1] in ("d", "c", "zg") or toks[j][0] in FUNC_ADV):
+                j += 1
+            ends = nxt[1] in ("x", "f", "t", "c", "p", "y", "ul")
+            if j < n and j > i and toks[j][0] == "是" and prv[1] in ("x", "d", "c", "v", "zg"):
+                at.append(i)    # 回憶都是我, 發現愛是…
+            elif prv[1] == "v" and prv[0] not in TAKES_A_VERB and ends:
+                at.append(i)    # 遇見愛 以後, 許下願望; not 想要等待
+    return at, done
+
+
 # who does it ------------------------------------------------------------------------------------------------
 NOT_DOER_AFTER = ("与", "和", "跟", "同", "把", "将", "被", "为", "对", "给", "替", "向", "往", "朝", "比", "像", "在", "从")
 JOIN = ("与", "和", "跟", "同")
@@ -57,7 +127,8 @@ RESULT = ("不见", "不到", "不了", "不着", "不起", "不住", "不完", 
 _LIGHT = ("d", "c", "zg", "t")          # words a doer can stand behind: 你[也許][明天]來
 
 
-def _who(toks: Sequence[Tuple[str, str, str]], verbs_at: Sequence[int], act_at: Sequence[int]) -> Tuple[str, str]:
+def _who(toks: Sequence[Tuple[str, str, str]], verbs_at: Sequence[int], act_at: Sequence[int],
+         noun_at: Sequence[int] = ()) -> Tuple[str, str]:
     """Who does it, and to whom. Per clause (a space ends one): the pronoun or noun before the first action verb;
     a clause with a verb and no one named is "我" (lyrics leave it out). Not a doer: whose (我的), where (雨裏),
     with or for whom (與你, 為你), what is handled (把距離). More doers: 你和我, a second one inside the clause
@@ -82,7 +153,8 @@ def _who(toks: Sequence[Tuple[str, str, str]], verbs_at: Sequence[int], act_at: 
             return PRONOUNS[w]
         if nxt[1] == "f":
             return ""           # 風裏, 路燈下: a place
-        if (f in ("n", "nz", "ns") and w not in ASK and w not in FUNC_ADV and len(w) <= 2 and w not in NOT_WHO
+        if ((f in ("n", "nz", "ns") or (j in noun_at and f not in ("s", "m"))) and w not in ASK and w not in FUNC_ADV
+                and (len(w) <= 2 or (len(w) == 3 and w in _THINGS)) and w not in NOT_WHO
                 and not any(ch in w for ch in "你我他她")):        # 想你 is a card's word, not someone
             return "人" if w == "个人" else o
         return ""
@@ -128,6 +200,8 @@ def _who(toks: Sequence[Tuple[str, str, str]], verbs_at: Sequence[int], act_at: 
             if any(j in verbs_at for j in clause):          # 沒有地球: nothing is done there
                 clause = []
                 continue
+            if any(toks[j][0] in ("让", "叫", "使") and toks[j][1] == "v" for j in clause):
+                found = found or ["我"]                      # 讓…的刺痛隨風而去: 我 lets it
             for j in clause:        # no verb found: the one it opens with (你張開了雙翼, 她會有多幸運), or 雨 in 雨漸漸
                 if light(j):
                     continue
@@ -196,6 +270,7 @@ def _who(toks: Sequence[Tuple[str, str, str]], verbs_at: Sequence[int], act_at: 
 
 
 _JIEBA = None
+_THINGS: set = set()        # the words the cards have a thing for (simplified)
 _T2S: Dict[str, str] = {}
 _S2T_WORD: Dict[str, str] = {}
 
@@ -223,12 +298,15 @@ def _load(rows=()) -> Optional[object]:
         if not tag:
             continue
         for w in ws:
+            if w and not w.isascii() and what.get("prop") and what["prop"] not in ("none", "dots", "ask", "call", "tears", "notes"):
+                _THINGS.add(simple(w))
             if w and not w.isascii() and len(w) >= 2 and w not in PRONOUNS:
                 s_w = simple(w)
                 if known.get(s_w, 0) > 0:
                     jieba.add_word(s_w, freq=max(50000, known[s_w]))     # a word jieba knows keeps its own tag (喜欢 is a verb)
-                else:
-                    jieba.add_word(s_w, freq=50000, tag=tag)
+                else:       # a word of the cards' own: a thing, unless it is made like something done (不要了, 等了, 爬上, 敬你)
+                    done = (s_w[0] in "不没别无" or s_w[-1] in "了着过上好到住" or any(ch in s_w for ch in "你我他她")) and tag == "n"
+                    jieba.add_word(s_w, freq=50000, tag="v" if done else tag)
     _JIEBA = jieba
     return jieba
 
@@ -251,23 +329,25 @@ def read(line: str, rows=(), things: Optional[Dict[str, str]] = None) -> Optiona
     at = 0
     for p in pseg.cut(s):
         w, f = p.word, p.flag
-        toks.append((w, f, line[at:at + len(w)]))
+        toks.append((w, ONE_CHAR_VERBS.get(w, f), line[at:at + len(w)]))
         at += len(w)
     out: Dict[str, object] = {"words": [(o, f) for _w, f, o in toks if f != "x"], "who": "", "to": "", "do": [], "things": [],
                               "where": [], "how": [], "when": [], "tone": [], "face": ""}
-    verbs_at = [i for i, (w, f, _o) in enumerate(toks) if f.startswith("v") and w not in MODAL and w not in COPULA]
+    known = lambda w: jb.dt.FREQ.get(w, 0) > 0  # noqa: E731
+    noun_at, done_at = _nouns(toks, known)
+    verbs_at = [i for i, (w, f, _o) in enumerate(toks)
+                if (f.startswith("v") or i in done_at) and w not in MODAL and w not in COPULA and i not in noun_at]
     act_at = [i for i in verbs_at if toks[i][0] not in ("没有", "没", "无")]     # 沒有地球: nothing is done there
     first_v = verbs_at[0] if verbs_at else len(toks)
-    out["who"], out["to"] = _who(toks, verbs_at, act_at)
+    out["who"], out["to"] = _who(toks, verbs_at, act_at, noun_at)
     # what is done (with a no in front of it)
     for i in verbs_at:
         w, f, o = toks[i]
         neg = i > 0 and toks[i - 1][0] in NEG
         out["do"].append(("不" if neg else "") + o)
     # things: nouns, with the number and the words that say what they are like in front of them
-    for i, (w, f, o) in enumerate(toks):
-        if not (f.startswith("n") and f not in ("nr", "nrt", "nrfg")) or w in PRONOUNS or w in ASK or w in ("告诉",):
-            continue
+    for i in noun_at:
+        w, f, o = toks[i]
         count, like = "", []
         j = i - 1
         while j >= 0 and (toks[j][1] in ("uj", "a", "ad", "an", "b", "z", "m", "q", "mq") or toks[j][0] == "的"):

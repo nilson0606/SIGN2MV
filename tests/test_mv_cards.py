@@ -587,10 +587,30 @@ def test_who_does_it_in_a_line():
     assert who("你和我走過那條街") == "你、我" and who("原來我們和愛情曾經靠得那麼近") == "我們"
     r = cg.read("與你相遇 好幸運", rows)
     assert r["who"] == "我" and r["to"] == "你" and who("為妳翹課的那一天") == "我"       # with / for whom is not who does it
-    assert who("妳說依賴 是我們的阻礙") == "你、我"                                      # 我們的: whose
+    assert who("妳說依賴 是我們的阻礙") == "你"                                          # 我們的: whose
     assert who("是誰風裏雨裏一直默默守護在原地") == "誰" and who("是你讓我看見彩虹") == "你、我"
     assert who("但偏偏 風漸漸 把距離吹得好遠") == "風" and who("但偏偏 雨漸漸 大到我看妳不見") == "雨、我"
     assert who("我們有始有終 就走到世界盡頭") == "我們"                                  # 就: the same ones go on
     assert who("原來你是我最想留住的幸運") == "你" and who("也是我現在正服下的毒藥") == "我"
     assert who("想你想到失眠") == "我" and who("放在你眺望我的夜裡") == "我"             # 想你想到: not 你; …的夜裡 says which night
     assert cg.read("大到我看妳不見", rows)["to"] == "你"
+
+
+def test_a_word_is_a_noun_by_where_it_stands():
+    """[2026-11-16] jieba gives a word one tag everywhere (願望 and 解藥 verbs, 張開 a name); the place in the line decides."""
+    pytest = __import__("pytest")
+    pytest.importorskip("jieba")
+    from app.mvstudio import cardgrammar as cg, cardstory as cs
+    rows = cs._rows()
+
+    def parts(t):
+        r = cg.read(t, rows)
+        return [x["word"] for x in r["things"]], list(r["do"])
+    assert parts("能不能把我的願望還給我") == (["願望"], ["還給"])                 # after 的
+    assert "解藥" in parts("也許時間是一種解藥")[0] and "笑" in parts("看不見妳的笑")[0]       # after a counter; after 的
+    assert parts("我喜歡你的笑")[1] == ["喜歡"]
+    nouns, verbs = parts("遇見愛以後")
+    assert "愛" in nouns and verbs == ["遇見"]                                  # one of the cards' things after a verb
+    assert "等待" in parts("想要等待 卻害怕失去")[1] and parts("忙著微笑和哭泣")[0] == []        # still done
+    assert parts("你張開了雙翼") == (["雙翼"], ["張開"]) and "沙灘" in parts("海浪輕輕拍著沙灘")[0]   # jieba's "names"
+    assert parts("把回憶鎖進抽屜")[0] == ["回憶", "抽屜"] and "飛" in parts("我走回從前你往未來飛")[1]
