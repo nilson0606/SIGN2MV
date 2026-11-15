@@ -64,6 +64,9 @@ Both projects are by the same author as SIGN2MV and are covered by this project'
 - `app/t2s_chars.txt`: Traditional → Simplified Chinese, one character each, taken from
   [OpenCC](https://github.com/BYVoid/OpenCC)'s `TSCharacters.txt` (Apache-2.0). It is used only to compare
   pasted lyrics with recognized words (Whisper mixes both scripts); no text shown to the user is converted.
+- `web/mv/pinyin.json`: the most common Mandarin reading of each Chinese character (toneless), generated with
+  [pypinyin](https://github.com/mozillazg/python-pinyin) 0.55 (MIT; its data comes from
+  [pinyin-data](https://github.com/mozillazg/pinyin-data), MIT). It only suggests an MV project code from the song name.
 
 ## FFmpeg (GPL)
 

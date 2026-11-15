@@ -62,6 +62,9 @@
   bar with the time (still the master player's sound, which is now labelled as such).
 - MV page: the 「合成單幀預覽」 button is gone (a card's 👁️ 預覽 shows the composed frame by itself); 「🎵 即時對字幕」 is
   a solid cyan button that lights up while it is on.
+- New MV project: the project code is filled in from the song name's pinyin (`web/mv/pinyin.json`, made with
+  pypinyin, MIT; your own code is kept), and photo slots default to 0: no empty slots until the lyrics are aligned,
+  then one per line (`slots_follow_lines`; projects with a number keep the old 12-slot minimum).
 
 ## 2026.11.15
 

@@ -320,8 +320,8 @@ def router(ctx: Context) -> APIRouter:
         mv_probe = probe_media_file(proj.get("output_mv", ""))
         existing_img_max = count_existing_scene_images(proj.get("illust_dir", ""))
         tl_max = max([int(s.get("scene", 1)) for s in proj.get("timeline", [])] + [0])
-        saved_sc_count = int(proj.get("scene_count", 12) or 12)
-        max_sc = max(tl_max, existing_img_max, saved_sc_count, 12)
+        saved_sc_count = core.scene_count_of(proj)
+        max_sc = max(tl_max, existing_img_max, saved_sc_count, core.slot_floor(proj))
         scenes = list_scene_images(proj.get("illust_dir", ""), max_scene=max_sc)
         whisper_segments = []
         w_path = proj.get("whisper_json", "")
@@ -405,7 +405,10 @@ def router(ctx: Context) -> APIRouter:
         if audio_file and not os.path.exists(audio_file):
             audio_file = ""
         probe = probe_media_file(audio_file)
-        scene_count = max(1, min(MAX_SCENES, int(body.get("scene_count", 12) or 12)))
+        try:   # 0＝先不開照片槽位（對齊歌詞後跟著句數出現）
+            scene_count = max(0, min(MAX_SCENES, int(body.get("scene_count", 12))))
+        except (TypeError, ValueError):
+            scene_count = 12
         lang = "en" if settings_mod.effective_language(cfg) == "en" else "zh"
         proj = {"slug": slug, "title": title, "title_spaced": "  ".join(list(title)), "badge": core.default_badge(lang),
                 "lyricist": sanitize_no_ai(body.get("lyricist", ""), ""), "composer": sanitize_no_ai(body.get("composer", ""), ""),
@@ -414,7 +417,7 @@ def router(ctx: Context) -> APIRouter:
                 "intro_desc": core.default_intro(lang), "outro_desc": "",
                 # old MV Studio started new projects with this picture style filled in
                 "style_theme": body.get("style_theme") or STYLE_THEME_DEFAULT[lang], "audio_file": audio_file,
-                "output_mv": f"{core.safe_file_title(title, name)}_MV.mp4", "scene_count": scene_count,
+                "output_mv": f"{core.safe_file_title(title, name)}_MV.mp4", "scene_count": scene_count, "slots_follow_lines": scene_count == 0,
                 "early_lead_sec": -0.70, "tail_extend_sec": 2.50, "timeline": []}
         proj["outro_desc"] = core.default_outro(proj)
         (Path(core.project_dir(slug)) / "scenes").mkdir(parents=True, exist_ok=True)
@@ -564,7 +567,7 @@ def router(ctx: Context) -> APIRouter:
             return jerr(404, str(exc))
         existing_img_max = count_existing_scene_images(proj.get("illust_dir", ""))
         tl_max = max([int(s.get("scene", 1)) for s in proj.get("timeline", [])] + [0])
-        cur_sc = max(tl_max, existing_img_max, int(proj.get("scene_count", 12) or 12), int(body.get("current_count", 12) or 12))
+        cur_sc = max(tl_max, existing_img_max, core.scene_count_of(proj), core.scene_count_of({"scene_count": body.get("current_count", 12)}))
         new_sc = min(MAX_SCENES, cur_sc + 1)
         proj["scene_count"] = new_sc
         saved = save_project_dict(proj)
@@ -671,7 +674,7 @@ def router(ctx: Context) -> APIRouter:
             filtered_pairs.append((sc_t, sanitize_no_ai(rem_t, rem_t)))
             line_pos.append(min(MAX_SCENES, pos))
 
-        existing_sc_count = count_existing_scene_images(proj.get("illust_dir", "")) or int(proj.get("scene_count", 12) or 12)
+        existing_sc_count = count_existing_scene_images(proj.get("illust_dir", "")) or core.scene_count_of(proj)
 
         if mode == "replace_text_only":
             if not filtered_pairs:
@@ -1107,7 +1110,7 @@ def router(ctx: Context) -> APIRouter:
         for fn in _scene_files(illust_dir, sid):   # an old jpg/webp of the same slot would shadow nothing, but keep one file
             if fn != out_path.name:
                 os.remove(os.path.join(illust_dir, fn))
-        if sid > int(proj.get("scene_count", 12) or 12):
+        if sid > core.scene_count_of(proj):
             proj["scene_count"] = sid
             save_project_dict(proj)
         return {"status": "ok", "scene_id": sid, "path": str(out_path), "scenes": _scene_payload(proj)}
@@ -1144,7 +1147,7 @@ def router(ctx: Context) -> APIRouter:
                 continue
             saved_scenes.append({"scene_id": cur_sc, "path": str(out_path), "source_name": uf.filename})
             cur_sc += 1
-        proj["scene_count"] = max(int(proj.get("scene_count", 12) or 12), cur_sc - 1)
+        proj["scene_count"] = max(core.scene_count_of(proj), cur_sc - 1)
         save_project_dict(proj)
         return {"status": "ok", "count": len(saved_scenes), "scenes": saved_scenes, "all_scenes": _scene_payload(proj),
                 "skipped": skipped}
@@ -1466,7 +1469,7 @@ def router(ctx: Context) -> APIRouter:
             for fn in _scene_files(illust_dir, sid):
                 if fn != out_path.name:
                     os.remove(os.path.join(illust_dir, fn))
-            if sid > int(proj.get("scene_count", 12) or 12):
+            if sid > core.scene_count_of(proj):
                 proj["scene_count"] = sid
                 save_project_dict(proj)
         return {"status": "ok", "slot": slot, "card": name, "look": look, "tone": tone}
@@ -1526,7 +1529,7 @@ def router(ctx: Context) -> APIRouter:
         if not ids:
             return jerr(400, "沒有指定要刪的照片")
         tl = proj.get("timeline") or []
-        total_count = max(int(proj.get("scene_count", 12) or 12), count_existing_scene_images(illust_dir),
+        total_count = max(core.scene_count_of(proj), count_existing_scene_images(illust_dir),
                           max([int(s.get("scene", 1)) for s in tl] + [0]))
         deleted, moved = [], 0
         for sid in ids:
@@ -1570,7 +1573,7 @@ def router(ctx: Context) -> APIRouter:
             return jerr(400, "兩格都沒有照片")
         os.makedirs(illust_dir, exist_ok=True)
         renumber_scene_files(illust_dir, {a: b, b: a})
-        proj["scene_count"] = max(int(proj.get("scene_count", 12) or 12), a, b)
+        proj["scene_count"] = max(core.scene_count_of(proj), a, b)
         saved = save_project_dict(proj)
         return {"status": "ok", "project": saved, "all_scenes": _scene_payload(saved)}
 
@@ -1599,7 +1602,7 @@ def router(ctx: Context) -> APIRouter:
             mapping = {a: b, **{k: k + 1 for k in range(b, a)}}
         os.makedirs(illust_dir, exist_ok=True)
         renumber_scene_files(illust_dir, mapping)
-        proj["scene_count"] = max(int(proj.get("scene_count", 12) or 12), a, b)
+        proj["scene_count"] = max(core.scene_count_of(proj), a, b)
         saved = save_project_dict(proj)
         return {"status": "ok", "project": saved, "all_scenes": _scene_payload(saved)}
 
@@ -1617,7 +1620,7 @@ def router(ctx: Context) -> APIRouter:
         except (TypeError, ValueError):
             return jerr(400, "位置不正確")
         tl = proj.get("timeline") or []
-        total_count = max(int(proj.get("scene_count", 12) or 12), count_existing_scene_images(illust_dir),
+        total_count = max(core.scene_count_of(proj), count_existing_scene_images(illust_dir),
                           max([int(s.get("scene", 1)) for s in tl] + [0]))
         if not 1 <= before <= total_count:
             return jerr(400, "位置不正確")
@@ -1648,7 +1651,7 @@ def router(ctx: Context) -> APIRouter:
             return jerr(400, "專案資料不正確")
         illust_dir = proj["illust_dir"]
         tl = proj.get("timeline") or []
-        total_count = max(int(proj.get("scene_count", 12) or 12), count_existing_scene_images(illust_dir),
+        total_count = max(core.scene_count_of(proj), count_existing_scene_images(illust_dir),
                           max([int(s.get("scene", 1)) for s in tl] + [0]))
         n = len(files)
         if not n:

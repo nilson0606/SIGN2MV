@@ -1335,7 +1335,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
     if not timeline:
         au_probe = probe_media_file(audio_file)
         tot_d = float(au_probe.get("duration", 240.0) or 240.0)
-        sc_cnt = count_existing_scene_images(proj.get("illust_dir", "")) or int(proj.get("scene_count", 12) or 12)
+        sc_cnt = count_existing_scene_images(proj.get("illust_dir", "")) or scene_count_of(proj) or 12
         timeline = build_guaranteed_fallback_timeline([], tot_d, -0.70, title, sc_cnt)
         proj["timeline"] = timeline
         save_project_dict(proj)
@@ -1911,10 +1911,23 @@ def renumber_scene_files(illust_dir: str, mapping: Dict[int, int]) -> int:
     return len(moves)
 
 
+def scene_count_of(proj: Dict[str, Any]) -> int:
+    """[Claude 2026-11-15] 專案存的照片槽位數；0 是使用者要的「先不開槽位」（照片卡跟著歌詞句數出現），沒存或讀不懂才當 12"""
+    try:
+        return max(0, int(proj.get("scene_count", 12)))
+    except (TypeError, ValueError):
+        return 12
+
+
+def slot_floor(proj: Dict[str, Any]) -> int:
+    """畫廊至少顯示幾格：照舊至少 12 格；建立時槽位數設成 0 的專案（slots_follow_lines）不補，照片卡跟著句數"""
+    return 0 if (proj.get("slots_follow_lines") or not scene_count_of(proj)) else 12
+
+
 def _scene_payload(proj: Dict[str, Any]) -> List[Dict[str, Any]]:
     illust_dir = proj.get("illust_dir", "")
     tl_max = max([int(s.get("scene", 1)) for s in proj.get("timeline", [])] + [0])
-    max_sc = max(tl_max, count_existing_scene_images(illust_dir), int(proj.get("scene_count", 12) or 12), 12)
+    max_sc = max(tl_max, count_existing_scene_images(illust_dir), scene_count_of(proj), slot_floor(proj))
     return list_scene_images(illust_dir, max_scene=max_sc)
 
 

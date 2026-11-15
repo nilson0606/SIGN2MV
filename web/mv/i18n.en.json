@@ -633,7 +633,11 @@
   "你放的照片和自己加的間奏都會留著。": "Your photos and the interludes you added stay.",
   "拖曳跳到歌曲任一位置（跟左上的母帶播放器是同一個聲音，所以那邊也會跟著動）": "Drag to jump anywhere in the song (it is the same sound as the master player at the top left, so that one moves too)",
   "右邊「即時對字幕」用的也是這個聲音，所以兩邊的進度會一起動": "“Live subtitles” on the right plays this same sound, so both move together",
-  "🎧 母帶播放器（跟即時對字幕同一個聲音）": "🎧 Master player (the same sound as the live subtitles)"
+  "🎧 母帶播放器（跟即時對字幕同一個聲音）": "🎧 Master player (the same sound as the live subtitles)",
+  "例如：nanduyequ（會自動用歌名的拼音）": "e.g. nanduyequ (filled in from the song name’s pinyin)",
+  "自動用歌名的拼音；破音字可能不對，可以自己改（自己改過就不會再被蓋掉，清空會恢復自動）": "Filled in from the song name’s pinyin; a character with several readings may be off, so edit it if needed (your own code is not overwritten; clear it to go back to automatic)",
+  "0＝先不開，對齊歌詞後一句一格": "0 = none yet; one per line after aligning",
+  "0：先不開照片槽位，貼歌詞對齊後每一句自動有一格（也可以之後用「＋ 新增照片槽位」加）": "0: no photo slots yet; after the lyrics are aligned every line gets one (you can also add slots later with “＋ Add photo slot”)"
  },
  "patterns": [
   {
@@ -1795,6 +1799,10 @@
   {
    "zh": "📚 已帶入歌曲庫調好的 {0} 句時間（照樣套用提前進字）。請用 ▶ 確認，不準的直接在右邊照片卡片微調。",
    "en": "📚 The {0} lines timed in the library are in (with the usual early start). Check them with ▶ and fine-tune any card on the right."
+  },
+  {
+   "zh": "🎉 已建立《{0}》專案！請確認「Step 1」的音檔，再到「Step 3」貼歌詞對齊：每一句會自動有一格照片卡片。",
+   "en": "🎉 Project “{0}” created! Check the audio in Step 1, then paste and align the lyrics in Step 3: every line gets its own photo card."
   }
  ]
 }

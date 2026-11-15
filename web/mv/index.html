@@ -1317,7 +1317,7 @@
         </div>
         <div class="form-group">
           <label>專案代碼（英文小寫，可留空）</label>
-          <input type="text" id="modSlug" value="" placeholder="例如：nanduyequ" />
+          <input type="text" id="modSlug" value="" placeholder="例如：nanduyequ（會自動用歌名的拼音）" title="自動用歌名的拼音；破音字可能不對，可以自己改（自己改過就不會再被蓋掉，清空會恢復自動）" oninput="this.dataset.auto = this.value ? 'false' : 'true'; if (!this.value) onModalTitleInput(document.getElementById('modTitle').value);" />
         </div>
         <div class="form-group">
           <label>原唱人</label>
@@ -1325,7 +1325,7 @@
         </div>
         <div class="form-group">
           <label>分鏡照片槽位數量 (N張)</label>
-          <input type="number" id="modSceneCount" value="12" min="1" max="60" placeholder="請輸入槽位數量 N (例如 12, 24, 30...)" />
+          <input type="number" id="modSceneCount" value="0" min="0" max="60" placeholder="0＝先不開，對齊歌詞後一句一格" title="0：先不開照片槽位，貼歌詞對齊後每一句自動有一格（也可以之後用「＋ 新增照片槽位」加）" />
         </div>
         <div class="form-group">
           <label>作詞人</label>
@@ -2626,7 +2626,7 @@
         .map(s => s.replace(/^\[Scene\s*\d+\]\s*/i, '').replace(/^\[\d+:\d+(?:\.\d+)?\]\s*/, '').trim())
         .filter(s => s && !s.startsWith('～') && !s.includes('請貼入歌詞'));
 
-      const nScenes = Math.max(currentScenesList.length || 12, rawLines.length || 12);
+      const nScenes = Math.max(currentScenesList.length, rawLines.length || 12);
       const introEnd = Math.min(18.0, +(dur * 0.10).toFixed(2));
       const outroStart = Math.max(introEnd + nScenes * 2.0, +(dur - Math.min(16.0, dur * 0.09)).toFixed(2));
       const step = (outroStart - introEnd) / Math.max(1, nScenes);
@@ -4417,22 +4417,35 @@
       } catch (e) { showToast(`❌ 對調失敗：${e.message}`, true); }
     }
 
-    function onModalTitleInput(val) {
-      const slugEl = document.getElementById('modSlug');
-      if (!slugEl) return;
-      if (val.includes('走馬燈')) {
-        slugEl.value = 'zhomadeng';
-      } else if (val.includes('無字的情批')) {
-        slugEl.value = 'wuzideqingpi';
-      } else if (val.includes('南都夜曲')) {
-        slugEl.value = 'nanduyequ';
-      } else {
-        const ascii = val.trim().replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').toLowerCase();
-        if (ascii && (!slugEl.value || slugEl.dataset.auto === 'true')) {
-          slugEl.value = ascii;
-          slugEl.dataset.auto = 'true';
-        }
+    // [Claude 2026-11-15] 專案代碼自動用歌名的拼音（不帶聲調、ü 寫成 v，例：彩虹 → caihong）；
+    // 對照表 pinyin.json 只在第一次用到時載入。破音字取最常見的讀法，不對可以自己改；自己改過就不再自動蓋掉（清空會恢復自動）。
+    let modalPinyin = null, modalPinyinLoading = null;
+    function loadModalPinyin() {
+      if (modalPinyin || modalPinyinLoading) return modalPinyinLoading || Promise.resolve(modalPinyin);
+      modalPinyinLoading = fetch('/mv/pinyin.json').then(r => r.ok ? r.json() : {}).catch(() => ({})).then(tab => {
+        const map = {};
+        for (const [py, chars] of Object.entries(tab)) if (!py.startsWith('_')) for (const ch of chars) map[ch] = py;
+        modalPinyin = map; modalPinyinLoading = null; return map;
+      });
+      return modalPinyinLoading;
+    }
+    function titleToSlug(val, map) {
+      let out = '';
+      for (const ch of String(val || '').trim().toLowerCase()) {
+        if (/[a-z0-9]/.test(ch)) out += ch;
+        else if (map && map[ch]) out += map[ch];
+        else out += '_';
       }
+      return out.replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, 40).replace(/_$/, '');
+    }
+    async function onModalTitleInput(val) {
+      const slugEl = document.getElementById('modSlug');
+      if (!slugEl || (slugEl.value && slugEl.dataset.auto !== 'true')) return;
+      const map = /[^\x00-\x7f]/.test(val || '') ? await loadModalPinyin() : null;
+      if (slugEl.value && slugEl.dataset.auto !== 'true') return;   // 等對照表時自己改了
+      if (document.getElementById('modTitle').value !== val) return;  // 已經又打了別的字
+      slugEl.value = titleToSlug(val, map);
+      slugEl.dataset.auto = 'true';
     }
 
     function openNewProjectModal() {
@@ -4444,7 +4457,7 @@
       document.getElementById('modOrigSinger').value = '';
       document.getElementById('modLyricist').value = '';
       document.getElementById('modComposer').value = '';
-      document.getElementById('modSceneCount').value = 12;
+      document.getElementById('modSceneCount').value = 0;
       sign2mvFillModalSongs();
       modal.style.display = 'flex';
     }
@@ -4464,7 +4477,8 @@
       const orig = document.getElementById('modOrigSinger').value.trim() || '';
       const lyricist = document.getElementById('modLyricist').value.trim() || '';
       const composer = document.getElementById('modComposer').value.trim() || '';
-      const sceneCount = parseInt(document.getElementById('modSceneCount').value) || 12;
+      const scRaw = parseInt(document.getElementById('modSceneCount').value);
+      const sceneCount = Number.isFinite(scRaw) ? Math.max(0, Math.min(60, scRaw)) : 0;
 
       // 依使用者指示：新建專案彈窗不匯入/綁定音檔，一律在建立後於 Step 1 介面置入
       const audioPath = '';
@@ -4492,7 +4506,9 @@
           closeNewProjectModal();
           currentSlug = data.project.slug;
           await initStudio();
-          setInlineStatus('step2StatusBox', 'ok', `🎉 已建立《${title}》專案（${sceneCount} 個分鏡槽位）！請確認「Step 1」的音檔，並於「Step 2」放入分鏡圖。`);
+          setInlineStatus('step2StatusBox', 'ok', sceneCount
+            ? `🎉 已建立《${title}》專案（${sceneCount} 個分鏡槽位）！請確認「Step 1」的音檔，並於「Step 2」放入分鏡圖。`
+            : `🎉 已建立《${title}》專案！請確認「Step 1」的音檔，再到「Step 3」貼歌詞對齊：每一句會自動有一格照片卡片。`);
           showToast(`🎉 已成功建立《${title}》專案！`);
         } else {
           showToast(`❌ 建立專案失敗：${data.detail || '未知錯誤'}`, true);
