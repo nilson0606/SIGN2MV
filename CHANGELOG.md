@@ -43,6 +43,7 @@
   月光, 窗, 亂 ...) and by the section; thirty more ways to stand (46 in all); a card with nothing of its own
   takes something that belongs to the place (a dog in town, gulls by the sea, fireflies at night); a premium
   song has sixteen places instead of ten. The last card is the first place again, small against the moon.
+- Manual (zh-TW and en): the simple cards section says what the three ways of drawing are and what Premium does.
 
 ## 2026.11.15
 
