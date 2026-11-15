@@ -50,14 +50,57 @@ KEEPSAKES = (
     ("teddy", "teddy", ("熊", "抱", "懷", "hug")),
 )
 ICONIC = ("ferris", "lighthouse", "chapel", "clocktower", "windmill", "bigtree", "cherry", "carousel", "observatory", "gazebo",
-          "farbridge", "castle", "piano", "telescope", "maple", "fountain", "swings", "benchlamp", "signpost")
-VERSE = ("solo_walk", "solo_sit", "solo_front", "solo_back")
-PRE = ("solo_reach", "solo_open", "solo_run", "solo_front")
-BRIDGE = ("solo_back", "duo_apart", "solo_sit", "other_back")
-CHORUS = (("duo_back", "duo_front", "duo_sit", "duo_hands"),     # the first time round: together, seen from afar
-          ("duo_hands", "duo_face", "duo_sit", "duo_back"),
-          ("duo_hug", "duo_face", "duo_hands", "duo_hug"))        # the last time round: closest
-CHORUS_FRAMES = (("wide", "mid", "wide", "mid"), ("mid", "mid", "close", "mid"), ("mid", "close", "hands", "close"))
+          "farbridge", "castle", "piano", "telescope", "maple", "fountain", "swings", "benchlamp", "signpost",
+          "pagoda", "temple", "torii", "eiffel", "palace", "treehouse", "waterwheel", "archbridge", "watchtower", "willow", "wishtree",
+          "moongate", "weddingarch", "heartsign", "teahouse", "lovelocks", "porchswing", "ginkgo", "appletree", "palmtree", "pinetree",
+          "windturbine", "rowboat", "fishingboat", "hotspring", "statue", "museum", "cablecar", "skylanterns", "bigship", "greatwall")
+# who is in the picture and how, by the section a line is in (a line's own words can say otherwise)
+VERSE = ("solo_walk", "solo_sit", "solo_front", "solo_look", "solo_back", "solo_think", "solo_hips", "solo_shade", "solo_away",
+         "solo_ground", "solo_give", "solo_heart")
+PRE = ("solo_reach", "solo_open", "solo_run", "solo_front", "solo_point", "solo_shade", "solo_cheer", "solo_jump")
+BRIDGE = ("solo_back", "duo_apart", "solo_sit", "other_back", "solo_ground", "duo_far", "solo_crouch", "other_away", "duo_backs", "solo_away")
+CHORUS = (("duo_back", "duo_front", "duo_sit", "duo_hands", "duo_walk", "duo_point", "duo_wave", "duo_ground"),   # the first time round: together, seen from afar
+          ("duo_hands", "duo_face", "duo_sit", "duo_run", "duo_lean", "duo_back", "duo_cheer", "duo_stars", "duo_dance"),
+          ("duo_hug", "duo_face", "duo_hands", "duo_dance", "duo_lean", "duo_hug", "duo_stars", "duo_cheer"))        # the last time round: closest
+CHORUS_FRAMES = (("wide", "mid", "far", "mid", "mirror", "mid", "wide", "close"),
+                 ("mid", "close", "mid", "window", "mid", "hands", "moon", "mid"),
+                 ("mid", "close", "hands", "sil", "moon", "close", "photo", "mid"))
+CHORUS_VIEWS = ("", "near", "", "small", "", "near", "centre", "")
+SAD_SOLO = ("solo_cover", "solo_back", "solo_crouch", "solo_sit", "solo_head", "solo_ground")
+SAD_DUO = ("duo_apart", "solo_back", "duo_backs", "duo_comfort", "duo_far", "solo_cover")
+GLAD_SOLO = ("solo_open", "solo_wave", "solo_cheer", "solo_jump", "solo_heart")
+NO_CLOSE = ("none", "solo_sit", "duo_sit", "duo_apart", "solo_ground", "solo_crouch", "solo_jump", "solo_away", "other_away", "duo_far",
+            "duo_follow", "duo_wave", "duo_ground", "duo_stars", "duo_lean", "solo_run", "duo_run", "duo_walk", "duo_backs")
+NO_UMBRELLA = {"solo": "solo_front", "duo": "duo_hands"}      # under an umbrella they simply stand (or walk hand in hand)
+UMBRELLA_OK = ("solo_front", "solo_back", "solo_walk", "solo_look", "solo_away", "duo_front", "duo_back", "duo_hands", "duo_walk")
+# words for the premium grade's ways to stand (before cardworld's own rows)
+POSE_WORDS = (
+    (("祈禱", "禱告", "祈求", "pray"), "solo_pray"), (("跳躍", "雀躍", "蹦跳", "jump"), "solo_jump"), (("跳舞", "共舞", "起舞", "華爾滋", "dance"), "duo_dance"),
+    (("眺望", "遙望", "遠望", "張望"), "solo_shade"), (("蹲", "蜷縮", "縮在"), "solo_crouch"), (("掩面", "捂著臉", "摀"), "solo_cover"),
+    (("歡呼", "萬歲", "吶喊"), "solo_cheer"), (("指著", "指向"), "solo_point"), (("背對背", "背靠背"), "duo_backs"),
+    (("追著你", "跟著你", "追隨"), "duo_follow"), (("揮手", "招手", "揮別"), "duo_wave"), (("安慰", "擦乾", "別哭"), "duo_comfort"),
+    (("看星星", "數星星", "看流星"), "duo_stars"), (("並肩", "散步", "漫步", "同行"), "duo_walk"), (("依偎", "靠著", "肩膀", "依靠"), "duo_lean"),
+    (("沉思", "思考", "想不通"), "solo_think"), (("轉身", "離去", "走遠", "遠去"), "solo_away"), (("坐在地", "席地"), "solo_ground"))
+# words that ask for a kind of shot
+SHOT_WORDS = {"memory": ("回憶", "記憶", "曾經", "從前", "那年", "當年", "往事", "過去", "一幕", "想起", "remember", "memory", "memories"),
+              "photo": ("照片", "相片", "合照", "相簿", "photo"), "window": ("窗",), "tilt": ("亂", "跌跌撞撞", "瘋", "暈", "旋轉", "崩", "搖晃", "crazy"),
+              "globe": ("雪", "冬", "聖誕", "snow", "winter"), "moon": ("月光", "月亮", "明月", "月色", "moon"), "split": ("兩地", "各自", "天涯", "相隔", "遠距")}
+# what a card with nothing of its own can have in it, by the kind of place (only things that are there on
+# their own: beside the people, in the sky or in the air)
+DRESS = {
+    "water": ("seagull", "sailboat", "boat", "crab", "starfish", "kitei", "paperboat", "birds", "dragonfly", "duck", "frog", "cloudi"),
+    "town": ("pigeon", "sparrow", "cat", "puppy", "bicyclei", "cari", "taxi", "bus", "roadsign", "balloons", "kite", "birds", "trafficcone", "scooter"),
+    "green": ("butterfly", "rabbit", "lamb", "puppy", "bee", "ladybug", "dragonfly", "sparrow", "kitei", "dandelion", "birds", "sunflower", "cloudi", "pony"),
+    "woods": ("squirrel", "deer", "owl", "fox", "mushroom", "butterfly", "leaves", "birds", "hedgehog", "sparrow", "fern"),
+    "snow": ("snowmani", "penguin", "fox", "deer", "snowflake", "moose", "xmas", "polarbear"),
+    "dry": ("camel", "cactus", "lizard", "eagle", "sun", "birds", "cloudi"),
+    "high": ("eagle", "cloudi", "kitei", "birds", "hotairballoon", "airplane"),
+    "room": ("cat", "pottedplant", "bookstack", "vase", "lampi", "teddy", "radio", "goldfish", "chair", "bonsai"),
+    "night": ("fireflies", "stars", "owl", "fullmoon", "halfmoon", "shooting", "constellation", "lanterni")}
+KIND = {"water": ("coast", "island", "boardwalk", "harbor", "lake", "river", "reeds", "sea", "pier", "riverbank", "bridge", "waterfall"),
+        "town": ("town", "skyline", "plaza", "oldtown", "rooftops", "tracks", "highway", "street", "alley", "market", "busstop", "station", "rooftop", "school", "fair", "stairs"),
+        "woods": ("woods", "bamboo", "forest"), "snow": ("snow", "aurora", "snowtown"), "dry": ("dunes", "canyon", "savanna"),
+        "high": ("cloudsea", "peaks", "cliff", "hill"), "room": cw.INDOOR + cw.INDOOR_STD}
 NAMES = {"intro": "前奏", "outro": "尾奏", "interlude": "間奏", "verse": "主歌", "pre": "導歌", "chorus": "副歌", "bridge": "橋段"}
 
 
@@ -185,12 +228,31 @@ def says(line: str, words: Sequence[str]) -> bool:
     return False
 
 
+def said(line: str, words: Sequence[str]) -> int:
+    """The length of the longest of the words the (simplified) line says, not right after a no / never; 0: none."""
+    toks = "".join(ch if ch.isalpha() and ch.isascii() else " " for ch in line).split()
+    best = 0
+    for w in words:
+        if len(w) <= best:
+            continue
+        if w.isascii():
+            if any(t == w and (n == 0 or toks[n - 1] not in NEG_EN) for n, t in enumerate(toks)):
+                best = len(w)
+        elif any(not _negated(line, j) for j in _found(line, w)):
+            best = len(w)
+    return best
+
+
 def hints(line: str, rows) -> Dict[str, str]:
+    """As cardworld._hints(longest=True): of the rows whose words the line says, the longest word wins."""
     got: Dict[str, str] = {}
+    size: Dict[str, int] = {}
     for ws, what in rows:
-        if line and says(line, ws):
+        n = said(line, ws) if line else 0
+        if n:
             for k, v in what.items():
-                got.setdefault(k, v)
+                if k not in got or n > size[k]:
+                    got[k], size[k] = v, n
     return got
 
 
@@ -231,7 +293,7 @@ def story(parts: Sequence[Tuple[str, str]], world: Dict[str, Any], title: str = 
     if lm or tr:
         chorus = cw.compose(chorus, tr, lm, world)
     home = next((p for lm in ICONIC for p in comps if p != chorus and cw.composite(p)[1] == lm),
-                next((p for p in outdoor if p != chorus and not cw.composite(p)), outdoor[0]))
+                next((p for p in comps if p != chorus), next((p for p in outdoor if p != chorus), outdoor[0])))
     walk = [p for p in outdoor if p not in (chorus, home)]
     room = [p for p in places if p in rooms]
     bridge = room[0] if room else (walk[-1] if walk else home)
@@ -243,7 +305,14 @@ def story(parts: Sequence[Tuple[str, str]], world: Dict[str, Any], title: str = 
 
 def _rows():
     # the standard grade's words, without its last three rows (the feeling of a line): that is feeling() here
-    return [(tuple(cw._simple(w) for w in ws), what) for ws, what in cw.HINTS_STD[:-3] + cw.ICON_HINTS + cw.HINTS]
+    poses = tuple((ws, {"subject": subject}) for ws, subject in POSE_WORDS)
+    return [(tuple(cw._simple(w) for w in ws), what) for ws, what in poses + cw.HINTS_STD[:-3] + cw.ICON_HINTS + cw.HINTS]
+
+
+def kind_of(place: str) -> str:
+    """What kind of place it is, for what can be in it (DRESS)."""
+    t = str(place).split(".")[0]
+    return next((kind for kind, names in KIND.items() if t in names), "green")
 
 
 def prepare(world: Dict[str, Any], parts: Sequence[Tuple[str, str]], title: str = "") -> Dict[str, Any]:
@@ -275,57 +344,77 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
     at = {i: n / max(1, len(lyr)) for n, i in enumerate(lyr)}
     rooms = cw.INDOOR + cw.INDOOR_STD
     frames = list(world["frames"])
+    shot_words = {name: tuple(cw._simple(w) for w in ws) for name, ws in SHOT_WORDS.items()}
+    duo_words, third_words = tuple(cw._simple(w) for w in DUO_WORDS), tuple(cw._simple(w) for w in THIRD)
     out: List[str] = []
     seen: set = set()
-    walk, wi, stay = st["walk"], 0, 0
+    walk, wi, stay, here = st["walk"], 0, 0, 0
     place, light_now, turn_light = st["home"], arc[0], {}
     since = 2
-    last_feel = []
+    last_feel: List[int] = []
+    recent: List[str] = []        # the things in the last cards, so that what fills an empty card is not one of them
+    used = {"memory": 0, "sad": 0, "glad": 0}
+    # the chorus place seen several ways: its own foreground and two or three others
+    ch = cw.composite(st["chorus"])
+    ch_fronts = [ch[2]] + r.sample([f for f in cw.FRONTS if f not in (ch[2], "none") and cw.front_fits(f, ch[0])], 3) if ch else []
 
     def arc_light(t: float) -> str:
         return arc[min(len(arc) - 1, int(t * len(arc)))]
+
+    def put(spec: str) -> None:
+        out.append(spec); seen.add(spec)
+        recent.append(spec.split("|")[5])
+        del recent[:-7]
 
     for i, ((kind, text), sc) in enumerate(zip(parts, secs)):
         sec = sc["sec"]
         line = cw._simple(text)
         if sec == "intro":       # the song's thing on a table, or (an umbrella, say) the lead holding it at the first place
             if keep and keep[1] in card_icons.TABLE and card_icons.TABLE[keep[1]][0] in ("hold", "side"):
-                spec = cw.card(st["home"], arc[0], "clear", "none", keep[1], "still", "c", 0)
+                put(cw.card(st["home"], arc[0], "clear", "none", keep[1], "still", "c", 0))
             else:
-                spec = cw.card(st["home"], arc[0], "clear", "solo_back" if keep else "none", keep[0] if keep else "none", "wide", "c", 0)
-            out.append(spec); seen.add(spec)
+                put(cw.card(st["home"], arc[0], "clear", "solo_back" if keep else "none", keep[0] if keep else "none", "wide", "c", 0))
             continue
-        if sec == "outro":
+        if sec == "outro":       # back where it began, at night: small against the moon
             happy = sum(last_feel[-6:]) >= 0
-            spec = cw.card(st["home"], "night", "clear", "duo_back" if happy else "solo_back",
-                           keep[0] if keep and keep[0] not in ("umbrella",) else "stars", "wide", "c", 0)
-            while spec in seen:
-                spec = spec[:-1] + str(int(spec[-1]) + 1)
-            out.append(spec); seen.add(spec)
+            spec, n = "", 0
+            while not spec or spec in seen:
+                spec = cw.card(st["home"], "night", "clear", "duo_back" if happy else "solo_back",
+                               keep[0] if keep and keep[0] not in ("umbrella",) else "stars", "moon" if n == 0 else "wide", "c", n)
+                n += 1
+            put(spec)
             continue
-        t = at.get(i, at[lyr[-1]] if lyr else 0.0) if sec != "interlude" else (at.get(i - 1, 0.0) if i else 0.0)
         if sec == "interlude":
             pl = out[-1].split("|")[1] if out else st["home"]
-            spec, n = cw.card(pl, light_now, "clear", "none", world["ambient"] if world["ambient"] != "none" else "birds", "wide", "c", 0), 0
-            while spec in seen:
-                n += 1; spec = cw.card(pl, light_now, "clear", "none", "birds" if n % 2 else "none", "wide", "c", n)
-            out.append(spec); seen.add(spec)
+            if cw.composite(pl):
+                pl = cw.with_view(pl, None, "small")
+            spec, n = "", 0
+            while not spec or spec in seen:
+                spec = cw.card(pl, light_now, "clear", "none", world["ambient"] if world["ambient"] != "none" and n == 0 else ("birds" if n % 2 else "none"),
+                               "far" if n == 0 else "wide", "c", n)
+                n += 1
+            put(spec)
             continue
+        t = at.get(i, 0.0)
         h = hints(line, rows)
         feel = feeling(line)
         last_feel.append(feel)
         k = sc["k"]
+        step = 0 if sc["turn"] == 0 else (2 if sc["turn"] == sc.get("turns", 1) - 1 else 1)
         # ---- where
         if sec == "chorus":
             pl = st["chorus"]
         elif sec == "bridge":
-            pl = st["bridge"] if k < 2 else place
-            if k >= 2 and stay <= 0:
-                wi, stay = wi + 1, 2
-            place = pl
+            if k == 0:
+                place, stay, here = st["bridge"], 2, 0
+            elif stay <= 0:
+                place, stay, here = walk[wi % len(walk)], 2, 0
+                wi += 1
+            stay -= 1
+            pl = place
         else:
             if stay <= 0:
-                place, stay = walk[wi % len(walk)], r.choice((3, 3, 4))
+                place, stay, here = walk[wi % len(walk)], r.choice((2, 3, 3)), 0
                 wi += 1
             stay -= 1
             pl = place
@@ -357,31 +446,36 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
             light = "overcast"
         if pl in rooms:
             weather = "clear"
+        dark = light in ("dusk", "night")
         # ---- who
-        duo_said = says(line, tuple(cw._simple(w) for w in DUO_WORDS))
-        third = says(line, tuple(cw._simple(w) for w in THIRD))
+        duo_said, third = says(line, duo_words), says(line, third_words)
         hs = h.get("subject")
         if sec == "chorus":
-            step = 0 if sc["turn"] == 0 else (2 if sc["turn"] == sc["turns"] - 1 else 1)
-            subject = CHORUS[step][k % 4]
-            if feel <= -2 or hs == "duo_apart":      # sung sad: the two of them apart, or one thinking of the other
-                subject = "duo_apart" if sc["again"] % 2 == 0 else "solo_back"
+            subject = CHORUS[step][k % len(CHORUS[step])]
+            if feel <= -2 or hs == "duo_apart":      # sung sad: the two of them apart, or one of them alone
+                subject = SAD_DUO[used["sad"] % len(SAD_DUO)]
+                used["sad"] += 1
             elif third:
                 subject = "other_back"
-            elif hs in ("duo_hug", "duo_face", "duo_hands", "duo_sit"):
+            elif hs and hs.startswith("duo"):
                 subject = hs
         else:
-            subject = {"verse": VERSE, "pre": PRE, "bridge": BRIDGE}[sec][k % 4]
+            pool = {"verse": VERSE, "pre": PRE, "bridge": BRIDGE}[sec]
+            subject = pool[(k + sc["again"] * 3 + (i // 7)) % len(pool)]
             if third:
-                subject = "other_back"
+                subject = "other_back" if k % 2 == 0 else "other_away"
             elif hs:
                 subject = hs
             elif duo_said:
-                subject = "duo_sit" if k % 2 else "duo_back"
+                subject = ("duo_back", "duo_sit", "duo_walk", "duo_ground")[(k + i) % 4]
             elif feel <= -2:
-                subject = "solo_back" if k % 2 else "solo_sit"
+                subject = SAD_SOLO[used["sad"] % len(SAD_SOLO)]
+                used["sad"] += 1
             elif feel >= 2:
-                subject = "solo_wave" if k % 2 else "solo_open"
+                subject = GLAD_SOLO[used["glad"] % len(GLAD_SOLO)]
+                used["glad"] += 1
+        if subject == "duo_stars" and not dark:
+            subject = "duo_ground"
         # ---- what is in it
         prop = h.get("prop", "none")
         if sc["again"]:           # sung before: another of the things its words name
@@ -395,56 +489,104 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
                 prop = "none"
         if keep and (k == 0 or says(line, keep[2])):
             prop = keep[0]
-        if prop == "none" and world["ambient"] != "none" and r.random() < 0.25:
-            prop = world["ambient"]
         duo = subject.startswith("duo")
         if sec == "chorus" and duo and prop in ("bike", "dots", "ask", "call"):
             prop = "none"           # a chorus keeps the two of them: what belongs to one person stays out
         if prop in ("bike", "dots", "ask", "call", "wings") and duo:
             subject = {"bike": "solo_walk", "wings": "solo_open"}.get(prop, "solo_front")
-        if prop == "tears" and duo and subject != "duo_apart":
-            subject = "duo_apart" if sec == "chorus" else "solo_front"
+        if prop == "tears" and (duo and subject not in ("duo_apart", "duo_comfort") or subject in ("solo_cover", "solo_back", "solo_away", "solo_ground", "other_back", "other_away", "none")):
+            subject = "duo_comfort" if sec == "chorus" and duo else "solo_front"
         if prop == "thread" and not duo:
             subject = "duo_face"
-        if prop == "umbrella":
-            if subject in ("duo_face", "duo_apart", "duo_hug"):
-                subject = "duo_hands"
-            elif subject in ("solo_reach", "solo_open", "solo_wave", "solo_sit", "solo_run"):
-                subject = "solo_front"
-            elif subject in ("none", "other_back"):
-                subject = "solo_back"
-        if prop in ("tears", "dots", "ask", "call") and subject in ("none", "solo_back", "other_back"):
+        if prop == "umbrella" and subject not in UMBRELLA_OK:
+            subject = NO_UMBRELLA["duo" if duo and subject not in ("duo_apart", "duo_far", "duo_follow", "duo_wave") else "solo"]
+        if prop in ("dots", "ask", "call") and subject in ("none", "solo_back", "other_back", "solo_away", "other_away", "solo_ground", "solo_cover"):
             subject = "solo_front"
+        if prop == "bike":
+            subject = "solo_walk"
         duo = subject.startswith("duo")
-        # ---- how close
+        outdoor = pl not in rooms
+        # ---- how it is seen
+        shot = ""
         if sec == "chorus":
-            step = 0 if sc["turn"] == 0 else (2 if sc["turn"] == sc["turns"] - 1 else 1)
-            frame = CHORUS_FRAMES[step][k % 4]
-            if frame == "close" and step == 2 and k % 4 == 1 and pl not in rooms and weather == "clear" \
-                    and light in ("sunset", "golden", "dawn", "dusk") and prop in ("none", "hearts", "thread", "leaves", "petals", "birds"):
-                frame = "sil"
+            shot = CHORUS_FRAMES[step][k % len(CHORUS_FRAMES[step])]
         else:
-            frame = frames[(i + k) % len(frames)]
+            shot = frames[(i + k) % len(frames)]
             since += 1
-            if since >= 3 and r.random() < 0.6:
+            if since >= 2 and r.random() < 0.7:
                 fam = card_icons.TABLE[prop][0] if prop in card_icons.TABLE else ""
-                if out and out[-1].split("|")[6] == "still":
-                    pass
-                elif prop in ("letter", "clock", "frames", "hourglass", "calendar", "key", "candle", "diary") or (fam in ("hold", "side") and not duo):
-                    frame, since = "still", 0
-                elif subject.startswith("solo") and subject not in ("solo_sit", "solo_run") and prop in ("none", "stars", "shooting", "bigmoon", "birds", "rainbow", "lantern", "kite", "plane", "balloons"):
-                    frame, since = "over", 0
-        if frame == "hands" and (not duo or subject == "duo_apart" or prop not in ("none", "hearts", "thread", "petals", "leaves", "bubbles", "fireflies", "stars")):
-            frame = "close" if subject not in ("duo_sit", "duo_apart") else "mid"
-        if frame == "close" and (subject in ("solo_sit", "duo_sit", "duo_apart", "none") or prop in ("bike", "wings", "thread", "frames", "kite", "rainbow", "umbrella")):
-            frame = "mid"
-        if frame == "still" and prop == "umbrella":
+                pick = ""
+                if prop in ("letter", "clock", "frames", "hourglass", "calendar", "key", "candle", "diary") or (fam in ("hold", "side") and not duo and r.random() < 0.5):
+                    pick = "still"
+                elif subject.startswith("solo") and subject in ("solo_front", "solo_back", "solo_reach", "solo_open", "solo_look", "solo_point") and prop in (
+                        "none", "stars", "shooting", "bigmoon", "birds", "rainbow", "lantern", "kite", "plane", "balloons"):
+                    pick = "over"
+                elif subject in ("solo_walk", "solo_away", "solo_run", "solo_back", "other_away", "duo_walk", "duo_far", "solo_shade"):
+                    pick = "far"
+                elif outdoor and (weather == "rain" or kind_of(pl) == "water"):
+                    pick = "mirror"
+                if pick and not (out and out[-1].split("|")[6] == pick):
+                    shot, since = pick, 0
+        # what the words ask for comes before the turn of the section
+        if says(line, shot_words["photo"]):
+            shot = "photo"
+        elif says(line, shot_words["memory"]):
+            shot = "memory" if used["memory"] % 2 == 0 else "photo"
+            used["memory"] += 1
+        elif says(line, shot_words["moon"]) or prop == "bigmoon":
+            shot, prop = "moon", ("none" if prop == "bigmoon" else prop)
+        elif says(line, shot_words["window"]) and pl not in rooms and sc["again"] % 2 == 0:
+            shot = "window"
+        elif says(line, shot_words["split"]) or (subject == "duo_apart" and sc["again"] % 2 == 1):
+            shot, subject = "split", "duo_apart"
+        elif says(line, shot_words["tilt"]) and feel <= 0 and sc["again"] % 3 == 0:
+            shot = "tilt"
+        elif says(line, shot_words["globe"]) and sc["again"] % 2 == 1:
+            shot = "globe"
+        duo = subject.startswith("duo")
+        # a shot that does not suit the card gives way
+        if shot == "moon" and not (outdoor and weather == "clear" and light in ("golden", "sunset", "dusk", "night", "dawn")):
+            shot = "wide"
+        if shot == "mirror" and not outdoor:
+            shot = "mid"
+        if shot == "sil" and not (outdoor and weather == "clear" and light in ("sunset", "golden", "dawn", "dusk") and prop in ("none", "hearts", "thread", "leaves", "petals", "birds")):
+            shot = "close"
+        if shot == "hands" and (not duo or subject in ("duo_apart", "duo_far", "duo_follow", "duo_wave", "duo_backs") or prop not in (
+                "none", "hearts", "thread", "petals", "leaves", "bubbles", "fireflies", "stars")):
+            shot = "close"
+        if shot == "over" and (duo or prop == "umbrella"):
+            shot = "mid"
+        if shot == "still" and prop == "umbrella":
             prop = "umbrellai"
+        if shot == "still" and (prop == "none" or any(sp.split("|")[5:7] == [prop, "still"] for sp in out[-12:])):
+            shot = "mid"            # (and not the same thing on the table again so soon)
+        if shot == "close" and (subject in NO_CLOSE or prop in ("bike", "wings", "thread", "frames", "kite", "rainbow", "umbrella")):
+            shot = "mid"
+        if out and out[-1].split("|")[6] == shot and shot in cw.FRAMES_STD + cw.FRAMES_PREM:
+            shot = "mid" if shot != "mid" else "wide"       # never the same special shot twice running
+        # ---- a card with nothing of its own takes something that belongs to the place
+        if prop == "none" and shot not in ("hands", "still", "split", "moon") and r.random() < 0.8:
+            pool2 = [x for x in (DRESS["night"] if dark and outdoor and r.random() < 0.5 else DRESS[kind_of(pl)])
+                     if (x in cw.PROPS + cw.PROPS_STD or x in card_icons.TABLE) and x not in recent]
+            if shot == "close":
+                pool2 = [x for x in pool2 if x in cw.PROPS or card_icons.TABLE.get(x, ("",))[0] == "rain"]
+            if pool2:
+                prop = r.choice(pool2)
+        # ---- the place, seen this way or that
+        if cw.composite(pl):
+            if sec == "chorus" and ch_fronts and pl.split(".")[:2] == st["chorus"].split(".")[:2]:
+                view = CHORUS_VIEWS[(k + sc["turn"] * 3) % len(CHORUS_VIEWS)]
+                if view == "centre" and duo and shot != "far":
+                    view = "near"
+                pl = cw.with_view(pl, ch_fronts[((k + 1) // 2 + sc["turn"]) % len(ch_fronts)], view)
+            elif sec != "chorus":
+                view = ("", "near", "small")[here % 3] if h.get("landmark") is None else ("", "near")[here % 2]
+                pl = cw.with_view(pl, None, view)
+        here += 1
         pos = "c" if duo else cw.POSES[(i + seed) % 3]
-        spec, n = cw.card(pl, light, weather, subject, prop, frame, pos, 0), 0
+        spec, n = cw.card(pl, light, weather, subject, prop, shot, pos, 0), 0
         while spec in seen:
             n += 1
-            spec = cw.card(pl, light, weather, subject, prop, frame, pos if duo else cw.POSES[(i + n) % 3], n)
-        seen.add(spec)
-        out.append(spec)
+            spec = cw.card(pl, light, weather, subject, prop, shot, pos if duo else cw.POSES[(i + n) % 3], n)
+        put(spec)
     return out, st

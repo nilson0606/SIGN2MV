@@ -26,6 +26,23 @@
   words it sings most; else a red scarf on the lead) comes back at the start of every section, in one colour,
   and is kept in the project's cards.json. The last card goes back to the first place, at night. A word right
   after 沒有 / 不再 / 別 ... is not drawn.
+- Picture cards, five times the parts (standard and premium; the simple way is unchanged, and cards drawn
+  before come out the same): more than 1000 things a line can call for (800 more icons in
+  `app/mvstudio/card_icons_more.py`: food, animals, plants, clothes, the house, tools, music, school, machines,
+  travel, sport, toys, feelings and signs, festivals, stories, work), 150 landmarks (100 more, one line of shapes
+  each in `app/mvstudio/card_parts.py`: pagoda, torii, tree house, water wheel, wishing tree, hot spring, tram,
+  cable car, ...), 31 terrains (lake, terraces, harbour, canyon, bamboo, orchard, lavender, rooftops, island,
+  waterfall, savanna, aurora, reeds, railway, old town, park, highway, boardwalk, sea of clouds) and 25
+  foregrounds: more than 2800 fitting terrain and landmark pairs. Landmarks such as a hospital, a grave or a
+  dinosaur are only there when the words ask for them. Of the words a line says the longest now wins ("鯊魚"
+  is the shark, not "魚" the fish).
+- Premium cards, more variety inside one song: every chorus still goes back to its one landmark, now seen from
+  near, far or straight on and with changing foregrounds; nine more kinds of shot (small people in a wide
+  view, the view mirrored in water, small and dark against a huge moon, two halves for two people apart, through
+  a window, photos lying on the view, a snow globe, a faded memory, a tilted camera), chosen by the words (回憶,
+  月光, 窗, 亂 ...) and by the section; thirty more ways to stand (46 in all); a card with nothing of its own
+  takes something that belongs to the place (a dog in town, gulls by the sea, fireflies at night); a premium
+  song has sixteen places instead of ten. The last card is the first place again, small against the moon.
 
 ## 2026.11.15
 

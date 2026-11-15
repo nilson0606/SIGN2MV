@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter
 
-from . import card_icons
+from . import card_icons, card_parts
 
 W, H, S = 1920, 1080, 2
 SKIN = (255, 224, 204)
@@ -57,6 +57,17 @@ INDOOR_STD = ("cafe", "library", "train")
 PROPS_STD = ("hourglass", "calendar", "suitcase", "phone", "key", "candle", "ring", "cranes", "dandelion", "broken", "wine",
              "guitar", "camera", "diary", "footprints", "door", "raincloud", "rays", "fireworks", "paperboat", "butterfly", "cat",
              "thought", "dream")
+# The premium grade (world["grade"] == "premium"; cardstory plans it) draws with the standard grade's parts and
+# has more ways to stand and more kinds of shot. far: small people in a wide view; mirror: the view again in
+# water at their feet; moon: small and dark against a very large moon or sun; the rest are put together from
+# one or two cards by card_shots (two halves, through a window, photos, a snow globe, a memory, a tilted view).
+SUBJECTS_PREM = ("solo_hips", "solo_think", "solo_cover", "solo_heart", "solo_cheer", "solo_point", "solo_shade", "solo_pray", "solo_head",
+                 "solo_jump", "solo_crouch", "solo_ground", "solo_away", "solo_give", "solo_look",
+                 "duo_walk", "duo_run", "duo_backs", "duo_lean", "duo_cheer", "duo_point", "duo_follow", "duo_wave", "duo_dance",
+                 "duo_ground", "duo_stars", "duo_comfort", "duo_far", "other_front", "other_away")
+FRAMES_PREM = ("far", "mirror", "moon", "split", "window", "photo", "globe", "memory", "tilt")
+POST_FRAMES = ("split", "window", "photo", "globe", "memory", "tilt")
+VIEWS = ("near", "centre", "small")       # a put-together place can end in one of these: how its landmark is seen
 POSES = ("l", "c", "r")
 LINES = {"ink": ((50, 60, 92), 4), "brown": ((96, 68, 60), 5), "soft": (None, 3), "fine": ((74, 80, 100), 3)}
 HAIR_COLORS = ((92, 70, 70), (52, 48, 62), (134, 88, 62), (182, 134, 88), (116, 62, 70), (70, 84, 110))
@@ -81,12 +92,13 @@ def make_world(seed: int, grade: str = "simple") -> Dict[str, Any]:
     r = random.Random(f"world:{int(seed)}:{grade}" if std else f"world:{int(seed)}")
     indoor = INDOOR + (INDOOR_STD if std else ())
     out_places = [p for p in PLACES + (PLACES_STD if std else ()) if p not in indoor]
-    if std:      # six put-together places, two of the painted ones, two rooms
-        terrains, places = r.sample(TERRAINS, 5), []
-        for i, lm in enumerate(r.sample(LANDMARKS, 6)):
-            t = terrains[i % 5] if fits(lm, terrains[i % 5]) else r.choice([x for x in TERRAINS if fits(lm, x)])
-            places.append(f"{t}.{lm}.{r.choice(FRONTS)}")
-        places += r.sample(out_places, 2) + r.sample(indoor, 2)
+    if std:      # six put-together places, two of the painted ones, two rooms (premium: nine, four and three)
+        n_t, n_c, n_p, n_r = (6, 9, 4, 3) if grade == "premium" else (5, 6, 2, 2)
+        terrains, places = r.sample(TERRAINS, n_t), []
+        for i, lm in enumerate(r.sample([x for x in LANDMARKS if x not in card_parts.KEYWORD_ONLY], n_c)):
+            t = terrains[i % n_t] if fits(lm, terrains[i % n_t]) else r.choice([x for x in TERRAINS if fits(lm, x)])
+            places.append(f"{t}.{lm}.{r.choice([f for f in FRONTS if front_fits(f, t)])}")
+        places += r.sample(out_places, n_p) + r.sample(indoor, n_r)
     else:
         places = r.sample(out_places, 4) + [r.choice(INDOOR)]
     hue, sat = r.choice(PALETTES)
@@ -223,15 +235,21 @@ def _simple(text: str) -> str:
     return "".join(table.get(ch, ch) for ch in str(text or "").replace("妳", "你").replace("星期", "")).lower()
 
 
-def _hints(line: str, rows) -> Dict[str, str]:
+def _hints(line: str, rows, longest: bool = False) -> Dict[str, str]:
+    """What a line's words ask for. The first row that says something about a place, a thing ... wins; with
+    longest, the row whose word is longest does ("鯊魚" is the shark, though "魚" comes first), and of two
+    as long the first."""
     got: Dict[str, str] = {}
     if not line:
         return got
     words = set("".join(ch if ch.isalpha() and ch.isascii() else " " for ch in line).split())
+    size: Dict[str, int] = {}
     for ws, what in rows:
-        if any((w in words) if w.isascii() else (w in line) for w in ws):
+        hit = [len(w) for w in ws if ((w in words) if w.isascii() else (w in line))]
+        if hit:
             for k, v in what.items():
-                got.setdefault(k, v)
+                if k not in got or (longest and max(hit) > size[k]):
+                    got[k], size[k] = v, max(hit)
     return got
 
 
@@ -242,8 +260,8 @@ def card(place, light, weather, subject, prop, frame, pos, n) -> str:
 def parse(spec: str) -> Optional[Tuple[str, str, str, str, str, str, str, int]]:
     p = str(spec or "").split("|")
     if (len(p) == 9 and p[0] == "w2" and valid_place(p[1]) and p[2] in LIGHTS and p[3] in WEATHERS
-            and p[4] in SUBJECTS + SUBJECTS_STD and (p[5] in PROPS + PROPS_STD or p[5] in card_icons.TABLE)
-            and p[6] in FRAMES + FRAMES_STD and p[7] in POSES
+            and p[4] in SUBJECTS + SUBJECTS_STD + SUBJECTS_PREM and (p[5] in PROPS + PROPS_STD or p[5] in card_icons.TABLE)
+            and p[6] in FRAMES + FRAMES_STD + FRAMES_PREM and p[7] in POSES
             and p[8].isdigit() and len(p[8]) <= 4):
         return p[1], p[2], p[3], p[4], p[5], p[6], p[7], int(p[8])
     return None
@@ -271,7 +289,7 @@ def plan(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, Any]) -> 
         elif kind == "outro":
             spec = card(outdoor[-1], "night" if lights[-1] in ("dusk", "night", "sunset") else "dusk", "clear", "duo_back", "stars" if lights[-1] in ("dusk", "night", "sunset") else "birds", "wide", "c", 0)
         else:
-            h = {} if kind == "interlude" else _hints(_simple(text), rows)
+            h = {} if kind == "interlude" else _hints(_simple(text), rows, world.get("grade") in ("standard", "premium"))
             if stay <= 0:                 # move on to the song's next place
                 order = order[1:] + order[:1]
                 place, stay = order[0], r.choice((2, 2, 3))
@@ -840,23 +858,34 @@ PLACE_FN = {"meadow": pl_meadow, "sea": pl_sea, "rooftop": pl_rooftop, "street":
 # --------------------------------------------------------------------------------------------- the people
 ARMS = {"down": ((-52, -150), (52, -150)), "up": ((-70, -292), (52, -150)), "both": ((-80, -292), (80, -292)),
         "wave": ((-52, -150), (88, -300)), "out": ((-124, -204), (124, -204)), "hold_r": ((-52, -150), (86, -146)),
-        "hold_l": ((-86, -146), (52, -150)), "fwd_r": ((-52, -150), (104, -196)), "fwd_l": ((-104, -196), (52, -150))}
+        "hold_l": ((-86, -146), (52, -150)), "fwd_r": ((-52, -150), (104, -196)), "fwd_l": ((-104, -196), (52, -150)),
+        # the premium grade's
+        "hips": ((-46, -134), (46, -134)), "chin": ((-52, -150), (16, -226)), "cover": ((-18, -250), (18, -250)),
+        "heart": ((-52, -150), (8, -190)), "cheer": ((-98, -304), (98, -304)), "point": ((-52, -150), (128, -262)),
+        "shade": ((-52, -150), (34, -268)), "pray": ((-7, -196), (7, -196)), "head": ((-34, -292), (34, -292)),
+        "hug": ((-30, -120), (30, -120)), "dance_r": ((-104, -276), (88, -172)), "dance_l": ((-88, -172), (104, -276)),
+        "shoulder_r": ((-52, -150), (96, -212))}
+# where the elbow is, for arms that bend (left, right; None: a straight arm)
+ELBOWS = {"hips": ((-88, -176), (88, -176)), "chin": (None, (72, -168)), "cover": ((-70, -188), (70, -188)), "heart": (None, (66, -166)),
+          "shade": (None, (86, -214)), "pray": ((-58, -160), (58, -160)), "head": ((-92, -236), (92, -236)), "hug": ((-66, -150), (66, -150))}
 
 
-def figure(k, who, x, y, s, face="front", arms="down", sit=False, walk=False):
-    """One of the song's two people, feet at (x, y). Returns where the head and hands are."""
+def figure(k, who, x, y, s, face="front", arms="down", sit=False, walk=False, shadow=True):
+    """One of the song's two people, feet at (x, y). Returns where the head and hands are.
+    sit: True on a seat (or crouching), 2 on the ground; walk: True a step, 2 a run."""
     p = k.w[who]
     girl = who == "girl"
     hd = float(k.w["head"])
     hair, top, low, ecol = tuple(p["hair"]), tuple(p["top"]), tuple(p["low"]), tuple(p["extra_col"])
     cut, wear, extra = p["cut"], p["wear"], p["extra"]
     tall = float(k.w.get("tall", 0) or 0)
-    b = y + (48 * s if sit else -tall * s)     # where the feet would be standing: the body hangs from here
+    b = y + ((92 if sit == 2 else 48) * s if sit else -tall * s)     # where the feet would be standing: the body hangs from here
     hy, hr = b - (222 + 38 * hd) * s, 46 * hd * s
     back = face == "back"
     if wear == "hoodie":
         top = ecol
-    k.shadow(x, y, s)
+    if shadow:
+        k.shadow(x, y, s)
     if not back:                               # hair behind the head and shoulders
         if girl and cut == "long": k.poly([(x - hr * 1.12, hy - 6 * s), (x + hr * 1.12, hy - 6 * s), (x + hr, hy + hr * 2.5), (x - hr, hy + hr * 2.5)], hair)
         elif girl and cut == "bob": k.poly([(x - hr * 1.16, hy - 6 * s), (x + hr * 1.16, hy - 6 * s), (x + hr * 1.26, hy + hr * 1.2), (x - hr * 1.26, hy + hr * 1.2)], hair)
@@ -866,6 +895,8 @@ def figure(k, who, x, y, s, face="front", arms="down", sit=False, walk=False):
         if wear == "hoodie": k.ell(x, b - 214 * s, 54 * s, 30 * s, top)
     # legs
     fl, fr = (x - 24 * s, y), (x + 24 * s, y)
+    if sit == 2:
+        fl, fr = (x - 62 * s, y + 4 * s), (x + 62 * s, y + 4 * s)
     if walk:
         fl, fr = (x - 52 * s, y - 4 * s), (x + 46 * s, y)
         if walk > 1:
@@ -889,9 +920,11 @@ def figure(k, who, x, y, s, face="front", arms="down", sit=False, walk=False):
         if wear == "hoodie" and not back: k.stroke([(x - 20 * s, b - 160 * s), (x + 20 * s, b - 160 * s)], None, 3)
     sleeve = ecol if wear == "jacket" else top
     hands = []
-    for sx, (ax, ay) in zip((-1, 1), ARMS[arms]):
+    elbows = ELBOWS.get(arms, (None, None))
+    for i, (sx, (ax, ay)) in enumerate(zip((-1, 1), ARMS[arms])):
         hx_, hy_ = x + ax * s, b + ay * s
-        k.limb([(x + sx * 40 * s, b - 208 * s), (hx_, hy_)], sleeve, 12 * s)
+        bend = [(x + elbows[i][0] * s, b + elbows[i][1] * s)] if elbows[i] else []
+        k.limb([(x + sx * 40 * s, b - 208 * s)] + bend + [(hx_, hy_)], sleeve, 12 * s)
         k.ell(hx_, hy_, 10 * s, 10 * s, SKIN, skin=True)
         hands.append((hx_, hy_))
     if extra == "scarf":
@@ -948,12 +981,14 @@ def people(k, subject, pos, frame, ground, n):
     """Put the people of the subject in the picture. Returns [lead, other] (either can be None)."""
     lead = k.w["lead"]
     other = "boy" if lead == "girl" else "girl"
-    s = {"wide": 0.82, "mid": 1.14, "close": 2.2}[frame]
-    y = 1130 if frame == "close" else ground + (6 if frame == "wide" else 28)
+    s = {"far": 0.5, "wide": 0.82, "mid": 1.14, "close": 2.2}[frame]
+    y = 1130 if frame == "close" else ground + {"far": 2, "wide": 6}.get(frame, 28)
     x = {"l": 560, "c": 960, "r": 1360}[pos]
     flip = n % 2 == 1
     if subject == "none":
         return [None, None]
+    if subject in SUBJECTS_PREM:
+        return people_more(k, subject, pos, lead, other, x, y, s, flip)
     if subject == "solo_front": return [figure(k, lead, x, y, s, "front"), None]
     if subject == "solo_back": return [figure(k, lead, x, y, s, "back"), None]
     if subject == "other_back": return [None, figure(k, other, x, y, s, "back")]
@@ -982,6 +1017,60 @@ def people(k, subject, pos, frame, ground, n):
         return [figure(k, lead, x - 120 * s, y, s, "right", "fwd_r"), figure(k, other, x + 120 * s, y, s, "left", "fwd_l")]
     f = "back" if subject == "duo_back" else "front"
     return [figure(k, lead, x - 84 * s, y, s, f), figure(k, other, x + 84 * s, y, s, f, "wave" if f == "front" and flip else "down")]
+
+
+def people_more(k, subject, pos, lead, other, x, y, s, flip):
+    """The premium grade's ways to stand (SUBJECTS_PREM); as people()."""
+    away = "left" if pos == "r" else "right"       # looking into the picture
+    if subject == "solo_hips": return [figure(k, lead, x, y, s, "front", "hips"), None]
+    if subject == "solo_think": return [figure(k, lead, x, y, s, "front", "chin"), None]
+    if subject == "solo_cover": return [figure(k, lead, x, y, s, "front", "cover"), None]
+    if subject == "solo_heart": return [figure(k, lead, x, y, s, "front", "heart"), None]
+    if subject == "solo_cheer": return [figure(k, lead, x, y, s, "front", "cheer"), None]
+    if subject == "solo_point": return [figure(k, lead, x, y, s, "back" if flip else "front", "point"), None]
+    if subject == "solo_shade": return [figure(k, lead, x, y, s, away, "shade"), None]
+    if subject == "solo_pray": return [figure(k, lead, x, y, s, "front", "pray"), None]
+    if subject == "solo_head": return [figure(k, lead, x, y, s, "front", "head"), None]
+    if subject == "solo_jump":
+        k.shadow(x, y, s * 0.8)
+        return [figure(k, lead, x, y - 76 * s, s, "front", "cheer", walk=True, shadow=False), None]
+    if subject == "solo_crouch": return [figure(k, lead, x, y, s, "front", "hug", sit=True), None]
+    if subject == "solo_ground": return [figure(k, lead, x, y, s, "back", "down", sit=2), None]
+    if subject == "solo_away": return [figure(k, lead, x, y - 10 * s, s * 0.82, "back", "down", walk=True), None]
+    if subject == "solo_give": return [figure(k, lead, x, y, s, away, "fwd_l" if pos == "r" else "fwd_r"), None]
+    if subject == "solo_look": return [figure(k, lead, x, y, s, away, "down"), None]
+    if subject == "other_front": return [None, figure(k, other, x, y, s, "front")]
+    if subject == "other_away": return [None, figure(k, other, x, y - 10 * s, s * 0.82, "back", "down", walk=True)]
+    x = 960
+    if subject in ("duo_walk", "duo_run"):
+        wk = 2 if subject == "duo_run" else True
+        return [figure(k, lead, x - 82 * s, y, s, "right", "hold_r", walk=wk), figure(k, other, x + 82 * s, y, s, "right", "hold_l", walk=wk)]
+    if subject == "duo_backs":
+        return [figure(k, lead, x - 46 * s, y, s, "left", "down"), figure(k, other, x + 46 * s, y, s, "right", "down")]
+    if subject == "duo_lean":
+        bench(k, x, y, s)
+        f = "front" if flip else "back"
+        return [figure(k, lead, x - 56 * s, y, s, f, sit=True), figure(k, other, x + 56 * s, y, s, f, sit=True)]
+    if subject == "duo_cheer":
+        return [figure(k, lead, x - 104 * s, y, s, "front", "cheer"), figure(k, other, x + 104 * s, y, s, "front", "cheer")]
+    if subject == "duo_point":
+        return [figure(k, lead, x - 86 * s, y, s, "back", "point"), figure(k, other, x + 86 * s, y, s, "back", "down")]
+    if subject == "duo_follow":
+        return [figure(k, lead, x - 230 * s, y, s, "right", "fwd_r"), figure(k, other, x + 250 * s, y - 14 * s, s * 0.8, "back", "down", walk=True)]
+    if subject == "duo_wave":
+        g = min(520, 380 / s + 180)
+        return [figure(k, lead, x - g, y, s, "right", "wave"), figure(k, other, x + g, y, s, "left", "wave")]
+    if subject == "duo_dance":
+        return [figure(k, lead, x - 74 * s, y, s, "right", "dance_r"), figure(k, other, x + 74 * s, y, s, "left", "dance_l")]
+    if subject == "duo_ground":
+        return [figure(k, lead, x - 84 * s, y, s, "back", "down", sit=2), figure(k, other, x + 84 * s, y, s, "back", "down", sit=2)]
+    if subject == "duo_stars":
+        return [figure(k, lead, x - 84 * s, y, s, "back", "point", sit=2), figure(k, other, x + 84 * s, y, s, "back", "down", sit=2)]
+    if subject == "duo_comfort":
+        return [figure(k, lead, x - 62 * s, y, s, "right", "shoulder_r"), figure(k, other, x + 62 * s, y, s, "front", "cover")]
+    # duo_far: one near, seen from behind; the other far off, waving
+    far = figure(k, other, x + 330, y - 46 * s, s * 0.5, "front", "wave")
+    return [figure(k, lead, x - 360, y + 30 * s, s * 1.2, "back", "down"), far]
 
 
 # --------------------------------------------------------------------------------------------- the things
@@ -1167,7 +1256,10 @@ def weather(k, kind):
 
 # ------------------------------------------------------------------------------------------------ the card
 def _finish(k, border):
-    im = k.im.resize((W, H), Image.LANCZOS)
+    return _finish_im(k.im.resize((W, H), Image.LANCZOS), k.ink or (70, 76, 100), border)
+
+
+def _finish_im(im, ink, border):
     im = ImageEnhance.Color(ImageEnhance.Contrast(im).enhance(1.1)).enhance(1.14)     # the mixing of lights leaves it a little pale
     # the corners a little darker, so the middle of the card holds the eye
     small = Image.new("L", (96, 54))
@@ -1178,7 +1270,6 @@ def _finish(k, border):
             px[xx, yy] = int(max(0.0, min(1.0, (dd - 0.78) / 0.7)) * 56)
     im = Image.composite(Image.new("RGB", (W, H), (20, 24, 50)), im, small.resize((W, H), Image.BILINEAR))
     d = ImageDraw.Draw(im, "RGBA")
-    ink = k.ink or (70, 76, 100)
     if border == "comic":
         d.rounded_rectangle([14, 14, W - 15, H - 15], radius=26, outline=(255, 255, 255), width=18); d.rounded_rectangle([24, 24, W - 25, H - 25], radius=20, outline=ink, width=4)
     elif border == "round":
@@ -1195,13 +1286,30 @@ def draw(spec: str, world: Dict[str, Any], seed: int = 0) -> Image.Image:
     got = parse(spec)
     if not got or not valid_world(world):
         raise KeyError(spec)
-    place, light, wth, subject, prop, frame, pos, n = got
+    if got[5] in POST_FRAMES and world.get("grade") in ("standard", "premium"):
+        from . import card_shots
+        return card_shots.compose(spec, world, seed)
+    import zlib
+    k = _paint(spec, world, seed)
+    im = _finish(k, world["border"])
+    return _finish_standard(im, zlib.crc32(spec.encode())) if k.std else im
+
+
+def _paint(spec: str, world: Dict[str, Any], seed: int = 0) -> "K":
+    """The card painted on its canvas (twice the size; not yet scaled down and finished)."""
+    place, light, wth, subject, prop, frame, pos, n = parse(spec)  # type: ignore[misc]
     import zlib
     k = K(world, light, zlib.crc32(spec.encode()) + int(seed) % 999983)
     std = k.std
-    if frame in FRAMES_STD and not std:
+    if frame in FRAMES_STD + FRAMES_PREM and not std or frame in POST_FRAMES:
         frame = "mid"
     k.sky()
+    if std:
+        k.mood = MOODS.get(prop, "sad" if subject in SAD_SUBJECTS else "smile")
+    if frame == "moon":
+        shot_moon(k, place, subject, prop, n)
+        weather(k, wth)
+        return k
     sun = None
     if wth == "clear" and place != "forest":
         sun = k.orb(horizon=680, side=("l" if pos == "r" else "r") if frame == "sil" else None)
@@ -1213,7 +1321,6 @@ def draw(spec: str, world: Dict[str, Any], seed: int = 0) -> Image.Image:
     info = paint_place(k, place) or {}
     ground = float(info.get("ground", 900))
     if std:
-        k.mood = MOODS.get(prop, "sad" if subject in SAD_SUBJECTS else "smile")
         if sun and place not in INDOOR + INDOOR_STD and light in ("golden", "sunset", "dawn", "dusk", "night"):
             k.rim = 1 if sun[0] > 960 else -1
     if frame == "still":
@@ -1225,13 +1332,13 @@ def draw(spec: str, world: Dict[str, Any], seed: int = 0) -> Image.Image:
         shot_hands(k, subject, prop, n)
         thing(k, prop if prop in ("petals", "leaves", "fireflies", "bubbles") else "none", "front", [None, None], ground)
     else:
-        shot = "mid" if frame in ("sil", "over") else frame
+        shot = "mid" if frame in ("sil", "over") else ("wide" if frame == "mirror" else frame)
         probe = {"l": 560, "c": 960, "r": 1360}[pos]
         who = None
         if prop in ("bike", "wings", "clover") and subject != "none":
             # these go behind the person, who is not there yet: work out where the person will be
-            s = {"wide": 0.82, "mid": 1.14, "close": 2.2}[shot]
-            y = 1130 if shot == "close" else ground + (6 if shot == "wide" else 28)
+            s = {"far": 0.5, "wide": 0.82, "mid": 1.14, "close": 2.2}[shot]
+            y = 1130 if shot == "close" else ground + {"far": 2, "wide": 6}.get(shot, 28)
             b = y + (48 * s if subject.endswith("sit") else -float(world.get("tall", 0) or 0) * s)
             who = [{"x": probe if not subject.startswith("duo") else 960 - 84 * s, "y": y, "s": s, "top": b - 222 * s}, None]
         thing(k, prop, "mid", who, ground)
@@ -1243,6 +1350,8 @@ def draw(spec: str, world: Dict[str, Any], seed: int = 0) -> Image.Image:
         if frame == "over":
             k.blur(5)
         who = people(k, subject, pos, shot, ground, n)
+        if frame == "mirror":    # the view again in the water at their feet
+            _mirror(k, ground + 20)
         if shot != "close" and frame != "over":
             paint_place(k, place, True)
         k.flat = None
@@ -1256,11 +1365,57 @@ def draw(spec: str, world: Dict[str, Any], seed: int = 0) -> Image.Image:
         if prop in PROPS_STD or prop in card_icons.TABLE:
             thing_standard(k, prop, "front", who, ground)
     weather(k, wth)
-    im = _finish(k, world["border"])
-    return _finish_standard(im, zlib.crc32(spec.encode())) if std else im
+    return k
 
 
-# ------------------------------------------------------------------------- the standard grade: more places
+def _mirror(k, y: float) -> None:
+    """Everything above y once more below it, upside down, as in still water."""
+    yl = P(y)
+    hh = H * S - yl
+    if hh < 40 or yl - hh < 0:
+        return
+    src = k.im.crop((0, yl - hh, W * S, yl)).transpose(Image.FLIP_TOP_BOTTOM)
+    out = src.copy()
+    ph = k.r.uniform(0, 6)
+    for y0 in range(0, hh, 8):               # ripples: rows pushed a little left and right, more further down
+        out.paste(src.crop((0, y0, W * S, y0 + 8)), (int(math.sin(y0 / 26.0 + ph) * (4 + y0 * 0.05)), y0))
+    out = Image.blend(out, Image.new("RGB", out.size, _mix(k.sky3[1], (60, 110, 170), 0.35)), 0.36)
+    k.im.paste(out, (0, yl))
+    k.d.line([(0, yl), (W * S, yl)], fill=(255, 255, 255, 150), width=P(3))
+    for _ in range(14):
+        x, yy = k.r.uniform(0, W), k.r.uniform(y + 14, H - 10)
+        k.d.line([(P(x), P(yy)), (P(x + k.r.uniform(60, 200)), P(yy))], fill=(255, 255, 255, 70), width=P(3))
+
+
+def shot_moon(k, place, subject, prop, n):
+    """A very large moon (or sun), with the place's landmark and the people small and dark against it."""
+    night = k.light in ("night", "dusk", "overcast")
+    cx, cy, rr = 960, 440, 330
+    thing(k, prop if prop in ("stars", "shooting") else "none", "back", None, 0)
+    col = (255, 248, 214) if night else {"sunset": (255, 196, 124), "golden": (255, 226, 140), "dawn": (255, 220, 190)}.get(k.light, (255, 244, 170))
+    for g in range(8, 0, -1):
+        k.d.ellipse([P(cx - rr - g * 26), P(cy - rr - g * 26), P(cx + rr + g * 26), P(cy + rr + g * 26)], fill=col + (12,))
+    k.d.ellipse([P(cx - rr), P(cy - rr), P(cx + rr), P(cy + rr)], fill=col)
+    if night:
+        for dx, dy, r2 in ((-120, -90, 62), (96, 40, 46), (-40, 130, 38), (150, -150, 30), (-190, 60, 26)):
+            k.d.ellipse([P(cx + dx - r2), P(cy + dy - r2), P(cx + dx + r2), P(cy + dy + r2)], fill=(238, 228, 190))
+    k.flat = _mix((22, 22, 46), k.sky3[0], 0.14)
+    pts = [(x, 856 - math.exp(-((x - cx) / 560.0) ** 2) * 120 + math.sin(x / 140.0) * 8) for x in range(-30, W + 60, 30)]
+    k.poly(pts + [(W + 30, H + 30), (-30, H + 30)], (0, 0, 0), line=False)
+    parts = composite(place)
+    side = -1 if n % 2 else 1
+    if parts:
+        LANDMARK_FN[parts[1]](k, 960 if parts[1] in WIDE_LANDMARKS else cx + side * 600, 838, 0.9)
+    else:
+        k.tree(cx + side * 600, 838, 1.3)
+    people(k, subject, "c", "far", 734, n)
+    for i in range(18):
+        x = k.r.uniform(0, W)
+        yy = 856 - math.exp(-((x - cx) / 560.0) ** 2) * 120
+        k.stroke([(x, yy + 6), (x + k.r.uniform(-8, 8), yy - k.r.uniform(14, 34))], (0, 0, 0), 4)
+    k.flat = None
+
+
 def pl_cafe(k, front=False):
     if front:
         k.rect(-10, 990, W + 10, H + 20, (176, 128, 100)); k.rect(-10, 968, W + 10, 996, (206, 156, 122), r=6)
@@ -1640,6 +1795,9 @@ HINTS_STD = (
     _row(("快樂", "幸福", "開心", "笑", "甜", "美好", "溫暖", "happy", "smile", "sweet", "warm"), light="day", subject="solo_wave"),
     _row(("我們", "一起", "陪", "身邊", "together"), subject="duo_sit"),
 )
+# card_parts' terrains and landmarks: their words go first (they are longer, so "湖畔" is the lake, not the peaks)
+HINTS_STD = (tuple(_row(words, terrain=name) for name, words in card_parts.TERRAIN_WORDS.items())
+             + tuple(_row(words, landmark=name) for name, words in card_parts.LANDMARK_WORDS.items()) + HINTS_STD)
 ICON_HINTS = tuple(_row(words, prop=name) for name, (_fam, words, _shapes) in card_icons.TABLE.items())
 MOODS = {"tears": "sad", "hearts": "closed", "call": "wow", "ask": "wow", "shooting": "wow", "notes": "closed", "umbrella": "sad",
          "broken": "sad", "raincloud": "sad", "fireworks": "wow", "thought": "closed", "dream": "closed", "guitar": "closed", "suitcase": "sad"}
@@ -1918,6 +2076,7 @@ def tr_plaza(k):
 
 TERRAIN_FN = {"grass": tr_grass, "coast": tr_coast, "skyline": tr_skyline, "town": tr_town, "peaks": tr_peaks, "woods": tr_woods,
               "snow": tr_snow, "wheat": tr_wheat, "river": tr_river, "dunes": tr_dunes, "cliff": tr_cliff, "plaza": tr_plaza}
+TERRAIN_FN.update(card_parts.TERRAIN_FN)          # eighteen more
 TERRAINS = tuple(TERRAIN_FN)
 
 
@@ -2248,6 +2407,7 @@ LANDMARK_FN = {"lighthouse": lm_lighthouse, "ferris": lm_ferris, "windmill": lm_
                "greenhouse": lm_greenhouse, "stage": lm_stage, "carousel": lm_carousel, "snowman": lm_snowman, "scarecrow": lm_scarecrow,
                "signpost": lm_signpost, "well": lm_well, "gazebo": lm_gazebo, "piano": lm_piano, "telescope": lm_telescope,
                "lifeguard": lm_lifeguard, "jetty": lm_jetty, "jet": lm_plane, "tents": lm_tents, "lanterns": lm_torch}
+LANDMARK_FN.update(card_parts.LANDMARK_FN)        # a hundred more, one line of shapes each
 LANDMARKS = tuple(LANDMARK_FN)
 # a landmark that only makes sense on some terrains
 ONLY_ON = {"lighthouse": ("coast", "cliff", "peaks"), "sailboats": ("coast", "cliff", "peaks", "river"), "lifeguard": ("coast",),
@@ -2256,11 +2416,19 @@ ONLY_ON = {"lighthouse": ("coast", "cliff", "peaks"), "sailboats": ("coast", "cl
            "vending": ("town", "skyline", "plaza"), "phonebooth": ("town", "skyline", "plaza", "snow"), "shelter": ("town", "skyline", "plaza", "grass"),
            "stage": ("plaza", "skyline", "grass"), "carousel": ("plaza", "grass", "skyline"), "ferris": ("plaza", "skyline", "coast", "grass", "town")}
 NOT_ON = {"dunes": ("cherry", "maple", "bigtree", "greenhouse", "gazebo", "fountain", "swings", "slide", "castle", "chapel", "cabin", "mailbox", "benchlamp", "piano", "clocktower")}
-WIDE_LANDMARKS = ("trainpass", "farbridge", "hotair", "sailboats", "jet", "tents", "lanterns")
+NOT_ON.update({t: NOT_ON["dunes"] + ("pond", "willow", "flowerbed", "appletree", "hotspring") for t in card_parts.DRY})
+ONLY_ON.update({lm: ONLY_ON[lm] + more for lm, more in card_parts.MORE_ON.items()})
+ONLY_ON.update(card_parts.ONLY_ON)
+WIDE_LANDMARKS = ("trainpass", "farbridge", "hotair", "sailboats", "jet", "tents", "lanterns") + card_parts.WIDE
 
 
 def fits(landmark: str, terrain: str) -> bool:
-    return terrain in ONLY_ON.get(landmark, TERRAINS) and landmark not in NOT_ON.get(terrain, ())
+    return (terrain in ONLY_ON.get(landmark, TERRAINS) and landmark not in NOT_ON.get(terrain, ())
+            and (terrain not in card_parts.TERRAIN_ALLOWS or landmark in card_parts.TERRAIN_ALLOWS[terrain]))
+
+
+def front_fits(front: str, terrain: str) -> bool:
+    return terrain in card_parts.FRONT_ONLY.get(front, (terrain,))
 
 
 def fr_none(k, front):
@@ -2319,14 +2487,28 @@ def fr_puddles(k, front):
 
 FRONT_FN = {"none": fr_none, "flowers": fr_flowers, "grass": fr_grass, "fence": fr_fence, "railing": fr_railing, "lamps": fr_lamps,
             "branches": fr_branches, "rocks": fr_rocks, "puddles": fr_puddles}
+FRONT_FN.update(card_parts.FRONT_FN)              # sixteen more
 FRONTS = tuple(FRONT_FN)
 
 
 def composite(place: str) -> Optional[Tuple[str, str, str]]:
     p = str(place).split(".")
-    if len(p) == 3 and p[0] in TERRAIN_FN and p[1] in LANDMARK_FN and p[2] in FRONT_FN:
+    if len(p) in (3, 4) and p[0] in TERRAIN_FN and p[1] in LANDMARK_FN and p[2] in FRONT_FN and (len(p) == 3 or p[3] in VIEWS):
         return p[0], p[1], p[2]
     return None
+
+
+def view_of(place: str) -> str:
+    p = str(place).split(".")
+    return p[3] if len(p) == 4 and p[3] in VIEWS else ""
+
+
+def with_view(place: str, front: Optional[str] = None, view: str = "") -> str:
+    """The same terrain and landmark seen another way: with another foreground and/or the landmark near,
+    in the middle or small and far off."""
+    t, l, f = composite(place)  # type: ignore[misc]
+    f = front if front in FRONT_FN and front_fits(front, t) else f
+    return f"{t}.{l}.{f}" + (f".{view}" if view in VIEWS and l not in WIDE_LANDMARKS else "")
 
 
 def valid_place(place: object) -> bool:
@@ -2343,8 +2525,20 @@ def paint_place(k, place: str, front: bool = False):
         FRONT_FN[f](k, True)
         return None
     info = TERRAIN_FN[t](k)
-    x = 960 if l in WIDE_LANDMARKS else info.get("x") or k.r.choice((400, 1520))
-    LANDMARK_FN[l](k, x, info["base"], 1.0 if l in WIDE_LANDMARKS else 1.4)
+    view = view_of(place)
+    if l in WIDE_LANDMARKS:
+        LANDMARK_FN[l](k, 960, info["base"], 1.0)
+        FRONT_FN[f](k, False)
+        return {"ground": info["ground"]}
+    side = info.get("x") or k.r.choice((400, 1520))
+    if view == "near":
+        LANDMARK_FN[l](k, 470 if side < 960 else 1450, info["base"] + 44, 2.3)
+    elif view == "centre":
+        LANDMARK_FN[l](k, 960, info["base"] + 10, 1.75)
+    elif view == "small":
+        LANDMARK_FN[l](k, 300 if side < 960 else 1620, info["base"] - 6, 0.8)
+    else:
+        LANDMARK_FN[l](k, side, info["base"], 1.4)
     FRONT_FN[f](k, False)
     return {"ground": info["ground"]}
 

@@ -15,7 +15,10 @@ from typing import Dict, List, Tuple
 COLORS = {"R": (226, 90, 90), "O": (240, 150, 80), "Y": (250, 214, 110), "G": (110, 186, 130), "B": (110, 160, 210),
           "V": (160, 132, 204), "P": (255, 150, 170), "W": (255, 255, 255), "K": (60, 62, 80), "N": (150, 110, 92),
           "S": (255, 224, 204), "C": (255, 246, 226), "T": (96, 170, 176), "L": (190, 226, 250), "A": (170, 176, 190),
-          "D": (250, 206, 96)}
+          "D": (250, 206, 96),
+          # more, for the later icons and for card_parts' landmarks
+          "M": (120, 130, 170), "H": (236, 214, 190), "E": (190, 110, 100), "F": (104, 176, 124), "I": (84, 92, 120),
+          "Q": (255, 196, 214), "U": (86, 170, 214), "J": (206, 156, 122), "X": (240, 160, 90), "Z": (150, 160, 200)}
 
 ICONS = """
 rose|hold|玫瑰,rose|l 50,100 50,45 G 4;p 50,70 30,60 44,76 G;e 50,32 18 18 R;e 50,30 9 9 P
@@ -186,27 +189,43 @@ shootingi|bubble|心願,許個願,許願|p 50,8 60,38 92,40 66,58 76,90 50,70 24
 FAMILIES = ("sky", "side", "hold", "bubble", "rain")
 
 
+def parse_shapes(shapes: str) -> List[tuple]:
+    """The shapes of one line (see the top of this file). "w x0,y0 x1,y1" is a window (lit when it is dark)
+    and "g cx,cy r" a glow that is only there when it is dark; both are for card_parts' landmarks."""
+    prims: List[tuple] = []
+    for sh in shapes.split(";"):
+        t = sh.split()
+        if t[0] == "e":
+            cx, cy = t[1].split(",")
+            prims.append(("e", float(cx), float(cy), float(t[2]), float(t[3]), COLORS[t[4]]))
+        elif t[0] == "r":
+            (x0, y0), (x1, y1) = t[1].split(","), t[2].split(",")
+            prims.append(("r", float(x0), float(y0), float(x1), float(y1), COLORS[t[3]], float(t[4]) if len(t) > 4 else 0.0))
+        elif t[0] == "p":
+            prims.append(("p", [tuple(float(v) for v in q.split(",")) for q in t[1:-1]], COLORS[t[-1]]))
+        elif t[0] == "l":
+            prims.append(("l", [tuple(float(v) for v in q.split(",")) for q in t[1:-2]], COLORS[t[-2]], float(t[-1])))
+        elif t[0] == "w":
+            (x0, y0), (x1, y1) = t[1].split(","), t[2].split(",")
+            prims.append(("w", float(x0), float(y0), float(x1), float(y1)))
+        elif t[0] == "g":
+            cx, cy = t[1].split(",")
+            prims.append(("g", float(cx), float(cy), float(t[2])))
+        else:
+            raise ValueError(sh)
+    return prims
+
+
 def _load() -> Dict[str, Tuple[str, Tuple[str, ...], List[tuple]]]:
+    from . import card_icons_more
     out: Dict[str, Tuple[str, Tuple[str, ...], List[tuple]]] = {}
-    for line in ICONS.splitlines():
-        name, fam, words, shapes = line.split("|")
-        assert fam in FAMILIES and name not in out, line
-        prims: List[tuple] = []
-        for sh in shapes.split(";"):
-            t = sh.split()
-            if t[0] == "e":
-                cx, cy = t[1].split(",")
-                prims.append(("e", float(cx), float(cy), float(t[2]), float(t[3]), COLORS[t[4]]))
-            elif t[0] == "r":
-                (x0, y0), (x1, y1) = t[1].split(","), t[2].split(",")
-                prims.append(("r", float(x0), float(y0), float(x1), float(y1), COLORS[t[3]], float(t[4]) if len(t) > 4 else 0.0))
-            elif t[0] == "p":
-                prims.append(("p", [tuple(float(v) for v in q.split(",")) for q in t[1:-1]], COLORS[t[-1]]))
-            elif t[0] == "l":
-                prims.append(("l", [tuple(float(v) for v in q.split(",")) for q in t[1:-2]], COLORS[t[-2]], float(t[-1])))
-            else:
-                raise ValueError(line)
-        out[name] = (fam, tuple(w for w in words.split(",") if w), prims)
+    for line in ICONS.splitlines() + [ln for ln in card_icons_more.ICONS.splitlines() if ln.strip() and not ln.startswith("#")]:
+        try:
+            name, fam, words, shapes = line.split("|")
+            assert fam in FAMILIES and name not in out
+            out[name] = (fam, tuple(w for w in words.split(",") if w), parse_shapes(shapes))
+        except Exception as e:  # noqa: BLE001
+            raise ValueError(f"icon line: {line!r}: {e!r}") from e
     return out
 
 
@@ -214,17 +233,27 @@ TABLE = _load()
 NAMES = tuple(TABLE)
 
 
-def draw_icon(k, name: str, x: float, y: float, size: float, shine: bool = True) -> None:
-    """Paint the icon with its bottom middle at (x, y), `size` wide and high. shine: its own colours,
-    whatever the light of the card (False: it stands in the card's light like everything else)."""
-    z = size / 100.0
-    ox, oy = x - 50 * z, y - 100 * z
-    for pr in TABLE[name][2]:
+def draw_shapes(k, prims, ox: float, oy: float, z: float, shine: bool = True, lit: bool = False) -> None:
+    """Paint parsed shapes: (ox, oy) is the box's top left corner and z the size of one unit."""
+    for pr in prims:
         if pr[0] == "e":
             k.ell(ox + pr[1] * z, oy + pr[2] * z, pr[3] * z, pr[4] * z, pr[5], e=shine)
         elif pr[0] == "r":
             k.rect(ox + pr[1] * z, oy + pr[2] * z, ox + pr[3] * z, oy + pr[4] * z, pr[5], r=pr[6] * z, e=shine)
         elif pr[0] == "p":
             k.poly([(ox + px * z, oy + py * z) for px, py in pr[1]], pr[2], e=shine)
-        else:
+        elif pr[0] == "l":
             k.stroke([(ox + px * z, oy + py * z) for px, py in pr[1]], pr[2], max(1.5, pr[3] * z), e=shine)
+        elif pr[0] == "w":
+            k.rect(ox + pr[1] * z, oy + pr[2] * z, ox + pr[3] * z, oy + pr[4] * z, (255, 232, 150) if lit else (198, 226, 244), r=0.6 * z, e=lit)
+        elif pr[0] == "g" and lit:
+            x, y, rr = ox + pr[1] * z, oy + pr[2] * z, pr[3] * z
+            for i in range(12, 0, -1):         # (the canvas is twice the size)
+                k.d.ellipse([(x - rr * i / 6) * 2, (y - rr * i / 6) * 2, (x + rr * i / 6) * 2, (y + rr * i / 6) * 2], fill=(255, 238, 170, 11))
+
+
+def draw_icon(k, name: str, x: float, y: float, size: float, shine: bool = True) -> None:
+    """Paint the icon with its bottom middle at (x, y), `size` wide and high. shine: its own colours,
+    whatever the light of the card (False: it stands in the card's light like everything else)."""
+    z = size / 100.0
+    draw_shapes(k, TABLE[name][2], x - 50 * z, y - 100 * z, z, shine)

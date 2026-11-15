@@ -366,8 +366,10 @@ def test_premium_tells_the_song_as_one_story():
     assert len(specs) == len(lines) and len(set(specs)) == len(specs) and all(cardworld.parse(sp) for sp in specs)
     got = [cardworld.parse(sp) for sp in specs]
     ch = [g for g, s in zip(got, secs) if s["sec"] == "chorus"]
-    assert len({g[0] for g in ch}) == 1                          # every chorus at the song's one chorus place
+    # every chorus at the song's one chorus place (one terrain, one landmark), seen in several ways
+    assert len({tuple(g[0].split(".")[:2]) for g in ch}) == 1 and len({g[0] for g in ch}) >= 4 and len({g[5] for g in ch}) >= 4
     assert all(g[3].startswith("duo") for g, s in zip(got, secs) if s["sec"] == "chorus" and s["turn"] == 0 and g[4] not in ("tears",))
+    assert sum(1 for g in got if g[4] == "none") <= len(got) // 4          # few cards with nothing in them
     order = cardstory.ORDER
     turn_light = {}
     for g, s in zip(got, secs):
@@ -377,7 +379,7 @@ def test_premium_tells_the_song_as_one_story():
     ls = [order.index(next(iter(turn_light[t]))) for t in sorted(turn_light)]
     assert ls == sorted(ls) and ls[0] < ls[-1]                   # ... and each one comes later
     assert all(g[4] in ("umbrella", "umbrellai") for g, s in zip(got, secs) if s["sec"] in ("verse", "pre", "chorus", "bridge") and s["k"] == 0)
-    assert got[0][0] == got[-1][0] == st["home"] and got[-1][1] == "night"     # the last card goes back to the first place, at night
+    assert got[0][0] == got[-1][0] == st["home"] and got[-1][1] == "night" and got[-1][5] == "moon"   # the last card: the first place again, at night
     b = next(g for g, (k, t) in zip(got, lines) if t == "沒有下雨的城市")
     assert b[2] == "clear"                                       # "no rain": no rain
     for sp in specs[:3] + specs[-3:]:
@@ -405,3 +407,77 @@ def test_the_page_can_ask_for_the_premium_grade(client, root):
         assert st["grade"] == "premium" and st["world"] == plan["world"] and len(st["cards"]) == len(plan["empty"]) and st["empty"] == []
     assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == len(plan["empty"])
     assert _post(client, "/api/mv/cards/plan", slug=slug, grade="standard").json()["world"]["grade"] == "standard"
+
+
+def test_more_parts_shots_and_ways_to_stand():
+    from app.mvstudio import card_parts, cardstory
+    things = set(cardworld.PROPS[1:]) | set(cardworld.PROPS_STD) | set(card_icons.NAMES)
+    assert len(things) >= 1000 and len(cardworld.TERRAINS) >= 30 and len(cardworld.LANDMARKS) >= 150 and len(cardworld.FRONTS) >= 25
+    assert len(cardworld.SUBJECTS[1:] + cardworld.SUBJECTS_STD + cardworld.SUBJECTS_PREM) >= 40
+    assert len(cardworld.FRAMES + cardworld.FRAMES_STD + cardworld.FRAMES_PREM) >= 12
+    pairs = [(t, lm) for t in cardworld.TERRAINS for lm in cardworld.LANDMARKS if cardworld.fits(lm, t)]
+    assert len(pairs) >= 2000 and all(any(cardworld.fits(lm, t) for t in cardworld.TERRAINS) for lm in cardworld.LANDMARKS)
+    assert all(any(cardworld.fits(lm, t) for lm in ("bigtree", "signpost", "bicycle", "hotair")) for t in cardworld.TERRAINS)
+    # a song's world is never given by chance a landmark that only words ask for
+    for i in range(40):
+        wd = cardworld.make_world(500 + i, ("standard", "premium")[i % 2])
+        assert cardworld.valid_world(wd) and len(wd["places"]) == (10, 16)[i % 2]
+        for pl in wd["places"]:
+            c = cardworld.composite(pl)
+            assert not c or (c[1] not in card_parts.KEYWORD_ONLY and cardworld.fits(c[1], c[0]) and cardworld.front_fits(c[2], c[0])), pl
+    # all of them draw
+    wd = cardworld.make_world(21, "premium")
+    lights, seen = list(cardworld.LIGHTS), set()
+    for i, t in enumerate(card_parts.TERRAIN_FN):
+        lm = next(x for x in ("bigtree", "signpost", "bicycle", "hotair") if cardworld.fits(x, t))
+        im = cardworld.draw(cardworld.card(f"{t}.{lm}.none", lights[i % 7], "clear", "none", "none", "wide", "c", 0), wd, 2)
+        seen.add(im.resize((32, 18)).tobytes())
+    assert len(seen) == len(card_parts.TERRAIN_FN)
+    for i, lm in enumerate(card_parts.LANDMARK_FN):
+        t = [x for x in cardworld.TERRAINS if cardworld.fits(lm, x)][i % 3 % sum(1 for x in cardworld.TERRAINS if cardworld.fits(lm, x))]
+        f = [x for x in cardworld.FRONTS if cardworld.front_fits(x, t)]
+        pl = cardworld.with_view(f"{t}.{lm}.{f[i % len(f)]}", None, ("", "near", "centre", "small")[i % 4])
+        assert cardworld.valid_place(pl) and cardworld.composite(pl)[1] == lm
+        assert cardworld.draw(cardworld.card(pl, lights[i % 7], "clear", "solo_back", "none", "wide", "c", 0), wd, 2).size == (1920, 1080)
+    for i, f in enumerate(card_parts.FRONT_FN):
+        t = next(x for x in cardworld.TERRAINS if cardworld.front_fits(f, x))
+        cardworld.draw(cardworld.card(f"{t}.signpost.{f}", "night" if i % 2 else "day", "clear", "duo_front", "none", "mid", "c", 0), wd, 2)
+    for i, sub in enumerate(cardworld.SUBJECTS_PREM):
+        cardworld.draw(cardworld.card("grass.bigtree.none", "day", "clear", sub, "none", ("mid", "wide", "far")[i % 3], cardworld.POSES[i % 3], i % 2), wd, 2)
+    shots = set()
+    for i, fr in enumerate(cardworld.FRAMES_PREM):
+        for pl, light, sub in (("coast.lighthouse.rocks", "sunset", "duo_hands"), ("classroom", "night", "duo_apart")):
+            sp = cardworld.card(pl, light, "clear", sub, "hearts", fr, "c", i)
+            im = cardworld.draw(sp, wd, 2)
+            assert im.size == (1920, 1080) and im.mode == "RGB" and im.tobytes() == cardworld.draw(sp, wd, 2).tobytes()
+            shots.add(im.resize((32, 18)).tobytes())
+            cardworld.draw(sp, cardworld.make_world(21), 2)          # a simple world draws it as an ordinary card
+    assert len(shots) == 2 * len(cardworld.FRAMES_PREM)
+    k = cardworld.K(wd, "day", 1)
+    for name in card_icons.NAMES:
+        card_icons.draw_icon(k, name, 500, 500, 200)
+    # the longest word wins: the shark, not "fish"; simple worlds read as before
+    lines = [("lyric", t) for t in ("一隻鯊魚游過", "熊貓在吃竹子", "買了一份熱狗", "湖畔的風", "在拜拜的時候", "刻骨銘心的愛")]
+    got = [cardworld.parse(sp) for sp in cardworld.plan_standard(lines, 3, cardworld.make_world(8, "standard"))]
+    assert [g[4] for g in got[:3]] == ["shark", "panda", "hotdog"] and got[3][0].startswith("lake.")
+    assert "temple" not in got[4][0] and got[5][4] != "bone"
+    rows = cardstory._rows()
+    assert cardstory.hints(cardworld._simple("沒有鯊魚"), rows).get("prop") != "shark"
+    simple = cardworld.make_world(8)
+    assert cardworld.plan(lines, 3, simple) == cardworld.plan(lines, 3, simple) and all(
+        cardworld.parse(sp)[4] in cardworld.PROPS and cardworld.parse(sp)[0] in cardworld.PLACES for sp in cardworld.plan(lines, 3, simple))
+    # the standard grade keeps to its own shots and stances
+    long = [("intro", "")] + [("lyric", t) for t in ("雨落在窗外的小巷", "夕陽下我們牽著手", "回憶裡的那年", "月光下跳舞", "亂了頭緒")] * 8 + [("outro", "")]
+    for i in range(4):
+        swd = cardworld.make_world(60 + i, "standard")
+        for sp in cardworld.plan_standard(long, 60 + i, swd):
+            g = cardworld.parse(sp)
+            assert g[3] not in cardworld.SUBJECTS_PREM and g[5] not in cardworld.FRAMES_PREM and not cardworld.view_of(g[0])
+    # premium: many kinds of shot and stance in one song
+    pwd = cardstory.prepare(cardworld.make_world(61, "premium"), long, "")
+    specs = cardstory.plan_premium(long, 61, pwd, "")[0]
+    got = [cardworld.parse(sp) for sp in specs]
+    assert len(set(specs)) == len(specs) and len({g[5] for g in got}) >= 7 and len({g[3] for g in got}) >= 8
+    assert {"memory", "photo"} & {g[5] for g in got} and "moon" in {g[5] for g in got}
+    for a, b in zip(got, got[1:]):
+        assert not (a[5] == b[5] and a[5] in cardworld.FRAMES_STD + cardworld.FRAMES_PREM), (a, b)
