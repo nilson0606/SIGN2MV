@@ -97,6 +97,14 @@ DRESS = {
     "high": ("eagle", "cloudi", "kitei", "birds", "hotairballoon", "airplane"),
     "room": ("cat", "pottedplant", "bookstack", "vase", "lampi", "teddy", "radio", "goldfish", "chair", "bonsai"),
     "night": ("fireflies", "stars", "owl", "fullmoon", "halfmoon", "shooting", "constellation", "lanterni")}
+# [2026-11-16] what may drift into a card whose line names nothing: air and sky, nothing that reads as a thing the
+# song is about (a road sign, a puppy, a lamb said things the words did not)
+AMBIENT = {
+    "water": ("birds", "seagull", "cloudi", "dragonfly"), "town": ("birds", "pigeon", "sparrow"),
+    "green": ("butterfly", "dandelion", "birds", "cloudi", "dragonfly"), "woods": ("leaves", "birds", "butterfly"),
+    "snow": ("snowflake",), "dry": ("birds", "cloudi"), "high": ("cloudi", "birds"), "room": (),
+    "night": ("fireflies", "stars", "constellation", "halfmoon")}
+KEEP_NOT_ALONE = ("umbrella", "bike", "thread", "wings", "dots", "ask", "call", "tears", "frames", "kite")
 KIND = {"water": ("coast", "island", "boardwalk", "harbor", "lake", "river", "reeds", "sea", "pier", "riverbank", "bridge", "waterfall"),
         "town": ("town", "skyline", "plaza", "oldtown", "rooftops", "tracks", "highway", "street", "alley", "market", "busstop", "station", "rooftop", "school", "fair", "stairs"),
         "woods": ("woods", "bamboo", "forest"), "snow": ("snow", "aurora", "snowtown"), "dry": ("dunes", "canyon", "savanna"),
@@ -391,6 +399,7 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
     phrase_rows = [(ws, what) for ws, what in rows if what.get("prop") and what["prop"] not in NOT_A_THING]
     place_rows = [(ws, what) for ws, what in rows if what.get("place") or what.get("terrain") or what.get("landmark")]
     r = random.Random(f"premium:{int(seed)}")
+    rf = random.Random(f"premium-fill:{int(seed)}")      # what fills an empty card, drawn apart from the rest
     lyr = [i for i, (k, _) in enumerate(parts) if k not in ("intro", "outro", "interlude")]
     at = {i: n / max(1, len(lyr)) for n, i in enumerate(lyr)}
     rooms = cw.INDOOR + cw.INDOOR_STD
@@ -499,6 +508,9 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
             weather = "clear"
         dark = light in ("dusk", "night")
         # ---- who
+        g = cardgrammar.read(line, rows)        # [2026-11-16] None without jieba: the cards as before
+        doers = set(str(g["who"]).split("、")) if g and g["who"] else set()
+        both = bool(doers & {"我", "我們"}) and bool(doers & {"你", "他", "她", "你們", "他們", "她們"})   # 我走回從前你往未來飛
         duo_said, third = says(line, duo_words), says(line, third_words)
         hs = h.get("subject")
         if sec == "chorus":
@@ -517,7 +529,10 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
                 subject = "other_back" if k % 2 == 0 else "other_away"
             elif hs:
                 subject = hs
-            elif duo_said:
+            elif both and feel <= -1:
+                subject = ("duo_apart", "duo_backs", "duo_far")[used["sad"] % 3]
+                used["sad"] += 1
+            elif duo_said or both:
                 subject = ("duo_back", "duo_sit", "duo_walk", "duo_ground")[(k + i) % 4]
             elif feel <= -2:
                 subject = SAD_SOLO[used["sad"] % len(SAD_SOLO)]
@@ -680,14 +695,23 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
             shot = "mid"
         if out and out[-1].split("|")[6] == shot and shot in cw.FRAMES_STD + cw.FRAMES_PREM:
             shot = "mid" if shot != "mid" else "wide"       # never the same special shot twice running
-        # ---- a card with nothing of its own takes something that belongs to the place
-        if prop == "none" and shot not in ("hands", "still", "split", "moon") and r.random() < 0.8:
-            pool2 = [x for x in (DRESS["night"] if dark and outdoor and r.random() < 0.5 else DRESS[kind_of(pl)])
-                     if (x in cw.PROPS + cw.PROPS_STD or x in card_icons.TABLE) and x not in recent]
-            if shot == "close":
-                pool2 = [x for x in pool2 if x in cw.PROPS or card_icons.TABLE.get(x, ("",))[0] == "rain"]
-            if pool2:
-                prop = r.choice(pool2)
+        # ---- [2026-11-16] a card whose line names nothing: the song's own thing again (not when it was in one of the
+        # last cards), or air and sky of the place (AMBIENT), or nothing: the people and their faces carry it.
+        # (Before: four in five of these took any thing of the place, a road sign or a lamb, which said things
+        # the words did not.)
+        if prop == "none" and shot not in ("hands", "still", "split", "moon"):
+            roll = rf.random()
+            if (keep and roll < 0.3 and keep[0] not in recent and keep[0] not in KEEP_NOT_ALONE
+                    and (keep[0] in cw.PROPS + cw.PROPS_STD or keep[0] in card_icons.TABLE)
+                    and not (shot == "close" and keep[0] in ("rainbow",))):
+                prop = keep[0]
+            elif roll < 0.7:
+                pool2 = [x for x in (AMBIENT["night"] if dark and outdoor and rf.random() < 0.5 else AMBIENT[kind_of(pl)])
+                         if (x in cw.PROPS + cw.PROPS_STD or x in card_icons.TABLE) and x not in recent]
+                if shot == "close":
+                    pool2 = [x for x in pool2 if x in cw.PROPS or card_icons.TABLE.get(x, ("",))[0] == "rain"]
+                if pool2:
+                    prop = rf.choice(pool2)
         # ---- the place, seen this way or that
         if cw.composite(pl):
             if sec == "chorus" and ch_fronts and pl.split(".")[:2] == st["chorus"].split(".")[:2]:
@@ -705,7 +729,6 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
         # ---- [2026-11-16] the line's grammar (cardgrammar; nothing without jieba): the face it asks for, how many
         # of its thing, and whether a card with one person shows the other one (你 / 她 does it, not 我)
         face, count, who = "", 1, "m"
-        g = cardgrammar.read(line, rows) if kind not in ("intro", "outro", "interlude") else None
         if g:
             face = cardgrammar.FACE_KEY.get(str(g["face"]), "")
             for th in g["things"]:
@@ -714,7 +737,6 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
                     if named and prop in (named, icon_for(named)):
                         count = int(th["n"])
                         break
-            doers = set(str(g["who"]).split("、")) if g["who"] else set()
             if doers and doers <= {"你", "他", "她", "你們", "他們", "她們"} and not duo and "我" not in line:
                 who = "o"
         spec, n = cw.card(pl, light, weather, subject, prop, shot, pos, 0, face, count, who), 0

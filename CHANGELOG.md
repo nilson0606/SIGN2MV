@@ -96,6 +96,12 @@
   for it (回憶都是我, 遇見愛), and a "name" only with such a sign (拍著沙灘; 張開了雙翼 is done). 飛, 問, 淋, 流,
   記, 藏, 等 are verbs. The cards' own words that jieba does not know are things unless made like something done
   (不要了, 等了, 敬你).
+- Picture cards, a line that names nothing (in 100 sampled songs: 43% of the lines): its card no longer takes any
+  thing of the place (a road sign, a puppy, a lamb said things the words did not). It takes the song's own thing
+  again (three in ten, not when it was in one of the last cards), or air and sky of the place (birds, clouds,
+  butterflies, leaves, fireflies, stars; four in ten), or nothing. A line with two doers (我走回從前你往未來飛,
+  聽你分享, 是你給我勇氣) has both people in the card, apart when the line is sad. 默默／悄悄／緩緩 give a calm face,
+  獨自 a lonely one, 忽然 a surprised one.
 
 ## 2026.11.15
 

@@ -614,3 +614,25 @@ def test_a_word_is_a_noun_by_where_it_stands():
     assert "等待" in parts("想要等待 卻害怕失去")[1] and parts("忙著微笑和哭泣")[0] == []        # still done
     assert parts("你張開了雙翼") == (["雙翼"], ["張開"]) and "沙灘" in parts("海浪輕輕拍著沙灘")[0]   # jieba's "names"
     assert parts("把回憶鎖進抽屜")[0] == ["回憶", "抽屜"] and "飛" in parts("我走回從前你往未來飛")[1]
+
+
+def test_a_line_that_names_nothing_gets_no_unrelated_thing():
+    """[2026-11-16] An empty card takes air and sky of its place or the song's own thing, never a road sign or a lamb;
+    and a line with two doers (我… 你…) has both of them in the card."""
+    pytest = __import__("pytest")
+    from app.mvstudio import cardstory as cs
+    nothing = ["明明你就已經站在我面前", "要怎麼說才好", "還要多久才能夠", "其實都沒有關係", "就這樣吧", "也許是我不夠好",
+               "到底該怎麼做", "原來如此而已", "不知道為什麼", "就算這樣也好", "已經沒有什麼", "到最後還是一樣"]
+    parts = [("intro", "x")] + [("lyric", t) for t in nothing * 2] + [("outro", "x")]
+    air = {x for xs in cs.AMBIENT.values() for x in xs}
+    for seed in (3, 11, 29):
+        w = cs.prepare(cardworld.make_world(seed, "premium"), parts, "")
+        specs = cs.plan_premium(parts, seed, w, "")[0]
+        props = {sp.split("|")[5] for sp in specs[1:-1]}
+        assert props <= air | {"none", "dots", "ask"}, props - air
+        assert any(sp.split("|")[5] == "none" for sp in specs[1:-1])
+    pytest.importorskip("jieba")
+    parts = [("lyric", "我知道你會懂"), ("lyric", "來不及感謝是你給我勇氣"), ("lyric", "害怕破壞完美的平衡點")]
+    w = cs.prepare(cardworld.make_world(3, "premium"), parts, "")
+    subj = [sp.split("|")[4] for sp in cs.plan_premium(parts, 3, w, "")[0]]
+    assert subj[0].startswith("duo") and subj[1].startswith("duo") and not subj[2].startswith("duo")
