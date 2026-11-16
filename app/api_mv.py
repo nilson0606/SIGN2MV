@@ -14,20 +14,23 @@ Differences for SIGN2MV:
 from __future__ import annotations
 
 import asyncio
+import copy
 import hashlib
 import json
 import os
 import re
 import shutil
 import subprocess
+import threading
 import time
 import uuid
+from collections import OrderedDict
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from . import quick_lyrics, relisten
 from . import settings as settings_mod
@@ -1317,6 +1320,9 @@ def router(ctx: Context) -> APIRouter:
     def card_grade(body: Dict[str, Any]) -> str:
         return body.get("grade") if body.get("grade") in ("standard", "premium") else "simple"
 
+    card_plans: "OrderedDict[str, Tuple[Any, List[Any]]]" = OrderedDict()
+    card_plan_lock = threading.Lock()
+
     def card_state(proj: Dict[str, Any], grade: str = "simple") -> Dict[str, Any]:
         """What the cards button would do now. "empty": the parts of the timeline that show no photo, each with
         the card chosen for it (the choice goes over the whole timeline, so a card drawn later still differs
@@ -1356,16 +1362,32 @@ def router(ctx: Context) -> APIRouter:
             seed = cards.song_seed(f"{slug}#{rnd}" if rnd else slug)
             # (the song's own last world is among them too, so cards made again do not look like the ones taken out)
             world = cardworld.choose_world(seed, [h["world"] for h in cards.read_history(core.LIBRARY_ROOT)], grade)
-        if world and world.get("grade") == "premium":
-            # the whole song as one story; what stays the same through it (its thing) goes into the world
-            world = cardstory.prepare(world, parts, str(proj.get("title") or ""))
-            picks = [(spec, 0) for spec in cardstory.plan_premium(parts, seed, world, str(proj.get("title") or ""))[0]]
-        elif world and world.get("grade") == "standard":
-            picks = [(spec, 0) for spec in cardworld.plan_standard(parts, seed, world, str(proj.get("title") or ""))]
-        elif world:
-            picks = [(spec, 0) for spec in cardworld.plan(parts, seed, world)]
+        # [2026-11-16] The plan of a song is kept while its lines, its seed and its world stay what they are: the
+        # page asks for one card at a time, and every one of those calls planned the whole song again (a
+        # hundred cards: a hundred plans).
+        title = str(proj.get("title") or "")
+        plan_key = json.dumps([parts, seed, world, title], ensure_ascii=False, sort_keys=True, default=str)
+        with card_plan_lock:
+            kept = card_plans.get(plan_key)
+            if kept:
+                card_plans.move_to_end(plan_key)
+        if kept:
+            world, picks = copy.deepcopy(kept[0]), list(kept[1])
         else:
-            picks = cards.pick(parts, seed)
+            if world and world.get("grade") == "premium":
+                # the whole song as one story; what stays the same through it (its thing) goes into the world
+                world = cardstory.prepare(world, parts, title)
+                picks = [(spec, 0) for spec in cardstory.plan_premium(parts, seed, world, title)[0]]
+            elif world and world.get("grade") == "standard":
+                picks = [(spec, 0) for spec in cardworld.plan_standard(parts, seed, world, title)]
+            elif world:
+                picks = [(spec, 0) for spec in cardworld.plan(parts, seed, world)]
+            else:
+                picks = cards.pick(parts, seed)
+            with card_plan_lock:
+                card_plans[plan_key] = (copy.deepcopy(world), list(picks))
+                while len(card_plans) > 8:
+                    card_plans.popitem(last=False)
         empty: List[Dict[str, Any]] = []
         seen = set()
         for seg, (name, look) in zip(tl, picks):
@@ -1428,7 +1450,7 @@ def router(ctx: Context) -> APIRouter:
             proj = load_project_dict(str(body.get("slug", "")))
         except ProjectNotFound as exc:
             return jerr(404, str(exc))
-        return {"status": "ok", **card_state(proj, card_grade(body))}
+        return {"status": "ok", **(await asyncio.to_thread(card_state, proj, card_grade(body)))}
 
     @r.post("/api/mv/cards/draw")
     async def api_cards_draw(request: Request):
@@ -1445,7 +1467,7 @@ def router(ctx: Context) -> APIRouter:
         out_path = card_slot_path(illust_dir, slot)
         if out_path is None or tone not in cards.TONES:
             return jerr(400, "簡易圖卡的資料不正確")
-        state = card_state(proj, card_grade(body))
+        state = await asyncio.to_thread(card_state, proj, card_grade(body))
         old_print = ""
         if body.get("redraw"):
             hit = next((c for c in state["cards"] if c["slot"] == slot), None)
@@ -1511,7 +1533,7 @@ def router(ctx: Context) -> APIRouter:
             return jerr(404, str(exc))
         return {"status": "ok", "all_scenes": _scene_payload(proj),
                 "instrument_photos": list_instrumental_photos(proj["illust_dir"], proj.get("timeline", [])),
-                **card_state(proj, card_grade(body))}
+                **(await asyncio.to_thread(card_state, proj, card_grade(body)))}
 
     @r.post("/api/mv/scenes/delete_shift")
     async def api_delete_scenes_shift(request: Request):
@@ -1697,8 +1719,35 @@ def router(ctx: Context) -> APIRouter:
                 "project": saved, "all_scenes": _scene_payload(saved)}
 
     # ------------------------------------------------------------------ media
+    # [2026-11-16] Small pictures for the photo wall and the timeline table. They showed every photo as it is
+    # (1920x1080 PNG, some tens of them at once), and decoding those kept the page busy for a second or two.
+    thumbs: "OrderedDict[Tuple[str, int, int, int], bytes]" = OrderedDict()
+    thumb_lock = threading.Lock()
+
+    def thumb_bytes(p: Path, width: int) -> bytes:
+        st = p.stat()
+        key = (str(p), st.st_mtime_ns, st.st_size, width)
+        with thumb_lock:
+            hit = thumbs.get(key)
+            if hit is not None:
+                thumbs.move_to_end(key)
+                return hit
+        from PIL import Image
+        with Image.open(p) as im:
+            im = im.convert("RGB")
+            im.thumbnail((width, width * 4), Image.LANCZOS)
+            buf = BytesIO()
+            im.save(buf, "JPEG", quality=82)
+        data = buf.getvalue()
+        with thumb_lock:
+            thumbs[key] = data
+            while len(thumbs) > 400:
+                thumbs.popitem(last=False)
+        return data
+
     @r.get("/api/mv/media")
-    def serve_media_file(request: Request, path: str, download: bool = False, filename: Optional[str] = None):
+    def serve_media_file(request: Request, path: str, download: bool = False, filename: Optional[str] = None,
+                         thumb: int = 0):
         configure()
         try:
             p = Path(path).resolve()
@@ -1710,6 +1759,12 @@ def router(ctx: Context) -> APIRouter:
             return jerr(404, "找不到檔案")
         if download:
             return FileResponse(p, filename=filename or p.name, media_type="application/octet-stream")
+        if thumb and MEDIA_TYPES[ext].startswith("image/"):
+            try:        # the address carries the photo's time (t=), so a changed photo is another address
+                return Response(thumb_bytes(p, max(80, min(960, int(thumb)))), media_type="image/jpeg",
+                                headers={"Cache-Control": "private, max-age=86400"})
+            except Exception:  # noqa: BLE001  (a picture PIL cannot read: the file as it is)
+                pass
         return media_response(p, request, MEDIA_TYPES[ext], {"Cache-Control": "no-cache"})
 
     return r

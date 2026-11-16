@@ -1732,8 +1732,9 @@
           selectOptionsHtml += `<option value="${idx}" ${isSel}>[Scene ${String(seg.scene).padStart(2, '0')} ${secToMmss(seg.start)}] ${shortTxt}</option>`;   // [SIGN2MV] the card's Scene number, not the line number
         });
 
+        // [SIGN2MV 2026-11-16] a small picture (thumb=): the photo itself is 1920x1080, and tens of those at once kept the page busy
         const imgUrl = sc.exists
-          ? `/api/mv/media?path=${encodeURIComponent(sc.path)}&t=${sc.mtime || Date.now()}`
+          ? `/api/mv/media?path=${encodeURIComponent(sc.path)}&t=${sc.mtime || Date.now()}&thumb=480`
           : '';
 
         const lyricVal = boundSeg ? (boundSeg.text || '').replace(/"/g, '&quot;') : '';
@@ -1742,7 +1743,7 @@
         card.innerHTML = `
           <div class="scene-card-img-wrap" title="點擊或拖曳圖片更換 Scene ${String(sc.scene_id).padStart(2, '0')} 照片">
             ${imgUrl
-              ? `<img src="${imgUrl}" alt="Scene ${sc.scene_id}" draggable="true" title="拖到別張卡片＝把這張照片移到那個位置（中間的照片往旁邊讓一格，歌詞不動）；點一下＝換照片" ondragstart="sceneDragStart(event, ${sc.scene_id})" ondragend="sceneDragEnd()" onclick="triggerUploadScene(${sc.scene_id})" />`
+              ? `<img src="${imgUrl}" loading="lazy" decoding="async" alt="Scene ${sc.scene_id}" draggable="true" title="拖到別張卡片＝把這張照片移到那個位置（中間的照片往旁邊讓一格，歌詞不動）；點一下＝換照片" ondragstart="sceneDragStart(event, ${sc.scene_id})" ondragend="sceneDragEnd()" onclick="triggerUploadScene(${sc.scene_id})" />`
               : `<div class="scene-card-empty" onclick="triggerUploadScene(${sc.scene_id})"><span>📥 點擊或拖曳放入照片</span><span>Scene ${String(sc.scene_id).padStart(2, '0')} (自動轉 1920x1080)</span></div>`
             }
             <label class="scene-card-overlay-badge" style="display:inline-flex; align-items:center; gap:5px; cursor:pointer;" onclick="event.stopPropagation()" title="勾選此張照片以進行批次刪除">
@@ -1848,7 +1849,7 @@
       grid.innerHTML = '';
       items.forEach(({ seg, idx, no }) => {
         const key = instKey(seg), own = !!(key && instrumentPhotos[key]);
-        const url = segPhotoUrl(seg);
+        const url = segPhotoUrl(seg) && (segPhotoUrl(seg) + '&thumb=480');     // [SIGN2MV 2026-11-16] a small picture here too
         const isIv = !(seg.type === 'intro' || seg.type === 'outro');
         const label = seg.type === 'intro' ? '🌟 前奏' : (seg.type === 'outro' ? '🎬 尾奏' : `🎻 間奏 ${no}`);
         const locked = !!seg.locked;
@@ -3221,7 +3222,7 @@
         const tr = document.createElement('tr');
         const scInfo = currentScenesMap[seg.scene];
         const thumbUrl = scInfo && scInfo.exists
-          ? `/api/mv/media?path=${encodeURIComponent(scInfo.path)}&t=${scInfo.mtime || Date.now()}`
+          ? `/api/mv/media?path=${encodeURIComponent(scInfo.path)}&t=${scInfo.mtime || Date.now()}&thumb=480`
           : '';
 
         tr.innerHTML = `
@@ -3237,7 +3238,7 @@
           <td>
             <div style="display:flex; align-items:center; gap:8px;">
               ${thumbUrl
-                ? `<img class="scene-thumb" src="${thumbUrl}" title="點擊更換 Scene ${seg.scene} 分鏡圖" onclick="triggerUploadScene(${seg.scene})" />`
+                ? `<img class="scene-thumb" loading="lazy" decoding="async" src="${thumbUrl}" title="點擊更換 Scene ${seg.scene} 分鏡圖" onclick="triggerUploadScene(${seg.scene})" />`
                 : `<div class="scene-thumb" style="display:flex;align-items:center;justify-content:center;font-size:11px;color:#9ca9be;" onclick="triggerUploadScene(${seg.scene})">上傳圖</div>`
               }
               <div>

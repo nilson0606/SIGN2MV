@@ -44,7 +44,13 @@ def shown_lines(lines: list, lead: float) -> list[tuple[float, float, str]]:
             rows.append([max(0.0, float(x["start"]) - lead), float(x["end"]), text])
     for a, b in zip(rows, rows[1:]):
         a[1] = min(a[1], b[0])
-    return [(st, max(en, st + MIN_SHOW_S), tx) for st, en, tx in rows]
+    out = []
+    for n, (st, en, tx) in enumerate(rows):
+        en = max(en, st + MIN_SHOW_S)
+        if n + 1 < len(rows) and rows[n + 1][0] > st:     # [2026-11-16] the shortest time too stops where the next line comes
+            en = min(en, rows[n + 1][0])                  # (two lines 0.2 s apart stood on top of each other)
+        out.append((st, en, tx))
+    return out
 
 
 def ass_text(lines: list[tuple[float, float, str]], family: str, font_path: str, w: int, h: int, style: str) -> str:

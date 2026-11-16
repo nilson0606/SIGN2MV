@@ -236,6 +236,9 @@ def relisten(data: dict, device: str) -> None:
         st, et = float(w["start"]), float(w["end"])
         say(10 + 85 * n / len(wins), f"🎙️ 空檔重聽 {n + 1}/{len(wins)}：{_clock(st)}–{_clock(et)}", str(w.get("prompt", ""))[:26])
         clip = audio[int(st * 16000):int(et * 16000)]
+        if clip.size < 1600:        # [2026-11-16] under a tenth of a second (a window at the very end of the song): nothing to hear
+            out.append({"start": st, "end": et, "prompt": w.get("prompt", ""), "segments": []})
+            continue
         opts = {"beam_size": 5, "word_timestamps": True, "vad_filter": False, "condition_on_previous_text": False,
                 "initial_prompt": str(w.get("prompt") or "")[:220] or None}
         try:

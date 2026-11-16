@@ -18,6 +18,7 @@ whole song first:
 """
 from __future__ import annotations
 
+import functools
 import random
 import re
 from collections import Counter
@@ -203,13 +204,55 @@ def sections(parts: Sequence[Tuple[str, str]], title: str = "") -> List[Dict[str
 
 
 # ---------------------------------------------------------------------------------------- reading a line
+# [2026-11-16] A word of one character is found inside longer words, and in some of those it is not the thing its
+# card shows: 抱 in 抱歉 drew two people in each other's arms, 海 in 腦海 a shore, 手 in 手機 two hands held.
+# Here are the longer words in which a one-character word does not count (from the words of 500 sampled songs
+# that hold such a character, read through by hand). Simplified characters, as the lines are when they are read.
+NOT_INSIDE = {
+    "海": "人海 四海 脑海 苦海 沧海桑田 法海 上海 海报 学海 火海 宦海 海量 海关 海派",
+    "浪": "浪费 放浪 浪漫 浪子 浪荡", "山": "江山 关山 靠山 山寨", "湖": "江湖", "雪": "昭雪 雪耻 风花雪月",
+    "田": "心田 沧海桑田 丹田", "河": "拔河", "云": "风云 云游 云云", "寄": "寄望 寄托",
+    "追": "追求 追究 追问 追寻 追回 追忆 追悔 追随", "奔": "奔波 疲于奔命 投奔",
+    "抱": "抱歉 抱怨 抱负 抱恨", "锁": "封锁 连锁 锁定", "醉": "麻醉", "弹": "子弹 炸弹 弹性 反弹 导弹 弹指",
+    "拍": "拍子 节拍 拍卖 合拍 拍马", "门": "部门 专门 热门 窍门 门神 门当户对 冷门 门路 门派 门徒 掌门",
+    "潮": "人潮 思潮 潮流 高潮 新潮 低潮 热潮 心潮", "熊": "熊熊", "狗": "走狗 狗血", "蜂": "蜂拥", "攀": "攀比 高攀",
+    "星": "明星 歌星 巨星 影星 星期 救星", "晚": "早晚 一天到晚 晚辈 晚餐", "窗": "同窗 橱窗",
+    "树": "玉树临风 玉树 树立 建树", "林": "林黛玉 武林 少林 林立", "井": "井井有条 市井 背井离乡 天井",
+    "麦": "麦克风 麦克", "书": "书记 秘书 证书 文书 书法 说明书",
+    "花": "花费 花钱 花样 花心 花言巧语 眼花 花车 风花雪月",
+    "路": "路人 出路 思路 网路 路用 套路 门路 销路 路线", "走": "带走 送走 溜走 滑走 夺走 偷走 抢走 拿走 吹走 赶走 冲走",
+    "肩": "擦肩而过", "牵": "挂牵 牵挂 牵动 牵引 牵连 牵强",
+    "手": "好手 选手 对手 着手 手势 手机 歌手 高手 杀手 手段 手续 手法 手艺 新手 老手 下手 动手 出手 插手 顺手 随手 一手 "
+          "亲手 手下 手足 棘手 帮手 凶手 拿手 入手 手工 手术 手表 手套 手册 手帕 手枪 手电",
+    "靠": "可靠 靠背 靠谱 牢靠 靠山", "离": "离谱 迷离 扑朔迷离 离奇 支离破碎 陆离",
+    "等": "何等 等等 平等 等于 等级 相等 同等 等闲 上等 等同",
+    "笑": "可笑 嘲笑 笑话 玩笑 哭笑不得 耻笑 冷笑 讥笑 取笑 见笑",
+    "飞": "飞快 飞速 飞涨 分飞 劳燕分飞 灰飞烟灭 不翼而飞",
+    "愿": "愿意 宁愿 甘愿 情愿 心甘情愿 愿不愿 甘心情愿 一厢情愿 不愿 自愿 志愿",
+    "他": "其他 他乡 他日 吉他 他方 他年", "爱": "可爱 爱好 爱国",
+    "心": "小心 中心 核心 点心 耐心 专心 用心 决心 信心 细心 粗心 狠心 忍心 甘心 存心 无心 费心 操心 灰心 恶心 野心 重心 "
+          "手心 掌心 背心 心理 心态 心机 心得 心血 心虚 心急 心烦 心慌 心地 心眼 心目 心甘情愿 甘心情愿",
+    "信": "自信 信心 不信 信念 信任 信仰 信用 迷信 确信 坚信 信号 信赖 置信 诚信 威信 可信 深信 轻信 信奉",
+    "写": "改写 写照 描写 写真", "痛": "痛快", "苦": "辛苦 艰苦 苦心 苦干 刻苦 苦力 苦工 苦功",
+    "风": "风光 风情 风骚 风格 风度 风采 风流 风险 风趣 风味 作风 威风 风云 风声 风气 风俗 风波 风尘 风水 风头 风貌 风范 "
+          "风靡 风凉 风华 风韵 风姿 伤风 风花雪月 玉树临风 风骨 风月",
+    "缘": "边缘 缘故 缘由 血缘", "问": "问候 问好 学问 顾问 访问 慰问 问世",
+    "说": "传说 小说 说明 说服 据说 学说 再说 如果说 虽说 比如说 说不定 难说 说法 演说 游说",
+    "话": "的话 笑话 神话 童话 听话 佳话",
+}
+_INSIDE: Dict[str, List[Tuple[str, int]]] = {
+    w: [(c, off) for c in cs_.split() for off in range(len(c)) if c[off] == w] for w, cs_ in NOT_INSIDE.items()}
+
+
 def _found(line: str, w: str) -> List[int]:
     at, out = 0, []
+    inside = _INSIDE.get(w, ()) if len(w) == 1 else ()
     while True:
         j = line.find(w, at)
         if j < 0:
             return out
-        out.append(j)
+        if not any(j >= off and line.startswith(c, j - off) for c, off in inside):
+            out.append(j)
         at = j + 1
 
 
@@ -226,9 +269,16 @@ def _negated(line: str, j: int) -> bool:
     return " " not in before and any(w in before for w in _NEG)
 
 
+@functools.lru_cache(maxsize=2048)
+def _latin(line: str) -> Tuple[str, ...]:
+    """The line's words in Latin letters. Kept per line: says() and said() are asked about a line once for
+    every row of words (some 1,800 of them), and making this list each time was half of a plan's time."""
+    return tuple("".join(ch if ch.isalpha() and ch.isascii() else " " for ch in line).split())
+
+
 def says(line: str, words: Sequence[str]) -> bool:
     """Whether a (simplified) line says one of the words, not right after a no / never."""
-    toks = "".join(ch if ch.isalpha() and ch.isascii() else " " for ch in line).split()
+    toks = _latin(line)
     for w in words:
         if w.isascii():
             if any(t == w and (n == 0 or toks[n - 1] not in NEG_EN) for n, t in enumerate(toks)):
@@ -240,7 +290,7 @@ def says(line: str, words: Sequence[str]) -> bool:
 
 def said(line: str, words: Sequence[str]) -> int:
     """The length of the longest of the words the (simplified) line says, not right after a no / never; 0: none."""
-    toks = "".join(ch if ch.isalpha() and ch.isascii() else " " for ch in line).split()
+    toks = _latin(line)
     best = 0
     for w in words:
         if len(w) <= best:
@@ -520,6 +570,9 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
         both = bool(doers & {"我", "我們"}) and bool(doers & {"你", "他", "她", "你們", "他們", "她們"})   # 我走回從前你往未來飛
         duo_said, third = says(line, duo_words), says(line, third_words)
         hs, hs_more = h.get("subject"), more.get("subject")      # a pose the rows know; one the further words give
+        if "我" in line and (third or (hs or "").startswith("other")):
+            third, both = False, True       # [2026-11-16] 她說我不懂: the two of them, not the other one's back alone
+            hs = None if (hs or "").startswith("other") else hs
         if sec == "chorus":
             subject = CHORUS[step][k % len(CHORUS[step])]
             if feel <= -2 or hs == "duo_apart":      # sung sad: the two of them apart, or one of them alone
@@ -581,7 +634,10 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
                 turns[group] += 1
                 if not (dark and (prop.startswith("e_sun") or prop in ("sun", "sunrise", "rays", "sunriseclock"))):
                     break           # no sun in a night card
-        if keep and (k == 0 or says(line, keep[2])):
+        # the song's own thing: where the line says it, and at the head of a section, unless that line names a
+        # thing of its own ([2026-11-16] before, the first line of every section lost its thing to it)
+        own = h.get("prop") not in (None, "none", "dots", "ask", "call") or more.get("kind") == "noun"
+        if keep and (says(line, keep[2]) or (k == 0 and not own)):
             prop = keep[0]
         duo = subject.startswith("duo")
         if sec == "chorus" and duo and prop in ("bike", "dots", "ask", "call"):

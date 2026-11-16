@@ -119,6 +119,17 @@
   has 我 (媽媽牽著我的手), alone otherwise; the child is the lead made small, so 童年 is the lead as a child. 女孩／姑娘
   and 男孩／男人 show the girl or the boy of the two. A card's tenth field says who (`-.1.a`); a version before this
   one does not read such a card, so after going back to an older version the cards are drawn again.
+- Picture cards are drawn faster: a song was planned again for every single card (a hundred cards: a hundred
+  plans, some four seconds each, on the server's main loop). The plan is kept while the song's lines, seed and
+  world stay what they are, it is made off the main loop, and making it takes an eighth of the time.
+- Picture cards: a one-character word no longer counts inside a longer word where it means something else
+  (抱 in 抱歉 drew two people in each other's arms, 海 in 腦海 a shore, 手 in 手機 two hands held; 389 such words
+  for 54 characters, from the 500 sampled songs). 她／他 and 我 in one line: both people, not the other one's
+  back alone. The first line of a section keeps a thing of its own instead of the song's thing.
+- MV page: the photo wall, the intro/outro panel and the timeline table show small pictures (`thumb=480`, loaded
+  as they come into view) instead of every photo at 1920x1080, which kept the page busy for a second or two.
+- A window of under a tenth of a second is skipped when gaps are listened to again; in the lyric picture a line's
+  shortest time on screen stops where the next line comes (two lines 0.2 s apart stood on top of each other).
 - Picture cards, a second round of words (62 more groups: 床, 病, 壓力, 婚禮, 城堡…; 帶, 藏, 停, 穿越, 轉, 破, 守, 盛開,
   握, 慶祝…; 清楚, 滿, 小, 傻, 荒涼, 短暫, 繁華, 坎坷, 到底, 漸漸, 完全, 最後…): about 1,200 words in 199 groups now.
 

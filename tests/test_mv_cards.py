@@ -700,3 +700,43 @@ def test_a_mother_a_child_and_the_others_in_a_card():
             assert whos[3] == ("m" if girl else "o")
         if not specs[4].split("|")[4].startswith("duo"):
             assert whos[4] == ("o" if girl else "m")
+
+
+def test_one_plan_for_all_the_cards_of_a_song_and_small_pictures(client, root, monkeypatch):
+    """[2026-11-16] Drawing a song's cards one after the other plans the song once, not once for every card; and
+    the photo wall can ask for a small picture of a photo."""
+    from app.mvstudio import cardstory as cs
+    sid, slug, pdir = _aligned_project(client, root)
+    calls = []
+    real = cs.plan_premium
+    monkeypatch.setattr(cs, "plan_premium", lambda *a, **k: (calls.append(1), real(*a, **k))[1])
+    plan = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium").json()
+    for e in plan["empty"]:
+        assert _post(client, "/api/mv/cards/draw", slug=slug, slot=e["slot"], tone="fresh", grade="premium").status_code == 200
+    assert len(plan["empty"]) >= 3 and len(calls) <= 2, calls      # one before the first card, one with the world as it was kept
+    done = _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()
+    path = next(p for p in sorted(str(x) for x in (pdir / "scenes").iterdir()) if p.endswith(".png"))
+    full = client.get("/api/mv/media", params={"path": path})
+    small = client.get("/api/mv/media", params={"path": path, "thumb": 480})
+    assert full.headers["content-type"] == "image/png" and small.headers["content-type"] == "image/jpeg"
+    assert Image.open(io.BytesIO(small.content)).size == (480, 270) and len(small.content) < len(full.content) / 3
+    assert small.content == client.get("/api/mv/media", params={"path": path, "thumb": 480}).content and done["cards"]
+
+
+def test_a_one_character_word_is_not_found_inside_another_word():
+    """[2026-11-16] 抱 in 抱歉 drew two people in each other's arms, 海 in 腦海 a shore, 手 in 手機 two hands held."""
+    from app.mvstudio import cardstory as cs
+    rows = cs._rows()
+    h = lambda t: cs.hints(cardworld._simple(t), rows)  # noqa: E731
+    assert "subject" not in h("真的很抱歉") and h("緊緊抱著你")["subject"] == "duo_hug"
+    assert "place" not in h("在我腦海裡") and h("一個人看海")["place"] == "sea"
+    assert h("手機沒有響").get("subject") != "duo_hands" and h("牽著你的手")["subject"] == "duo_hands"
+    assert h("風光明媚") == {} and h("風吹過")["prop"] == "leaves" and h("可笑的我") == {} and h("小心翼翼") == {}
+    assert h("我的心")["prop"] == "hearts" and h("他彈吉他")["prop"] == "guitar"
+    # every word of the list holds the character it is listed under
+    assert all(w in c for w, cs_ in cs.NOT_INSIDE.items() for c in cs_.split())
+    # 她 and 我 in one line: both of them; the first line of a section keeps a thing of its own
+    parts = [("lyric", t) for t in ["她說我不懂", "寫一封信給你", "雨一直下", "雨還在下", "雨停了"]]
+    w = cs.prepare(cardworld.make_world(4, "premium"), parts, "雨")
+    specs = cs.plan_premium(parts, 4, w, "雨")[0]
+    assert specs[0].split("|")[4].startswith("duo")

@@ -288,3 +288,13 @@ def test_quick_mv_subtitles_are_twice_the_old_size_and_wrapped():
     assert "\\N" in events[1] and events[1].replace("\\N", "") == long_line     # rows instead of running off the sides
     small = mv_quick.lyrics_ass(lines, "F", "720p", font).splitlines()
     assert next(x for x in small if x.startswith("Style: MV_Lyric,")).split(",")[2] == "61"
+
+
+def test_a_line_never_stays_into_the_next_one():
+    """[2026-11-16] The shortest time on screen (0.3 s) stops where the next line comes: two lines 0.2 s apart
+    stood on top of each other."""
+    import lyric_video
+    rows = lyric_video.shown_lines([{"start": 10, "end": 10.1, "text": "a"}, {"start": 10.2, "end": 12, "text": "b"},
+                                    {"start": 12.0, "end": 12.1, "text": "c"}], 0)
+    assert rows == [(10.0, 10.2, "a"), (10.2, 12.0, "b"), (12.0, 12.3, "c")]
+    assert all(a[1] <= b[0] for a, b in zip(rows, rows[1:]))
