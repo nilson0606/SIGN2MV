@@ -622,7 +622,7 @@ def test_a_line_that_names_nothing_gets_no_unrelated_thing():
     pytest = __import__("pytest")
     from app.mvstudio import cardstory as cs
     nothing = ["明明你就已經站在我面前", "要怎麼辦才好", "還要多久才能夠", "其實都沒有關係", "就這樣吧", "也許是我不夠好",
-               "到底該怎麼做", "原來如此而已", "不知道為什麼", "就算這樣也好", "已經沒有什麼", "到最後還是一樣"]
+               "原來如此而已", "那又怎麼樣呢", "就算這樣也好", "已經沒有什麼", "嗯就是這樣", "其實我都知道"]
     parts = [("intro", "x")] + [("lyric", t) for t in nothing * 2] + [("outro", "x")]
     air = {x for xs in cs.AMBIENT.values() for x in xs}
     for seed in (3, 11, 29):
@@ -669,3 +669,34 @@ def test_more_words_and_more_than_one_picture_for_a_word():
     parts = [("lyric", t) for t in ["星星掛在天上", "那顆星星還亮著", "數著星星等你", "星星不說話"]]
     w = cs.prepare(cardworld.make_world(5, "premium"), parts, "星星")
     assert {sp.split("|")[5] for sp in cs.plan_premium(parts, 5, w, "星星")[0]} == {"stars"}
+
+
+def test_a_mother_a_child_and_the_others_in_a_card():
+    """[2026-11-16] More people than the song's two (cardworld.CAST): they are in a card's tenth field."""
+    pytest = __import__("pytest")
+    from app.mvstudio import cardstory as cs
+    spec = cardworld.card("field", "day", "clear", "duo_walk", "none", "mid", "c", 0, who="a")
+    assert spec.endswith("|-.1.a") and cardworld.extras(spec) == ("", 1, "a") and cardworld.parse(spec)
+    assert cardworld.card("field", "day", "clear", "solo_front", "none", "mid", "c", 0, who="x").count("|") == 8      # no such one
+    w = cardworld.make_world(8, "premium")
+    cast = cardworld.cast_people(w)
+    assert set(cast) == {"mother", "father", "grandma", "grandpa", "child"} and cast["child"]["scale"] < 0.7
+    assert cast["child"]["hair"] == w[w["lead"]]["hair"] and cast == cardworld.cast_people(w)          # the lead, small; the same every time
+    for who in "afegcp":            # each of them can be drawn, alone and beside the lead
+        for subject in ("solo_front", "duo_hands"):
+            im = cardworld.draw(cardworld.card("field", "day", "clear", subject, "none", "mid", "c", 0, who=who), w, 1)
+            assert im.size == (1920, 1080)
+    pytest.importorskip("jieba")
+    lines = ["媽媽牽著我的手", "爺爺說過的故事", "父母站在月台", "那個女孩沒有回頭", "那個男孩還在等"]
+    parts = [("lyric", t) for t in lines]
+    for seed in (8, 9, 10, 11):
+        w = cs.prepare(cardworld.make_world(seed, "premium"), parts, "")
+        specs = cs.plan_premium(parts, seed, w, "")[0]
+        whos = [cardworld.extras(sp)[2] for sp in specs]
+        assert whos[0] == "a" and specs[0].split("|")[4].startswith("duo") and whos[1] == "g"
+        assert whos[2] == "p" and specs[2].split("|")[4].startswith("duo")
+        girl = w["lead"] == "girl"
+        if not specs[3].split("|")[4].startswith("duo"):
+            assert whos[3] == ("m" if girl else "o")
+        if not specs[4].split("|")[4].startswith("duo"):
+            assert whos[4] == ("o" if girl else "m")

@@ -120,6 +120,37 @@ def make_world(seed: int, grade: str = "simple") -> Dict[str, Any]:
     return wd
 
 
+# [2026-11-16] More people than the song's two: a mother, a father, a grandmother, a grandfather, a child. They are
+# made from the world as it is (no new field in it, so a song's world from before has them too) and stand where
+# "the other one" stands. The child looks like the lead, small: 童年 is the lead as a child.
+CAST = {"a": "mother", "f": "father", "e": "grandma", "g": "grandpa", "c": "child", "p": "mother"}
+GREY = (206, 206, 214)
+
+
+def cast_people(world: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    r = random.Random(f"cast:{world.get('hue')}:{world['girl']['hair']}:{world['boy']['hair']}:{world.get('line')}")
+    girl, boy, lead = world["girl"], world["boy"], world[world["lead"]]
+
+    def cloth():
+        return list(r.choice(LIGHT_CLOTH)), list(r.choice(CLOTH)), list(r.choice(CLOTH))
+    out = {}
+    top, low, ecol = cloth()
+    out["mother"] = {"kind": "girl", "hair": list(girl["hair"]), "cut": "bun", "wear": "skirt", "top": top, "low": low, "extra": "none",
+                     "extra_col": ecol, "scale": 1.04, "head": 0.94}
+    top, low, ecol = cloth()
+    out["father"] = {"kind": "boy", "hair": list(boy["hair"]), "cut": "short", "wear": "jacket", "top": top, "low": low, "extra": "glasses",
+                     "extra_col": ecol, "scale": 1.08, "head": 0.92}
+    top, low, ecol = cloth()
+    out["grandma"] = {"kind": "girl", "hair": list(GREY), "cut": "bun", "wear": "dress", "top": top, "low": low, "extra": "glasses",
+                      "extra_col": ecol, "scale": 0.93, "head": 1.0}
+    top, low, ecol = cloth()
+    out["grandpa"] = {"kind": "boy", "hair": list(GREY), "cut": "short", "wear": "tee", "top": top, "low": low, "extra": "hat",
+                      "extra_col": ecol, "scale": 0.96, "head": 1.0}
+    out["child"] = {**lead, "kind": world["lead"], "extra": "none" if lead.get("extra") in ("glasses", "scarf") else lead.get("extra"),
+                    "scale": 0.62, "head": 1.3, "tall": 0.0}
+    return out
+
+
 def world_distance(a: Dict[str, Any], b: Dict[str, Any]) -> float:
     """How unlike two songs' worlds are (larger: more unlike)."""
     d = 0.0
@@ -268,13 +299,14 @@ def _hints(line: str, rows, longest: bool = False) -> Dict[str, str]:
 # card with one person shows ("m" the song's lead, "o" the other one). Cards without the field are as before.
 FACES = ("smile", "sad", "closed", "wow", "laugh", "wry", "tear", "cry", "angry", "shy", "love", "worry", "miss", "lonely",
          "sleepy", "firm")
-_EXTRA = re.compile(r"^(-|[a-z]+)\.([1-5])\.([mo])$")
+_EXTRA = re.compile(r"^(-|[a-z]+)\.([1-5])\.([moafegcp])$")
 
 
 def card(place, light, weather, subject, prop, frame, pos, n, face: str = "", count: int = 1, who: str = "m") -> str:
     spec = "|".join(("w2", place, light, weather, subject, prop, frame, pos, str(int(n))))
-    if (face in FACES) or count > 1 or who == "o":
-        spec += f"|{face if face in FACES else '-'}.{max(1, min(5, int(count)))}.{'o' if who == 'o' else 'm'}"
+    who = who if who == "o" or who in CAST else "m"
+    if (face in FACES) or count > 1 or who != "m":
+        spec += f"|{face if face in FACES else '-'}.{max(1, min(5, int(count)))}.{who}"
     return spec
 
 
@@ -397,7 +429,8 @@ class K:
         self.flat = None      # set: everything is painted in this one colour (people against the light)
         self.mood = "smile"   # the faces: FACES
         self.count = 1        # how many of the card's thing (card_icons.draw_icon)
-        self.who = "m"        # "o": a card with one person shows the other one
+        self.who = "m"        # "o": a card with one person shows the other one; a CAST letter: a mother, a child...
+        self.cast = cast_people(world) if "girl" in world and "boy" in world else {}
         self.rim = 0          # -1 / 1: light from the left / right draws a bright edge on people
         self.std = world.get("grade") in ("standard", "premium")
 
@@ -910,12 +943,13 @@ ELBOWS = {"hips": ((-88, -176), (88, -176)), "chin": (None, (72, -168)), "cover"
 def figure(k, who, x, y, s, face="front", arms="down", sit=False, walk=False, shadow=True):
     """One of the song's two people, feet at (x, y). Returns where the head and hands are.
     sit: True on a seat (or crouching), 2 on the ground; walk: True a step, 2 a run."""
-    p = k.w[who]
-    girl = who == "girl"
-    hd = float(k.w["head"])
+    p = k.w[who] if who in k.w else k.cast[who]
+    girl = p.get("kind", who) == "girl"
+    s = s * float(p.get("scale", 1))
+    hd = float(k.w["head"]) * float(p.get("head", 1))
     hair, top, low, ecol = tuple(p["hair"]), tuple(p["top"]), tuple(p["low"]), tuple(p["extra_col"])
     cut, wear, extra = p["cut"], p["wear"], p["extra"]
-    tall = float(k.w.get("tall", 0) or 0)
+    tall = float(k.w.get("tall", 0) or 0) * float(p.get("tall", 1))
     b = y + ((92 if sit == 2 else 48) * s if sit else -tall * s)     # where the feet would be standing: the body hangs from here
     hy, hr = b - (222 + 38 * hd) * s, 46 * hd * s
     back = face == "back"
@@ -1054,7 +1088,13 @@ def people(k, subject, pos, frame, ground, n):
     """Put the people of the subject in the picture. Returns [lead, other] (either can be None)."""
     lead = k.w["lead"]
     other = "boy" if lead == "girl" else "girl"
-    if k.who == "o" and not subject.startswith("duo"):
+    if k.who in CAST:                  # a mother, a child...: where the other one stands; alone when the card has one person
+        other = CAST[k.who]
+        if k.who == "p":               # both parents
+            lead, other = "mother", "father"
+        elif not subject.startswith("duo"):
+            lead, other = other, lead
+    elif k.who == "o" and not subject.startswith("duo"):
         lead, other = other, lead      # the line is about the other one
     s = {"far": 0.5, "wide": 0.82, "mid": 1.14, "close": 2.2}[frame]
     y = 1130 if frame == "close" else ground + {"far": 2, "wide": 6}.get(frame, 28)

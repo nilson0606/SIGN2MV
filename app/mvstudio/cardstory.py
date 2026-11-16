@@ -549,6 +549,11 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
             elif feel >= 2:
                 subject = GLAD_SOLO[used["glad"] % len(GLAD_SOLO)]
                 used["glad"] += 1
+        cast = more.get("who", "")       # [2026-11-16] a mother, a father, a child... (cardworld.CAST), or G / B
+        if cast == "p" and not subject.startswith("duo"):
+            subject = ("duo_front", "duo_sit", "duo_walk")[(k + i) % 3]
+        elif cast in cw.CAST and not subject.startswith("duo") and sec != "chorus" and ("我" in line or both):
+            subject = ("duo_walk", "duo_sit", "duo_face", "duo_hug")[(k + i) % 4]      # 媽媽牽著我: the two of them
         if subject == "duo_stars" and not dark:
             subject = "duo_ground"
         # ---- what is in it
@@ -766,6 +771,11 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
                         break
             if doers and doers <= {"你", "他", "她", "你們", "他們", "她們"} and not duo and "我" not in line:
                 who = "o"
+        if cast in cw.CAST:
+            if subject != "none" and (cast != "p" or duo):
+                who = cast
+        elif cast in ("G", "B") and not duo and (cast == "G") != (world["lead"] == "girl"):
+            who = "o"               # 那個女孩: the girl of the two, when the lead is the boy
         spec, n = cw.card(pl, light, weather, subject, prop, shot, pos, 0, face, count, who), 0
         while spec in seen:
             n += 1

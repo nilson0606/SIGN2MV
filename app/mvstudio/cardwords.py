@@ -27,7 +27,7 @@ NOUNS: Tuple[Tuple[Tuple[str, ...], Tuple[str, ...]], ...] = (
     (("往事", "舊事", "過去", "昨天", "當初", "當年"), ("yesterday", "photoframe", "album", "phoneold", "gramophone")),
     (("明天", "未來", "將來"), ("tomorrow", "sunrise", "telescopehand", "arrowright")),
     (("青春", "年少", "年輕"), ("kite", "pinwheel", "bicyclei", "skateboard")),
-    (("童年", "小時候", "孩子", "小孩", "寶寶", "兒時"), ("teddy", "rockinghorse", "pinwheel", "kitei", "toycar")),
+    (("童年", "小時候", "兒時", "玩具"), ("teddy", "rockinghorse", "pinwheel", "kitei", "toycar")),
     (("時刻", "一刻", "瞬間", "一刹", "剎那", "轉眼"), ("stopwatch", "hourhand", "shootingi", "sparkle")),
     # life
     (("生命", "性命", "生機", "一生", "今生"), ("sprout", "sapling", "heartbeat", "e_seedling")),
@@ -74,7 +74,7 @@ NOUNS: Tuple[Tuple[Tuple[str, ...], Tuple[str, ...]], ...] = (
     (("沙", "沙灘", "塵沙"), ("footprintsand", "sandbucket", "shell", "sandglass")),
     (("影", "倒影", "影子", "身影", "背影"), ("shadowi", "mirror", "puddle")),
     # people and home
-    (("媽媽", "母親", "爸爸", "父親", "父母", "家人", "親人", "家", "家鄉", "故鄉"), ("house", "e_house_with_garden", "photoframe", "doorway")),
+    (("家人", "親人", "家", "家鄉", "故鄉", "老家"), ("house", "e_house_with_garden", "photoframe", "doorway")),
     (("名字", "姓名", "稱呼"), ("gifttag", "badge", "penpaper")),
     # the body (a part of it, close)
     (("手", "雙手", "手心", "手中", "掌心", "手指", "指尖"), ("hand", "handshake", "pinky", "finger")),
@@ -135,11 +135,11 @@ VERBS: Tuple[Tuple[Tuple[str, ...], Tuple[str, ...]], ...] = (
     (("燒", "燃", "燃燒", "點燃"), ("flame", "firei", "candle", "matches")),
     (("冷卻", "凍", "凍結", "冰封", "結冰"), ("snowflake", "icecube", "icicle", "heartice")),
     (("嘆息", "嘆", "歎", "發呆", "呆"), ("ellipsis", "windi", "cloudi", "zzz")),
-    (("輸", "贏", "失敗", "成功", "勝"), ("trophy", "medal", "flagrace", "crossmark")),
+    (("輸", "贏", "成功", "勝", "勝利"), ("trophy", "medal", "flagrace", "crossmark")),
     (("回來", "歸來", "回家", "歸", "回去", "歸去", "返回"), ("house", "doorway", "footprints")),
     (("留下", "留", "留住", "挽留", "留在", "保留", "挽回"), ("anchori", "keyring", "heartlock")),
     (("吻", "親", "熱吻", "親吻"), ("lips", "lipstickmark", "twohearts")),
-    (("打開", "推開", "敞開", "開啟"), ("doorway", "keyhole", "envelopeopen", "e_unlocked")),
+    (("打開", "推開", "敞開", "解開"), ("doorway", "keyhole", "envelopeopen", "e_unlocked")),
     (("關上", "鎖上", "鎖", "封閉"), ("padlock", "e_locked", "door")),
     (("寫",), ("penpaper", "quill", "notebook")),
 )
@@ -179,6 +179,76 @@ HOWS: Tuple[Tuple[Tuple[str, ...], Tuple[str, ...]], ...] = (
     (("瘋狂", "瘋癲", "瘋", "狂"), ("dizzy", "tornado", "lightning")),
 )
 
+# a second round, from what was still without a picture after the first
+NOUNS += (
+    (("床", "枕頭", "被窩"), ("bed", "pillow", "moonbed")),
+    (("飯", "晚餐", "早餐", "餐桌"), ("bowl", "rice", "chopsticks", "bento")),
+    (("病", "藥", "解藥", "病痛"), ("pill", "medicine", "thermo", "bandaid")),
+    (("壓力", "負荷", "重擔", "包袱", "負擔"), ("anchori", "dumbbell", "stone", "backpack")),
+    (("計劃", "計畫", "安排", "方法", "辦法"), ("clipboard", "maproll", "lightbulb", "compass")),
+    (("婚姻", "婚禮", "新娘", "嫁"), ("rings2", "weddingcake", "weddingdress", "bouquettoss")),
+    (("戰爭", "烽火", "衝突", "戰場"), ("shieldsword", "sword", "firei", "smoke")),
+    (("權利", "地位", "王", "冠軍"), ("crown", "medal", "trophy")),
+    (("堡壘", "古堡", "城堡"), ("castlegate", "e_castle", "e_japanese_castle")),
+    (("鴛鴦", "比翼", "一雙", "雙人"), ("swan", "twohearts", "dove")),
+    (("能量", "電", "電流"), ("lightning", "battery", "lightbulb")),
+    (("號碼", "電話", "訊息", "簡訊", "消息"), ("phoneold", "e_mobile_phone", "chatbubble", "email")),
+    (("東西", "行李", "包"), ("box", "backpack", "handbag", "parcel")),
+    (("舞步", "舞", "舞蹈"), ("balletshoe", "e_ballet_shoes", "notes", "discoball")),
+    (("傷疤", "疤痕", "瘀青"), ("bandaid", "bandagedheart", "e_adhesive_bandage")),
+)
+VERBS += (
+    (("帶", "帶走", "帶來", "帶上", "帶著", "拿", "拿著"), ("suitcase", "backpack", "handbag", "basket")),
+    (("埋藏", "深藏", "收藏", "藏", "隱藏"), ("treasure", "safe", "box", "padlock")),
+    (("掛", "掛著", "懸"), ("lanterni", "e_wind_chime", "hanger", "bellxmas")),
+    (("停", "停留", "停住", "停下", "逗留", "暫停"), ("stopsign", "hourhand", "bench", "anchori")),
+    (("穿過", "穿越", "穿梭", "跨越", "渡過", "度過", "越過", "橫越"), ("bridgei", "footpath", "boat", "arrowright")),
+    (("轉", "繞", "旋轉", "打轉", "圍繞"), ("pinwheel", "ferriswheeli", "season", "spinningtop")),
+    (("破", "打破", "撕裂", "斷", "剪", "碎", "撕", "斷線"), ("brokenheart", "scissors", "hourglassbroken", "kiteline")),
+    (("守", "照顧", "保護", "呵護", "守住", "守護著"), ("shieldi", "umbrellai", "lighthousei", "house")),
+    (("演", "上演", "演出", "做戲", "扮演"), ("maski", "curtainstage", "clapper", "e_performing_arts")),
+    (("搖", "搖曳", "擺", "搖擺", "晃", "盪"), ("swingi", "pinwheel", "windi", "bellxmas")),
+    (("犧牲", "付出", "給予", "奉獻", "獻出", "分享"), ("gift", "hearti", "candle", "handshake")),
+    (("纏", "糾纏", "纏繞", "牽絆", "綁"), ("yarn", "chain", "ivy", "e_knot")),
+    (("淹沒", "沉澱", "吞沒", "沉淪"), ("wave", "whirlpool", "tide", "anchori")),
+    (("盛開", "綻放", "開放", "開花", "花開"), ("rose", "tulip", "e_blossom", "sunflower", "cherryblossom")),
+    (("浮現", "浮", "漂", "漂流", "飄浮"), ("bubblei", "cloudi", "e_balloon", "boat")),
+    (("響", "響起", "奏", "敲"), ("bell", "schoolbell", "e_bell", "notes")),
+    (("握", "握住", "握著", "握緊"), ("handshake", "hand", "pinky")),
+    (("玩", "嬉戲", "玩耍", "遊玩"), ("pinwheel", "balloondog", "kitei", "yoyo")),
+    (("借", "欠", "虧欠", "還", "償還"), ("coins", "receipt", "contract")),
+    (("印", "烙", "刻", "刻下", "烙印"), ("stampseal", "footprint", "penpaper")),
+    (("染", "褪色", "塗", "塗抹"), ("palette", "paintbucket", "mapleleaf", "brush")),
+    (("道歉", "對不起", "抱歉", "認錯"), ("bandagedheart", "bouquet", "handkerchief")),
+    (("祝", "慶祝", "慶賀", "喝彩", "乾杯", "歡呼"), ("toast2", "e_party_popper", "confetti", "e_clinking_glasses")),
+    (("出生", "誕生", "降臨", "來臨", "發芽"), ("sprout", "hatch", "babybottle", "sunrise")),
+    (("聞", "吸", "嗅"), ("perfume", "rose", "windi")),
+)
+HOWS += (
+    (("清楚", "清醒", "清澈", "清", "清晰", "透明"), ("glasses", "droplet", "dewdrop", "magnifier")),
+    (("滿", "充滿", "滿滿", "滿滿的", "裝滿", "填滿"), ("fullmoon", "jar", "cup", "basket")),
+    (("小", "小小", "小小的", "渺小", "微小"), ("sprout", "ant", "marbles", "daisy")),
+    (("傻", "笨", "蠢", "傻傻", "傻傻的", "糊塗"), ("dizzy", "spinningtop", "question")),
+    (("聰明", "機靈"), ("bulb", "lightbulb", "chessking")),
+    (("假", "虛偽", "虛假", "假惺惺"), ("maski", "e_performing_arts", "mirror")),
+    (("荒涼", "沉寂", "荒蕪", "蒼涼", "淒涼"), ("cactus", "desert", "stone", "tombstonei")),
+    (("短暫", "短", "一時", "暫時"), ("stopwatch", "shootingi", "matches", "e_sparkler")),
+    (("濕", "濕透", "潮濕", "濕濕"), ("raindrop", "umbrellai", "puddle")),
+    (("繁華", "熱鬧", "喧嘩", "喧鬧", "熙攘"), ("fireworks", "ferriswheeli", "e_cityscape", "confetti")),
+    (("坎坷", "崎嶇", "艱難", "艱險", "艱辛", "曲折"), ("mountain", "cliffi", "footpath", "summit")),
+    (("混亂", "凌亂", "亂", "紊亂"), ("tornado", "dizzy", "yarn")),
+    (("硬", "堅固", "堅硬"), ("stone", "shieldi", "anvil")),
+    (("軟", "柔軟", "柔柔", "柔柔的", "鬆軟"), ("feather", "pillow", "cloudi", "teddy")),
+    (("難道", "到底", "究竟", "何必", "是否", "可否", "會否", "為何"), ("question", "exclaim", "crossroads")),
+    (("漸漸", "逐漸", "越來越", "愈來愈", "日漸"), ("season", "hourhand", "sapling", "sunriseclock")),
+    (("完全", "徹底", "絕對", "全部", "所有", "一切"), ("circle", "fullmoon", "checkmark")),
+    (("從來", "未曾", "從沒", "從不", "從來不", "從來沒"), ("nosign", "crossmark", "calendari")),
+    (("最終", "終究", "終於", "最後", "終歸"), ("flagrace", "checkmark", "sunsetclock", "curtainstage")),
+    (("特別", "尤其", "格外", "唯一"), ("star5", "sparkles", "crown")),
+    (("相同", "同樣", "一樣", "一般"), ("equal", "mirror", "twohearts")),
+    (("隨便", "隨意", "隨時"), ("dice", "windi", "feather")),
+)
+
 # ------------------------------------------------------------------------------------------ people's stance
 # (words, how the people stand). Whole words of the line, or two characters and more anywhere in it.
 POSES: Tuple[Tuple[Tuple[str, ...], str], ...] = (
@@ -201,18 +271,36 @@ POSES: Tuple[Tuple[Tuple[str, ...], str], ...] = (
     (("留住", "挽留", "挽回", "伸手"), "solo_reach"),
     (("面對", "對抗", "抵抗", "堅強", "不怕"), "solo_hips"),
     (("發呆", "猶豫", "考慮", "猜", "懷疑", "想想"), "solo_think"),
+    (("扶", "攙", "攙扶", "照顧"), "duo_comfort"),
+    (("貼著", "相偎", "倚", "倚靠", "枕著"), "duo_lean"),
+    (("道歉", "對不起", "抱歉", "認錯"), "solo_head"),
+    (("慶祝", "慶賀", "喝彩", "乾杯"), "solo_cheer"),
+)
+
+# who else is in the card: (words, who). A letter of cardworld.CAST (a mother, a father, a grandmother, a
+# grandfather, a child, both parents), or "G" / "B": the song's girl / boy, whichever of the two the lead is.
+PEOPLE: Tuple[Tuple[Tuple[str, ...], str], ...] = (
+    (("父母", "爸媽", "雙親", "爹娘"), "p"),
+    (("媽媽", "母親", "媽", "娘", "阿母", "媽咪", "老媽"), "a"),
+    (("爸爸", "父親", "爸", "阿爸", "爹", "老爸"), "f"),
+    (("奶奶", "外婆", "阿嬤", "祖母", "姥姥"), "e"),
+    (("爺爺", "外公", "阿公", "祖父"), "g"),
+    (("孩子", "小孩", "寶寶", "娃娃", "兒子", "女兒", "小朋友", "童年", "小時候", "兒時"), "c"),
+    (("姑娘", "女孩", "少女", "女人", "女生", "女子", "小妹", "妹妹", "姐姐", "公主"), "G"),
+    (("男人", "男孩", "少年", "男生", "男子", "哥哥", "弟弟", "王子"), "B"),
 )
 
 # how far the card looks: (words, shot)
 SHOTS: Tuple[Tuple[Tuple[str, ...], str], ...] = (
-    (("遙遠", "遠", "遠遠", "遠處", "天涯", "很遠", "最遠", "遼闊", "廣闊", "無邊", "蒼茫"), "far"),
-    (("臉", "臉龐", "臉上", "面容", "容顏", "表情", "模樣", "樣子", "近", "靠近", "貼近", "面前", "眼前"), "close"),
+    (("遙遠", "遠", "遠遠", "遠處", "天涯", "很遠", "最遠", "遼闊", "廣闊", "無邊", "蒼茫", "景色", "風景", "地平線", "寬闊"), "far"),
+    (("臉", "臉龐", "臉上", "面容", "容顏", "表情", "模樣", "樣子", "近", "靠近", "貼近", "面前", "眼前",
+      "額頭", "眉頭", "眉", "嘴角", "面孔", "臉頰", "秀髮", "長髮", "頭髮", "髮梢"), "close"),
 )
 
 # the light of the card: (words, light)
 LIGHTS: Tuple[Tuple[Tuple[str, ...], str], ...] = (
     (("黑暗", "漆黑", "黑", "暗", "晦暗", "灰暗", "陰暗", "深宵", "深夜", "天黑"), "night"),
-    (("昏黃", "黃昏", "夕陽", "日落"), "sunset"),
+    (("昏黃", "黃昏", "夕陽", "日落", "紅霞", "晚霞", "彩霞"), "sunset"),
     (("天明", "天亮", "清晨", "破曉", "黎明"), "dawn"),
 )
 
@@ -287,9 +375,10 @@ def table(simple: Callable[[str], str], drawable: Callable[[str], bool]) -> Dict
         poses=[(tuple(simple(w) for w in ws), s) for ws, s in POSES],
         shots=[(tuple(simple(w) for w in ws), s) for ws, s in SHOTS],
         lights=[(tuple(simple(w) for w in ws), s) for ws, s in LIGHTS],
+        people=[(tuple(simple(w) for w in ws), s) for ws, s in PEOPLE],
         vary={k: tuple(p for p in dict.fromkeys(v) if drawable(p)) for k, v in VARY.items() if drawable(k)})
     _TABLE["words"] = {w: kind for ws, _ps, kind in pics for w in ws}
-    for name in ("poses", "shots", "lights"):
+    for name in ("poses", "shots", "lights", "people"):
         for ws, _s in _TABLE[name]:
             for w in ws:
                 _TABLE["words"].setdefault(w, name)
@@ -299,7 +388,7 @@ def table(simple: Callable[[str], str], drawable: Callable[[str], bool]) -> Dict
 def words() -> List[Tuple[str, str]]:
     """Every word of the lists (traditional) with the kind of word it is, for the word splitter (cardgrammar)."""
     out = []
-    for tag, rows in (("n", NOUNS), ("v", VERBS), ("a", HOWS), ("v", POSES), ("a", SHOTS), ("a", LIGHTS)):
+    for tag, rows in (("n", NOUNS), ("v", VERBS), ("a", HOWS), ("v", POSES), ("a", SHOTS), ("a", LIGHTS), ("n", PEOPLE)):
         for ws, _what in rows:
             out.extend((w, tag) for w in ws)
     return out
@@ -307,7 +396,7 @@ def words() -> List[Tuple[str, str]]:
 
 def read(line: str, tokens: Sequence[str], tb: Dict[str, Any], says: Callable[[str, Sequence[str]], bool]) -> Dict[str, Any]:
     """What these lists find in a (simplified) line: {"pics": pictures, "kind": noun|verb|how, "subject", "shot",
-    "light"}, each only when found. `tokens`: the line's whole words (simplified; empty without the word
+    "light", "who"}, each only when found. `tokens`: the line's whole words (simplified; empty without the word
     splitter, and then only words of two characters and more are found). Not after a no / never (`says`)."""
     toks = set(tokens)
 
@@ -318,7 +407,7 @@ def read(line: str, tokens: Sequence[str], tb: Dict[str, Any], says: Callable[[s
         if has(ws):
             out["pics"], out["kind"] = ps, kind
             break
-    for key, name in (("subject", "poses"), ("shot", "shots"), ("light", "lights")):
+    for key, name in (("subject", "poses"), ("shot", "shots"), ("light", "lights"), ("who", "people")):
         for ws, what in tb[name]:
             if has(ws):
                 out[key] = what

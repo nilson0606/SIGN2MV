@@ -114,6 +114,13 @@
   had a thing keeps it), and a word of one character counts only as a whole word (手 is not in 分手). New stances
   (朋友: two people, 相逢: face to face, 分開: apart, 躲: crouching, 望: looking…), 遙遠 seen from far, 臉／眼前 close,
   黑暗／黃昏／天明 move the light. About a hundred more words give a face.
+- Picture cards, more people than the song's two: a mother, a father, a grandmother, a grandfather and a child
+  (媽媽, 爸爸, 奶奶, 爺爺, 孩子／童年; 父母: both). They stand where the other one stands, beside the lead when the line
+  has 我 (媽媽牽著我的手), alone otherwise; the child is the lead made small, so 童年 is the lead as a child. 女孩／姑娘
+  and 男孩／男人 show the girl or the boy of the two. A card's tenth field says who (`-.1.a`); a version before this
+  one does not read such a card, so after going back to an older version the cards are drawn again.
+- Picture cards, a second round of words (62 more groups: 床, 病, 壓力, 婚禮, 城堡…; 帶, 藏, 停, 穿越, 轉, 破, 守, 盛開,
+  握, 慶祝…; 清楚, 滿, 小, 傻, 荒涼, 短暫, 繁華, 坎坷, 到底, 漸漸, 完全, 最後…): about 1,200 words in 199 groups now.
 
 ## 2026.11.15
 
