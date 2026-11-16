@@ -703,7 +703,7 @@ export default {
   "qmvl.locked_tip": "已定錨：時間不能改，再按「自動對時間」也不會動（點擊解除）",
   "qmvl.unlock_all": "🔓 全部解除定錨",
   "qmvl.download_lrc": "⬇ 下載 LRC",
-  "qmvl.download_lrc_tip": "把調好的時間存成 LRC 歌詞檔（[分:秒] 歌詞）。MV 頁不用這個檔：在 MV 頁 Step 3 按「📚 從歌曲庫帶入調好的時間」就會直接帶過去",
+  "qmvl.download_lrc_tip": "把調好的時間存成 LRC 歌詞檔（[分:秒] 歌詞）。MV 頁不用這個檔：在 MV 頁的「📝 歌詞／字幕區」按「📚 從歌曲庫帶入調好的時間」就會直接帶過去",
   "qmvl.lrc_empty": "還沒有調好時間的句子，沒有東西可以下載",
   "qmvl.anchor_hint": "沒對好時：把對的句子點「🔓 未鎖」定錨（至少錨住沒對好那段的前一句和後一句），再按一次「🎙️ 自動對時間」。錨和錨之間的句子會重新逐字對；中間有句子完全沒聽到時，Whisper 會只把那一段重聽一次。",
   "qmvl.relisten_running": "Whisper 正在重聽 {0} 段沒聽到的地方（只聽兩個錨之間）…",

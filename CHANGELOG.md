@@ -102,6 +102,9 @@
   butterflies, leaves, fireflies, stars; four in ten), or nothing. A line with two doers (我走回從前你往未來飛,
   聽你分享, 是你給我勇氣) has both people in the card, apart when the line is sad. 默默／悄悄／緩緩 give a calm face,
   獨自 a lonely one, 忽然 a surprised one.
+- MV page: the panels are no longer numbered Step 1 to 4 (with lyrics on the left and photos on the right, and
+  lyrics usually done before photos, the numbers no longer said the order). Messages name the panel instead:
+  「🎵 母帶音源」, 「🖼️ 分鏡照片」, 「📝 歌詞／字幕區」.
 
 ## 2026.11.15
 

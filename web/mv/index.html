@@ -928,7 +928,7 @@
       <!-- Left: Song Metadata & Master Audio Deck -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">🎵 Step 1｜母帶音源與名牌設定</div>
+          <div class="panel-title">🎵 母帶音源與名牌設定</div>
           <span style="font-size:12px; color:#86efac;">自動過濾任何「AI」字樣</span>
         </div>
 
@@ -1060,7 +1060,7 @@
       <!-- Right on wide screens (CSS order): Visual Scene Gallery & Photo-to-Lyric Binding Workbench -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">🖼️ Step 2｜分鏡照片畫廊 ＆「照片指定歌詞」工作台 <span id="galleryCountBadge" style="font-size:12.5px; color:var(--gold-bright); font-weight:700; margin-left:6px;"></span></div>
+          <div class="panel-title">🖼️ 分鏡照片畫廊 ＆「照片指定歌詞」工作台 <span id="galleryCountBadge" style="font-size:12.5px; color:var(--gold-bright); font-weight:700; margin-left:6px;"></span></div>
           <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
             <label style="display:inline-flex; align-items:center; gap:5px; cursor:pointer; font-size:12.5px; color:var(--gold-bright); margin-right:4px;">
               <input type="checkbox" id="chkSelectAllScenes" style="width:16px; height:16px; accent-color:var(--gold); cursor:pointer;" onchange="toggleSelectAllScenes(this.checked)" />
@@ -1119,7 +1119,7 @@
       <!-- Left on wide screens (CSS order): Paste Full Lyrics / Subtitles Panel -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">📝 Step 3｜一鍵貼上整首歌詞 / 字幕區</div>
+          <div class="panel-title">📝 一鍵貼上整首歌詞 / 字幕區</div>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
             <button class="btn btn-sm" onclick="document.getElementById('inpPasteLyrics').value=''; setInlineStatus('step3StatusBox', 'ok', '🧹 已清空歌詞輸入框，請貼入新歌詞或直接點下方 Whisper 按鈕。');" title="清空下方文字框以便重新貼上歌詞">🧹 清空</button>
             <button class="btn btn-sm" onclick="pasteLyricsFromClipboard()" title="把剪貼簿裡的歌詞貼進下方文字框（取代原本的內容）">📋 貼上剪貼簿</button>
@@ -1246,7 +1246,7 @@
     <section class="panel">
       <div class="panel-header" style="margin-bottom:0; border-bottom:none; padding-bottom:0;">
         <div class="panel-title">
-          ⏱️ Step 4｜字幕時間軸微調器（支援 `02:29` 分秒與 `149.00s` 秒數雙向同步）
+          ⏱️ 字幕時間軸微調器（支援 `02:29` 分秒與 `149.00s` 秒數雙向同步）
           <span id="tlCountBadge" class="pill" style="margin-left:8px;">共 0 段</span>
         </div>
         <div style="display:flex; gap:10px; align-items:center;">
@@ -1338,7 +1338,7 @@
         </div>
         <div class="form-group" style="grid-column: span 2; margin-top: 4px;">
           <div style="font-size:12.5px; color:#86efac; background:rgba(34,197,94,0.08); border:1px dashed rgba(34,197,94,0.3); border-radius:8px; padding:10px 14px; line-height:1.6;">
-            💡 <strong>音檔</strong>：建立後先用這首歌的原曲音訊（或從唱錄／翻唱帶過來的成品）。要換成唱錄或翻唱成品，到「<strong>Step 1｜母帶音源</strong>」的下拉選單選；也可以把電腦裡的音檔拖進播放器。
+            💡 <strong>音檔</strong>：建立後先用這首歌的原曲音訊（或從唱錄／翻唱帶過來的成品）。要換成唱錄或翻唱成品，到「<strong>🎵 母帶音源</strong>」的下拉選單選；也可以把電腦裡的音檔拖進播放器。
           </div>
         </div>
       </div>
@@ -3579,7 +3579,7 @@
       liveRaf = requestAnimationFrame(tick);
     }
     function liveTogglePlay() {
-      if (!audioEl.src) { showToast('請先在 Step 1 選擇母帶音檔', true); return; }
+      if (!audioEl.src) { showToast('請先在「🎵 母帶音源」選擇母帶音檔', true); return; }
       if (audioEl.paused) audioEl.play().catch(e => showToast('無法播放：' + e.message, true)); else audioEl.pause();
     }
     function liveSeekBy(sec) { audioEl.currentTime = Math.max(0, (audioEl.currentTime || 0) + sec); }
@@ -4219,7 +4219,7 @@
         catch (e) { setInlineStatus('step2StatusBox', 'err', `❌ 簡易圖卡沒有畫：${e.message}`); return; }
       }
       if (!state.timeline) {
-        setInlineStatus('step2StatusBox', 'err', '⚠️ 還沒有時間軸：請先到 Step 3 貼上歌詞並對齊，再按圖卡抽抽樂（圖卡是依每一句歌詞挑的）。');
+        setInlineStatus('step2StatusBox', 'err', '⚠️ 還沒有時間軸：請先到「📝 歌詞／字幕區」貼上歌詞並對齊，再按圖卡抽抽樂（圖卡是依每一句歌詞挑的）。');
         return;
       }
       const todo = (state.empty || []).map(c => ({ slot: c.slot, redraw: false }));
@@ -4280,7 +4280,7 @@
           renderSceneGallery();
           renderTimelineTable();
           previewSegmentFrame(0);
-          setInlineStatus('step2StatusBox', 'ok', '💥 所有分鏡照片已全刪光！<strong>音軌對齊已同步重置</strong>，請放入新分鏡圖片後，至 Step 3 重新執行對齊。');
+          setInlineStatus('step2StatusBox', 'ok', '💥 所有分鏡照片已全刪光！<strong>音軌對齊已同步重置</strong>，請放入新分鏡圖片後，至「📝 歌詞／字幕區」重新執行對齊。');
           setInlineStatus('step3StatusBox', 'work', '🔄 <strong>音軌對齊待重做</strong>：圖庫已全刪光，請重新放入分鏡圖並點擊「⚡ 貼上並依 Whisper 自動對齊」重新生成時間軸！');
           showToast(`💥 已全刪光！所有分鏡照片已清空，音軌對齊已同步重置待重做。`);
         } else {
@@ -4492,7 +4492,7 @@
       const scRaw = parseInt(document.getElementById('modSceneCount').value);
       const sceneCount = Number.isFinite(scRaw) ? Math.max(0, Math.min(60, scRaw)) : 0;
 
-      // 依使用者指示：新建專案彈窗不匯入/綁定音檔，一律在建立後於 Step 1 介面置入
+      // 依使用者指示：新建專案彈窗不匯入/綁定音檔，一律在建立後於「母帶音源」區置入
       const audioPath = '';
 
       const btn = document.getElementById('btnConfirmCreateProject');
@@ -4519,8 +4519,8 @@
           currentSlug = data.project.slug;
           await initStudio();
           setInlineStatus('step2StatusBox', 'ok', sceneCount
-            ? `🎉 已建立《${title}》專案（${sceneCount} 個分鏡槽位）！請確認「Step 1」的音檔，並於「Step 2」放入分鏡圖。`
-            : `🎉 已建立《${title}》專案！請確認「Step 1」的音檔，再到「Step 3」貼歌詞對齊：每一句會自動有一格照片卡片。`);
+            ? `🎉 已建立《${title}》專案（${sceneCount} 個分鏡槽位）！請確認「🎵 母帶音源」的音檔，並於「🖼️ 分鏡照片」放入分鏡圖。`
+            : `🎉 已建立《${title}》專案！請確認「🎵 母帶音源」的音檔，再到「📝 歌詞／字幕區」貼歌詞對齊：每一句會自動有一格照片卡片。`);
           showToast(`🎉 已成功建立《${title}》專案！`);
         } else {
           showToast(`❌ 建立專案失敗：${data.detail || '未知錯誤'}`, true);

@@ -742,10 +742,10 @@ def router(ctx: Context) -> APIRouter:
             if mode == "whisper_align":
                 if not audio_file_path or not os.path.exists(audio_file_path):
                     if has_existing_lyrics:
-                        return _keep_timeline("還沒有選擇母帶音檔，無法用 Whisper 對齊；請先在 Step 1 選音檔", 400)
+                        return _keep_timeline("還沒有選擇母帶音檔，無法用 Whisper 對齊；請先在「🎵 母帶音源」選音檔", 400)
                     fallback_used = True
-                    warning_notes.append("⚠️ 提醒：您尚未在上方「Step 1」選擇母帶音檔！系統已先幫右側照片自動分配預設連續時間軸（您可先微調秒數）；"
-                                         "若要使用 Whisper 語音辨識對齊，請先在 Step 1 下拉選單挑選音檔後再按一次！")
+                    warning_notes.append("⚠️ 提醒：您尚未在上方「🎵 母帶音源」選擇母帶音檔！系統已先幫右側照片自動分配預設連續時間軸（您可先微調秒數）；"
+                                         "若要使用 Whisper 語音辨識對齊，請先在「🎵 母帶音源」的下拉選單挑選音檔後再按一次！")
                     new_tl = _align(existing_timeline=existing_tl, line_pairs=line_pairs, w_segs=[], total_dur=total_dur,
                                     early_lead=early_lead, tail_ext=tail_ext, title=proj.get("title", ""), target_scene_count=target_sc_max)
                 else:

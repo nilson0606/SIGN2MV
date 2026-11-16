@@ -703,7 +703,7 @@ export default {
   "qmvl.locked_tip": "Anchored: its time cannot be changed and timing the lines again leaves it (click to free it)",
   "qmvl.unlock_all": "🔓 Free all anchors",
   "qmvl.download_lrc": "⬇ Download LRC",
-  "qmvl.download_lrc_tip": "Saves the timed lines as an LRC lyrics file ([mm:ss] line). The MV page does not need it: “📚 Bring in the library timing” in its Step 3 takes them over directly",
+  "qmvl.download_lrc_tip": "Saves the timed lines as an LRC lyrics file ([mm:ss] line). The MV page does not need it: “📚 Bring in the library timing” in its “📝 Lyrics / subtitles” panel takes them over directly",
   "qmvl.lrc_empty": "There are no timed lines to download yet",
   "qmvl.anchor_hint": "When lines are off: anchor the right ones with “🔓 Free” (at least the line before and the line after the part that is off), then press “🎙️ Time the lines” again. The lines between anchors are matched again word by word; where lines were not heard at all, Whisper listens to just that stretch once more.",
   "qmvl.relisten_running": "Whisper is listening again to {0} stretch(es) it missed (only between anchors)…",
