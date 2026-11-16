@@ -105,6 +105,15 @@
 - MV page: the panels are no longer numbered Step 1 to 4 (with lyrics on the left and photos on the right, and
   lyrics usually done before photos, the numbers no longer said the order). Messages name the panel instead:
   「🎵 母帶音源」, 「🖼️ 分鏡照片」, 「📝 歌詞／字幕區」.
+- Picture cards, more words and more than one picture for a word (`app/mvstudio/cardwords.py`): the commonest
+  nouns, verbs, adjectives and adverbs of 500 sampled songs that had no picture, about 850 words in 137 groups
+  (時光, 青春, 生命, 感覺, 靈魂, 理由, 謊言, 天空, 水, 火, 光, 手, 眼, 歌, 話…; 忘記, 尋找, 改變, 吹, 流, 醒來, 放棄,
+  開始, 明白, 面對, 唱, 說…; 冷, 暖, 永遠, 匆匆, 舊, 紅, 白, 朦朧, 自由…). Each has several pictures and takes the next
+  one every time it comes in a song; the things the cards knew already do the same (hearts, stars, a letter, a
+  clock, a ring… 45 of them). The song's own thing never changes. These words are a second choice (a card that
+  had a thing keeps it), and a word of one character counts only as a whole word (手 is not in 分手). New stances
+  (朋友: two people, 相逢: face to face, 分開: apart, 躲: crouching, 望: looking…), 遙遠 seen from far, 臉／眼前 close,
+  黑暗／黃昏／天明 move the light. About a hundred more words give a face.
 
 ## 2026.11.15
 

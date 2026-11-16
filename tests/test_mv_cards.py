@@ -621,7 +621,7 @@ def test_a_line_that_names_nothing_gets_no_unrelated_thing():
     and a line with two doers (我… 你…) has both of them in the card."""
     pytest = __import__("pytest")
     from app.mvstudio import cardstory as cs
-    nothing = ["明明你就已經站在我面前", "要怎麼說才好", "還要多久才能夠", "其實都沒有關係", "就這樣吧", "也許是我不夠好",
+    nothing = ["明明你就已經站在我面前", "要怎麼辦才好", "還要多久才能夠", "其實都沒有關係", "就這樣吧", "也許是我不夠好",
                "到底該怎麼做", "原來如此而已", "不知道為什麼", "就算這樣也好", "已經沒有什麼", "到最後還是一樣"]
     parts = [("intro", "x")] + [("lyric", t) for t in nothing * 2] + [("outro", "x")]
     air = {x for xs in cs.AMBIENT.values() for x in xs}
@@ -636,3 +636,36 @@ def test_a_line_that_names_nothing_gets_no_unrelated_thing():
     w = cs.prepare(cardworld.make_world(3, "premium"), parts, "")
     subj = [sp.split("|")[4] for sp in cs.plan_premium(parts, 3, w, "")[0]]
     assert subj[0].startswith("duo") and subj[1].startswith("duo") and not subj[2].startswith("duo")
+
+
+def test_more_words_and_more_than_one_picture_for_a_word():
+    """[2026-11-16] cardwords: further nouns, verbs, adjectives and adverbs; a word's pictures take turns."""
+    pytest = __import__("pytest")
+    from app.mvstudio import card_icons, cardstory as cs, cardwords as cwd
+    # every picture named there can be drawn, and no list lost a picture to a typing mistake
+    for rows in (cwd.NOUNS, cwd.VERBS, cwd.HOWS):
+        for ws, ps in rows:
+            assert all(cs._drawable(p) for p in ps), (ws[0], [p for p in ps if not cs._drawable(p)])
+    assert all(cs._drawable(p) for k, v in cwd.VARY.items() for p in (k,) + v)
+    subjects = set(cardworld.SUBJECTS) | set(cardworld.SUBJECTS_STD) | set(cardworld.SUBJECTS_PREM)
+    assert all(s in subjects for _ws, s in cwd.POSES)
+    tb = cwd.table(cardworld._simple, cs._drawable)
+    sim = cardworld._simple
+    # a word of one character only as a whole word: 手 is not in 分手, 火 not in 火車
+    assert "pics" not in cwd.read(sim("分手那天"), [sim("分手"), sim("那天")], tb, cs.says)
+    assert "hand" in cwd.read(sim("你的手"), ["你", "的", "手"], tb, cs.says)["pics"]
+    assert cwd.read(sim("那段時光"), [], tb, cs.says)["pics"][0] == "hourglass"         # two characters: without the splitter too
+    assert "pics" not in cwd.read(sim("不再迷惘"), [], tb, cs.says)                     # not after a no
+    assert cwd.read(sim("遙遠的你"), [], tb, cs.says)["shot"] == "far"
+    pytest.importorskip("jieba")
+    # the same word four times: not four times the same card; the song's own thing stays what it is
+    lines = ["把愛留在這裡", "原來愛是這樣", "我的愛還在", "愛沒有離開", "那段時光很美", "時光不等人", "時光帶走一切"]
+    parts = [("lyric", t) for t in lines]
+    w = cs.prepare(cardworld.make_world(5, "premium"), parts, "")
+    props = [sp.split("|")[5] for sp in cs.plan_premium(parts, 5, w, "")[0]]
+    assert len(set(props[1:4])) >= 3 and all(p in cwd.VARY["hearts"] for p in props[1:4]), props
+    hours = ("hourglass", "e_hourglass_done", "clock", "calendar", "calendari", "sandglass", "clockwall")    # on a table: its small picture
+    assert len(set(props[4:])) == 3 and all(p in hours for p in props[4:]), props
+    parts = [("lyric", t) for t in ["星星掛在天上", "那顆星星還亮著", "數著星星等你", "星星不說話"]]
+    w = cs.prepare(cardworld.make_world(5, "premium"), parts, "星星")
+    assert {sp.split("|")[5] for sp in cs.plan_premium(parts, 5, w, "星星")[0]} == {"stars"}

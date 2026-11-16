@@ -23,7 +23,7 @@ import re
 from collections import Counter
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from . import card_icons, cardgrammar, cardphrase
+from . import card_icons, cardgrammar, cardphrase, cardwords
 from . import cardworld as cw
 
 ORDER = ("dawn", "day", "golden", "sunset", "dusk", "night")
@@ -366,6 +366,10 @@ def _rows():
     return [(tuple(cw._simple(w) for w in ws), what) for ws, what in poses + cw.HINTS_STD[:-3] + cw.ICON_HINTS + cw.HINTS + cw.EMOJI_HINTS]
 
 
+def _drawable(prop: str) -> bool:
+    return prop in cw.PROPS + cw.PROPS_STD or prop in card_icons.TABLE
+
+
 def kind_of(place: str) -> str:
     """What kind of place it is, for what can be in it (DRESS)."""
     t = str(place).split(".")[0]
@@ -412,6 +416,8 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
     place, light_now, turn_light = st["home"], arc[0], {}
     since = 2
     last_feel: List[int] = []
+    tb = cardwords.table(cw._simple, _drawable)      # [2026-11-16] more words, and more than one picture for a word
+    turns: Counter = Counter()    # how many times a word's pictures were used: the next time takes the next one
     recent: List[str] = []        # the things in the last cards, so that what fills an empty card is not one of them
     used = {"memory": 0, "sad": 0, "glad": 0}
     # the chorus place seen several ways: its own foreground and two or three others
@@ -457,6 +463,8 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
             continue
         t = at.get(i, 0.0)
         h = hints(line, rows)
+        g = cardgrammar.read(line, rows)        # None without jieba: the cards as before
+        more = cardwords.read(line, [cw._simple(w) for w, _f in g["words"]] if g else (), tb, says)
         feel = feeling(line)
         last_feel.append(feel)
         k = sc["k"]
@@ -496,7 +504,7 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
         if light_now in arc and arc.index(base) < arc.index(light_now):
             base = light_now
         light_now = light = base
-        want = h.get("light")
+        want = h.get("light") or more.get("light")
         if want in arc and arc.index(want) > arc.index(base) and sec != "chorus":   # the words move it on a step, for this card
             light = arc[arc.index(base) + 1]
         weather = h.get("weather", "clear")
@@ -508,11 +516,10 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
             weather = "clear"
         dark = light in ("dusk", "night")
         # ---- who
-        g = cardgrammar.read(line, rows)        # [2026-11-16] None without jieba: the cards as before
         doers = set(str(g["who"]).split("、")) if g and g["who"] else set()
         both = bool(doers & {"我", "我們"}) and bool(doers & {"你", "他", "她", "你們", "他們", "她們"})   # 我走回從前你往未來飛
         duo_said, third = says(line, duo_words), says(line, third_words)
-        hs = h.get("subject")
+        hs, hs_more = h.get("subject"), more.get("subject")      # a pose the rows know; one the further words give
         if sec == "chorus":
             subject = CHORUS[step][k % len(CHORUS[step])]
             if feel <= -2 or hs == "duo_apart":      # sung sad: the two of them apart, or one of them alone
@@ -520,8 +527,8 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
                 used["sad"] += 1
             elif third:
                 subject = "other_back"
-            elif hs and hs.startswith("duo"):
-                subject = hs
+            elif (hs or hs_more or "").startswith("duo"):
+                subject = hs if hs and hs.startswith("duo") else hs_more
         else:
             pool = {"verse": VERSE, "pre": PRE, "bridge": BRIDGE}[sec]
             subject = pool[(k + sc["again"] * 3 + (i // 7)) % len(pool)]
@@ -534,6 +541,8 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
                 used["sad"] += 1
             elif duo_said or both:
                 subject = ("duo_back", "duo_sit", "duo_walk", "duo_ground")[(k + i) % 4]
+            elif hs_more:
+                subject = hs_more
             elif feel <= -2:
                 subject = SAD_SOLO[used["sad"] % len(SAD_SOLO)]
                 used["sad"] += 1
@@ -553,8 +562,20 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
                 alts = [a for a in alts if not a.startswith("e_")]         # an emoji is not "another thing" beside a drawn one
             if len(alts) > 1:
                 prop = alts[sc["again"] % len(alts)]
-            elif sc["again"] % 2:
+            elif sc["again"] % 2 and prop not in tb["vary"]:
                 prop = "none"
+        # [2026-11-16] a word with several pictures: each time it comes, the next one (the song's own thing stays)
+        group: Tuple[str, ...] = ()
+        if prop == "none" and more.get("pics"):
+            group = more["pics"]
+        elif prop in tb["vary"] and not (keep and prop == keep[0]):
+            group = tb["vary"][prop]
+        if group:
+            for _try in range(len(group)):
+                prop = group[turns[group] % len(group)]
+                turns[group] += 1
+                if not (dark and (prop.startswith("e_sun") or prop in ("sun", "sunrise", "rays", "sunriseclock"))):
+                    break           # no sun in a night card
         if keep and (k == 0 or says(line, keep[2])):
             prop = keep[0]
         duo = subject.startswith("duo")
@@ -611,6 +632,8 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
             shot = "tilt"
         elif says(line, shot_words["globe"]) and sc["again"] % 2 == 1:
             shot = "globe"
+        if more.get("shot") and sec != "chorus" and shot not in ("photo", "memory", "moon", "window", "split", "tilt", "globe"):
+            shot = more["shot"]         # 遙遠: seen from far; 臉, 眼前: close
         # ---- [2026-11-15] what the line does with its thing (a verb or a preposition and the thing: cardphrase)
         act = cardphrase.read(line, phrase_rows, _negated, cw._simple, place_rows)
         if act and keep and act["thing"] and act["thing"] != keep[0] and says(line, keep[2]):
@@ -687,6 +710,10 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
             shot = "close"
         if shot == "over" and (duo or prop == "umbrella"):
             shot = "mid"
+        if shot == "still" and prop not in card_icons.TABLE and prop not in ("letter", "clock", "frames", "none", "umbrella"):
+            prop = icon_for(prop)       # [2026-11-16] on the table lies the thing itself (an hourglass was a cup and a book)
+            if prop not in card_icons.TABLE:
+                shot = "mid"
         if shot == "still" and prop == "umbrella":
             prop = "umbrellai"
         if shot == "still" and (prop == "none" or any(sp.split("|")[5:7] == [prop, "still"] for sp in out[-12:])):
