@@ -23,13 +23,14 @@ NEGATIVE = ("letterbox, black bars, border, picture frame, text, caption, speech
 # has few pixels for a face that is small in the picture. So a feeling is said quietly (a mood, where the
 # eyes look), never as a strong expression, and every card that shows a face asks for a calm, simple one.
 CALM = "simple soft anime face with a calm natural expression, closed mouth"
-# [2026-11-17] An option to compare: where the people are small in the picture (every shot that shows them from
-# head to foot) no face looks at the viewer: backs, side views, faces turned away. Of the first 41 AI cards the
-# ones seen from behind or from far were all fine; the bad ones were small figures drawn face on.
-AWAY = "seen from behind or in side view, faces turned away from the viewer"
+# [2026-11-17] Asked for by the user, as a choice: no face is shown. Whoever is in the picture is seen from
+# behind, from the side or with the face turned away, in every shot. (Of the first 41 AI cards the ones seen
+# from behind were all fine; the frightening ones were faces.)
+AWAY = "seen from behind or in side view, faces turned away from the viewer, no face visible"
 NEGATIVE_AWAY = ", face looking at the viewer, front view of a face"
-SMALL_FRAMES = ("wide", "mid", "far", "sil", "mirror", "moon", "split", "window", "photo", "globe", "memory",
-                "tilt", "give", "under", "toward")
+# [2026-11-17] And one more: no people at all, the place of the card with its light, its weather and its thing.
+SCENERY = "wide scenery shot, nobody in the picture"
+NEGATIVE_SCENERY = ", people, person, human figure, face, crowd"
 
 
 # ---- the people -------------------------------------------------------------------------------------------
@@ -92,7 +93,7 @@ def person(look: Dict[str, Any], kind: str) -> str:
             f"{hair(look.get('hair') or (60, 50, 50))} hair, wearing {wear}")
 
 
-def people(world: Dict[str, Any], who: str = "") -> Dict[str, str]:
+def persons(world: Dict[str, Any], who: str = "") -> Dict[str, str]:
     """{"a": the lead, "b": the other one}; who (a cast letter of the card) puts someone else where the
     other one stands: a mother, a father, a grandmother, a grandfather, a child, both parents."""
     lead = "boy" if world.get("lead") == "boy" else "girl"
@@ -337,7 +338,13 @@ def _a(text: str) -> str:
     return ("an " if text[:1] in "aeiou" else "a ") + text
 
 
-def prop(name: str, still: bool = False) -> str:
+def prop(name: str, still: bool = False, alone: bool = False) -> str:
+    """alone: the thing with nobody to hold or wear it (a scenery card)."""
+    if alone:
+        text = prop(name)
+        if re.search(r"\b(look|mood|smile|frown|eyes|face|hand|hands|thumbs|shoulder)\b", text):
+            return ""                                  # a feeling or a gesture: nothing to show without people
+        return re.sub(r"^(holding|wearing) ", "", text)
     if name in PROP and not still:
         return PROP[name]
     text = words(name)
@@ -367,10 +374,11 @@ def place(name: str) -> str:
     return ", ".join(out)
 
 
-def build(spec: str, world: Optional[Dict[str, Any]], away: bool = False) -> Optional[str]:
+def build(spec: str, world: Optional[Dict[str, Any]], people: str = "") -> Optional[str]:
     """The prompt of a card, or None for a card that is not one of a song's world (the first cards had
-    no people of their own and no plan to read). away: no face looks at the viewer in the shots where the
-    people are small (AWAY)."""
+    no people of their own and no plan to read). people: "away" no face is shown (AWAY); "none" scenery
+    only, nobody in the picture (SCENERY)."""
+    away, scenery = people == "away", people == "none"
     if not world or not cardworld.parse(spec) or not cardworld.valid_world(world):
         return None
     p = str(spec).split("|")
@@ -381,13 +389,13 @@ def build(spec: str, world: Optional[Dict[str, Any]], away: bool = False) -> Opt
         face, who = f[0], (f[2] if len(f) > 2 else "")
     still = frame == "still"
     bits = []
-    doing = "" if still else SUBJECT.get(subject, "{a}, " + words(subject.split("_", 1)[-1]))
+    doing = "" if still or scenery else SUBJECT.get(subject, "{a}, " + words(subject.split("_", 1)[-1]))
     if doing:
-        ppl = people(world, who)
+        ppl = persons(world, who)
         if subject.startswith("solo") and who in cardworld.CAST:
             # someone of the family beside the lead: the card shows both
             doing = doing + ", with {b} beside"
-        hidden = away and frame in SMALL_FRAMES
+        hidden = away
         if hidden:
             doing = doing.replace("standing and facing the viewer", "standing, seen from behind").replace(
                 ", facing the viewer", ", seen from behind").replace("coming toward the viewer", "walking away")
@@ -396,16 +404,19 @@ def build(spec: str, world: Optional[Dict[str, Any]], away: bool = False) -> Opt
             bits.append(FACE[face])
         if SIDE.get(pos) and subject.startswith(("solo", "other")):
             bits.append(SIDE[pos])
-    thing_text = prop(thing, still)
+    thing_text = prop(thing, still, alone=scenery and not still)
     if thing_text:
         bits.append(thing_text)
     bits.append(place(where))
     bits.append(LIGHT.get(light, ""))
     if WEATHER.get(weather):
         bits.append(WEATHER[weather])
-    bits.append(FRAME.get(frame, FRAME["wide"]).replace("coming toward the viewer", "walking away")
-                if doing and away and frame in SMALL_FRAMES else FRAME.get(frame, FRAME["wide"]))
-    if doing and away and frame in SMALL_FRAMES:
+    if scenery and not still:
+        bits.append(SCENERY)
+    else:
+        bits.append(FRAME.get(frame, FRAME["wide"]).replace("coming toward the viewer", "walking away")
+                    if doing and away else FRAME.get(frame, FRAME["wide"]))
+    if doing and away:
         bits.append(AWAY)
     elif doing and frame not in ("sil", "far"):
         bits.append(CALM)

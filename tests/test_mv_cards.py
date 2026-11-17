@@ -764,15 +764,21 @@ def test_a_card_as_words_for_the_image_model():
     assert cardprompt.CALM in solo and cardprompt.CALM in duo and cardprompt.CALM not in still
     assert cardprompt.CALM not in cardprompt.build("w2|road|dusk|clear|duo_far|none|far|c|0", world)
     assert "exaggerated expression" in cardprompt.NEGATIVE and "cheering" not in cardprompt.SUBJECT["solo_cheer"]
-    # an option: where the people are small no face looks at the viewer; upper-body and close shots are as before
+    # a choice: no face is shown, in any shot (backs, side views, faces turned away)
     front = "w2|cafe|sunset|clear|solo_front|none|mid|c|0|sad.1.m"
     assert "facing the viewer" in cardprompt.build(front, world) and "a quiet sad look" in cardprompt.build(front, world)
-    turned = cardprompt.build(front, world, away=True)
+    turned = cardprompt.build(front, world, people="away")
     assert "facing the viewer" not in turned and "seen from behind" in turned and cardprompt.AWAY in turned
     assert cardprompt.CALM not in turned and "a quiet sad look" not in turned
     close = "w2|cafe|sunset|clear|solo_front|none|close|c|0|sad.1.m"
-    assert cardprompt.build(close, world, away=True) == cardprompt.build(close, world)
-    assert cardprompt.build(still.split(",")[0] and "w2|cafe|sunset|clear|solo_sit|hourglass|still|c|0", world, away=True) == still
+    assert cardprompt.AWAY in cardprompt.build(close, world, people="away") and cardprompt.CALM in cardprompt.build(close, world)
+    assert cardprompt.build(still.split(",")[0] and "w2|cafe|sunset|clear|solo_sit|hourglass|still|c|0", world, people="away") == still
+    # and one more: scenery only, nobody in the picture; the place, the light, the weather and the thing stay
+    empty = cardprompt.build("w2|lake.cherry.fence.near|sunset|rain|solo_sit|letter|mid|c|0|sad.1.m", world, people="none")
+    assert me not in empty and other not in empty and "sitting" not in empty and cardprompt.CALM not in empty
+    assert empty.startswith("a letter, by a calm lake") and "rain falling" in empty and cardprompt.SCENERY in empty
+    assert "mood" not in cardprompt.build("w2|stairs|dusk|clear|solo_wave|tears|mid|c|0|cry.1.m", world, people="none")
+    assert cardprompt.build("w2|cafe|sunset|clear|solo_sit|hourglass|still|c|0", world, people="none") == still
     # the hair colours of a card world by name: the blue-grey and the wine-red are dark hair, not blue or red hair
     assert [cardprompt.hair(c) for c in cardworld.HAIR_COLORS] == ["dark brown", "black", "brown", "light brown", "dark auburn", "black"]
     assert solo == cardprompt.build("w2|peaks.clocktower.stones|dawn|clear|solo_reach|rainbow|mid|c|0", world)      # the same card, the same words
@@ -844,16 +850,27 @@ def test_ai_cards_are_drawn_by_a_job_and_put_in_one_by_one(client, root, monkeyp
     assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="pag").json()["total"] == 1
     assert not _ai_wait(client, slug)["error"]
     one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
-    assert one["aiseed"] == c["aiseed"] + 2 and one["aiway"] == "pag" and not one["aiaway"]      # or the way the page asks for
-    # the two options to compare: both ways together, and faces turned away where the people are small
-    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="both", away=True).json()["total"] == 1
+    assert one["aiseed"] == c["aiseed"] + 2 and one["aiway"] == "pag" and not one["aipeople"]      # or the way the page asks for
+    # who is shown is a choice of each drawing, and of each redraw: as planned, no faces, scenery only
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="both").status_code == 400      # no third way
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="steps", people="away").json()["total"] == 1
     assert not _ai_wait(client, slug)["error"]
     one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
-    assert one["aiway"] == "both" and one["aiaway"] is True
+    assert one["aiway"] == "steps" and one["aipeople"] == "away"
     assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"]).json()["total"] == 1      # again, as it was drawn
     assert not _ai_wait(client, slug)["error"]
     one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
-    assert one["aiseed"] == c["aiseed"] + 4 and one["aiway"] == "both" and one["aiaway"] is True
+    assert one["aiseed"] == c["aiseed"] + 4 and one["aiway"] == "steps" and one["aipeople"] == "away"
+    # the redraw menu of a card says who is shown and leaves the way to the card: its own way, the people asked for
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], people="").json()["total"] == 1
+    assert not _ai_wait(client, slug)["error"]
+    one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
+    assert one["aiway"] == "steps" and one["aipeople"] == ""
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="pag", people="everyone").status_code == 400
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="pag", people="none").json()["total"] == 1
+    assert not _ai_wait(client, slug)["error"]
+    one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
+    assert one["aiway"] == "pag" and one["aipeople"] == "none"
     # a photo put into a slot while the AI draws stays: only parts that still show nothing get a card
     assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == n
     monkeypatch.setenv("SIGN2MV_CARD_AI_WAIT", "0.4")

@@ -490,6 +490,14 @@
       font-size: 11px;
       cursor: pointer;
     }
+    .scene-card.viewer-back { box-shadow: 0 0 0 3px var(--gold-bright), 0 0 22px rgba(255, 215, 120, 0.55); transition: box-shadow 0.3s; }
+    #photoViewer { position: fixed; inset: 0; z-index: 9000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(4, 7, 13, 0.94); }
+    #photoViewer img { max-width: calc(100vw - 180px); max-height: calc(100vh - 110px); border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); background: #090d16; }
+    #photoViewerCap { color: #f1f5f9; font-size: 15px; max-width: 90vw; text-align: center; }
+    .viewer-nav { position: fixed; top: 50%; transform: translateY(-50%); width: 62px; height: 110px; font-size: 42px; line-height: 1; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3); background: rgba(9, 13, 22, 0.85); color: #fff; cursor: pointer; }
+    .viewer-nav:hover:not(:disabled) { border-color: var(--gold); color: var(--gold-bright); }
+    .viewer-nav:disabled { opacity: 0.25; cursor: default; }
+    #photoViewerClose { position: fixed; top: 14px; right: 18px; width: 46px; height: 46px; font-size: 24px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.35); background: rgba(9, 13, 22, 0.85); color: #fff; cursor: pointer; }
     .scene-mini-btn:hover {
       border-color: var(--gold);
       color: var(--gold-bright);
@@ -1019,7 +1027,7 @@
         <div class="panel-header">
           <div class="panel-title">🖼️ 即時 1080p 畫面合成預覽 ＆ 成品 MV 播放器</div>
           <div style="display:flex; gap:8px; align-items:center;">
-            <button class="btn btn-sm" id="btnLiveSync" onclick="playPreview('live')" title="按下就開始播：播放音檔時即時顯示當下的分鏡圖與字幕（時間點照成品規則：換段前 0.4 秒淡入），不用出影片就能對字幕。播放中再按一次是暫停">🎵 即時對字幕</button>
+            <button class="btn btn-sm" id="btnLiveSync" onclick="playPreview('live')" title="按下就開始播：播放音檔時即時顯示當下的分鏡圖與字幕（時間點照成品規則：換段前 0.4 秒淡入），不用出影片就能對字幕">🎵 即時對字幕</button>
             <button class="btn btn-sm btn-gold" id="btnPlayMv" disabled title="尚未渲染成品 MV" onclick="playPreview('video')">🎬 播放成品 MV (.mp4)</button>
             <button class="btn btn-sm" id="btnDownloadMvVideo" style="border-color:#22c55e; color:#86efac; display:none;" onclick="downloadRenderedMv()" title="將已渲染完成的 1080p 60fps MP4 影片下載至本機">⬇️ 匯出/下載 MV 影片</button>
             <button class="btn btn-sm" id="btnOpenMvFolder" style="display:none;" onclick="openMvFolder()" title="在檔案總管顯示已輸出的 MV 檔案">📂 開啟資料夾</button>
@@ -1081,14 +1089,13 @@
             <span class="cards-tools" style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 12px; border:1.5px solid rgba(232,121,249,0.75); border-radius:12px; white-space:nowrap; background:linear-gradient(135deg, rgba(168,85,247,0.22), rgba(236,72,153,0.16)); box-shadow:0 0 14px rgba(217,70,239,0.25);">
               <button class="btn btn-sm" id="btnSimpleCards" style="border:none; color:#fff; font-weight:800; letter-spacing:0.5px; background:linear-gradient(135deg, #a855f7, #ec4899); box-shadow:0 2px 10px rgba(236,72,153,0.45); flex:0 0 auto;" onclick="makeSimpleCards()" title="沒有照片的畫面，由程式依歌詞抽一組簡單的圖卡補上。已經有圖卡時會先問你要不要清掉重抽。不需要網路，不會動你放的照片；畫好的圖卡跟一般照片一樣，可以再換成自己的照片">🎲 圖卡抽抽樂</button>
               <label for="selCardStyle" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">畫風</label>
-              <select id="selCardStyle" onchange="cardStyleChanged()" title="極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 14 秒），第一次會先下載約 10 GB 的模型。兩種 AI 畫法的臉都比較穩：「加強引導」多用一種引導讓形狀更穩，「30 步」是多畫幾步" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
+              <select id="selCardStyle" onchange="cardStyleChanged()" title="極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 14 秒），第一次會先下載約 10 GB 的模型。AI 有四種：「加強引導」多用一種引導讓形狀更穩；「30 步」是多畫幾步；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」完全不畫人，只畫那一句的場景、光線、天氣和東西" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
                 <option value="simple">極簡</option>
                 <option value="pag">AI 繪圖・加強引導</option>
                 <option value="steps">AI 繪圖・30 步</option>
-                <option value="both">AI 繪圖・加強引導＋30 步</option>
+                <option value="away">AI 繪圖・不露臉</option>
+                <option value="none">AI 繪圖・純風景</option>
               </select>
-              <label style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto; cursor:pointer;" title="只用在 AI 繪圖：人在畫面裡比較小的鏡頭（全身、遠景）不畫正臉，改成背影、側身或臉轉開。小小的正臉是 AI 最容易畫壞的地方；半身和特寫照常畫臉">
-                <input type="checkbox" id="chkCardAway" onchange="cardStyleChanged()" style="width:14px; height:14px; accent-color:#e879f9;" />遠景不露正臉</label>
               <label for="selCardTone" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">色調</label>
               <select id="selCardTone" title="整首歌的簡易圖卡用同一種色調" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
                 <option value="fresh">清新</option>
@@ -1096,7 +1103,7 @@
                 <option value="night">夜藍</option>
                 <option value="manga">黑白漫畫</option>
               </select>
-              <span id="cardsRedrawHint" style="font-size:12px; color:#f5d0fe; flex:0 1 auto; white-space:normal;">💡 AI 畫的圖卡哪一張不滿意，按那一張圖下面的「🎨 重畫」，只重畫那一張</span>
+              <span id="cardsRedrawHint" style="font-size:12px; color:#f5d0fe; flex:0 1 auto; white-space:normal;">💡 AI 畫的圖卡哪一張不滿意，用那一張圖下面的「🎨 重畫…」選單只重畫那一張（可選原模式、不露臉、純風景）</span>
             </span>
           </div>
         </div>
@@ -1753,9 +1760,9 @@
         const durSec = boundSeg ? (boundSeg.end - boundSeg.start).toFixed(2) : '';
 
         card.innerHTML = `
-          <div class="scene-card-img-wrap" title="點擊或拖曳圖片更換 Scene ${String(sc.scene_id).padStart(2, '0')} 照片">
+          <div class="scene-card-img-wrap" title="點一下看大圖；換照片請按下面的「📤 換圖」或把圖片拖進來">
             ${imgUrl
-              ? `<img src="${imgUrl}" loading="lazy" decoding="async" alt="Scene ${sc.scene_id}" draggable="true" title="拖到別張卡片＝把這張照片移到那個位置（中間的照片往旁邊讓一格，歌詞不動）；點一下＝換照片" ondragstart="sceneDragStart(event, ${sc.scene_id})" ondragend="sceneDragEnd()" onclick="triggerUploadScene(${sc.scene_id})" />`
+              ? `<img src="${imgUrl}" loading="lazy" decoding="async" alt="Scene ${sc.scene_id}" draggable="true" title="點一下＝看大圖（可以按左右看上一張、下一張）；拖到別張卡片＝把這張照片移到那個位置（中間的照片往旁邊讓一格，歌詞不動）" ondragstart="sceneDragStart(event, ${sc.scene_id})" ondragend="sceneDragEnd()" onclick="openPhotoViewer(${sc.scene_id})" />`
               : `<div class="scene-card-empty" onclick="triggerUploadScene(${sc.scene_id})"><span>📥 點擊或拖曳放入照片</span><span>Scene ${String(sc.scene_id).padStart(2, '0')} (自動轉 1920x1080)</span></div>`
             }
             <label class="scene-card-overlay-badge" style="display:inline-flex; align-items:center; gap:5px; cursor:pointer;" onclick="event.stopPropagation()" title="勾選此張照片以進行批次刪除">
@@ -3401,16 +3408,14 @@
       showToast(`✔ 已將間奏前與片尾前共 ${count} 處歌詞尾韻往後延展 +${extSec}s！`);
     }
 
-    // [SIGN2MV 2026-11-17] 使用者要求：按「即時對字幕」「播放成品 MV」就直接播（原本只換畫面，還要再去按播放）。
-    // 已經在那個畫面而且正在播，再按一次是暫停。
+    // [SIGN2MV 2026-11-17] 使用者要求：按「即時對字幕」「播放成品 MV」就直接起播（原本只換畫面，還要再去按播放）。
     function playPreview(mode) {
-      const vid = document.getElementById('mvVideoPlayer');
-      const was = mode === 'live' ? liveMode : vid.style.display === 'block';
       switchPreviewMode(mode);
+      const vid = document.getElementById('mvVideoPlayer');
       const el = mode === 'live' ? audioEl : vid, other = mode === 'live' ? vid : audioEl;
       if (!el) return;
-      if (was && !el.paused) { el.pause(); return; }
       if (other && !other.paused) other.pause();          // one sound at a time
+      if (!el.paused) return;                             // already playing
       const p = el.play();
       if (p && p.catch) p.catch(() => {});                // nothing to play yet: the player says so itself
     }
@@ -4054,6 +4059,47 @@
       }
     });
 
+    // [SIGN2MV 2026-11-17] 使用者要求：按卡片的圖就直接看大圖；左右是上一張、下一張；關掉回到正在看的那一張卡片。
+    let viewerScene = 0;
+    function viewerList() { return (currentScenesList || []).filter(x => x.exists && x.path).sort((a, b) => a.scene_id - b.scene_id); }
+    function viewerShow(sceneId) {
+      const list = viewerList(), k = list.findIndex(x => parseInt(x.scene_id) === parseInt(sceneId));
+      if (k < 0) return false;
+      const sc = list[k];
+      viewerScene = parseInt(sc.scene_id);
+      document.getElementById('photoViewerImg').src = `/api/mv/media?path=${encodeURIComponent(sc.path)}&t=${sc.mtime || 0}`;
+      const lines = ((currentProject && currentProject.timeline) || []).filter(seg => parseInt(seg.scene) === viewerScene && seg.type !== 'intro' && seg.type !== 'outro').map(seg => seg.text || '');
+      document.getElementById('photoViewerCap').textContent = `Scene ${String(viewerScene).padStart(2, '0')}（${k + 1}／${list.length}）` + (lines.length ? '　' + lines.join(' ／ ') : '');
+      document.getElementById('photoViewerPrev').disabled = k === 0;
+      document.getElementById('photoViewerNext').disabled = k === list.length - 1;
+      return true;
+    }
+    function openPhotoViewer(sceneId) {
+      if (!viewerShow(sceneId)) return;
+      document.getElementById('photoViewer').style.display = 'flex';
+    }
+    function photoViewerStep(d) {
+      const list = viewerList(), k = list.findIndex(x => parseInt(x.scene_id) === viewerScene);
+      if (k + d >= 0 && k + d < list.length) viewerShow(list[k + d].scene_id);
+    }
+    function closePhotoViewer() {
+      const box = document.getElementById('photoViewer');
+      if (box.style.display === 'none') return;
+      box.style.display = 'none';
+      document.getElementById('photoViewerImg').removeAttribute('src');
+      const card = document.getElementById(`scene_card_${viewerScene}`);      // back to the card that was on show
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.add('viewer-back');
+        setTimeout(() => card.classList.remove('viewer-back'), 1600);
+      }
+    }
+    document.addEventListener('keydown', (e) => {
+      if (document.getElementById('photoViewer').style.display === 'none') return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); photoViewerStep(-1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); photoViewerStep(1); }
+      else if (e.key === 'Escape') { e.preventDefault(); closePhotoViewer(); }
+    }, true);
     function triggerUploadScene(sceneId) {
       pendingUploadSceneId = sceneId;
       document.getElementById('hiddenSceneUpload').click();
@@ -4200,9 +4246,9 @@
 
     // [SIGN2MV 2026-11-17] 畫風：極簡（程式自己畫）或 AI 繪圖（顯示卡上的繪圖模型，照同一份規劃畫）
     let cardsState = null, aiPolling = false;
-    const AI_STYLES = { pag: 'AI 繪圖・加強引導', steps: 'AI 繪圖・30 步', both: 'AI 繪圖・加強引導＋30 步' };
-    const AI_SECS = { pag: 14, steps: 14, both: 17 };      // 每張大約幾秒（RTX 4060 Laptop 上量的；both 是估的）
-    function cardAway() { const c = document.getElementById('chkCardAway'); return !!(c && c.checked); }
+    // AI 的四種模式：前兩種是畫法（都照規劃畫人、會畫臉）；後兩種是「畫誰」，畫法用加強引導
+    const AI_STYLES = { pag: 'AI 繪圖・加強引導', steps: 'AI 繪圖・30 步', away: 'AI 繪圖・不露臉', none: 'AI 繪圖・純風景' };
+    const AI_MODES = { pag: { way: 'pag', people: '' }, steps: { way: 'steps', people: '' }, away: { way: 'pag', people: 'away' }, none: { way: 'pag', people: 'none' } };
     function cardStyle() {      // 'simple', or one of the AI ways
       const sel = document.getElementById('selCardStyle');
       const opt = sel && sel.options[sel.selectedIndex];
@@ -4210,7 +4256,7 @@
     }
     function cardStyleChanged() {
       const sel = document.getElementById('selCardStyle');
-      try { localStorage.setItem('sign2mv.cardStyle', sel.value); localStorage.setItem('sign2mv.cardAway', cardAway() ? '1' : ''); } catch (e) { /* private mode */ }
+      try { localStorage.setItem('sign2mv.cardStyle', sel.value); } catch (e) { /* private mode */ }
       const tone = document.getElementById('selCardTone');
       if (tone) tone.title = AI_STYLES[sel.value] ? '色調只用在極簡圖卡；AI 繪圖有自己的畫風' : '整首歌的簡易圖卡用同一種色調';
     }
@@ -4231,7 +4277,6 @@
           let want = 'simple';
           try { want = localStorage.getItem('sign2mv.cardStyle') || 'simple'; } catch (e) { /* private mode */ }
           if (want === 'ai') want = 'pag';          // the first AI way is gone
-          try { document.getElementById('chkCardAway').checked = localStorage.getItem('sign2mv.cardAway') === '1'; } catch (e) { /* private mode */ }
           style.value = AI_STYLES[want] && ai.available ? want : 'simple';
           cardStyleChanged();
         }
@@ -4242,11 +4287,12 @@
         const m = /^scene:(\d+)$/.exec(c.slot || '');
         const bar = m && document.querySelector(`#scene_card_${m[1]} .scene-card-actions-top`);
         if (!bar || c.style !== 'ai' || bar.querySelector('.ai-redraw-btn')) return;
-        const btn = document.createElement('button');
+        const btn = document.createElement('select');        // 重畫這一張，並選這一次畫不畫人、露不露臉
         btn.className = 'scene-mini-btn ai-redraw-btn';
-        btn.textContent = '🎨 重畫';
-        btn.title = '這一張不滿意：用 AI 再畫一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。畫風選單選著哪一種 AI 畫法（和「遠景不露正臉」有沒有勾）就照那樣畫，選著「極簡」時照這一張原本的畫法';
-        btn.onclick = (ev) => { ev.stopPropagation(); aiRedrawCard(c.slot); };
+        btn.title = '這一張不滿意：選一種，用 AI 只重畫這一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。原模式＝照這一張原本的畫法再畫一次；不露臉＝人物改成背影、側身；純風景＝不畫人';
+        [['', '🎨 重畫…'], ['same', '🎨 原模式'], ['away', '🎨 不露臉'], ['none', '🎨 純風景']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; btn.appendChild(o); });
+        btn.onclick = (ev) => ev.stopPropagation();
+        btn.onchange = () => { const v = btn.value; btn.value = ''; if (v) aiRedrawCard(c.slot, v); };
         bar.insertBefore(btn, bar.firstChild);
       });
       if (ai.running && !aiPolling) aiFollow(currentSlug, ai.total || 0, false);   // a run begun before this page was opened
@@ -4282,7 +4328,7 @@
 
     function cardsLock(on) {
       cardsBusy = on;
-      ['btnSimpleCards', 'selCardTone', 'selCardStyle', 'chkCardAway'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = on; });
+      ['btnSimpleCards', 'selCardTone', 'selCardStyle'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = on; });
       document.querySelectorAll('.ai-redraw-btn').forEach(el => { el.disabled = on; });
     }
 
@@ -4330,12 +4376,11 @@
         await aiFollow(slug, got.total || total, one);
       } catch (e) { setInlineStatus('step2StatusBox', 'err', `❌ AI 繪圖沒有開始：${aiEsc(e.message)}`); }
     }
-    async function aiRedrawCard(slot) {
+    async function aiRedrawCard(slot, how) {      // how: 'same' 照這一張原本的模式；'away' 不露臉；'none' 純風景（畫法照這一張原本的）
       if (!currentSlug || cardsBusy) return;
       if (isRenderingInProgress) { showToast('正在輸出 MV，等它完成再重畫', true); return; }
       const sel = document.getElementById('selCardTone');
-      const way = cardStyle();
-      await aiStart(Object.assign({ slot, tone: sel ? sel.value : 'fresh' }, way === 'simple' ? {} : { way, away: cardAway() }), 1, true);
+      await aiStart(Object.assign({ slot, tone: sel ? sel.value : 'fresh' }, how === 'away' || how === 'none' ? { people: how } : {}), 1, true);
     }
 
     async function makeSimpleCards() {
@@ -4364,14 +4409,13 @@
       if (cardStyle() !== 'simple') {
         const ai = state.ai || {};
         if (ai.busy) { setInlineStatus('step2StatusBox', 'err', '⚠️ AI 繪圖正在畫另一首歌的圖卡，等它畫完再按。'); return; }
-        const each = AI_SECS[cardStyle()] || 14;
-        const mins = Math.max(1, Math.round(todo.length * each / 60));
+        const mins = Math.max(1, Math.round(todo.length * 14 / 60));
         if (!ai.installed && ai.model) {
           if (!confirm(`第一次用 AI 繪圖，要先安裝它的程式庫（約 0.3 GB，需要網路，只有這一次）。\n\n裝完會接著畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘。\n要開始嗎？`)) return;
         } else if (!ai.installed) {
           if (!confirm(`第一次用 AI 繪圖，要先下載繪圖模型（約 10 GB）和程式庫（約 0.3 GB），放在 SIGN2MV 的資料夾裡。\n下載只有這一次，需要網路；之後畫圖不用網路。\n\n下載完會接著畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘。\n要開始嗎？`)) return;
-        } else if (!confirm(`用 AI 畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘（每張約 ${each} 秒）。\n畫的時候顯示卡會被佔用，翻唱和字幕辨識會排在後面。\n\n要開始嗎？`)) return;
-        await aiStart({ tone, way: cardStyle(), away: cardAway() }, todo.length, false);
+        } else if (!confirm(`用 AI 畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘（每張約 14 秒）。\n畫的時候顯示卡會被佔用，翻唱和字幕辨識會排在後面。\n\n要開始嗎？`)) return;
+        await aiStart(Object.assign({ tone }, AI_MODES[cardStyle()]), todo.length, false);
         return;
       }
       cardsLock(true); cardsStop = false;
@@ -4681,5 +4725,13 @@
 
     window.addEventListener('DOMContentLoaded', () => { initStudio().then(resumeRunningRender).then(() => window.sign2mvReady && window.sign2mvReady()); });
   </script>
+  <!-- [SIGN2MV 2026-11-17] a photo, big: opened by a click on a card's picture -->
+  <div id="photoViewer" style="display:none;" onclick="if (event.target === this) closePhotoViewer()">
+    <button type="button" id="photoViewerClose" title="關掉，回到這一張圖卡（Esc）" onclick="closePhotoViewer()">✕</button>
+    <button type="button" class="viewer-nav" id="photoViewerPrev" style="left:18px;" title="上一張（鍵盤 ←）" onclick="photoViewerStep(-1)">‹</button>
+    <img id="photoViewerImg" alt="" />
+    <button type="button" class="viewer-nav" id="photoViewerNext" style="right:18px;" title="下一張（鍵盤 →）" onclick="photoViewerStep(1)">›</button>
+    <div id="photoViewerCap"></div>
+  </div>
 </body>
 </html>

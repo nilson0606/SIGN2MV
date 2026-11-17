@@ -667,16 +667,25 @@
   "AI 繪圖・30 步": "AI drawing · 30 steps",
   "AI 繪圖・加強引導（這台電腦不能用）": "AI drawing · extra guidance (not on this computer)",
   "AI 繪圖・30 步（這台電腦不能用）": "AI drawing · 30 steps (not on this computer)",
-  "極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 14 秒），第一次會先下載約 10 GB 的模型。兩種 AI 畫法的臉都比較穩：「加強引導」多用一種引導讓形狀更穩，「30 步」是多畫幾步": "Simple: drawn by the app itself, fast, works on every computer. AI drawing: drawn on this computer's graphics card (about 14 s a card); the first time it downloads a model of about 10 GB. Both AI ways keep faces steadier: “extra guidance” adds a second guidance for steadier shapes, “30 steps” draws with more steps",
   "即時合成預覽這張照片＋歌詞，並跳到上面的播放器看": "Preview this photo with its lyric, and jump to the player above to see it",
   "即時合成預覽這段，並跳到上面的播放器看": "Preview this part, and jump to the player above to see it",
-  "💡 AI 畫的圖卡哪一張不滿意，按那一張圖下面的「🎨 重畫」，只重畫那一張": "💡 Not happy with one AI card? Press “🎨 Redraw” under it: only that card is drawn again",
-  "按下就開始播：播放音檔時即時顯示當下的分鏡圖與字幕（時間點照成品規則：換段前 0.4 秒淡入），不用出影片就能對字幕。播放中再按一次是暫停": "Press to play: while the audio plays, shows the current scene and subtitle live (same timing as the final video: fades in 0.4 s before each change), so you can check subtitles without rendering. Press again while it plays to pause",
-  "AI 繪圖・加強引導＋30 步": "AI drawing · extra guidance + 30 steps",
-  "AI 繪圖・加強引導＋30 步（這台電腦不能用）": "AI drawing · extra guidance + 30 steps (not on this computer)",
-  "遠景不露正臉": "No small faces",
-  "只用在 AI 繪圖：人在畫面裡比較小的鏡頭（全身、遠景）不畫正臉，改成背影、側身或臉轉開。小小的正臉是 AI 最容易畫壞的地方；半身和特寫照常畫臉": "For AI drawing only: in shots where the people are small (full body, far away) no face looks at the viewer: backs, side views, faces turned away. A small face seen from the front is what the AI draws worst; upper-body and close shots show faces as usual",
-  "這一張不滿意：用 AI 再畫一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。畫風選單選著哪一種 AI 畫法（和「遠景不露正臉」有沒有勾）就照那樣畫，選著「極簡」時照這一張原本的畫法": "Not happy with this one: let the AI draw it again (same line, same scene, another picture; about 25 s). It is drawn the AI way chosen in the style menu (and with “No small faces” as ticked), or the way this card was drawn when the menu says “Simple”"
+  "按下就開始播：播放音檔時即時顯示當下的分鏡圖與字幕（時間點照成品規則：換段前 0.4 秒淡入），不用出影片就能對字幕": "Press to play: while the audio plays, shows the current scene and subtitle live (same timing as the final video: fades in 0.4 s before each change), so you can check subtitles without rendering",
+  "🎨 重畫…": "🎨 Redraw…",
+  "🎨 不露臉": "🎨 No faces",
+  "🎨 純風景": "🎨 Scenery only",
+  "AI 繪圖・不露臉": "AI drawing · no faces",
+  "AI 繪圖・純風景": "AI drawing · scenery only",
+  "AI 繪圖・不露臉（這台電腦不能用）": "AI drawing · no faces (not on this computer)",
+  "AI 繪圖・純風景（這台電腦不能用）": "AI drawing · scenery only (not on this computer)",
+  "極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 14 秒），第一次會先下載約 10 GB 的模型。AI 有四種：「加強引導」多用一種引導讓形狀更穩；「30 步」是多畫幾步；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」完全不畫人，只畫那一句的場景、光線、天氣和東西": "Simple: drawn by the app itself, fast, works on every computer. AI drawing: drawn on this computer's graphics card (about 14 s a card); the first time it downloads a model of about 10 GB. Four AI modes: “extra guidance” adds a second guidance for steadier shapes; “30 steps” draws with more steps; “no faces” shows everyone from behind, from the side or with the face turned away; “scenery only” draws no people at all, just the place of that line with its light, weather and things",
+  "🎨 原模式": "🎨 Same mode",
+  "這一張不滿意：選一種，用 AI 只重畫這一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。原模式＝照這一張原本的畫法再畫一次；不露臉＝人物改成背影、側身；純風景＝不畫人": "Not happy with this one: pick one and the AI draws only this card again (same line, same scene, another picture; about 25 s). Same mode = once more the way this card was drawn; No faces = the people seen from behind or from the side; Scenery only = no people",
+  "💡 AI 畫的圖卡哪一張不滿意，用那一張圖下面的「🎨 重畫…」選單只重畫那一張（可選原模式、不露臉、純風景）": "💡 Not happy with one AI card? Use the “🎨 Redraw…” menu under it to draw only that card again (same mode, no faces, or scenery only)",
+  "點一下看大圖；換照片請按下面的「📤 換圖」或把圖片拖進來": "Click for a big view; to change the photo press “📤 Change” below or drop a picture here",
+  "點一下＝看大圖（可以按左右看上一張、下一張）；拖到別張卡片＝把這張照片移到那個位置（中間的照片往旁邊讓一格，歌詞不動）": "Click = big view (left and right go to the previous and the next); drag onto another card = move this photo there (the photos between shift by one, the lyrics stay)",
+  "關掉，回到這一張圖卡（Esc）": "Close and go back to this card (Esc)",
+  "上一張（鍵盤 ←）": "Previous (← key)",
+  "下一張（鍵盤 →）": "Next (→ key)"
  },
  "patterns": [
   {
@@ -1892,8 +1901,8 @@
    "en": "Then it draws {0} card(s), about {1} minute(s)."
   },
   {
-   "zh": "用 AI 畫 {0} 張圖卡，大約 {1} 分鐘（每張約 {2} 秒）。",
-   "en": "The AI draws {0} card(s), about {1} minute(s) (about {2} s each)."
+   "zh": "用 AI 畫 {0} 張圖卡，大約 {1} 分鐘（每張約 14 秒）。",
+   "en": "The AI draws {0} card(s), about {1} minute(s) (about 14 s each)."
   },
   {
    "zh": "顯示卡記憶體 {0} GB 不夠（AI 繪圖要 6 GB 以上）",
@@ -1906,6 +1915,10 @@
   {
    "zh": "裝完會接著畫 {0} 張圖卡，大約 {1} 分鐘。",
    "en": "Then it draws {0} card(s), about {1} minute(s)."
+  },
+  {
+   "zh": "Scene {0}（{1}／{2}）",
+   "en": "Scene {0} ({1} / {2})"
   }
  ]
 }

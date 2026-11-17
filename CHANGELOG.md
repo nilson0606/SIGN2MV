@@ -24,17 +24,20 @@
   (30 steps), each about 13 s a card. A card remembers the way it was drawn; its 「🎨 重畫」 uses the way
   chosen in the menu, or its own while the menu says 「極簡」.
 - MV page: 「👁️ 預覽」 on a photo also scrolls up to the player, where the preview is shown.
-- MV page: the card row says that one AI card can be drawn again on its own (「🎨 重畫」 under the picture).
+- MV page: the card row says that one AI card can be drawn again on its own (the 「🎨 重畫…」 menu under the picture).
 - MV page: the small buttons of a photo card (重畫, 預覽, 🎧, 換圖, 刪圖) are a row of their own under the
   picture; they covered the top of it.
-- AI picture cards, two options to compare (asked for by the user): a third way 「AI 繪圖・加強引導＋30 步」
-  (both of the above together), and a tick 「遠景不露正臉」: in every shot that shows the people from head
-  to foot no face looks at the viewer (backs, side views, faces turned away), because a small face seen
-  from the front is what the model draws worst; upper-body and close shots are as before. A card remembers
-  both. And the six hair colours of a card world are said by name: the blue-grey and the wine-red of the
-  simple cards are dark hair ("black", "dark auburn"), where "dark blue" made the model paint bright blue hair.
-- MV page: 「🎵 即時對字幕」 and 「🎬 播放成品 MV」 start playing when pressed (they only changed the view); pressed
-  again while playing, they pause.
+- AI picture cards, two more modes (asked for by the user), four in all in the style menu: 「不露臉」 (everyone
+  seen from behind, from the side or with the face turned away, in every shot: faces are what the model draws
+  worst) and 「純風景」 (nobody in the picture: the place of the card with its light, its weather and its thing);
+  both are drawn the 「加強引導」 way. The 「🎨 重畫…」 of a card is a menu: 「原模式」 (once more as that card
+  was drawn), 「不露臉」, 「純風景」, for that one card. A card remembers how it was drawn.
+- MV page: a click on a photo opens it big (it started an upload; changing the photo is the 「📤 換圖」 button or a
+  drop); ‹ › and the arrow keys go to the previous and the next photo; closing (✕, Esc, a click beside the
+  picture) scrolls back to the card of the photo that was on show and lights it up for a moment.
+- AI picture cards: the six hair colours of a card world are said by name: the blue-grey and the wine-red of
+  the simple cards are dark hair ("black", "dark auburn"), where "dark blue" made the model paint bright blue hair.
+- MV page: 「🎵 即時對字幕」 and 「🎬 播放成品 MV」 start playing when pressed (they only changed the view).
 - MV: a new project starts with 「轉場變化：隨機」 (it was 「固定一種」), with a seed of its own. Projects made
   before keep what they have.
 - Simple cards: a second way of drawing, 「畫法：標準」, beside the first (「簡易」, unchanged). A standard
