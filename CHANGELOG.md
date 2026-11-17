@@ -24,6 +24,7 @@
   (30 steps), each about 13 s a card. A card remembers the way it was drawn; its 「🎨 重畫」 uses the way
   chosen in the menu, or its own while the menu says 「極簡」.
 - MV page: 「👁️ 預覽」 on a photo also scrolls up to the player, where the preview is shown.
+- MV page: the card row says that one AI card can be drawn again on its own (「🎨 重畫」 at its top right).
 - Simple cards: a second way of drawing, 「畫法：標準」, beside the first (「簡易」, unchanged). A standard
   world has ten places, six of them put together from a terrain (12), a landmark (45: lighthouse, Ferris wheel,
   chapel, phone booth, campfire, castle, ...) and a foreground (9), 392 fitting terrain and landmark pairs in

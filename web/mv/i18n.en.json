@@ -670,7 +670,8 @@
   "極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 14 秒），第一次會先下載約 10 GB 的模型。兩種 AI 畫法的臉都比較穩：「加強引導」多用一種引導讓形狀更穩，「30 步」是多畫幾步": "Simple: drawn by the app itself, fast, works on every computer. AI drawing: drawn on this computer's graphics card (about 14 s a card); the first time it downloads a model of about 10 GB. Both AI ways keep faces steadier: “extra guidance” adds a second guidance for steadier shapes, “30 steps” draws with more steps",
   "這一張不滿意：用 AI 再畫一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。畫風選單選著哪一種 AI 畫法就用哪一種，選著「極簡」時照這一張原本的畫法": "Not happy with this one: let the AI draw it again (same line, same scene, another picture; about 25 s). It uses the AI way chosen in the style menu, or the way this card was drawn when the menu says “Simple”",
   "即時合成預覽這張照片＋歌詞，並跳到上面的播放器看": "Preview this photo with its lyric, and jump to the player above to see it",
-  "即時合成預覽這段，並跳到上面的播放器看": "Preview this part, and jump to the player above to see it"
+  "即時合成預覽這段，並跳到上面的播放器看": "Preview this part, and jump to the player above to see it",
+  "💡 AI 畫的圖卡哪一張不滿意，按那一張右上角的「🎨 重畫」，只重畫那一張": "💡 Not happy with one AI card? Press “🎨 Redraw” at its top right: only that card is drawn again"
  },
  "patterns": [
   {
