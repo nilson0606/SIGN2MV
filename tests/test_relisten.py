@@ -74,7 +74,7 @@ def test_locked_lines_are_kept_and_nothing_else_changes():
     assert not any(x.get("locked") for x in rep["lines"])
 
 
-def test_library_api_no_anchors_as_before_and_anchors_ask_whisper_again(client, root, monkeypatch):
+def test_library_api_lines_not_heard_are_listened_to_again_with_or_without_anchors(client, root, monkeypatch):
     from app import stems as stems_mod
     lines, starts, per_line, segs = _missed()
     secs = int(per_line[-1][-1]["end"] + 6)
@@ -86,19 +86,34 @@ def test_library_api_no_anchors_as_before_and_anchors_ask_whisper_again(client, 
     text = "\n".join(lines)
     before = client.post(url, json={"text": text}).json()
     want = quick_lyrics.align_report(lines, segs)
-    assert before["mode"] == "whisper" and before["lines"] == want["lines"]
+    assert before["mode"] == "whisper" and before["matched"] == want["placed"] == 5 and before["relistened"] == 0
+    assert [x["start"] for i, x in enumerate(before["lines"]) if i not in (2, 3, 4)] == [x["start"] for i, x in enumerate(want["lines"]) if i not in (2, 3, 4)]
 
-    # something heard again earlier, and lines sent without anchors: still exactly as before
+    # something heard again earlier counts without anchors too (it took anchors before 2026-11-18)
     relisten.store_file(wf).write_text(json.dumps({"windows": [{"start": 10.0, "end": 40.0, "segments": [
         {"start": 11, "end": 12, "text": "x", "words": [{"word": "清", "start": 11.0, "end": 11.4}]}]}]}), encoding="utf-8")
     plain_lines = [{k: v for k, v in x.items() if k != "locked"} for x in before["lines"]]
     again = client.post(url, json={"text": text, "lines": plain_lines}).json()
-    assert again == before
+    assert again["mode"] == "whisper" and again["relistened"] == 1
     relisten.forget(wf)
 
     # anchors: the stretch between them where lines were not heard is listened to again (once)
     vocals = song_dir / "stems" / "v.wav"
     monkeypatch.setattr(stems_mod, "plan", lambda *a, **k: ([], {"vocals": "stems/v.wav", "voice": "stems/v.wav"}))
+    # no anchors: the stretch whose lines were not heard is listened to again, with those lines as the hint
+    auto = client.post(url, json={"text": text, "lines": plain_lines}).json()
+    assert auto["relisten"] == 1 and auto["job"]["kind"] == "quickmv_relisten"
+    asked = client.app.state.jobs._jobs[auto["job"]["id"]].spec.input["windows"][0]
+    assert all(lines[i] in asked["prompt"] for i in (2, 3, 4))
+    # listened to (and nothing heard): not asked again for the same lines, asked again when the lines change
+    relisten.store_file(wf).write_text(json.dumps({"windows": [{**asked, "segments": []}]}), encoding="utf-8")
+    assert "job" not in client.post(url, json={"text": text, "lines": plain_lines}).json()
+    changed = "\n".join(lines[:3] + [lines[3][:-2] + "呀呀"] + lines[4:])
+    other = client.post(url, json={"text": changed}).json()
+    assert other["relisten"] == 1          # (the job is the one already waiting: one listen-again job at a time)
+    gaps = quick_lyrics.anchored_report(quick_lyrics.plain_lines(changed), segs, [], secs)["gaps"]
+    assert "呀呀" in relisten.windows(gaps, wf)[0]["prompt"]
+    relisten.forget(wf)
     anchored = [dict(x) for x in before["lines"]]
     anchored[1]["locked"] = anchored[5]["locked"] = True
     first = client.post(url, json={"text": text, "lines": anchored}).json()
@@ -118,8 +133,9 @@ def test_library_api_no_anchors_as_before_and_anchors_ask_whisper_again(client, 
     assert done["mode"] == "anchored" and done["matched"] == 8 and done["anchors"] == 2 and done["relistened"] == 1
     assert [x["start"] for x in done["lines"]] [2:5] == starts[2:5] and done["missing"] == []
     assert done["lines"][1]["locked"] and done["lines"][5]["start"] == anchored[5]["start"]
-    # unlocked again: back to exactly the first result
-    assert client.post(url, json={"text": text, "lines": plain_lines}).json() == before
+    # unlocked again: what was heard again still counts
+    free = client.post(url, json={"text": text, "lines": plain_lines}).json()
+    assert free["mode"] == "whisper" and free["matched"] == 8 and free["relistened"] == 1
 
 
 def test_mv_page_uses_what_was_heard_again_only_with_anchors(client, root):

@@ -706,7 +706,7 @@ export default {
   "qmvl.download_lrc_tip": "Saves the timed lines as an LRC lyrics file ([mm:ss] line). The MV page does not need it: “📚 Bring in the library timing” in its “📝 Lyrics / subtitles” panel takes them over directly",
   "qmvl.lrc_empty": "There are no timed lines to download yet",
   "qmvl.anchor_hint": "When lines are off: anchor the right ones with “🔓 Free” (at least the line before and the line after the part that is off), then press “🎙️ Time the lines” again. The lines between anchors are matched again word by word; where lines were not heard at all, Whisper listens to just that stretch once more.",
-  "qmvl.relisten_running": "Whisper is listening again to {0} stretch(es) it missed (only between anchors)…",
+  "qmvl.relisten_running": "Whisper is listening again, with the lyrics as a hint, to {0} stretch(es) whose lines were not placed…",
   "qmvl.relisten_failed": "Whisper did not finish listening again; the lines are placed by what was heard so far.",
   "qmvl.mode_anchored": "{0} of {1} lines matched to the singing ({2} of them anchored by you). Check them with ▶.",
   "qmvl.missing": "⚠ Some lines here were not heard and are spread evenly: {0}. Tune them one by one and anchor them.",

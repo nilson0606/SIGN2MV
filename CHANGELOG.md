@@ -55,6 +55,10 @@
   colour; a man in pink trousers came out as a second woman).
 - AI picture cards: 「小人物」 (small figures) is a mode of its own, the fifth, in the style menu and in the redraw
   menu of a card. 「純風景」 is scenery with nobody on every card (it had small figures on one scene in four).
+- Lyrics timing (快速 MV): a stretch whose lines were not placed is listened to again by Whisper with those lines
+  as the hint, without the user locking lines first, and again when its lines change. Before, a second press of
+  「自動對時間」 only matched the same recognized words again (the first listening has only the title as a hint),
+  so changing the line breaks of a Taiwanese song with 15 of 24 lines placed changed nothing.
 - AI picture cards are drawn by FLUX.2 klein 4B alone: Sana (the first painter, never released) is taken out, with
   its two ways of drawing and its five menu entries. The style menu is 極簡 and four AI modes (plain, no faces,
   scenery, small figures); a card drawn by Sana is drawn again by klein. The entries about Sana below are how it

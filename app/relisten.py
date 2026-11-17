@@ -81,16 +81,18 @@ def merged(data: Any, w_json: Any) -> list[dict]:
 
 def windows(gaps: list[dict], w_json: Any) -> list[dict]:
     """The stretches to listen to again: {start, end, prompt}. A stretch that overlaps one listened to
-    before by more than half is left out (listening again would hear the same)."""
+    before by more than half with the same lines as the hint is left out (listening again would hear the same);
+    with other lines (the user changed the lyrics or their line breaks) it is listened to again."""
     before = done(w_json)
     out = []
     for g in gaps:
         st, et = float(g["start"]), float(g["end"])
         if not (MIN_S <= et - st <= MAX_S) or not g.get("lines"):
             continue
-        if any(min(et, float(b["end"])) - max(st, float(b["start"])) > 0.5 * (et - st) for b in before):
-            continue
         prompt = "，".join(str(x) for x in g["lines"])[:PROMPT_CHARS]
+        if any(min(et, float(b["end"])) - max(st, float(b["start"])) > 0.5 * (et - st)
+               and str(b.get("prompt", prompt)) == prompt for b in before):
+            continue
         out.append({"start": round(max(0.0, st - 0.3), 2), "end": round(et + 0.3, 2), "prompt": prompt})
     return out[:12]
 

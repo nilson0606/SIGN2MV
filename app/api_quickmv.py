@@ -312,26 +312,29 @@ def router(ctx: Context) -> APIRouter:
             except (OSError, ValueError):
                 data, segs = {}, []
             anchors = [x for x in (quick_lyrics.clean_lines(body.get("lines") or [], total) or []) if x.get("locked")]
+            # [2026-11-18] Lines that were not heard are listened to again without anchors too (it took locked
+            # lines before). The user had a Taiwanese song with 15 of 24 lines placed, changed the line breaks and
+            # pressed again: nothing changed, because Whisper listens once (with only the title as a hint) and a
+            # second press only matched the same words again. Now each stretch between placed lines whose lines
+            # were not heard is listened to again with those lines as the hint, and again when its lines change
+            # (app/relisten.py). Lines the user locked stay, as before, and bound what is matched between them.
+            relisten.collect(wf)
+            rep = quick_lyrics.anchored_report(plain, relisten.merged(data, wf), anchors, total)
+            wins = relisten.windows(rep["gaps"], wf) if body.get("relisten") is not False and not layers else []
+            if wins:
+                job = ctx.submit(kind="quickmv_relisten", lane="gpu", script="mv_whisper.py",
+                                 input=relisten.payload(wins, sdir / tracks["vocals"], wf),
+                                 title=f"lyrics timing (listen again): {song['title']}", song_id=song_id,
+                                 timeout_s=1800, dedupe="quickmv_whisper")
+                return {"job": job, "relisten": len(wins)}
             if anchors:
-                # lines the user locked stay; the lines between two of them are matched only to what was heard
-                # between them; a stretch where lines were not heard at all is listened to again (once)
-                relisten.collect(wf)
-                rep = quick_lyrics.anchored_report(plain, relisten.merged(data, wf), anchors, total)
-                wins = relisten.windows(rep["gaps"], wf) if body.get("relisten") is not False and not layers else []
-                if wins:
-                    job = ctx.submit(kind="quickmv_relisten", lane="gpu", script="mv_whisper.py",
-                                     input=relisten.payload(wins, sdir / tracks["vocals"], wf),
-                                     title=f"lyrics timing (listen again): {song['title']}", song_id=song_id,
-                                     timeout_s=1800, dedupe="quickmv_whisper")
-                    return {"job": job, "relisten": len(wins)}
                 return {"lines": rep["lines"], "mode": "anchored", "matched": rep["placed"], "total": len(plain),
                         "anchors": sum(1 for x in rep["lines"] if x.get("locked")), "unsung": rep["unsung"][:8],
                         "missing": [{"start": g["start"], "end": g["end"], "lines": len(g["lines"])} for g in rep["gaps"]][:8],
                         "relistened": len(relisten.done(wf))}
-            rep = quick_lyrics.align_report(plain, segs)
             if rep["placed"] >= 1:
                 return {"lines": rep["lines"], "mode": "whisper", "matched": rep["placed"], "total": len(plain),
-                        "unsung": rep["unsung"][:8]}
+                        "unsung": rep["unsung"][:8], "relistened": len(relisten.done(wf))}
             return {"lines": quick_lyrics.spread(plain, total), "mode": "even", "whisper_empty": True}
         if not src.get("audio"):
             return err("song_has_no_audio")
