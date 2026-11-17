@@ -55,6 +55,10 @@
   colour; a man in pink trousers came out as a second woman).
 - AI picture cards: 「小人物」 (small figures) is a mode of its own, the fifth, in the style menu and in the redraw
   menu of a card. 「純風景」 is scenery with nobody on every card (it had small figures on one scene in four).
+- AI small figures: a figure is told by its outline (two came out as two men, both in hoodies, from behind): a
+  woman by her hair and by her skirt, dress or shorts, a man by short hair, and the man the taller of a pair.
+- Picture cards: ten tones (four before). New: 老照片棕褐, 褪色底片, 粉彩柔和, 鮮豔, 青橘電影感, 紫粉夢幻; each a change
+  of the colours of the finished picture, the same on simple cards and on AI cards.
 - AI picture cards take the tone of the cards (they ignored it: 黑白漫畫 was chosen and the pictures came in
   colour). A finished AI picture gets the same change of colours as a simple card (`cards.toned`); the
   black-and-white tone is also drawn as one (ink lines and screentone asked for, colour refused). The theme

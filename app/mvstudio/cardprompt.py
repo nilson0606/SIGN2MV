@@ -155,9 +155,24 @@ def negative(spec: str, people: str = "", tone: str = "") -> str:
     return out
 
 
+# [2026-11-17] Two small figures came out as two men (the user's card: two hoodies and two short heads, from
+# behind). Far away and from behind only the outline tells a man from a woman, and in black and white the colour
+# of a top tells nothing, so a small figure is said by its outline: the hair (a woman's cut, a man's short hair),
+# what a woman wears below (a skirt, a dress, shorts), and the man the taller of the two.
+LEGS = {"skirt": " and a skirt", "shorts": " and shorts"}
+TRESS = {"long": "long hair", "bob": "bob-cut hair", "ponytail": "a long ponytail", "twin": "long twin tails",
+         "bun": "hair tied up in a bun"}
+
+
 def brief(look: Dict[str, Any], kind: str) -> str:
-    """One person in a few words, for a figure that is small in the picture."""
-    return f"a {KIND.get(kind, kind)} in a {clothes(look.get('top') or (240, 240, 240), kind)} {GARMENT.get(str(look.get('wear')), 'top')}"
+    """One person in a few words, for a figure that is small in the picture: told by the outline."""
+    top = f"{clothes(look.get('top') or (240, 240, 240), kind)} {GARMENT.get(str(look.get('wear')), 'top')}"
+    if kind in MALE:
+        return f"a {'taller ' if kind in ('boy', 'father') else ''}{KIND.get(kind, kind)} with short hair in a {top}"
+    if kind == "child":
+        return f"a {KIND[kind]} in a {top}"
+    return (f"a {KIND.get(kind, kind)} with {TRESS.get(str(look.get('cut')), 'long hair')} in a {top}"
+            f"{LEGS.get(str(look.get('wear')), '')}")
 
 
 def small_figures(world: Dict[str, Any], subject: str, who: str = "") -> str:

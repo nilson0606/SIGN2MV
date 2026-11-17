@@ -42,7 +42,10 @@ def test_every_scene_draws_in_both_looks_and_every_tone():
     tones = {t: cards.draw("sea", 0, t) for t in cards.TONES}
     assert len({raw(im) for im in tones.values()}) == len(cards.TONES)
     assert all(r == g == b for r, g, b in tones["manga"].resize((32, 18)).getdata())
-    for bad in (("nothing", 0, "fresh"), ("sea", 0, "sepia")):
+    # ten tones, and each is the same change of colours for a picture that was not drawn here (an AI card)
+    assert len(cards.TONES) == 10 and cards.TONES[:4] == ("fresh", "warm", "night", "manga")
+    assert all(raw(cards.toned(a, t)) == raw(tones[t]) and cards.toned(a, t).size == a.size for t in cards.TONES)
+    for bad in (("nothing", 0, "fresh"), ("sea", 0, "neon")):
         try:
             cards.draw(*bad)
         except KeyError:
@@ -111,7 +114,7 @@ def test_cards_fill_only_the_empty_parts(client, root):
     # a slot with a photo is refused; so are a made-up slot and a made-up tone
     assert _post(client, "/api/mv/cards/draw", slug=slug, slot=f"scene:{mine}", tone="fresh").status_code == 409
     assert _post(client, "/api/mv/cards/draw", slug=slug, slot="scene:../x", tone="fresh").status_code == 400
-    assert _post(client, "/api/mv/cards/draw", slug=slug, slot=slots[0], tone="sepia").status_code == 400
+    assert _post(client, "/api/mv/cards/draw", slug=slug, slot=slots[0], tone="neon").status_code == 400
     assert _post(client, "/api/mv/cards/draw", slug="nope/none", slot=slots[0], tone="fresh").status_code == 404
 
     for slot in slots:
@@ -784,6 +787,12 @@ def test_a_card_as_words_for_the_image_model():
     assert me not in small and cardprompt.CALM not in small and "a quiet sad look" not in small
     assert small.startswith("far away, the single small figure of " + cardprompt.brief(world[lead], lead) + ", sitting, alone, a letter, by a calm lake")
     assert cardprompt.SCENERY_SMALL in small
+    # a small figure is told by its outline (two came out as two men): a woman by her hair and what she wears
+    # below, a man by short hair, and the man of a pair the taller one
+    her, him = dict(world["girl"], cut="ponytail", wear="shorts"), dict(world["boy"], wear="hoodie")
+    assert cardprompt.brief(her, "girl").startswith("a young woman with a long ponytail in a ") and cardprompt.brief(her, "girl").endswith(" shirt and shorts")
+    assert cardprompt.brief(dict(her, cut="bob", wear="dress"), "girl").endswith(" dress") and "bob-cut hair" in cardprompt.brief(dict(her, cut="bob"), "girl")
+    assert cardprompt.brief(him, "boy").startswith("a taller young man with short hair in a ") and cardprompt.brief(him, "boy").endswith(" hoodie")
     two = cardprompt.build("w2|road|dusk|clear|duo_walk|none|close|c|0", world, people="small")
     assert "only two small figures, a man and a woman" in two and "walking together" in two and "close-up" not in two
     assert "mood" not in cardprompt.build("w2|stairs|dusk|clear|solo_wave|tears|mid|c|0|cry.1.m", world, people="small")

@@ -689,7 +689,13 @@
   "💡 AI 畫的圖卡哪一張不滿意，用那一張圖下面的「🎨 重畫…」選單只重畫那一張（可選原模式、不露臉、純風景、小人物）": "💡 Not happy with one AI card? Use the “🎨 Redraw…” menu under it to draw only that card again (same mode, no faces, scenery only, or small figures)",
   "🎨 小人物": "🎨 Small figures",
   "AI 繪圖・小人物": "AI drawing · small figures",
-  "AI 繪圖・小人物（這台電腦不能用）": "AI drawing · small figures (not on this computer)"
+  "AI 繪圖・小人物（這台電腦不能用）": "AI drawing · small figures (not on this computer)",
+  "老照片棕褐": "Old photo sepia",
+  "褪色底片": "Faded film",
+  "粉彩柔和": "Soft pastel",
+  "鮮豔": "Vivid",
+  "青橘電影感": "Teal and orange cinema",
+  "紫粉夢幻": "Purple-pink dream"
  },
  "patterns": [
   {

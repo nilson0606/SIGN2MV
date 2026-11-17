@@ -19,7 +19,7 @@ import secrets
 import zlib
 from typing import Dict, List, Sequence, Tuple
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageOps
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps
 
 from . import cardworld
 
@@ -507,7 +507,16 @@ def pick(parts: Sequence[Tuple[str, str]], seed: int = 0) -> List[Tuple[str, int
 
 
 # One tone for all cards of a song (the MV page's 色調): the same drawing in other colours.
-TONES = ("fresh", "warm", "night", "manga")
+# [2026-11-17] Ten tones (four at first; the user picked the other six from a sheet of real cards in each tone).
+# Every tone is a change of the colours of a finished picture, so it means the same on a simple card and on an
+# AI card (toned).
+TONES = ("fresh", "warm", "night", "manga", "sepia", "faded", "pastel", "vivid", "teal", "dream")
+
+
+def _curves(im: Image.Image, r, g, b) -> Image.Image:
+    R, G, B = im.split()
+    clip = lambda f: (lambda v: max(0, min(255, int(f(v)))))
+    return Image.merge("RGB", (R.point(clip(r)), G.point(clip(g)), B.point(clip(b))))
 # A scene used again in a song: look 1 is its other light (or, for a scene with one light, its mirror image);
 # looks 2 and 3 are those two again, the other way round and with the small things elsewhere.
 LOOKS = 4
@@ -526,6 +535,28 @@ def _tone(im: Image.Image, tone: str) -> Image.Image:
                                  b.point(lambda v: min(255, int(v * 0.96 + 10)))))
     elif tone == "manga":   # black and white print
         im = ImageEnhance.Contrast(ImageOps.autocontrast(im.convert("L"), cutoff=1)).enhance(1.15).convert("RGB")
+    elif tone == "sepia":   # an old photo: one brown ink
+        im = ImageOps.colorize(ImageOps.autocontrast(im.convert("L"), cutoff=1), (44, 28, 16), (255, 240, 212),
+                               mid=(168, 124, 84))
+    elif tone == "faded":   # faded film: little colour, lifted blacks, a green-grey cast
+        im = ImageEnhance.Contrast(ImageEnhance.Color(im).enhance(0.42)).enhance(0.82)
+        im = _curves(im, lambda v: v * 0.84 + 30, lambda v: v * 0.88 + 36, lambda v: v * 0.78 + 34)
+    elif tone == "pastel":  # light and pale, a touch of pink
+        im = ImageEnhance.Color(im).enhance(0.9)
+        im = _curves(im, lambda v: v * 0.62 + 100, lambda v: v * 0.60 + 94, lambda v: v * 0.60 + 100)
+    elif tone == "vivid":   # more colour, more contrast
+        im = ImageEnhance.Contrast(ImageEnhance.Color(im).enhance(1.6)).enhance(1.12)
+    elif tone == "teal":    # cinema: the dark parts to teal, the light parts to orange
+        im = ImageEnhance.Contrast(ImageEnhance.Color(im).enhance(0.75)).enhance(1.15)
+        dark = Image.blend(im, Image.new("RGB", im.size, (0, 96, 110)), 0.34)
+        light = Image.blend(im, Image.new("RGB", im.size, (255, 170, 90)), 0.26)
+        mask = im.convert("L").point(lambda v: max(0, min(255, int((v - 70) * 2.2))))
+        im = Image.composite(light, dark, mask.filter(ImageFilter.GaussianBlur(max(1, im.width // 107))))
+    elif tone == "dream":   # purple and pink, a soft glow on the light parts
+        im = ImageEnhance.Color(im).enhance(0.85)
+        im = _curves(im, lambda v: v * 0.86 + 40, lambda v: v * 0.78 + 28, lambda v: v * 0.86 + 50)
+        glow = im.filter(ImageFilter.GaussianBlur(max(1, im.width // 46)))
+        im = Image.blend(im, Image.composite(glow, im, glow.convert("L").point(lambda v: 255 if v > 120 else 0)), 0.28)
     return im
 
 

@@ -1103,6 +1103,12 @@
                 <option value="warm">暖色復古</option>
                 <option value="night">夜藍</option>
                 <option value="manga">黑白漫畫</option>
+                <option value="sepia">老照片棕褐</option>
+                <option value="faded">褪色底片</option>
+                <option value="pastel">粉彩柔和</option>
+                <option value="vivid">鮮豔</option>
+                <option value="teal">青橘電影感</option>
+                <option value="dream">紫粉夢幻</option>
               </select>
               <span id="cardsRedrawHint" style="font-size:12px; color:#f5d0fe; flex:0 1 auto; white-space:normal;">💡 AI 畫的圖卡哪一張不滿意，用那一張圖下面的「🎨 重畫…」選單只重畫那一張（可選原模式、不露臉、純風景、小人物）</span>
             </span>
@@ -4230,7 +4236,7 @@
     // [SIGN2MV] ---- simple picture cards -------------------------------------------------------------
     // The app draws a card for every part of the timeline that shows no photo (never over a photo). One
     // tone for the whole song: choosing another tone offers to draw the cards that are there again.
-    const CARD_TONES = { fresh: '清新', warm: '暖色復古', night: '夜藍', manga: '黑白漫畫' };
+    const CARD_TONES = { fresh: '清新', warm: '暖色復古', night: '夜藍', manga: '黑白漫畫', sepia: '老照片棕褐', faded: '褪色底片', pastel: '粉彩柔和', vivid: '鮮豔', teal: '青橘電影感', dream: '紫粉夢幻' };
     // [Claude 2026-11-15] 使用者要求不分等級：一律用「高級」畫法（伺服器仍認得簡易／標準，舊圖卡照舊）
     function cardGrade() { return 'premium'; }
     let cardsBusy = false, cardsStop = false;
