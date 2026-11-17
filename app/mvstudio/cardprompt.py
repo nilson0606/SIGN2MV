@@ -28,9 +28,16 @@ CALM = "simple soft anime face with a calm natural expression, closed mouth"
 # from behind were all fine; the frightening ones were faces.)
 AWAY = "seen from behind or in side view, faces turned away from the viewer, no face visible"
 NEGATIVE_AWAY = ", face looking at the viewer, front view of a face"
-# [2026-11-17] And one more: no people at all, the place of the card with its light, its weather and its thing.
+# [2026-11-17] And one more: scenery. The place of the card with its light, its weather and its thing fills the
+# picture and nobody is in it; on fewer than a third of the cards (scenery_people: one scene in four) the people
+# of the card are there as small figures far away (asked for by the user: on a small figure a bad face or a bad
+# limb does not show, and most of the cards should stay scenery).
 SCENERY = "wide scenery shot, nobody in the picture"
-NEGATIVE_SCENERY = ", people, person, human figure, face, crowd"
+SCENERY_SMALL = ("extreme wide scenery shot, the landscape fills the picture, the figures very small and far away, "
+                 "no face visible")
+NEGATIVE_SCENERY = ", close-up, portrait, large figure, face"
+GARMENT = {"skirt": "blouse", "dress": "dress", "shorts": "shirt", "tee": "t-shirt", "hoodie": "hoodie",
+           "jacket": "jacket"}
 
 
 # ---- the people -------------------------------------------------------------------------------------------
@@ -91,6 +98,36 @@ def person(look: Dict[str, Any], kind: str) -> str:
         top=colour(look.get("top") or (240, 240, 240)), low=colour(look.get("low") or (80, 90, 110)))
     return (f"a {KIND.get(kind, kind)} with {CUT.get(str(look.get('cut')), 'short')} "
             f"{hair(look.get('hair') or (60, 50, 50))} hair, wearing {wear}")
+
+
+def scenery_people(slot: str) -> str:
+    """For a card of the scenery mode: "small" (its people as small figures far away) for one scene in four,
+    spread through the song and the same every time for the same scene, else "none" (nobody)."""
+    m = re.fullmatch(r"scene:(\d+)", str(slot))
+    return "small" if m and int(m.group(1)) % 4 == 2 else "none"
+
+
+def brief(look: Dict[str, Any], kind: str) -> str:
+    """One person in a few words, for a figure that is small in the picture."""
+    return f"a {KIND.get(kind, kind)} in a {colour(look.get('top') or (240, 240, 240))} {GARMENT.get(str(look.get('wear')), 'top')}"
+
+
+def small_figures(world: Dict[str, Any], subject: str, who: str = "") -> str:
+    """The people of a card as small figures far away: who they are, and only whether they stand, sit or walk."""
+    lead = "boy" if world.get("lead") == "boy" else "girl"
+    other = "girl" if lead == "boy" else "boy"
+    a, b = brief(world[lead], lead), brief(world[other], other)
+    if who == "o":
+        a, b = b, a
+    elif who in cardworld.CAST:
+        cast = cardworld.cast_people(world)
+        b = (f"{brief(cast['mother'], 'mother')} and {brief(cast['father'], 'father')}" if who == "p"
+             else brief(cast[cardworld.CAST[who]], cardworld.CAST[who]))
+    doing = ("walking" if any(k in subject for k in ("walk", "run", "away", "follow")) else
+             "sitting" if any(k in subject for k in ("sit", "ground", "stars", "backs", "lean", "crouch")) else "standing")
+    if subject.startswith("duo") or (subject.startswith("solo") and who in cardworld.CAST):
+        return f"far away, the small figures of {a} and {b}, {doing} together"
+    return f"far away, the small figure of {b if subject.startswith('other') else a}, {doing}"
 
 
 def persons(world: Dict[str, Any], who: str = "") -> Dict[str, str]:
@@ -376,9 +413,9 @@ def place(name: str) -> str:
 
 def build(spec: str, world: Optional[Dict[str, Any]], people: str = "") -> Optional[str]:
     """The prompt of a card, or None for a card that is not one of a song's world (the first cards had
-    no people of their own and no plan to read). people: "away" no face is shown (AWAY); "none" scenery
-    only, nobody in the picture (SCENERY)."""
-    away, scenery = people == "away", people == "none"
+    no people of their own and no plan to read). people: "away" no face is shown (AWAY); "none" scenery,
+    nobody in the picture; "small" scenery with the people of the card small and far away (SCENERY_SMALL)."""
+    away, scenery = people == "away", people in ("none", "small")
     if not world or not cardworld.parse(spec) or not cardworld.valid_world(world):
         return None
     p = str(spec).split("|")
@@ -404,6 +441,9 @@ def build(spec: str, world: Optional[Dict[str, Any]], people: str = "") -> Optio
             bits.append(FACE[face])
         if SIDE.get(pos) and subject.startswith(("solo", "other")):
             bits.append(SIDE[pos])
+    far = people == "small" and not still and subject != "none"
+    if far:
+        bits.append(small_figures(world, subject, who))
     thing_text = prop(thing, still, alone=scenery and not still)
     if thing_text:
         bits.append(thing_text)
@@ -412,7 +452,7 @@ def build(spec: str, world: Optional[Dict[str, Any]], people: str = "") -> Optio
     if WEATHER.get(weather):
         bits.append(WEATHER[weather])
     if scenery and not still:
-        bits.append(SCENERY)
+        bits.append(SCENERY_SMALL if far else SCENERY)
     else:
         bits.append(FRAME.get(frame, FRAME["wide"]).replace("coming toward the viewer", "walking away")
                     if doing and away else FRAME.get(frame, FRAME["wide"]))

@@ -907,8 +907,6 @@
         <button class="btn" onclick="saveCurrentProject()" title="儲存當前專案設定至伺服器">💾 儲存專案</button>
         <button class="btn" onclick="exportProjectJson()" title="匯出目前專案設定檔 (JSON)">📥 匯出專案 (JSON)</button>
         <button class="btn" onclick="triggerImportProjectJson()" title="匯入現有專案 JSON 設定檔">📤 匯入專案</button>
-        <button class="btn" id="btnDownloadMvTop" style="border-color:#22c55e; color:#86efac;" onclick="downloadRenderedMv()" title="匯出/下載已渲染完成的 1080p 60fps MP4 影片">⬇️ 匯出/下載 MV 影片</button>
-        <button class="btn btn-crimson" id="btnRenderMV" onclick="triggerFullRender()">🎬 啟動 1080p 60fps NVENC 極速渲染</button>
       </div>
     </section>
 
@@ -979,7 +977,7 @@
           </div>
           <div class="form-group">
             <label>分鏡美學主題描述</label>
-            <input type="text" id="inpStyleTheme" oninput="syncProjectFields(); scheduleAutoSave()" />
+            <input type="text" id="inpStyleTheme" oninput="syncProjectFields(); scheduleAutoSave()" title="「🎲 圖卡抽抽樂」選的畫風和色調會自動填在這裡（例如：極簡清新）；也可以自己改字" />
           </div>
 
           <div class="form-group span-2">
@@ -1026,11 +1024,13 @@
       <div class="panel" id="previewPanel" style="scroll-margin-top:12px;">
         <div class="panel-header">
           <div class="panel-title">🖼️ 即時 1080p 畫面合成預覽 ＆ 成品 MV 播放器</div>
-          <div style="display:flex; gap:8px; align-items:center;">
+          <!-- [SIGN2MV 2026-11-17] 使用者要求：輸出 MV 和匯出 MV 的按鈕搬到播放器這裡；匯出只留這裡的一顆（上面工具列那顆拿掉） -->
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
             <button class="btn btn-sm" id="btnLiveSync" onclick="playPreview('live')" title="按下就開始播：播放音檔時即時顯示當下的分鏡圖與字幕（時間點照成品規則：換段前 0.4 秒淡入），不用出影片就能對字幕">🎵 即時對字幕</button>
             <button class="btn btn-sm btn-gold" id="btnPlayMv" disabled title="尚未渲染成品 MV" onclick="playPreview('video')">🎬 播放成品 MV (.mp4)</button>
             <button class="btn btn-sm" id="btnDownloadMvVideo" style="border-color:#22c55e; color:#86efac; display:none;" onclick="downloadRenderedMv()" title="將已渲染完成的 1080p 60fps MP4 影片下載至本機">⬇️ 匯出/下載 MV 影片</button>
             <button class="btn btn-sm" id="btnOpenMvFolder" style="display:none;" onclick="openMvFolder()" title="在檔案總管顯示已輸出的 MV 檔案">📂 開啟資料夾</button>
+            <button class="btn btn-sm btn-crimson" id="btnRenderMV" onclick="triggerFullRender()">🎬 啟動 1080p 60fps NVENC 極速渲染</button>
           </div>
         </div>
 
@@ -1089,7 +1089,7 @@
             <span class="cards-tools" style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 12px; border:1.5px solid rgba(232,121,249,0.75); border-radius:12px; white-space:nowrap; background:linear-gradient(135deg, rgba(168,85,247,0.22), rgba(236,72,153,0.16)); box-shadow:0 0 14px rgba(217,70,239,0.25);">
               <button class="btn btn-sm" id="btnSimpleCards" style="border:none; color:#fff; font-weight:800; letter-spacing:0.5px; background:linear-gradient(135deg, #a855f7, #ec4899); box-shadow:0 2px 10px rgba(236,72,153,0.45); flex:0 0 auto;" onclick="makeSimpleCards()" title="沒有照片的畫面，由程式依歌詞抽一組簡單的圖卡補上。已經有圖卡時會先問你要不要清掉重抽。不需要網路，不會動你放的照片；畫好的圖卡跟一般照片一樣，可以再換成自己的照片">🎲 圖卡抽抽樂</button>
               <label for="selCardStyle" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">畫風</label>
-              <select id="selCardStyle" onchange="cardStyleChanged()" title="極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 14 秒），第一次會先下載約 10 GB 的模型。AI 有四種：「加強引導」多用一種引導讓形狀更穩；「30 步」是多畫幾步；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」完全不畫人，只畫那一句的場景、光線、天氣和東西" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
+              <select id="selCardStyle" onchange="cardStyleChanged(); cardThemeFill(true)" title="極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 14 秒），第一次會先下載約 10 GB 的模型。AI 有四種：「加強引導」多用一種引導讓形狀更穩；「30 步」是多畫幾步；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」只畫場景、光線、天氣和東西；少數幾張（不到三分之一）會有遠遠的小小人影，看不出臉和手腳" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
                 <option value="simple">極簡</option>
                 <option value="pag">AI 繪圖・加強引導</option>
                 <option value="steps">AI 繪圖・30 步</option>
@@ -1097,7 +1097,7 @@
                 <option value="none">AI 繪圖・純風景</option>
               </select>
               <label for="selCardTone" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">色調</label>
-              <select id="selCardTone" title="整首歌的簡易圖卡用同一種色調" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
+              <select id="selCardTone" onchange="cardThemeFill(true)" title="整首歌的簡易圖卡用同一種色調" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
                 <option value="fresh">清新</option>
                 <option value="warm">暖色復古</option>
                 <option value="night">夜藍</option>
@@ -3790,7 +3790,7 @@
 
     function downloadRenderedMv() {
       if (!currentProject || !currentProject.output_mv) {
-        showToast('⚠️ 目前尚未渲染成品 MV 影片，請先點擊上方紅色「🎬 啟動 1080p 60fps NVENC 極速渲染」按鈕！', true);
+        showToast('⚠️ 目前尚未渲染成品 MV 影片，請先按播放器上紅色的「🎬 啟動 1080p 60fps NVENC 極速渲染」！', true);
         return;
       }
       const mvPath = currentProject.output_mv;
@@ -4260,6 +4260,26 @@
       const tone = document.getElementById('selCardTone');
       if (tone) tone.title = AI_STYLES[sel.value] ? '色調只用在極簡圖卡；AI 繪圖有自己的畫風' : '整首歌的簡易圖卡用同一種色調';
     }
+    // [SIGN2MV 2026-11-17] 使用者要求：圖卡的畫風、色調帶進上面「分鏡美學主題描述」那一欄（預設「極簡清新」）。
+    // 選單一改、或按抽抽樂開始畫，就寫進去；開專案時只有那一欄是空的或還是舊的預設字才代填，自己打的字不會被蓋掉。
+    const OLD_THEMES = ['電影級寫實敘事畫風（人物故事線＋純風景空鏡穿插）', 'Cinematic realistic storytelling (a character story line mixed with pure scenery shots)'];
+    function cardThemeText() {
+      const st = document.getElementById('selCardStyle'), tn = document.getElementById('selCardTone');
+      const a = st.options[st.selectedIndex].textContent.trim();
+      if (AI_STYLES[st.value]) return a;                     // 色調只用在極簡圖卡
+      const b = tn.options[tn.selectedIndex].textContent.trim(), cjk = /[\u3400-\u9fff]/;
+      return a + (cjk.test(a.slice(-1)) && cjk.test(b.slice(0, 1)) ? '' : ' · ') + b;
+    }
+    function cardThemeFill(force) {
+      const inp = document.getElementById('inpStyleTheme');
+      if (!inp || !currentProject) return;
+      if (!force && inp.value.trim() && !OLD_THEMES.includes(inp.value.trim())) return;
+      const text = cardThemeText();
+      if (inp.value === text) return;
+      inp.value = text;
+      syncProjectFields();
+      scheduleAutoSave();
+    }
     function cardsShow(state) {
       cardsState = state;
       const sel = document.getElementById('selCardTone');
@@ -4282,6 +4302,7 @@
         }
         if (!ai.available && AI_STYLES[style.value]) style.value = 'simple';
       }
+      cardThemeFill(false);
       // an AI card can be drawn again on its own (another picture of the same plan)
       (state.cards || []).forEach(c => {
         const m = /^scene:(\d+)$/.exec(c.slot || '');
@@ -4289,7 +4310,7 @@
         if (!bar || c.style !== 'ai' || bar.querySelector('.ai-redraw-btn')) return;
         const btn = document.createElement('select');        // 重畫這一張，並選這一次畫不畫人、露不露臉
         btn.className = 'scene-mini-btn ai-redraw-btn';
-        btn.title = '這一張不滿意：選一種，用 AI 只重畫這一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。原模式＝照這一張原本的畫法再畫一次；不露臉＝人物改成背影、側身；純風景＝不畫人';
+        btn.title = '這一張不滿意：選一種，用 AI 只重畫這一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。原模式＝照這一張原本的畫法再畫一次；不露臉＝人物改成背影、側身；純風景＝只畫風景（少數幾張有遠遠的小人影）';
         [['', '🎨 重畫…'], ['same', '🎨 原模式'], ['away', '🎨 不露臉'], ['none', '🎨 純風景']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; btn.appendChild(o); });
         btn.onclick = (ev) => ev.stopPropagation();
         btn.onchange = () => { const v = btn.value; btn.value = ''; if (v) aiRedrawCard(c.slot, v); };
@@ -4435,9 +4456,11 @@
         } else if (!ai.installed) {
           if (!confirm(`第一次用 AI 繪圖，要先下載繪圖模型（約 10 GB）和程式庫（約 0.3 GB），放在 SIGN2MV 的資料夾裡。\n下載只有這一次，需要網路；之後畫圖不用網路。\n\n下載完會接著畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘。\n要開始嗎？`)) return;
         } else if (!confirm(`用 AI 畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘（每張約 14 秒）。\n畫的時候顯示卡會被佔用，翻唱和字幕辨識會排在後面。\n\n要開始嗎？`)) return;
+        cardThemeFill(true);
         await aiStart(Object.assign({ tone }, AI_MODES[cardStyle()]), todo.length, false);
         return;
       }
+      cardThemeFill(true);
       cardsLock(true); cardsStop = false;
       let done = 0, failed = '';
       setInlineStatus('step2StatusBox', 'work', `<span id="cardsProgress">🎨 正在畫簡易圖卡… 0／${todo.length}</span> <button class="btn btn-sm btn-abort-action" style="margin-left:10px;" onclick="cardsStop = true; this.disabled = true;">停止</button>`);

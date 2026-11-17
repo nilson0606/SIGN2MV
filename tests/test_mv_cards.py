@@ -773,12 +773,27 @@ def test_a_card_as_words_for_the_image_model():
     close = "w2|cafe|sunset|clear|solo_front|none|close|c|0|sad.1.m"
     assert cardprompt.AWAY in cardprompt.build(close, world, people="away") and cardprompt.CALM in cardprompt.build(close, world)
     assert cardprompt.build(still.split(",")[0] and "w2|cafe|sunset|clear|solo_sit|hourglass|still|c|0", world, people="away") == still
-    # and one more: scenery only, nobody in the picture; the place, the light, the weather and the thing stay
-    empty = cardprompt.build("w2|lake.cherry.fence.near|sunset|rain|solo_sit|letter|mid|c|0|sad.1.m", world, people="none")
-    assert me not in empty and other not in empty and "sitting" not in empty and cardprompt.CALM not in empty
+    # and one more: scenery. The place, the light, the weather and the thing fill the picture and nobody is in it;
+    # on fewer than a third of the cards the people of the card are small figures far away (a few words each, only
+    # standing, sitting or walking)
+    plan = "w2|lake.cherry.fence.near|sunset|rain|solo_sit|letter|mid|c|0|sad.1.m"
+    empty = cardprompt.build(plan, world, people="none")
+    assert me not in empty and other not in empty and "figure" not in empty and "sitting" not in empty
     assert empty.startswith("a letter, by a calm lake") and "rain falling" in empty and cardprompt.SCENERY in empty
-    assert "mood" not in cardprompt.build("w2|stairs|dusk|clear|solo_wave|tears|mid|c|0|cry.1.m", world, people="none")
-    assert cardprompt.build("w2|cafe|sunset|clear|solo_sit|hourglass|still|c|0", world, people="none") == still
+    small = cardprompt.build(plan, world, people="small")
+    assert me not in small and cardprompt.CALM not in small and "a quiet sad look" not in small
+    assert small.startswith("far away, the small figure of " + cardprompt.brief(world[lead], lead) + ", sitting, a letter, by a calm lake")
+    assert cardprompt.SCENERY_SMALL in small
+    two = cardprompt.build("w2|road|dusk|clear|duo_walk|none|close|c|0", world, people="small")
+    assert "the small figures of" in two and "walking together" in two and "close-up" not in two
+    assert "mood" not in cardprompt.build("w2|stairs|dusk|clear|solo_wave|tears|mid|c|0|cry.1.m", world, people="small")
+    nobody = cardprompt.build("w2|road|dusk|clear|none|kite|wide|c|0", world, people="small")
+    assert "figure" not in nobody and cardprompt.SCENERY in nobody and "kite" in nobody
+    assert cardprompt.build("w2|cafe|sunset|clear|solo_sit|hourglass|still|c|0", world, people="small") == still
+    assert "person" not in cardprompt.NEGATIVE_SCENERY and "portrait" in cardprompt.NEGATIVE_SCENERY
+    with_people = [n for n in range(1, 41) if cardprompt.scenery_people(f"scene:{n}") == "small"]
+    assert with_people == list(range(2, 41, 4)) and len(with_people) / 40 < 1 / 3
+    assert cardprompt.scenery_people("inst:intro") == "none"
     # the hair colours of a card world by name: the blue-grey and the wine-red are dark hair, not blue or red hair
     assert [cardprompt.hair(c) for c in cardworld.HAIR_COLORS] == ["dark brown", "black", "brown", "light brown", "dark auburn", "black"]
     assert solo == cardprompt.build("w2|peaks.clocktower.stones|dawn|clear|solo_reach|rainbow|mid|c|0", world)      # the same card, the same words

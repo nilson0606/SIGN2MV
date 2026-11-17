@@ -36,6 +36,9 @@ def test_a_new_project_starts_with_random_transitions(client, root):
     sid, slug, pdir = project(client, root)
     data = client.get(f"/api/mv/project/{slug}").json()["project"]
     assert data["transition_mode"] == "random" and 0 < data["transition_seed"] <= 0x7FFFFFFF
+    # the style and tone of the picture cards, as they start (in the language of the app: 極簡清新 in Chinese)
+    from app import api_mv
+    assert data["style_theme"] in api_mv.STYLE_THEME_DEFAULT.values() and api_mv.STYLE_THEME_DEFAULT["zh"] == "極簡清新"
     plan = core.transition_plan(data, 12)
     assert len(set(plan)) > 3 and plan == core.transition_plan(data, 12)
     assert all(a != b for a, b in zip(plan, plan[1:]))

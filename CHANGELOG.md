@@ -29,7 +29,9 @@
   picture; they covered the top of it.
 - AI picture cards, two more modes (asked for by the user), four in all in the style menu: 「不露臉」 (everyone
   seen from behind, from the side or with the face turned away, in every shot: faces are what the model draws
-  worst) and 「純風景」 (nobody in the picture: the place of the card with its light, its weather and its thing);
+  worst) and 「純風景」 (the place of the card with its light, its weather and its thing fills the picture and
+  nobody is in it; on one scene in four, fewer than a third of the cards, the people of the card are there as
+  small figures far away, where a bad face or limb does not show);
   both are drawn the 「加強引導」 way. The 「🎨 重畫…」 of a card is a menu: 「原模式」 (once more as that card
   was drawn), 「不露臉」, 「純風景」, for that one card. A card remembers how it was drawn.
 - MV page: a click on a photo opens it big (it started an upload; changing the photo is the 「📤 換圖」 button or a
@@ -38,6 +40,13 @@
 - MV page: while cards are drawn or redrawn (AI or simple) every control of the page is off, as during a
   render, and comes back as it was afterwards; what stays on is 「停止」 and the big photo view. Cards and
   tables rebuilt while the cards come in are off too (asked for by the user).
+- MV page: 「分鏡美學主題描述」 says the style and the tone of the picture cards (asked for by the user). A new
+  project starts with 「極簡清新」; choosing a style or a tone, or starting a draw, writes them in (an AI style
+  alone: the tone is for the simple cards only). A field that is empty or still holds the old fixed sentence is
+  filled when the project is opened; words typed by the user stay.
+- MV page: the render button (「🎬 啟動 1080p 60fps NVENC 極速渲染」) moved from the bar at the top to the player,
+  beside play, export and open-folder; the export button of the top bar is gone, the one of the player stays
+  (asked for by the user).
 - AI picture cards: the six hair colours of a card world are said by name: the blue-grey and the wine-red of
   the simple cards are dark hair ("black", "dark auburn"), where "dark blue" made the model paint bright blue hair.
 - MV page: 「🎵 即時對字幕」 and 「🎬 播放成品 MV」 start playing when pressed (they only changed the view).

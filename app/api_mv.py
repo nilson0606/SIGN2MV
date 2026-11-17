@@ -53,8 +53,10 @@ from .mvstudio.core import (Image, KARAOKE_TIMING_MODES, MAX_SCENES, FRAME_W, FR
 from .renders import list_renders
 from .util import media_response
 
-STYLE_THEME_DEFAULT = {"zh": "電影級寫實敘事畫風（人物故事線＋純風景空鏡穿插）",
-                       "en": "Cinematic realistic storytelling (a character story line mixed with pure scenery shots)"}
+# [2026-11-17] asked for by the user: the field says the style and the tone of the picture cards (the page writes
+# them in when they are chosen); a new project starts with the default of both. It was a fixed sentence
+# ("電影級寫實敘事畫風（人物故事線＋純風景空鏡穿插）"), which the page still knows and replaces.
+STYLE_THEME_DEFAULT = {"zh": "極簡清新", "en": "Simple · Fresh"}
 AUDIO_EXT = (".wav", ".mp3", ".m4a", ".flac", ".webm", ".ogg", ".aac")
 MEDIA_TYPES = {".mp4": "video/mp4", ".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "audio/mp4",
                ".webm": "audio/webm", ".flac": "audio/flac", ".ogg": "audio/ogg", ".png": "image/png",
@@ -1708,7 +1710,9 @@ def router(ctx: Context) -> APIRouter:
         items = []
         work = ctx.paths.tmp / f"sana_{secrets.token_hex(6)}"
         for c in picked:
-            prompt = cardprompt.build(c["card"], state["world"], people)
+            # the scenery mode: nobody, and on one scene in four the card's people as small figures far away
+            shown = cardprompt.scenery_people(c["slot"]) if people == "none" else people
+            prompt = cardprompt.build(c["card"], state["world"], shown)
             if not prompt:
                 return jerr(409, "這首歌的圖卡是舊版的畫法，請先按「🎲 圖卡抽抽樂」清掉重抽，再用 AI 繪圖")
             items.append({"slot": c["slot"], "card": c["card"], "look": c.get("look", 0), "print": c.get("print", ""),
