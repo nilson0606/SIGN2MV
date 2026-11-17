@@ -42,7 +42,7 @@ SCENERY = "wide scenery shot, nobody in the picture"
 SCENERY_SMALL = ("extreme wide scenery shot, the landscape fills the picture, the figures very small and far away, "
                  "no face visible")
 NEGATIVE_SCENERY = ", close-up, portrait, large figure, face"
-GARMENT = {"skirt": "blouse", "dress": "dress", "shorts": "shirt", "tee": "t-shirt", "hoodie": "hoodie",
+GARMENT = {"skirt": "blouse", "dress": "dress", "shorts": "dress", "tee": "t-shirt", "hoodie": "hoodie",
            "jacket": "jacket"}
 
 
@@ -88,10 +88,15 @@ def hair(rgb: Sequence[int]) -> str:
     return colour(rgb)
 
 
-CUT = {"long": "long", "bob": "bob-cut", "ponytail": "ponytail", "twin": "twin-tail", "bun": "tied-up",
+# [2026-11-17] A woman of a card world may have a bob and shorts; drawn by the AI from behind beside a man in a
+# hoodie she came out as a second man (the user's card, twice). The simple cards draw her as a girl whatever she
+# wears; the AI has only the words, and it lends what one of two people wears to the other (a second card: two
+# hoodies, two short heads). So in the words a woman always has long hair and a dress or a skirt, and negative()
+# refuses two alike.
+CUT = {"long": "long", "bob": "long", "ponytail": "ponytail", "twin": "twin-tail", "bun": "tied-up",
        "short": "short", "fringe": "short fringed", "spiky": "short spiky"}
 WEAR = {"skirt": "a {top} blouse and a {low} skirt", "dress": "a {top} dress",
-        "shorts": "a {top} shirt and {low} shorts", "tee": "a {top} t-shirt and {low} trousers",
+        "shorts": "a {top} dress", "tee": "a {top} t-shirt and {low} trousers",
         "hoodie": "a {top} hoodie and {low} trousers", "jacket": "a {top} jacket and {low} trousers"}
 KIND = {"girl": "young woman", "boy": "young man", "mother": "middle-aged woman", "father": "middle-aged man",
         "grandma": "old woman", "grandpa": "old man", "child": "small child"}
@@ -105,7 +110,7 @@ MALE = ("boy", "father", "grandpa")
 _MANS = {"pink": "light grey", "pale pink": "light grey", "purple": "dark blue", "pale purple": "light grey",
          "dark purple": "dark blue", "dark pink": "grey"}
 ONE = "alone, only one person in the picture"
-PAIR = "a couple, exactly two people, one man and one woman"
+PAIR = "a man and a woman, a couple, exactly two people, one clearly a man and one clearly a woman"
 
 
 def clothes(rgb: Sequence[int], kind: str) -> str:
@@ -151,7 +156,9 @@ def negative(spec: str, people: str = "", tone: str = "") -> str:
         p = str(spec).split("|")
         who = p[9].split(".")[2] if len(p) > 9 and len(p[9].split(".")) > 2 else ""
         # the pair of the song is a man and a woman; a mother or a child beside the lead may be of the lead's own sex
-        return out + ", three people, third person, group" + ("" if who in cardworld.CAST else ", two women, two men")
+        return out + ", three people, third person, group" + (
+            "" if who in cardworld.CAST else ", two women, two men, two boys, two girls, identical clothes, "
+                                             "matching outfits, woman with short hair")
     return out
 
 
@@ -159,8 +166,8 @@ def negative(spec: str, people: str = "", tone: str = "") -> str:
 # behind). Far away and from behind only the outline tells a man from a woman, and in black and white the colour
 # of a top tells nothing, so a small figure is said by its outline: the hair (a woman's cut, a man's short hair),
 # what a woman wears below (a skirt, a dress, shorts), and the man the taller of the two.
-LEGS = {"skirt": " and a skirt", "shorts": " and shorts"}
-TRESS = {"long": "long hair", "bob": "bob-cut hair", "ponytail": "a long ponytail", "twin": "long twin tails",
+LEGS = {"skirt": " and a skirt"}
+TRESS = {"long": "long hair", "bob": "long hair", "ponytail": "a long ponytail", "twin": "long twin tails",
          "bun": "hair tied up in a bun"}
 
 

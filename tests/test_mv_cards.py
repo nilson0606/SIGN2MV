@@ -790,8 +790,13 @@ def test_a_card_as_words_for_the_image_model():
     # a small figure is told by its outline (two came out as two men): a woman by her hair and what she wears
     # below, a man by short hair, and the man of a pair the taller one
     her, him = dict(world["girl"], cut="ponytail", wear="shorts"), dict(world["boy"], wear="hoodie")
-    assert cardprompt.brief(her, "girl").startswith("a young woman with a long ponytail in a ") and cardprompt.brief(her, "girl").endswith(" shirt and shorts")
-    assert cardprompt.brief(dict(her, cut="bob", wear="dress"), "girl").endswith(" dress") and "bob-cut hair" in cardprompt.brief(dict(her, cut="bob"), "girl")
+    assert cardprompt.brief(her, "girl").startswith("a young woman with a long ponytail in a ") and cardprompt.brief(her, "girl").endswith(" dress")
+    assert cardprompt.brief(dict(her, cut="bob", wear="dress"), "girl").endswith(" dress") and "long hair" in cardprompt.brief(dict(her, cut="bob"), "girl")
+    # (a woman of a card world may have a bob and shorts: in the words for the AI she has long hair and a dress,
+    # and two alike are refused)
+    plain = cardprompt.person(dict(her, cut="bob"), "girl")
+    assert " with long " in plain and plain.endswith(" dress") and "shorts" not in plain and "bob" not in plain
+    assert all(x in cardprompt.negative("w2|road|dusk|clear|duo_walk|none|close|c|0") for x in ("matching outfits", "woman with short hair"))
     assert cardprompt.brief(him, "boy").startswith("a taller young man with short hair in a ") and cardprompt.brief(him, "boy").endswith(" hoodie")
     two = cardprompt.build("w2|road|dusk|clear|duo_walk|none|close|c|0", world, people="small")
     assert "only two small figures, a man and a woman" in two and "walking together" in two and "close-up" not in two
