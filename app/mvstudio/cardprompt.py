@@ -16,6 +16,12 @@ from typing import Any, Dict, Optional, Sequence
 from . import card_icons, cardworld
 
 STYLE = "soft watercolor anime illustration, clean lines, gentle colors, the picture fills the whole frame"
+# [2026-11-17] The tone of the cards is for the AI cards too (the user chose 黑白漫畫 and got colour): the finished
+# picture gets the same change of colours as a simple card (cards.toned), and the black-and-white tone is also
+# drawn as one, in ink and screentone, where a colour picture made grey would look washed out.
+STYLE_TONE = {"manga": "black and white manga illustration, clean ink lines, grey screentone shading, monochrome, "
+                       "the picture fills the whole frame"}
+NEGATIVE_TONE = {"manga": ", color, colorful"}
 NEGATIVE = ("letterbox, black bars, border, picture frame, text, caption, speech bubble, watermark, "
             "signature, extra people, crowd, deformed hands, extra fingers, distorted face, creepy face, "
             "exaggerated expression, wide open mouth, teeth, asymmetrical eyes, bad anatomy")
@@ -91,13 +97,62 @@ KIND = {"girl": "young woman", "boy": "young man", "mother": "middle-aged woman"
         "grandma": "old woman", "grandpa": "old man", "child": "small child"}
 
 
+# [2026-11-17] Asked for by the user: one or two people, and two are plainly a man and a woman, as on the simple
+# cards. The model made the man of a pair a second woman when his clothes were pink (the simple cards' world gives
+# either of them any colour), and added people of its own. So a man is said to be tall and wears no pink or
+# purple here, the number of people is said in the prompt (ONE, PAIR), and negative() names what must not come.
+MALE = ("boy", "father", "grandpa")
+_MANS = {"pink": "light grey", "pale pink": "light grey", "purple": "dark blue", "pale purple": "light grey",
+         "dark purple": "dark blue", "dark pink": "grey"}
+ONE = "alone, only one person in the picture"
+PAIR = "a couple, exactly two people, one man and one woman"
+
+
+def clothes(rgb: Sequence[int], kind: str) -> str:
+    name = colour(rgb)
+    return _MANS.get(name, name) if kind in MALE else name
+
+
 def person(look: Dict[str, Any], kind: str) -> str:
     """One person, said the same way on every card. (No glasses, hat or scarf: the model gives them to
     whoever stands beside the one who has them.)"""
     wear = WEAR.get(str(look.get("wear")), "a {top} top and {low} trousers").format(
-        top=colour(look.get("top") or (240, 240, 240)), low=colour(look.get("low") or (80, 90, 110)))
-    return (f"a {KIND.get(kind, kind)} with {CUT.get(str(look.get('cut')), 'short')} "
+        top=clothes(look.get("top") or (240, 240, 240), kind), low=clothes(look.get("low") or (80, 90, 110), kind))
+    tall = "tall " if kind in ("boy", "father") else ""
+    return (f"a {tall}{KIND.get(kind, kind)} with {CUT.get(str(look.get('cut')), 'short')} "
             f"{hair(look.get('hair') or (60, 50, 50))} hair, wearing {wear}")
+
+
+def head_count(spec: str) -> int:
+    """How many people the plan of a card shows: 0, 1, 2 (3 with both parents beside the lead)."""
+    p = str(spec).split("|")
+    subject, frame = p[4], p[6]
+    who = p[9].split(".")[2] if len(p) > 9 and len(p[9].split(".")) > 2 else ""
+    if frame == "still" or subject == "none":
+        return 0
+    n = 2 if subject.startswith("duo") else 1
+    if subject.startswith("solo") and who in cardworld.CAST:
+        n = 2
+    if who == "p":
+        n += 1
+    return n
+
+
+def negative(spec: str, people: str = "", tone: str = "") -> str:
+    """What the picture of this card must not show: the same for every card, and by how many people it has."""
+    out = NEGATIVE + {"away": NEGATIVE_AWAY, "none": NEGATIVE_SCENERY, "small": NEGATIVE_SCENERY}.get(people, "")
+    out += NEGATIVE_TONE.get(tone, "")
+    n = 0 if people == "none" else head_count(spec)
+    if n == 0:
+        return out + ", people, person, human figure"
+    if n == 1:
+        return out + ", two people, couple, second person, group"
+    if n == 2:
+        p = str(spec).split("|")
+        who = p[9].split(".")[2] if len(p) > 9 and len(p[9].split(".")) > 2 else ""
+        # the pair of the song is a man and a woman; a mother or a child beside the lead may be of the lead's own sex
+        return out + ", three people, third person, group" + ("" if who in cardworld.CAST else ", two women, two men")
+    return out
 
 
 def scenery_people(slot: str) -> str:
@@ -109,7 +164,7 @@ def scenery_people(slot: str) -> str:
 
 def brief(look: Dict[str, Any], kind: str) -> str:
     """One person in a few words, for a figure that is small in the picture."""
-    return f"a {KIND.get(kind, kind)} in a {colour(look.get('top') or (240, 240, 240))} {GARMENT.get(str(look.get('wear')), 'top')}"
+    return f"a {KIND.get(kind, kind)} in a {clothes(look.get('top') or (240, 240, 240), kind)} {GARMENT.get(str(look.get('wear')), 'top')}"
 
 
 def small_figures(world: Dict[str, Any], subject: str, who: str = "") -> str:
@@ -126,8 +181,9 @@ def small_figures(world: Dict[str, Any], subject: str, who: str = "") -> str:
     doing = ("walking" if any(k in subject for k in ("walk", "run", "away", "follow")) else
              "sitting" if any(k in subject for k in ("sit", "ground", "stars", "backs", "lean", "crouch")) else "standing")
     if subject.startswith("duo") or (subject.startswith("solo") and who in cardworld.CAST):
-        return f"far away, the small figures of {a} and {b}, {doing} together"
-    return f"far away, the small figure of {b if subject.startswith('other') else a}, {doing}"
+        pair = "only two small figures, a man and a woman" if who not in cardworld.CAST else "the small figures"
+        return f"far away, {pair}, {a} and {b}, {doing} together"
+    return f"far away, the single small figure of {b if subject.startswith('other') else a}, {doing}, alone"
 
 
 def persons(world: Dict[str, Any], who: str = "") -> Dict[str, str]:
@@ -411,7 +467,7 @@ def place(name: str) -> str:
     return ", ".join(out)
 
 
-def build(spec: str, world: Optional[Dict[str, Any]], people: str = "") -> Optional[str]:
+def build(spec: str, world: Optional[Dict[str, Any]], people: str = "", tone: str = "") -> Optional[str]:
     """The prompt of a card, or None for a card that is not one of a song's world (the first cards had
     no people of their own and no plan to read). people: "away" no face is shown (AWAY); "none" scenery,
     nobody in the picture; "small" scenery with the people of the card small and far away (SCENERY_SMALL)."""
@@ -437,6 +493,11 @@ def build(spec: str, world: Optional[Dict[str, Any]], people: str = "") -> Optio
             doing = doing.replace("standing and facing the viewer", "standing, seen from behind").replace(
                 ", facing the viewer", ", seen from behind").replace("coming toward the viewer", "walking away")
         bits.append(doing.format(**ppl))
+        count = head_count(spec)
+        if count == 1:
+            bits.append(ONE)
+        elif count == 2 and who not in cardworld.CAST:
+            bits.insert(len(bits) - 1, PAIR)           # said first, then who the two are
         if FACE.get(face) and not hidden:
             bits.append(FACE[face])
         if SIDE.get(pos) and subject.startswith(("solo", "other")):
@@ -460,7 +521,7 @@ def build(spec: str, world: Optional[Dict[str, Any]], people: str = "") -> Optio
         bits.append(AWAY)
     elif doing and frame not in ("sil", "far"):
         bits.append(CALM)
-    bits.append(STYLE)
+    bits.append(STYLE_TONE.get(tone, STYLE))
     out = []
     for b in ", ".join(b for b in bits if b).split(", "):     # a mood said by the face and by the thing is said once
         if b not in out:

@@ -1097,7 +1097,7 @@
                 <option value="none">AI 繪圖・純風景</option>
               </select>
               <label for="selCardTone" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">色調</label>
-              <select id="selCardTone" onchange="cardThemeFill(true)" title="整首歌的簡易圖卡用同一種色調" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
+              <select id="selCardTone" onchange="cardThemeFill(true)" title="整首歌的圖卡用同一種色調，極簡和 AI 繪圖都會套用（已經畫好的圖卡要重畫才會換）" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
                 <option value="fresh">清新</option>
                 <option value="warm">暖色復古</option>
                 <option value="night">夜藍</option>
@@ -4258,7 +4258,7 @@
       const sel = document.getElementById('selCardStyle');
       try { localStorage.setItem('sign2mv.cardStyle', sel.value); } catch (e) { /* private mode */ }
       const tone = document.getElementById('selCardTone');
-      if (tone) tone.title = AI_STYLES[sel.value] ? '色調只用在極簡圖卡；AI 繪圖有自己的畫風' : '整首歌的簡易圖卡用同一種色調';
+      if (tone) tone.title = '整首歌的圖卡用同一種色調，極簡和 AI 繪圖都會套用（已經畫好的圖卡要重畫才會換）';
     }
     // [SIGN2MV 2026-11-17] 使用者要求：圖卡的畫風、色調帶進上面「分鏡美學主題描述」那一欄（預設「極簡清新」）。
     // 選單一改、或按抽抽樂開始畫，就寫進去；開專案時只有那一欄是空的或還是舊的預設字才代填，自己打的字不會被蓋掉。
@@ -4266,9 +4266,9 @@
     function cardThemeText() {
       const st = document.getElementById('selCardStyle'), tn = document.getElementById('selCardTone');
       const a = st.options[st.selectedIndex].textContent.trim();
-      if (AI_STYLES[st.value]) return a;                     // 色調只用在極簡圖卡
       const b = tn.options[tn.selectedIndex].textContent.trim(), cjk = /[\u3400-\u9fff]/;
-      return a + (cjk.test(a.slice(-1)) && cjk.test(b.slice(0, 1)) ? '' : ' · ') + b;
+      // 「極簡清新」；AI 的名字裡已經有「・」，色調也用「・」接：「AI 繪圖・純風景・黑白漫畫」
+      return a + (a.includes('・') ? '・' : (cjk.test(a.slice(-1)) && cjk.test(b.slice(0, 1)) ? '' : ' · ')) + b;
     }
     function cardThemeFill(force) {
       const inp = document.getElementById('inpStyleTheme');

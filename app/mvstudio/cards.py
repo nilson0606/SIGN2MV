@@ -529,6 +529,14 @@ def _tone(im: Image.Image, tone: str) -> Image.Image:
     return im
 
 
+def toned(im: Image.Image, tone: str) -> Image.Image:
+    """A picture that was not drawn here (an AI card) in a tone of the cards: the same change of colours the
+    simple cards get, so the tone menu means the same for both."""
+    if tone not in TONES:
+        raise KeyError(tone)
+    return _tone(im.convert("RGB"), tone)
+
+
 def song_seed(key: str) -> int:
     """The seed of a song's look from something that names the song (never 0, the plain look)."""
     return zlib.crc32(str(key).encode("utf-8")) % 2000000000 + 1

@@ -782,10 +782,10 @@ def test_a_card_as_words_for_the_image_model():
     assert empty.startswith("a letter, by a calm lake") and "rain falling" in empty and cardprompt.SCENERY in empty
     small = cardprompt.build(plan, world, people="small")
     assert me not in small and cardprompt.CALM not in small and "a quiet sad look" not in small
-    assert small.startswith("far away, the small figure of " + cardprompt.brief(world[lead], lead) + ", sitting, a letter, by a calm lake")
+    assert small.startswith("far away, the single small figure of " + cardprompt.brief(world[lead], lead) + ", sitting, alone, a letter, by a calm lake")
     assert cardprompt.SCENERY_SMALL in small
     two = cardprompt.build("w2|road|dusk|clear|duo_walk|none|close|c|0", world, people="small")
-    assert "the small figures of" in two and "walking together" in two and "close-up" not in two
+    assert "only two small figures, a man and a woman" in two and "walking together" in two and "close-up" not in two
     assert "mood" not in cardprompt.build("w2|stairs|dusk|clear|solo_wave|tears|mid|c|0|cry.1.m", world, people="small")
     nobody = cardprompt.build("w2|road|dusk|clear|none|kite|wide|c|0", world, people="small")
     assert "figure" not in nobody and cardprompt.SCENERY in nobody and "kite" in nobody
@@ -794,6 +794,30 @@ def test_a_card_as_words_for_the_image_model():
     with_people = [n for n in range(1, 41) if cardprompt.scenery_people(f"scene:{n}") == "small"]
     assert with_people == list(range(2, 41, 4)) and len(with_people) / 40 < 1 / 3
     assert cardprompt.scenery_people("inst:intro") == "none"
+    # how many: one person is said to be alone, the two of the song are said to be a man and a woman, and each
+    # card says what must not come by its own number of people; a man is tall and wears no pink or purple
+    assert cardprompt.ONE in solo and cardprompt.PAIR not in solo and cardprompt.PAIR in duo and cardprompt.ONE not in duo
+    family = cardprompt.build("w2|park.ferris.puddles|day|clear|duo_hands|none|mid|c|0|smile.1.a", world)
+    assert duo.startswith(cardprompt.PAIR + ", " + me) and cardprompt.PAIR not in family and cardprompt.ONE not in family
+    spec1, spec2 = "w2|peaks.clocktower.stones|dawn|clear|solo_reach|rainbow|mid|c|0", "w2|park.ferris.puddles.near|night|rain|duo_sit|none|wide|c|0|sad.1.m"
+    assert [cardprompt.head_count(x) for x in (spec1, spec2, "w2|cafe|sunset|clear|solo_sit|hourglass|still|c|0", "w2|road|dusk|clear|none|kite|wide|c|0")] == [1, 2, 0, 0]
+    assert cardprompt.head_count("w2|park.ferris.puddles|day|clear|duo_hands|none|mid|c|0|smile.1.a") == 2
+    assert cardprompt.negative(spec1).startswith(cardprompt.NEGATIVE) and "two people, couple" in cardprompt.negative(spec1)
+    assert "two people" not in cardprompt.negative(spec2) and "three people" in cardprompt.negative(spec2) and "two women, two men" in cardprompt.negative(spec2)
+    with_mum = cardprompt.negative("w2|park.ferris.puddles|day|clear|duo_hands|none|mid|c|0|smile.1.a")
+    assert "three people" in with_mum and "two women" not in with_mum
+    assert "human figure" in cardprompt.negative(spec2, "none") and "human figure" not in cardprompt.negative(spec2, "small")
+    assert "human figure" in cardprompt.negative("w2|cafe|sunset|clear|solo_sit|hourglass|still|c|0")
+    assert cardprompt.NEGATIVE_AWAY in cardprompt.negative(spec2, "away") and cardprompt.NEGATIVE_SCENERY in cardprompt.negative(spec2, "small")
+    pinkish = {"cut": "short", "hair": (52, 48, 62), "top": (255, 255, 255), "low": (232, 120, 140), "wear": "jacket"}
+    assert "pink" in cardprompt.person(dict(pinkish, wear="skirt", cut="long"), "girl")
+    assert "pink" not in cardprompt.person(pinkish, "boy") and cardprompt.person(pinkish, "boy").startswith("a tall young man")
+    # the tone of the cards: black and white is drawn as ink and screentone and nothing coloured may come; the
+    # other tones leave the words alone (the finished picture is toned like a simple card, see the API test)
+    ink = cardprompt.build(spec2, world, "", "manga")
+    assert ink.endswith(cardprompt.STYLE_TONE["manga"]) and "watercolor" not in ink and "color" in cardprompt.negative(spec2, "", "manga")
+    assert cardprompt.build(spec2, world, "", "warm") == cardprompt.build(spec2, world) == cardprompt.build(spec2, world, "", "fresh")
+    assert cardprompt.negative(spec2, "", "night") == cardprompt.negative(spec2)
     # the hair colours of a card world by name: the blue-grey and the wine-red are dark hair, not blue or red hair
     assert [cardprompt.hair(c) for c in cardworld.HAIR_COLORS] == ["dark brown", "black", "brown", "light brown", "dark auburn", "black"]
     assert solo == cardprompt.build("w2|peaks.clocktower.stones|dawn|clear|solo_reach|rainbow|mid|c|0", world)      # the same card, the same words
@@ -901,6 +925,16 @@ def test_ai_cards_are_drawn_by_a_job_and_put_in_one_by_one(client, root, monkeyp
     if sid_last:
         assert ai["done"] == n - 1 and len(end["cards"]) == n - 1 and last not in [x["slot"] for x in end["cards"]]
         assert _middle(pdir / "scenes" / f"scene_{sid_last:02d}.png") == (9, 9, 9)
+    # the tone of the cards is for the AI cards too: black and white comes out with no colour in it
+    assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == len(end["cards"])
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="manga", way="pag").json()["total"] >= 1
+    assert not _ai_wait(client, slug)["error"]
+    end = _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()
+    grey = next(x for x in end["cards"] if x["slot"].startswith("scene:"))
+    assert grey["tone"] == "manga"
+    with Image.open(pdir / "scenes" / grey["file"]) as im:
+        small = im.convert("RGB").resize((16, 9))
+        assert all(len(set(small.getpixel((x, y)))) == 1 for x in range(16) for y in range(9))
     # stopping a run keeps what was drawn
     assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == len(end["cards"])
     left = len(_post(client, "/api/mv/cards/plan", slug=slug, grade="premium").json()["empty"])

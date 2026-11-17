@@ -47,6 +47,16 @@
 - MV page: the render button (「🎬 啟動 1080p 60fps NVENC 極速渲染」) moved from the bar at the top to the player,
   beside play, export and open-folder; the export button of the top bar is gone, the one of the player stays
   (asked for by the user).
+- AI picture cards, how many people (asked for by the user: one or two as on the simple cards, and two are
+  plainly a man and a woman): a card with one person says "alone, only one person in the picture", the pair
+  of the song says "a couple, exactly two people, one man and one woman" first; each card has a negative
+  prompt of its own by its number of people (no second person; no third, no two women, no two men; nobody).
+  A man is said to be tall and wears no pink or purple (the simple cards' world gives either of them any
+  colour; a man in pink trousers came out as a second woman).
+- AI picture cards take the tone of the cards (they ignored it: 黑白漫畫 was chosen and the pictures came in
+  colour). A finished AI picture gets the same change of colours as a simple card (`cards.toned`); the
+  black-and-white tone is also drawn as one (ink lines and screentone asked for, colour refused). The theme
+  field says the tone after an AI style too (「AI 繪圖・純風景・黑白漫畫」).
 - AI picture cards: the six hair colours of a card world are said by name: the blue-grey and the wine-red of
   the simple cards are dark hair ("black", "dark auburn"), where "dark blue" made the model paint bright blue hair.
 - MV page: 「🎵 即時對字幕」 and 「🎬 播放成品 MV」 start playing when pressed (they only changed the view).

@@ -1634,6 +1634,7 @@ def router(ctx: Context) -> APIRouter:
             img = im.convert("RGB")
         if img.size != (1920, 1080):
             img = img.resize((1920, 1080), Image.LANCZOS)
+        img = cards.toned(img, tone)            # the tone of the cards: the same change of colours as a simple card
         card_save(illust_dir, out_path, item["card"], int(item.get("look", 0)), tone, state, card_keep(state),
                   old_print, slug, img=img, extra=dict({"style": "ai", "aiseed": int(item["seed"]), "aiway": item["way"]},
                                                         **({"aipeople": item["people"]} if item.get("people") else {})))
@@ -1712,17 +1713,18 @@ def router(ctx: Context) -> APIRouter:
         for c in picked:
             # the scenery mode: nobody, and on one scene in four the card's people as small figures far away
             shown = cardprompt.scenery_people(c["slot"]) if people == "none" else people
-            prompt = cardprompt.build(c["card"], state["world"], shown)
+            prompt = cardprompt.build(c["card"], state["world"], shown, tone)
             if not prompt:
                 return jerr(409, "這首歌的圖卡是舊版的畫法，請先按「🎲 圖卡抽抽樂」清掉重抽，再用 AI 繪圖")
             items.append({"slot": c["slot"], "card": c["card"], "look": c.get("look", 0), "print": c.get("print", ""),
+                          "negative": cardprompt.negative(c["card"], shown, tone),
                           "redraw": c["redraw"], "seed": c["seed"], "prompt": prompt, "way": way, "people": people,
                           "out": str(work / (c["slot"].replace(":", "_") + ".png"))})
         if not items:
             return {"status": "ok", "total": 0, "ai": ai_info(slug)}
         p = ai_paths()
         fake = os.environ.get("SIGN2MV_CARD_AI") == "fake"
-        payload = {"items": [{k: i[k] for k in ("slot", "prompt", "seed", "out")} for i in items],
+        payload = {"items": [{k: i[k] for k in ("slot", "prompt", "negative", "seed", "out")} for i in items],
                    "negative": cardprompt.NEGATIVE + {"away": cardprompt.NEGATIVE_AWAY, "none": cardprompt.NEGATIVE_SCENERY}.get(people, ""), "width": 1280, "height": 720, "steps": int(how["steps"]),
                    "guidance": how["guidance"], "pag": how["pag"],
                    "size": [1920, 1080], "pkgs": str(p["pkgs"]), "lock": str(p["lock"]), "repo": AI_REPO,

@@ -1,8 +1,9 @@
 """AI picture cards: an image model (Sana) draws the cards of a song from their prompts.
 
 Input (stdin, one JSON document):
-  items     [{"slot": ..., "prompt": ..., "seed": int, "out": path of the PNG to write}, ...]
-  negative  what the pictures must not show
+  items     [{"slot": ..., "prompt": ..., "seed": int, "out": path of the PNG to write,
+               "negative": what this picture must not show (by how many people the card has)}, ...]
+  negative  what the pictures must not show, for an item that says nothing of its own
   width, height, steps, guidance   how the model draws (1280x720)
   pag       above 0: perturbed-attention guidance of this strength beside the usual one (SanaPAGPipeline)
   size      [w, h] of the card that is written (1920x1080)
@@ -140,7 +141,8 @@ def main() -> None:
         try:
             gen = torch.Generator(device="cpu").manual_seed(int(item.get("seed") or 0))
             more = {"pag_scale": pag} if pag > 0 else {}
-            img = pipe(prompt=str(item["prompt"]), negative_prompt=negative, width=width, height=height,
+            img = pipe(prompt=str(item["prompt"]), negative_prompt=str(item.get("negative") or negative),
+                       width=width, height=height,
                        num_inference_steps=steps, guidance_scale=guidance, generator=gen, **more).images[0]
         except Exception as exc:  # noqa: BLE001
             fail("sana_draw_failed", f"{item.get('slot')}: {type(exc).__name__}: {str(exc)[:400]}")
