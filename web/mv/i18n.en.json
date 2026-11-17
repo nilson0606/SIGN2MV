@@ -684,7 +684,6 @@
   "「🎲 圖卡抽抽樂」選的畫風和色調會自動填在這裡（例如：極簡清新）；也可以自己改字": "The style and tone chosen at “🎲 Card lottery” are filled in here (for example: Simple · Fresh); you can also type your own",
   "⚠️ 目前尚未渲染成品 MV 影片，請先按播放器上紅色的「🎬 啟動 1080p 60fps NVENC 極速渲染」！": "⚠️ No finished MV yet. Press the red \"🎬 Start 1080p 60fps NVENC fast render\" on the player first!",
   "整首歌的圖卡用同一種色調，極簡和 AI 繪圖都會套用（已經畫好的圖卡要重畫才會換）": "One tone for all the cards of a song, simple and AI alike (cards already drawn change when they are drawn again)",
-  "極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 14 秒），第一次會先下載約 10 GB 的模型。AI 有五種：「加強引導」多用一種引導讓形狀更穩；「30 步」是多畫幾步；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」只畫場景、光線、天氣和東西，沒有人；「小人物」是風景裡有遠遠的小小人影，看不出臉和手腳": "Simple: drawn by the app itself, fast, works on every computer. AI drawing: drawn on this computer's graphics card (about 14 s a card); the first time it downloads a model of about 10 GB. Five AI modes: “extra guidance” adds a second guidance for steadier shapes; “30 steps” draws with more steps; “no faces” shows everyone from behind, from the side or with the face turned away; “scenery only” draws the place with its light, weather and things, and nobody; “small figures” is the scenery with small figures far away, with no face or limbs to get wrong",
   "這一張不滿意：選一種，用 AI 只重畫這一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。原模式＝照這一張原本的畫法再畫一次；不露臉＝人物改成背影、側身；純風景＝只畫風景，沒有人；小人物＝風景裡有遠遠的小小人影": "Not happy with this one: pick one and the AI draws only this card again (same line, same scene, another picture; about 25 s). Same mode = once more the way this card was drawn; No faces = the people seen from behind or from the side; Scenery only = just the landscape, nobody; Small figures = the landscape with small figures far away",
   "💡 AI 畫的圖卡哪一張不滿意，用那一張圖下面的「🎨 重畫…」選單只重畫那一張（可選原模式、不露臉、純風景、小人物）": "💡 Not happy with one AI card? Use the “🎨 Redraw…” menu under it to draw only that card again (same mode, no faces, scenery only, or small figures)",
   "🎨 小人物": "🎨 Small figures",
@@ -695,7 +694,17 @@
   "粉彩柔和": "Soft pastel",
   "鮮豔": "Vivid",
   "青橘電影感": "Teal and orange cinema",
-  "紫粉夢幻": "Purple-pink dream"
+  "紫粉夢幻": "Purple-pink dream",
+  "極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫，有兩個繪圖模型，第一次用會先下載模型。FLUX（約 15 GB，每張約 9 秒）：水彩質感，每張圖卡是同一對人物；Sana（約 10 GB，每張約 14 秒）：同一張重畫變化比較大。模式：「一般」照圖卡的計畫畫、看得到臉（Sana 的「加強引導」「30 步」是它的兩種一般畫法）；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」只畫場景、光線、天氣和東西，沒有人；「小人物」是風景裡有遠遠的小小人影": "Simple: drawn by the app itself, fast, works on every computer. AI drawing: drawn on this computer's graphics card, with two models; a model is downloaded the first time it is used. FLUX (about 15 GB, about 9 s a card): a watercolour look, the same two people on every card; Sana (about 10 GB, about 14 s a card): a card drawn again changes more. Modes: “plain” draws the card as planned, faces showing (Sana's “extra guidance” and “30 steps” are its two plain ways); “no faces” shows everyone from behind, from the side or with the face turned away; “scenery only” draws the place with its light, weather and things, and nobody; “small figures” is the scenery with small figures far away",
+  "AI 繪圖 FLUX・一般": "AI drawing FLUX · plain",
+  "AI 繪圖 FLUX・一般（這台電腦不能用）": "AI drawing FLUX · plain (not on this computer)",
+  "AI 繪圖 FLUX・不露臉": "AI drawing FLUX · no faces",
+  "AI 繪圖 FLUX・不露臉（這台電腦不能用）": "AI drawing FLUX · no faces (not on this computer)",
+  "AI 繪圖 FLUX・純風景": "AI drawing FLUX · scenery only",
+  "AI 繪圖 FLUX・純風景（這台電腦不能用）": "AI drawing FLUX · scenery only (not on this computer)",
+  "AI 繪圖 FLUX・小人物": "AI drawing FLUX · small figures",
+  "AI 繪圖 FLUX・小人物（這台電腦不能用）": "AI drawing FLUX · small figures (not on this computer)",
+  "第一次用這個 AI 繪圖模型，要先下載它（約 15 GB），放在 SIGN2MV 的資料夾裡。": "The first time, this AI drawing model is downloaded (about 15 GB) into the SIGN2MV folder."
  },
  "patterns": [
   {
@@ -1883,6 +1892,10 @@
    "en": "⏳ Downloading the AI drawing model (about 10 GB, first time only; if it stops, press again and it continues) · {0}"
   },
   {
+   "zh": "⏳ 下載 AI 繪圖模型（約 15 GB，只有第一次；中斷了再按一次會接著下載） · {0}",
+   "en": "⏳ Downloading the AI drawing model (about 15 GB, first time only; if it stops, press again and it continues) · {0}"
+  },
+  {
    "zh": "⏳ 載入 AI 繪圖模型… · {0}",
    "en": "⏳ Loading the AI drawing model… · {0}"
   },
@@ -1913,6 +1926,10 @@
   {
    "zh": "用 AI 畫 {0} 張圖卡，大約 {1} 分鐘（每張約 14 秒）。",
    "en": "The AI draws {0} card(s), about {1} minute(s) (about 14 s each)."
+  },
+  {
+   "zh": "用 AI 畫 {0} 張圖卡，大約 {1} 分鐘（每張約 9 秒）。",
+   "en": "The AI draws {0} card(s), about {1} minute(s) (about 9 s each)."
   },
   {
    "zh": "顯示卡記憶體 {0} GB 不夠（AI 繪圖要 6 GB 以上）",

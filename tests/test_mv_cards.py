@@ -941,6 +941,17 @@ def test_ai_cards_are_drawn_by_a_job_and_put_in_one_by_one(client, root, monkeyp
     if sid_last:
         assert ai["done"] == n - 1 and len(end["cards"]) == n - 1 and last not in [x["slot"] for x in end["cards"]]
         assert _middle(pdir / "scenes" / f"scene_{sid_last:02d}.png") == (9, 9, 9)
+    # the second painter (FLUX.2 klein 4B) is one more way: asked for by name, kept on the card, and a redraw
+    # "the same way" stays with it; the state says whether its model is on the disk
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="klein", people="away").json()["total"] == 1
+    assert not _ai_wait(client, slug)["error"]
+    state = _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()
+    one = next(x for x in state["cards"] if x["slot"] == c["slot"])
+    assert one["aiway"] == "klein" and one["aipeople"] == "away" and "flux2" in state["ai"]
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"]).json()["total"] == 1
+    assert not _ai_wait(client, slug)["error"]
+    one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
+    assert one["aiway"] == "klein" and one["aipeople"] == "away"
     # the tone of the cards is for the AI cards too: black and white comes out with no colour in it
     assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == len(end["cards"])
     assert _post(client, "/api/mv/cards/ai", slug=slug, tone="manga", way="pag").json()["total"] >= 1

@@ -25,7 +25,7 @@ personal use.
 | basic-pitch 0.4.0 (ONNX model, installed without TensorFlow) | melody transcription | Apache-2.0 |
 | pretty_midi, mir_eval | MIDI | MIT |
 | tinysoundfont | sound-font synthesis | MIT |
-| diffusers, transformers, accelerate, sentencepiece, protobuf (and what they need: `installer/requirements/sana.lock.txt`) | AI picture cards; installed only when AI drawing is first used | Apache-2.0 / BSD |
+| diffusers, transformers, accelerate, bitsandbytes, sentencepiece, protobuf (and what they need: `installer/requirements/sana.lock.txt`) | AI picture cards; installed only when AI drawing is first used | Apache-2.0 / BSD |
 
 ## Models and sounds
 
@@ -47,6 +47,7 @@ check the model page. File sizes and SHA-256 hashes are in `installer/manifest.j
 | chinese-hubert-base (TencentGameMate, via Applio's model repository) | optional feature model for training | MIT |
 | Sana 1600M 1024px BF16 (NVIDIA, [Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers), revision e2b3c0c) | AI picture cards, optional; downloaded only when AI drawing is first used | Apache-2.0 by the repository's LICENSE file and its last commit ("Relicense model under Apache-2.0"); the model card still says "intended for research purposes only" — not settled, read before publishing pictures commercially |
 | Gemma-2-2B-IT (Google; the text encoder inside the Sana repository) | reads the prompt of an AI picture card | Gemma Terms of Use and Gemma Prohibited Use Policy |
+| FLUX.2 klein 4B (Black Forest Labs, [black-forest-labs/FLUX.2-klein-4B](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B), revision e7b7dc2; with its Qwen3 4B text encoder) | AI picture cards, the second painter (downloaded on first use, not shipped) | Apache-2.0 as tagged on the model page (to be read in full before a release) |
 | faster-whisper medium / small (Systran) | lyric alignment | MIT (OpenAI Whisper weights) |
 | GeneralUser GS 2.0.3 (S. Christian Collins) | steel guitar / yangqin sounds | GeneralUser GS License v2.0: free use and redistribution |
 

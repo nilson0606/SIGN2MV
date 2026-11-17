@@ -4,6 +4,7 @@ accelerate==1.15.0        # via -r installer/requirements/sana.txt
 annotated-doc==0.0.6      # via typer
 annotated-types==0.8.0    # via pydantic
 anyio==4.16.0             # via httpx2
+bitsandbytes==0.50.2      # via -r installer/requirements/sana.txt
 certifi==2026.10.23       # via requests
 charset-normalizer==3.5.2  # via requests
 click==8.5.1              # via huggingface-hub
@@ -21,7 +22,7 @@ importlib-metadata==10.2.0  # via diffusers
 lazy-importer==0.1.0      # via importlib-metadata
 markdown-it-py==4.3.0     # via rich
 mdurl==0.1.2              # via markdown-it-py
-packaging==26.3           # via accelerate, huggingface-hub, transformers
+packaging==26.3           # via accelerate, bitsandbytes, huggingface-hub, transformers
 protobuf==7.36.2          # via -r installer/requirements/sana.txt
 psutil==7.2.2             # via accelerate
 pydantic==2.14.3          # via typer

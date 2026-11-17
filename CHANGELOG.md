@@ -55,6 +55,11 @@
   colour; a man in pink trousers came out as a second woman).
 - AI picture cards: 「小人物」 (small figures) is a mode of its own, the fifth, in the style menu and in the redraw
   menu of a card. 「純風景」 is scenery with nobody on every card (it had small figures on one scene in four).
+- AI picture cards: a second painter, FLUX.2 klein 4B (way `klein`; four entries in the style menu: plain, no
+  faces, scenery, small figures). Picked from a night of trials on the user's card against seven other models
+  (`claude/model_trials_2026-11-18.md`): 8.9 s a picture and 6.0 GB of the card against Sana's 13.1 s and 6.8 GB,
+  the same two people on every card. Loaded in 4 bits (bitsandbytes, new in `sana.lock.txt`), about 15 GB to
+  download. Sana and its five entries stay; the simple style stays the default.
 - AI picture cards: a woman always has long hair and a dress or a skirt in the words, and two people alike are
   refused (a woman with a bob and shorts beside a man in a hoodie came out as a second man in a hoodie).
 - AI small figures: a figure is told by its outline (two came out as two men, both in hoodies, from behind): a

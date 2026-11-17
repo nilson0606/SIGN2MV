@@ -1541,8 +1541,13 @@ def router(ctx: Context) -> APIRouter:
     # cards whose faces had come out odd; the first way, 20 plain steps, was dropped):
     #   "pag"    perturbed-attention guidance beside the usual guidance (steadier shapes)
     #   "steps"  30 steps instead of 20
-    AI_WAYS: Dict[str, Dict[str, float]] = {"pag": {"steps": 20, "guidance": 5.0, "pag": 2.0},
-                                            "steps": {"steps": 30, "guidance": 4.5, "pag": 0.0}}
+    #   "klein"  [2026-11-18] the second painter, FLUX.2 klein 4B (workers/card_sana.py says why): 4 steps
+    AI_WAYS: Dict[str, Dict[str, Any]] = {"pag": {"steps": 20, "guidance": 5.0, "pag": 2.0},
+                                          "steps": {"steps": 30, "guidance": 4.5, "pag": 0.0},
+                                          "klein": {"steps": 4, "guidance": 1.0, "pag": 0.0, "model": "flux2"}}
+    AI_MODELS: Dict[str, Dict[str, str]] = {
+        "sana": {"repo": AI_REPO, "revision": AI_REVISION},
+        "flux2": {"repo": "black-forest-labs/FLUX.2-klein-4B", "revision": "e7b7dc27f91deacad38e78976d1f2b499d76a294"}}
     ai_run: Dict[str, Any] = {"job": "", "slug": "", "items": [], "placed": [], "skipped": [], "total": 0, "error": "",
                               "tone": "fresh", "dir": "", "task": None, "ended": 0.0}
     ai_gpu: Dict[str, Any] = {}
@@ -1580,11 +1585,15 @@ def router(ctx: Context) -> APIRouter:
     def ai_have() -> Dict[str, bool]:
         """What AI drawing needs and is on the disk already: its libraries, its model."""
         p = ai_paths()
-        snap = p["home"] / "hub" / ("models--" + AI_REPO.replace("/", "--")) / "snapshots" / AI_REVISION
-        return {"libs": any(p["pkgs"].glob(".installed-*")), "model": (snap / "model_index.json").exists()}
+        out = {"libs": any(p["pkgs"].glob(".installed-*"))}
+        for name, m in AI_MODELS.items():
+            snap = p["home"] / "hub" / ("models--" + m["repo"].replace("/", "--")) / "snapshots" / m["revision"]
+            out["model" if name == "sana" else name] = (snap / "model_index.json").exists()
+        return out
 
     def ai_installed() -> bool:
-        return all(ai_have().values())
+        have = ai_have()
+        return have["libs"] and have["model"]
 
     def ai_job() -> Optional[Dict[str, Any]]:
         job = ctx.jobs.get(ai_run["job"]) if ai_run["job"] else None
@@ -1597,9 +1606,10 @@ def router(ctx: Context) -> APIRouter:
         task = ai_run.get("task")
         live = bool(job) or bool(task and task.is_alive())      # the last cards are still being put in
         mine = live and ai_run["slug"] == slug
-        have = {"libs": True, "model": True} if fake else ai_have()
+        have = {"libs": True, "model": True, "flux2": True} if fake else ai_have()
         out = {"available": bool(gpu["ok"]), "reason": gpu["reason"], "gpu": gpu["name"],
-               "installed": all(have.values()), "libs": have["libs"], "model": have["model"],
+               "installed": have["libs"] and have["model"], "libs": have["libs"], "model": have["model"],
+               "flux2": have["flux2"],
                "running": mine, "busy": live and not mine,
                "done": len(ai_run["placed"]) if ai_run["slug"] == slug else 0,
                "total": ai_run["total"] if ai_run["slug"] == slug else 0,
@@ -1726,8 +1736,9 @@ def router(ctx: Context) -> APIRouter:
         payload = {"items": [{k: i[k] for k in ("slot", "prompt", "negative", "seed", "out")} for i in items],
                    "negative": cardprompt.NEGATIVE + {"away": cardprompt.NEGATIVE_AWAY, "none": cardprompt.NEGATIVE_SCENERY, "small": cardprompt.NEGATIVE_SCENERY}.get(people, ""), "width": 1280, "height": 720, "steps": int(how["steps"]),
                    "guidance": how["guidance"], "pag": how["pag"],
-                   "size": [1920, 1080], "pkgs": str(p["pkgs"]), "lock": str(p["lock"]), "repo": AI_REPO,
-                   "revision": AI_REVISION, "fake": fake,
+                   "size": [1920, 1080], "pkgs": str(p["pkgs"]), "lock": str(p["lock"]),
+                   "model": how.get("model", "sana"), "repo": AI_MODELS[how.get("model", "sana")]["repo"],
+                   "revision": AI_MODELS[how.get("model", "sana")]["revision"], "fake": fake,
                    "fake_wait": float(os.environ.get("SIGN2MV_CARD_AI_WAIT", "0") or 0)}
         env = {"HF_HOME": str(p["home"]), "HF_HUB_DISABLE_SYMLINKS_WARNING": "1"}
         job = ctx.submit(kind="card_sana", lane="gpu", script="card_sana.py", input=payload,

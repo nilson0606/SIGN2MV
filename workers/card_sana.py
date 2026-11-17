@@ -59,15 +59,20 @@ def ensure_libs(pkgs: Path, lock: Path) -> None:
     mark.write_text("ok", encoding="utf-8")
 
 
-def model_dir(repo: str, revision: str):
+def model_dir(repo: str, revision: str, model: str = "sana"):
     """The folder of the model: what is on the disk (no network asked), else downloaded."""
-    from diffusers import SanaPipeline
+    if model == "flux2":
+        from diffusers import Flux2KleinPipeline as kind
+        more, about = {}, "約 15 GB"
+    else:
+        from diffusers import SanaPipeline as kind
+        more, about = {"variant": "bf16"}, "約 10 GB"
     try:
-        return SanaPipeline.download(repo, variant="bf16", revision=revision or None, local_files_only=True)
+        return kind.download(repo, revision=revision or None, local_files_only=True, **more)
     except Exception as exc:  # noqa: BLE001 - not there yet (or not all of it)
         log(f"model not on the disk yet: {type(exc).__name__}: {str(exc)[:200]}")
-    with Heartbeat(5, "download", "下載 AI 繪圖模型（約 10 GB，只有第一次；中斷了再按一次會接著下載）"):
-        return SanaPipeline.download(repo, variant="bf16", revision=revision or None)
+    with Heartbeat(5, "download", f"下載 AI 繪圖模型（{about}，只有第一次；中斷了再按一次會接著下載）"):
+        return kind.download(repo, revision=revision or None, **more)
 
 
 def fake_card(item: dict, size: tuple) -> None:
@@ -118,9 +123,24 @@ def main() -> None:
         fail("sana_no_gpu", "AI 繪圖需要 NVIDIA 顯示卡")
     try:
         pag = float(job.get("pag") or 0)
-        path = model_dir(str(job["repo"]), str(job.get("revision") or ""))
+        model = str(job.get("model") or "sana")
+        path = model_dir(str(job["repo"]), str(job.get("revision") or ""), model)
         with Heartbeat(6, "load", "載入 AI 繪圖模型…"):
-            if pag > 0:
+            if model == "flux2":
+                # [2026-11-18] FLUX.2 klein 4B, the second AI painter (tried against seven others on the user's
+                # card: 8.9 s a picture and 6.0 GB of the card against Sana's 13.1 s and 6.8 GB, the same two
+                # people on every card, a real watercolour look). Its 4B transformer and its 4B text encoder do
+                # not fit an 8 GB card as they are, so both are loaded in 4 bits; with the parts taking turns on
+                # the card (offload) it is also faster than with all of it on the card (13.9 s, 7.1 GB).
+                from diffusers import Flux2KleinPipeline
+                from diffusers.quantizers import PipelineQuantizationConfig
+                quant = PipelineQuantizationConfig(
+                    quant_backend="bitsandbytes_4bit",
+                    quant_kwargs={"load_in_4bit": True, "bnb_4bit_quant_type": "nf4",
+                                  "bnb_4bit_compute_dtype": torch.bfloat16},
+                    components_to_quantize=["transformer", "text_encoder"])
+                pipe = Flux2KleinPipeline.from_pretrained(path, torch_dtype=torch.bfloat16, quantization_config=quant)
+            elif pag > 0:
                 from diffusers import SanaPAGPipeline
                 pipe = SanaPAGPipeline.from_pretrained(path, variant="bf16", torch_dtype=torch.bfloat16,
                                                        pag_applied_layers="transformer_blocks.8")
@@ -141,8 +161,9 @@ def main() -> None:
         try:
             gen = torch.Generator(device="cpu").manual_seed(int(item.get("seed") or 0))
             more = {"pag_scale": pag} if pag > 0 else {}
-            img = pipe(prompt=str(item["prompt"]), negative_prompt=str(item.get("negative") or negative),
-                       width=width, height=height,
+            if model != "flux2":            # klein is distilled: it has no second guidance, so nothing to refuse with
+                more["negative_prompt"] = str(item.get("negative") or negative)
+            img = pipe(prompt=str(item["prompt"]), width=width, height=height,
                        num_inference_steps=steps, guidance_scale=guidance, generator=gen, **more).images[0]
         except Exception as exc:  # noqa: BLE001
             fail("sana_draw_failed", f"{item.get('slot')}: {type(exc).__name__}: {str(exc)[:400]}")
