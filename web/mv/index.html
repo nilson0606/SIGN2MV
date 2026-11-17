@@ -1078,6 +1078,11 @@
             <!-- [SIGN2MV] simple picture cards: drawn by the app for the parts that have no photo -->
             <span class="cards-tools" style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 12px; border:1.5px solid rgba(232,121,249,0.75); border-radius:12px; white-space:nowrap; background:linear-gradient(135deg, rgba(168,85,247,0.22), rgba(236,72,153,0.16)); box-shadow:0 0 14px rgba(217,70,239,0.25);">
               <button class="btn btn-sm" id="btnSimpleCards" style="border:none; color:#fff; font-weight:800; letter-spacing:0.5px; background:linear-gradient(135deg, #a855f7, #ec4899); box-shadow:0 2px 10px rgba(236,72,153,0.45); flex:0 0 auto;" onclick="makeSimpleCards()" title="沒有照片的畫面，由程式依歌詞抽一組簡單的圖卡補上。已經有圖卡時會先問你要不要清掉重抽。不需要網路，不會動你放的照片；畫好的圖卡跟一般照片一樣，可以再換成自己的照片">🎲 圖卡抽抽樂</button>
+              <label for="selCardStyle" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">畫風</label>
+              <select id="selCardStyle" onchange="cardStyleChanged()" title="極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 10 秒），第一次會先下載約 10 GB 的模型" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
+                <option value="simple">極簡</option>
+                <option value="ai">AI 繪圖</option>
+              </select>
               <label for="selCardTone" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">色調</label>
               <select id="selCardTone" title="整首歌的簡易圖卡用同一種色調" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
                 <option value="fresh">清新</option>
@@ -4167,10 +4172,50 @@
       return data;
     }
 
+    // [SIGN2MV 2026-11-17] 畫風：極簡（程式自己畫）或 AI 繪圖（顯示卡上的繪圖模型，照同一份規劃畫）
+    let cardsState = null, aiPolling = false;
+    function cardStyle() {
+      const sel = document.getElementById('selCardStyle');
+      return sel && sel.value === 'ai' && !sel.options[1].disabled ? 'ai' : 'simple';
+    }
+    function cardStyleChanged() {
+      const sel = document.getElementById('selCardStyle');
+      try { localStorage.setItem('sign2mv.cardStyle', sel.value); } catch (e) { /* private mode */ }
+      const tone = document.getElementById('selCardTone');
+      if (tone) tone.title = sel.value === 'ai' ? '色調只用在極簡圖卡；AI 繪圖有自己的畫風' : '整首歌的簡易圖卡用同一種色調';
+    }
     function cardsShow(state) {
-      const n = (state.cards || []).length;
+      cardsState = state;
       const sel = document.getElementById('selCardTone');
       if (sel && !cardsBusy && state.tone && CARD_TONES[state.tone]) sel.value = state.tone;
+      const style = document.getElementById('selCardStyle'), ai = state.ai || {};
+      if (style) {
+        const opt = style.options[1];
+        opt.disabled = !ai.available;
+        opt.textContent = ai.available ? 'AI 繪圖' : 'AI 繪圖（這台電腦不能用）';
+        opt.title = ai.available ? '' : (ai.reason || '');
+        if (!style.dataset.ready) {
+          style.dataset.ready = '1';
+          let want = 'simple';
+          try { want = localStorage.getItem('sign2mv.cardStyle') || 'simple'; } catch (e) { /* private mode */ }
+          style.value = want === 'ai' && ai.available ? 'ai' : 'simple';
+          cardStyleChanged();
+        }
+        if (!ai.available && style.value === 'ai') style.value = 'simple';
+      }
+      // an AI card can be drawn again on its own (another picture of the same plan)
+      (state.cards || []).forEach(c => {
+        const m = /^scene:(\d+)$/.exec(c.slot || '');
+        const bar = m && document.querySelector(`#scene_card_${m[1]} .scene-card-actions-top`);
+        if (!bar || c.style !== 'ai' || bar.querySelector('.ai-redraw-btn')) return;
+        const btn = document.createElement('button');
+        btn.className = 'scene-mini-btn ai-redraw-btn';
+        btn.textContent = '🎨 重畫';
+        btn.title = '這一張不滿意：用 AI 再畫一張（同一句歌詞、同一個場景，畫面會不一樣；約 20 秒）';
+        btn.onclick = (ev) => { ev.stopPropagation(); aiRedrawCard(c.slot); };
+        bar.insertBefore(btn, bar.firstChild);
+      });
+      if (ai.running && !aiPolling) aiFollow(currentSlug, ai.total || 0, false);   // a run begun before this page was opened
     }
 
     let cardsRefreshTimer = null;
@@ -4203,7 +4248,59 @@
 
     function cardsLock(on) {
       cardsBusy = on;
-      ['btnSimpleCards', 'selCardTone'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = on; });
+      ['btnSimpleCards', 'selCardTone', 'selCardStyle'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = on; });
+      document.querySelectorAll('.ai-redraw-btn').forEach(el => { el.disabled = on; });
+    }
+
+    // AI 繪圖：伺服器用一個背景工作一張一張畫，畫好一張就放進那一格；這裡每秒問一次進度
+    const aiEsc = (t) => String(t || '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    function aiProgressText(ai, total) {
+      if (ai.queued) return `⏳ AI 繪圖在排隊${ai.waiting_for ? `（等「${aiEsc(ai.waiting_for)}」做完）` : ''}…`;
+      if (ai.stage === 'install' || ai.stage === 'download' || ai.stage === 'load') return `⏳ ${aiEsc(ai.message || '準備 AI 繪圖…')}`;
+      return `🎨 AI 繪圖中… ${ai.done || 0}／${total}`;
+    }
+    async function aiFollow(slug, total, one) {
+      if (aiPolling) return;
+      aiPolling = true;
+      cardsLock(true);
+      setInlineStatus('step2StatusBox', 'work', `<span id="cardsProgress">⏳ 準備 AI 繪圖…</span> <button class="btn btn-sm btn-abort-action" style="margin-left:10px;" onclick="this.disabled = true; cardsCall('ai_stop').catch(() => {});">停止</button>`);
+      let shown = 0, ai = {}, misses = 0;
+      while (slug === currentSlug) {
+        try { ai = (await cardsCall('ai_state', { slug })).ai || {}; misses = 0; }
+        catch (e) { if (++misses > 5) { ai = { error: e.message }; break; } }
+        const pr = document.getElementById('cardsProgress');
+        if (pr) pr.innerHTML = aiProgressText(ai, ai.total || total);
+        if ((ai.done || 0) > shown) {
+          shown = ai.done;
+          try { cardsTakePhotos(await cardsCall('done')); } catch (e) { /* the next round shows it */ }
+        }
+        if (!ai.running) break;
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      aiPolling = false;
+      cardsLock(false);
+      if (slug !== currentSlug) return;
+      try { const now = await cardsCall('done'); cardsTakePhotos(now); cardsShow(now); } catch (e) { await loadProject(currentSlug, true); }
+      const done = ai.done || 0, all = ai.total || total;
+      if (ai.error === '已停止') setInlineStatus('step2StatusBox', 'ok', `⏹️ 已停止，AI 畫好 ${done} 張（共 ${all} 張）。再按一次「🎲 圖卡抽抽樂」會把剩下的補上。`);
+      else if (ai.error) setInlineStatus('step2StatusBox', 'err', `❌ AI 繪圖沒有畫完：${aiEsc(ai.error)}（已畫好 ${done} 張）`);
+      else if (one) setInlineStatus('step2StatusBox', 'ok', '✅ 這一張已經用 AI 重畫。還是不滿意可以再按一次「🎨 重畫」，或直接換成自己的照片。');
+      else setInlineStatus('step2StatusBox', 'ok', `✅ AI 已畫好 ${done} 張圖卡。哪一張不滿意，按那一張上面的「🎨 重畫」；每一張也都可以換成自己的照片。`);
+      if (!ai.error) showToast(one ? '✔ 已重畫' : `✔ AI 圖卡完成（${done} 張）`);
+    }
+    async function aiStart(body, total, one) {
+      const slug = currentSlug;
+      try {
+        const got = await cardsCall('ai', body);
+        if (!got.total) { setInlineStatus('step2StatusBox', 'ok', '✅ 每個畫面都已經有照片或圖卡，沒有需要補的。'); return; }
+        await aiFollow(slug, got.total || total, one);
+      } catch (e) { setInlineStatus('step2StatusBox', 'err', `❌ AI 繪圖沒有開始：${aiEsc(e.message)}`); }
+    }
+    async function aiRedrawCard(slot) {
+      if (!currentSlug || cardsBusy) return;
+      if (isRenderingInProgress) { showToast('正在輸出 MV，等它完成再重畫', true); return; }
+      const sel = document.getElementById('selCardTone');
+      await aiStart({ slot, tone: sel ? sel.value : 'fresh' }, 1, true);
     }
 
     async function makeSimpleCards() {
@@ -4227,6 +4324,18 @@
       if (!todo.length) {
         setInlineStatus('step2StatusBox', 'ok', '✅ 每個畫面都已經有照片或圖卡，沒有需要補的。');
         cardsShow(state);
+        return;
+      }
+      if (cardStyle() === 'ai') {
+        const ai = state.ai || {};
+        if (ai.busy) { setInlineStatus('step2StatusBox', 'err', '⚠️ AI 繪圖正在畫另一首歌的圖卡，等它畫完再按。'); return; }
+        const mins = Math.max(1, Math.round(todo.length * 11 / 60));
+        if (!ai.installed && ai.model) {
+          if (!confirm(`第一次用 AI 繪圖，要先安裝它的程式庫（約 0.3 GB，需要網路，只有這一次）。\n\n裝完會接著畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘。\n要開始嗎？`)) return;
+        } else if (!ai.installed) {
+          if (!confirm(`第一次用 AI 繪圖，要先下載繪圖模型（約 10 GB）和程式庫（約 0.3 GB），放在 SIGN2MV 的資料夾裡。\n下載只有這一次，需要網路；之後畫圖不用網路。\n\n下載完會接著畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘。\n要開始嗎？`)) return;
+        } else if (!confirm(`用 AI 畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘（每張約 10 秒）。\n畫的時候顯示卡會被佔用，翻唱和字幕辨識會排在後面。\n\n要開始嗎？`)) return;
+        await aiStart({ tone }, todo.length, false);
         return;
       }
       cardsLock(true); cardsStop = false;

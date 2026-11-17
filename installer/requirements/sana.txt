@@ -1,0 +1,7 @@
+# AI picture cards (Sana). Installed on first use into runtime/sana/pkgs, beside (not into) the engine
+# environment, whose torch, numpy and pillow it uses: see sana.overrides.txt and workers/card_sana.py.
+diffusers==0.43.0
+transformers==5.23.0
+accelerate==1.15.0
+sentencepiece==0.2.3
+protobuf==7.36.2

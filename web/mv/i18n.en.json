@@ -639,7 +639,34 @@
   "0＝先不開，對齊歌詞後一句一格": "0 = none yet; one per line after aligning",
   "0：先不開照片槽位，貼歌詞對齊後每一句自動有一格（也可以之後用「＋ 新增照片槽位」加）": "0: no photo slots yet; after the lyrics are aligned every line gets one (you can also add slots later with “＋ Add photo slot”)",
   "🔒 LRC 時間全部定錨": "🔒 Anchor all LRC times",
-  "貼的是含 [分:秒] 時間碼的歌詞（LRC）時，解析完把每一句都定錨：之後重跑 Whisper 對齊也不會動這些時間，Whisper 只用來讓字幕逐字變金。要微調某一句，先按那張卡片的 🔒 解鎖": "When the pasted lyrics carry [mm:ss] timecodes (LRC), every line is anchored after parsing: aligning with Whisper again keeps these times, and Whisper only colours the subtitles word by word. To fine-tune a line, first unlock its card with 🔒"
+  "貼的是含 [分:秒] 時間碼的歌詞（LRC）時，解析完把每一句都定錨：之後重跑 Whisper 對齊也不會動這些時間，Whisper 只用來讓字幕逐字變金。要微調某一句，先按那張卡片的 🔒 解鎖": "When the pasted lyrics carry [mm:ss] timecodes (LRC), every line is anchored after parsing: aligning with Whisper again keeps these times, and Whisper only colours the subtitles word by word. To fine-tune a line, first unlock its card with 🔒",
+  "畫風": "Style",
+  "極簡": "Simple",
+  "AI 繪圖": "AI drawing",
+  "AI 繪圖（這台電腦不能用）": "AI drawing (not on this computer)",
+  "極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 10 秒），第一次會先下載約 10 GB 的模型": "Simple: drawn by the app itself, fast, works on every computer. AI drawing: drawn on this computer's graphics card (about 10 s a card); the first time it downloads a model of about 10 GB",
+  "色調只用在極簡圖卡；AI 繪圖有自己的畫風": "The tone is for the simple cards only; AI drawing has a look of its own",
+  "🎨 重畫": "🎨 Redraw",
+  "這一張不滿意：用 AI 再畫一張（同一句歌詞、同一個場景，畫面會不一樣；約 20 秒）": "Not happy with this one: let the AI draw it again (same line, same scene, another picture; about 20 s)",
+  "⏳ 準備 AI 繪圖…": "⏳ Getting AI drawing ready…",
+  "⏳ AI 繪圖在排隊…": "⏳ AI drawing is waiting in the queue…",
+  "⚠️ AI 繪圖正在畫另一首歌的圖卡，等它畫完再按。": "⚠️ AI drawing is busy with the cards of another song; press again when it is done.",
+  "✅ 這一張已經用 AI 重畫。還是不滿意可以再按一次「🎨 重畫」，或直接換成自己的照片。": "✅ This card was drawn again by the AI. Still not happy? Press “🎨 Redraw” once more, or put your own photo there.",
+  "✔ 已重畫": "✔ Redrawn",
+  "正在輸出 MV，等它完成再重畫": "The MV is being rendered; redraw when it is done",
+  "第一次用 AI 繪圖，要先下載繪圖模型（約 10 GB）和程式庫（約 0.3 GB），放在 SIGN2MV 的資料夾裡。": "The first time, AI drawing downloads its model (about 10 GB) and libraries (about 0.3 GB) into the SIGN2MV folder.",
+  "下載只有這一次，需要網路；之後畫圖不用網路。": "Only this once, and it needs the internet; drawing afterwards does not.",
+  "畫的時候顯示卡會被佔用，翻唱和字幕辨識會排在後面。": "The graphics card is busy while it draws; covers and subtitle recognition wait their turn.",
+  "要開始嗎？": "Start?",
+  "這一張是 AI 圖卡，請用它自己的「重畫」": "This is an AI card: use its own “Redraw”",
+  "AI 繪圖正在畫另一批圖卡，等它畫完再試": "AI drawing is busy with other cards; try again when it is done",
+  "這一格不是 AI 圖卡，沒有重畫": "This slot is not an AI card; not redrawn",
+  "這首歌的圖卡是舊版的畫法，請先按「🎲 圖卡抽抽樂」清掉重抽，再用 AI 繪圖": "The cards of this song are of the old kind: press “🎲 Card lottery” to clear and draw them anew, then use AI drawing",
+  "這台電腦沒有 NVIDIA 顯示卡，AI 繪圖用不了": "This computer has no NVIDIA graphics card; AI drawing is not available",
+  "這台電腦不能用 AI 繪圖": "AI drawing is not available on this computer",
+  "圖卡的資料不正確": "The card request is not valid",
+  "已停止": "stopped",
+  "第一次用 AI 繪圖，要先安裝它的程式庫（約 0.3 GB，需要網路，只有這一次）。": "The first time, AI drawing installs its libraries (about 0.3 GB; needs the internet; only this once)."
  },
  "patterns": [
   {
@@ -1809,6 +1836,66 @@
   {
    "zh": "⏱️ 已照 LRC 時間碼排好 {0} 句，而且全部定錨：之後重跑 Whisper 也不會動這些時間（Whisper 只用來讓字幕逐字變金）。要微調某一句，先按那張卡片的 🔒 解鎖；全部解開用「🔓 全部解除定錨」。",
    "en": "⏱️ {0} lines placed by the LRC timecodes, all anchored: aligning with Whisper again keeps these times (Whisper only colours the subtitles word by word). To fine-tune a line, unlock its card with 🔒 first; “🔓 Free all anchors” frees them all."
+  },
+  {
+   "zh": "🎨 AI 繪圖中… {0}／{1}",
+   "en": "🎨 AI drawing… {0} / {1}"
+  },
+  {
+   "zh": "⏳ AI 繪圖在排隊（等「{0}」做完）…",
+   "en": "⏳ AI drawing is waiting in the queue (for “{0}”)…"
+  },
+  {
+   "zh": "⏳ 安裝 AI 繪圖需要的程式庫（約 0.3 GB，只有第一次） · {0}",
+   "en": "⏳ Installing the libraries for AI drawing (about 0.3 GB, first time only) · {0}"
+  },
+  {
+   "zh": "⏳ 下載 AI 繪圖模型（約 10 GB，只有第一次；中斷了再按一次會接著下載） · {0}",
+   "en": "⏳ Downloading the AI drawing model (about 10 GB, first time only; if it stops, press again and it continues) · {0}"
+  },
+  {
+   "zh": "⏳ 載入 AI 繪圖模型… · {0}",
+   "en": "⏳ Loading the AI drawing model… · {0}"
+  },
+  {
+   "zh": "⏹️ 已停止，AI 畫好 {0} 張（共 {1} 張）。再按一次「🎲 圖卡抽抽樂」會把剩下的補上。",
+   "en": "⏹️ Stopped with {0} of {1} AI cards drawn. Press “🎲 Card lottery” again to add the rest."
+  },
+  {
+   "zh": "❌ AI 繪圖沒有畫完：{0}（已畫好 {1} 張）",
+   "en": "❌ AI drawing did not finish: {0} ({1} drawn)"
+  },
+  {
+   "zh": "✅ AI 已畫好 {0} 張圖卡。哪一張不滿意，按那一張上面的「🎨 重畫」；每一張也都可以換成自己的照片。",
+   "en": "✅ The AI drew {0} card(s). Not happy with one? Press “🎨 Redraw” on it; every card can also be replaced by your own photo."
+  },
+  {
+   "zh": "✔ AI 圖卡完成（{0} 張）",
+   "en": "✔ AI cards done ({0})"
+  },
+  {
+   "zh": "❌ AI 繪圖沒有開始：{0}",
+   "en": "❌ AI drawing did not start: {0}"
+  },
+  {
+   "zh": "下載完會接著畫 {0} 張圖卡，大約 {1} 分鐘。",
+   "en": "Then it draws {0} card(s), about {1} minute(s)."
+  },
+  {
+   "zh": "用 AI 畫 {0} 張圖卡，大約 {1} 分鐘（每張約 10 秒）。",
+   "en": "The AI draws {0} card(s), about {1} minute(s) (about 10 s each)."
+  },
+  {
+   "zh": "顯示卡記憶體 {0} GB 不夠（AI 繪圖要 6 GB 以上）",
+   "en": "The graphics card has {0} GB of memory, not enough (AI drawing needs 6 GB or more)"
+  },
+  {
+   "zh": "圖卡放不進去：{0}",
+   "en": "The card could not be put in: {0}"
+  },
+  {
+   "zh": "裝完會接著畫 {0} 張圖卡，大約 {1} 分鐘。",
+   "en": "Then it draws {0} card(s), about {1} minute(s)."
   }
  ]
 }

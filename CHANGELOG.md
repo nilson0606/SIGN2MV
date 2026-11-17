@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Picture cards, a second style: 「畫風：AI 繪圖」 beside 「極簡」 (which stays the default and is unchanged).
+  The plan of a card is the same (where, in what light, who does what, what else is there);
+  `app/mvstudio/cardprompt.py` says it as one English prompt, the song's two people described the same way
+  on every card, and an image model (Sana 1600M, not quantized, its parts on the graphics card one after
+  the other: about 10 s a card and 5 GB of graphics memory on an RTX 4060 Laptop) draws it
+  (`workers/card_sana.py`, one job in the GPU lane for the cards of a run). Each finished card goes into its
+  slot while the job runs; a photo put there in the meantime stays. An AI card has a 「🎨 重畫」 of its own
+  (another picture of the same plan). The model (about 10 GB, `models/sana`) and its libraries (0.3 GB,
+  `runtime/sana/pkgs`, beside the engine environment whose torch they use; `installer/requirements/sana.lock.txt`)
+  are fetched the first time the style is used, after a question; a computer without an NVIDIA card of 6 GB
+  or more is not offered the style. Tried first as a script outside the app (three ways of loading, then
+  the 23 cards of one song; a language model reading the lyrics was tried too and not kept:
+  `claude/sana_trial_2026-11-16.md` in the project notes).
 - Simple cards: a second way of drawing, 「畫法：標準」, beside the first (「簡易」, unchanged). A standard
   world has ten places, six of them put together from a terrain (12), a landmark (45: lighthouse, Ferris wheel,
   chapel, phone booth, campfire, castle, ...) and a foreground (9), 392 fitting terrain and landmark pairs in

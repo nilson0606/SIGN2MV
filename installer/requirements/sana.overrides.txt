@@ -1,0 +1,4 @@
+# never installed here: the engine environment's own are used
+torch ; sys_platform == 'never'
+numpy ; sys_platform == 'never'
+pillow ; sys_platform == 'never'

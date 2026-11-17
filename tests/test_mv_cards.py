@@ -740,3 +740,107 @@ def test_a_one_character_word_is_not_found_inside_another_word():
     w = cs.prepare(cardworld.make_world(4, "premium"), parts, "雨")
     specs = cs.plan_premium(parts, 4, w, "雨")[0]
     assert specs[0].split("|")[4].startswith("duo")
+
+
+def test_a_card_as_words_for_the_image_model():
+    """[2026-11-17] AI cards: the plan of a card becomes one English prompt, the two people said the same way on
+    every card of the song."""
+    from app.mvstudio import cardprompt
+    world = cardworld.choose_world(77, [], "premium")
+    lead = "boy" if world["lead"] == "boy" else "girl"
+    me, other = cardprompt.person(world[lead], lead), cardprompt.person(world["girl" if lead == "boy" else "boy"], "girl" if lead == "boy" else "boy")
+    assert me != other and "hair" in me and "wearing" in me
+    solo = cardprompt.build("w2|peaks.clocktower.stones|dawn|clear|solo_reach|rainbow|mid|c|0", world)
+    duo = cardprompt.build("w2|park.ferris.puddles.near|night|rain|duo_sit|none|wide|c|0|sad.1.m", world)
+    still = cardprompt.build("w2|cafe|sunset|clear|solo_sit|hourglass|still|c|0", world)
+    assert solo.startswith(me) and other not in solo and "rainbow" in solo and "clock tower in the background" in solo and "at dawn" in solo
+    assert me in duo and other in duo and "ferris wheel close by" in duo and "rain falling" in duo and "a sad face" in duo and "at night" in duo
+    assert "no people" in still and "hourglass" in still and me not in still and "inside a cafe" in still
+    assert all(p.endswith(cardprompt.STYLE) for p in (solo, duo, still))
+    assert solo == cardprompt.build("w2|peaks.clocktower.stones|dawn|clear|solo_reach|rainbow|mid|c|0", world)      # the same card, the same words
+    # someone of the family stands where the other one would
+    mum = cardprompt.build("w2|park.ferris.puddles|day|clear|duo_hands|none|mid|c|0|smile.1.a", world)
+    assert "middle-aged woman" in mum and other not in mum and me in mum
+    # every word of the plan has words here; a picture without words of its own is said by its name
+    for s in cardworld.SUBJECTS + cardworld.SUBJECTS_PREM:
+        assert s in cardprompt.SUBJECT, s
+    for f in cardworld.FRAMES + cardworld.FRAMES_STD + cardworld.FRAMES_PREM:
+        assert f in cardprompt.FRAME, f
+    assert not [t for t in cardworld.TERRAINS if t not in cardprompt.TERRAIN] and not [t for t in cardworld.PLACE_FN if t not in cardprompt.PLACE]
+    assert not [t for t in cardworld.FRONTS if t not in cardprompt.FRONT] and not [t for t in cardworld.FACES if t not in cardprompt.FACE]
+    assert cardprompt.words("e_alarm_clock") == "alarm clock" and cardprompt.words("weddingdress") == "wedding dress"
+    assert cardprompt.words("cloudi") == "cloud" and cardprompt.words("pineapple") == "pineapple" and cardprompt.words("taxi") == "taxi"
+    for name in list(card_icons.TABLE)[::7]:
+        assert cardprompt.prop(name) is not None and "_" not in cardprompt.prop(name)
+    # the first cards (no world of their own) are not something the image model is asked to draw
+    assert cardprompt.build("meadow", world) is None and cardprompt.build("w2|cafe|sunset|clear|solo_sit|hourglass|still|c|0", None) is None
+
+
+def _ai_wait(client, slug, sec=60):
+    import time
+    t0 = time.time()
+    while time.time() - t0 < sec:
+        ai = _post(client, "/api/mv/cards/ai_state", slug=slug).json()["ai"]
+        if not ai["running"]:
+            return ai
+        time.sleep(0.2)
+    raise AssertionError("the AI cards did not finish")
+
+
+def test_ai_cards_are_drawn_by_a_job_and_put_in_one_by_one(client, root, monkeypatch):
+    """[2026-11-17] The second style: an image model draws the cards (here a stand-in that paints flat pictures).
+    Without a graphics card the style is not offered. The cards of a run come in while the job runs, the song
+    keeps its world, an AI card is redrawn only by its own redraw, and Remove takes them out like the others."""
+    sid, slug, pdir = _aligned_project(client, root)
+    plan = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium").json()
+    assert plan["ai"]["available"] is False and plan["ai"]["reason"]
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh").status_code == 409
+    monkeypatch.setenv("SIGN2MV_CARD_AI", "fake")
+    plan = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium").json()
+    assert plan["ai"]["available"] and plan["ai"]["installed"] and not plan["ai"]["running"]
+    n = len(plan["empty"])
+    got = _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh").json()
+    assert got["total"] == n >= 3, got
+    ai = _ai_wait(client, slug)
+    assert ai["done"] == n and not ai["error"], ai
+    done = _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()
+    assert done["empty"] == [] and len(done["cards"]) == n and all(c["style"] == "ai" for c in done["cards"])
+    assert done["world"] == plan["world"]
+    assert not [d for d in (root / "runtime" / "tmp").glob("sana_*")]          # the job's own folder is gone
+    c = done["cards"][0]
+    path = pdir / "scenes" / c["file"]
+    with Image.open(path) as im:
+        assert im.size == (1920, 1080)
+    before = path.read_bytes()
+    assert _post(client, "/api/mv/cards/draw", slug=slug, slot=c["slot"], tone="fresh", grade="premium", redraw=True).status_code == 409
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"]).json()["total"] == 1
+    ai = _ai_wait(client, slug)
+    assert ai["done"] == 1 and not ai["error"]
+    assert path.read_bytes() != before
+    again = _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()
+    assert len(again["cards"]) == n and again["empty"] == []
+    assert next(x for x in again["cards"] if x["slot"] == c["slot"])["aiseed"] == c["aiseed"] + 1
+    # a photo put into a slot while the AI draws stays: only parts that still show nothing get a card
+    assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == n
+    monkeypatch.setenv("SIGN2MV_CARD_AI_WAIT", "0.4")
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh").json()["total"] == n
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh").status_code == 409          # one run at a time
+    last = plan["empty"][-1]["slot"]
+    sid_last = int(last.split(":")[1]) if last.startswith("scene:") else 0
+    if sid_last:
+        r = client.post("/api/mv/upload_scene", data={"slug": slug, "scene_id": str(sid_last)}, files={"file": ("mine.png", png((9, 9, 9)), "image/png")})
+        assert r.status_code == 200, r.text
+    ai = _ai_wait(client, slug)
+    end = _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()
+    if sid_last:
+        assert ai["done"] == n - 1 and len(end["cards"]) == n - 1 and last not in [x["slot"] for x in end["cards"]]
+        assert _middle(pdir / "scenes" / f"scene_{sid_last:02d}.png") == (9, 9, 9)
+    # stopping a run keeps what was drawn
+    assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == len(end["cards"])
+    left = len(_post(client, "/api/mv/cards/plan", slug=slug, grade="premium").json()["empty"])
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh").json()["total"] == left
+    import time
+    time.sleep(1.0)
+    _post(client, "/api/mv/cards/ai_stop", slug=slug)
+    ai = _ai_wait(client, slug)
+    assert ai["error"] == "已停止" and 0 < ai["done"] < left, ai

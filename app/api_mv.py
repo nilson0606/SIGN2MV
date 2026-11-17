@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import threading
@@ -37,7 +38,7 @@ from . import settings as settings_mod
 from . import stems as stems_mod
 from .context import Context
 from .library import LibraryError
-from .mvstudio import align, cards, cardstory, cardworld, core
+from .mvstudio import align, cardprompt, cards, cardstory, cardworld, core
 from .mvstudio.align import (align_timeline_with_anchors_and_whisper, apply_anchor_locks, unsung_sections,
                              auto_generate_timeline_from_whisper_only, build_guaranteed_fallback_timeline,
                              enforce_anchor_invariants, WHISPER_PIPELINE)
@@ -1348,7 +1349,9 @@ def router(ctx: Context) -> APIRouter:
                 info = known.get(pr)
                 if info and core.photo_ok(illust_dir, fp):
                     have.append({"slot": f"scene:{int(m.group(1))}" if m else f"inst:{mi.group(1)}", "card": info["card"],
-                                 "look": int(info.get("look", 0) or 0), "tone": info["tone"], "file": fn, "print": pr})
+                                 "look": int(info.get("look", 0) or 0), "tone": info["tone"], "file": fn, "print": pr,
+                                 "style": "ai" if info.get("style") == "ai" else "",
+                                 "aiseed": int(info.get("aiseed", 0) or 0)})
         # The song's look. While cards are there it is theirs, so that cards added later match: a world of
         # its own (cardworld), or for cards from before songs had worlds the scenes of the first cards.
         # With no card left the song gets a new world, away from what the songs before it used, and another
@@ -1415,12 +1418,36 @@ def router(ctx: Context) -> APIRouter:
                 empty.append({"slot": slot, "card": name, "look": look})
         return {"empty": empty, "cards": have, "tone": rec["tone"] or "fresh", "tones": list(cards.TONES),
                 "timeline": len(tl), "seed": seed, "world": world, "round": rnd,
-                "grade": (world or {}).get("grade", "simple")}
+                "grade": (world or {}).get("grade", "simple"), "ai": ai_info(slug)}
+
+    def card_keep(state: Dict[str, Any]) -> Dict[str, Any]:
+        """The record of the cards that are there, as it is written back with a new card."""
+        out: Dict[str, Any] = {}
+        for c in state["cards"]:
+            out[c["print"]] = {"card": c["card"], "look": c["look"], "tone": c["tone"], "seed": state["seed"]}
+            if c.get("style") == "ai":
+                out[c["print"]].update(style="ai", aiseed=c.get("aiseed", 0))
+        return out
+
+    def card_placed(proj: Dict[str, Any], slot: str, out_path: Path) -> None:
+        """After a card was written into a scene slot: no other file of that slot, and the project knows the slot."""
+        m = CARD_SLOT_RE.fullmatch(slot)
+        if m and m.group(1):
+            sid = int(m.group(1))
+            for fn in _scene_files(proj["illust_dir"], sid):
+                if fn != out_path.name:
+                    os.remove(os.path.join(proj["illust_dir"], fn))
+            if sid > core.scene_count_of(proj):
+                proj["scene_count"] = sid
+                save_project_dict(proj)
 
     def card_save(illust_dir: str, out_path: Path, name: str, look: int, tone: str, state: Dict[str, Any],
-                  keep: Dict[str, Any], replace_print: str, slug: str) -> None:
+                  keep: Dict[str, Any], replace_print: str, slug: str, img: Any = None,
+                  extra: Optional[Dict[str, Any]] = None) -> None:
+        """img: the picture when it was not drawn here (an AI card); extra: what the record says besides."""
         seed, world = state["seed"], state["world"]
-        img = cards.draw(name, look, tone, seed, world)
+        if img is None:
+            img = cards.draw(name, look, tone, seed, world)
         os.makedirs(illust_dir, exist_ok=True)
         part = out_path.with_name(out_path.name + ".part")
         try:
@@ -1437,7 +1464,7 @@ def router(ctx: Context) -> APIRouter:
         known.update(keep)
         known.pop(replace_print, None)
         if pr:
-            known[pr] = {"card": name, "look": look, "tone": tone, "seed": seed}
+            known[pr] = dict({"card": name, "look": look, "tone": tone, "seed": seed}, **(extra or {}))
         cards.write_record(illust_dir, tone, known, seed, world, state["round"])
         if world:
             cards.note_history(core.LIBRARY_ROOT, slug, world)
@@ -1473,6 +1500,8 @@ def router(ctx: Context) -> APIRouter:
             hit = next((c for c in state["cards"] if c["slot"] == slot), None)
             if not hit:
                 return jerr(409, "這一格已經不是簡易圖卡（換成照片了），沒有重畫")
+            if hit.get("style") == "ai":
+                return jerr(409, "這一張是 AI 圖卡，請用它自己的「重畫」")
             name, look = hit["card"], hit["look"]
             old_print = core._photo_print(str(out_path)) or ""
         else:
@@ -1481,22 +1510,212 @@ def router(ctx: Context) -> APIRouter:
                 return jerr(409, "這一格已經有照片，沒有畫簡易圖卡")
             name, look = hit["card"], hit["look"]
         try:
-            keep = {c["print"]: {"card": c["card"], "look": c["look"], "tone": c["tone"], "seed": state["seed"]}
-                    for c in state["cards"]}
-            await asyncio.to_thread(card_save, illust_dir, out_path, name, look, tone, state, keep, old_print,
-                                    str(proj.get("slug") or ""))
+            await asyncio.to_thread(card_save, illust_dir, out_path, name, look, tone, state, card_keep(state),
+                                    old_print, str(proj.get("slug") or ""))
         except Exception as e:  # noqa: BLE001
             return jerr(500, f"簡易圖卡畫不出來：{e}")
-        m = CARD_SLOT_RE.fullmatch(slot)
-        if m and m.group(1):
-            sid = int(m.group(1))
-            for fn in _scene_files(illust_dir, sid):
-                if fn != out_path.name:
-                    os.remove(os.path.join(illust_dir, fn))
-            if sid > core.scene_count_of(proj):
-                proj["scene_count"] = sid
-                save_project_dict(proj)
+        card_placed(proj, slot, out_path)
         return {"status": "ok", "slot": slot, "card": name, "look": look, "tone": tone}
+
+    # ---- AI picture cards (Sana) ------------------------------------------------------------------------
+    # [2026-11-17] The same plan as the simple cards (where, in what light, who does what), drawn by an image
+    # model on the graphics card instead of by the app's own painter. One job draws the cards of a run one
+    # after the other (the model is loaded once); each finished card is put into its slot while the job
+    # runs, so the page sees them come in. The model and its libraries are fetched the first time only.
+    AI_REPO = "Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers"
+    AI_REVISION = "e2b3c0cbffebcd09d83805e88b9f5f106afc74ac"
+    AI_MIN_VRAM_MB = 6000
+    ai_run: Dict[str, Any] = {"job": "", "slug": "", "items": [], "placed": [], "skipped": [], "total": 0, "error": "",
+                              "tone": "fresh", "dir": "", "task": None, "ended": 0.0}
+    ai_gpu: Dict[str, Any] = {}
+
+    def ai_paths() -> Dict[str, Path]:
+        return {"pkgs": ctx.paths.runtime / "sana" / "pkgs", "home": ctx.paths.models / "sana",
+                "lock": ctx.paths.root / "installer" / "requirements" / "sana.lock.txt"}
+
+    def ai_card_gpu() -> Dict[str, Any]:
+        """{"ok", "reason", "name", "mb"}: asked once (nvidia-smi), then remembered."""
+        if ai_gpu:
+            return ai_gpu
+        out: Dict[str, Any] = {"ok": False, "reason": "這台電腦沒有 NVIDIA 顯示卡，AI 繪圖用不了", "name": "", "mb": 0}
+        try:
+            got = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"],
+                                 capture_output=True, text=True, timeout=8,
+                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            line = (got.stdout or "").strip().splitlines()[0]
+            name, mb = [x.strip() for x in line.rsplit(",", 1)]
+            out.update(name=name, mb=int(float(mb)))
+            if out["mb"] >= AI_MIN_VRAM_MB:
+                out.update(ok=True, reason="")
+            else:
+                out["reason"] = f"顯示卡記憶體 {out['mb'] // 1024} GB 不夠（AI 繪圖要 6 GB 以上）"
+        except Exception:  # noqa: BLE001 - no nvidia-smi: what the installer found
+            try:
+                rep = json.loads((ctx.paths.runtime / "install_report.json").read_text(encoding="utf-8"))
+                if rep.get("device") == "cuda":
+                    out.update(ok=True, reason="", name=str(rep.get("gpu_name") or "NVIDIA"))
+            except (OSError, ValueError):
+                pass
+        ai_gpu.update(out)
+        return ai_gpu
+
+    def ai_have() -> Dict[str, bool]:
+        """What AI drawing needs and is on the disk already: its libraries, its model."""
+        p = ai_paths()
+        snap = p["home"] / "hub" / ("models--" + AI_REPO.replace("/", "--")) / "snapshots" / AI_REVISION
+        return {"libs": any(p["pkgs"].glob(".installed-*")), "model": (snap / "model_index.json").exists()}
+
+    def ai_installed() -> bool:
+        return all(ai_have().values())
+
+    def ai_job() -> Optional[Dict[str, Any]]:
+        job = ctx.jobs.get(ai_run["job"]) if ai_run["job"] else None
+        return job if job and job["status"] in ("queued", "running") else None
+
+    def ai_info(slug: str) -> Dict[str, Any]:
+        fake = os.environ.get("SIGN2MV_CARD_AI") == "fake"
+        gpu = {"ok": True, "reason": "", "name": "fake", "mb": 0} if fake else ai_card_gpu()
+        job = ai_job()
+        task = ai_run.get("task")
+        live = bool(job) or bool(task and task.is_alive())      # the last cards are still being put in
+        mine = live and ai_run["slug"] == slug
+        have = {"libs": True, "model": True} if fake else ai_have()
+        out = {"available": bool(gpu["ok"]), "reason": gpu["reason"], "gpu": gpu["name"],
+               "installed": all(have.values()), "libs": have["libs"], "model": have["model"],
+               "running": mine, "busy": live and not mine,
+               "done": len(ai_run["placed"]) if ai_run["slug"] == slug else 0,
+               "total": ai_run["total"] if ai_run["slug"] == slug else 0,
+               "error": ai_run["error"] if ai_run["slug"] == slug else "",
+               "percent": None, "message": "", "stage": ""}
+        if mine and job:
+            out.update(percent=job.get("percent"), message=str(job.get("message") or ""), stage=str(job.get("stage") or ""),
+                       queued=job["status"] == "queued", waiting_for=str(job.get("waiting_for") or ""))
+        return out
+
+    def ai_place(slug: str, item: Dict[str, Any], tone: str) -> bool:
+        """Put a finished AI card into its slot, if the slot is still what it was when the run began."""
+        try:
+            proj = load_project_dict(slug)
+        except ProjectNotFound:
+            return False
+        illust_dir = proj["illust_dir"]
+        out_path = card_slot_path(illust_dir, item["slot"])
+        if out_path is None:
+            return False
+        state = card_state(proj, "premium")
+        old_print = ""
+        if item.get("redraw"):
+            hit = next((c for c in state["cards"] if c["slot"] == item["slot"] and c["print"] == item["print"]), None)
+            old_print = item["print"]
+        else:
+            hit = next((c for c in state["empty"] if c["slot"] == item["slot"]), None)
+        if not hit:
+            return False                    # a photo was put there in the meantime: it stays
+        from PIL import Image
+        with Image.open(item["out"]) as im:
+            img = im.convert("RGB")
+        if img.size != (1920, 1080):
+            img = img.resize((1920, 1080), Image.LANCZOS)
+        card_save(illust_dir, out_path, item["card"], int(item.get("look", 0)), tone, state, card_keep(state),
+                  old_print, slug, img=img, extra={"style": "ai", "aiseed": int(item["seed"])})
+        card_placed(proj, item["slot"], out_path)
+        return True
+
+    def ai_watch(job_id: str) -> None:
+        """(a thread of its own: the cards come in whether or not a page is asking)"""
+        slug, tone = ai_run["slug"], ai_run["tone"]
+        try:
+            while True:
+                job = ctx.jobs.get(job_id)
+                live = bool(job) and job["status"] in ("queued", "running")
+                for item in ai_run["items"]:
+                    if item["slot"] in ai_run["placed"] or item["slot"] in ai_run["skipped"]:
+                        continue
+                    if os.path.exists(item["out"]):
+                        try:
+                            ok = ai_place(slug, item, tone)
+                        except Exception as e:  # noqa: BLE001
+                            ok, ai_run["error"] = False, f"圖卡放不進去：{e}"
+                        ai_run["placed" if ok else "skipped"].append(item["slot"])
+                if not live:
+                    if job and job["status"] != "succeeded" and not ai_run["error"]:
+                        ai_run["error"] = ("已停止" if job["status"] == "cancelled"
+                                           else str(job.get("error_message") or job.get("error_code") or job["status"]))
+                    break
+                time.sleep(0.4)
+        finally:
+            shutil.rmtree(ai_run["dir"], ignore_errors=True)
+            ai_run["ended"] = time.time()
+
+    @r.post("/api/mv/cards/ai")
+    async def api_cards_ai(request: Request):
+        """Draw with the image model: every part that shows no photo, or ("slot") one AI card again."""
+        configure()
+        body = await request.json()
+        try:
+            proj = load_project_dict(str(body.get("slug", "")))
+        except ProjectNotFound as exc:
+            return jerr(404, str(exc))
+        slug, tone = str(proj.get("slug") or ""), str(body.get("tone", "fresh"))
+        if tone not in cards.TONES:
+            return jerr(400, "圖卡的資料不正確")
+        info = ai_info(slug)
+        if not info["available"]:
+            return jerr(409, info["reason"] or "這台電腦不能用 AI 繪圖")
+        if info["running"] or info["busy"]:
+            return jerr(409, "AI 繪圖正在畫另一批圖卡，等它畫完再試")
+        state = await asyncio.to_thread(card_state, proj, "premium")
+        one = str(body.get("slot") or "")
+        if one:
+            hit = next((c for c in state["cards"] if c["slot"] == one and c.get("style") == "ai"), None)
+            if not hit:
+                return jerr(409, "這一格不是 AI 圖卡，沒有重畫")
+            picked = [dict(hit, redraw=True, seed=int(hit.get("aiseed", 0)) + 1)]
+        else:
+            base = int(state["seed"] or 0) % 1000003
+            picked = [dict(c, redraw=False, **{"print": ""}, seed=base * 1000 + i * 7 + 1)
+                      for i, c in enumerate(state["empty"])]
+        items = []
+        work = ctx.paths.tmp / f"sana_{secrets.token_hex(6)}"
+        for c in picked:
+            prompt = cardprompt.build(c["card"], state["world"])
+            if not prompt:
+                return jerr(409, "這首歌的圖卡是舊版的畫法，請先按「🎲 圖卡抽抽樂」清掉重抽，再用 AI 繪圖")
+            items.append({"slot": c["slot"], "card": c["card"], "look": c.get("look", 0), "print": c.get("print", ""),
+                          "redraw": c["redraw"], "seed": c["seed"], "prompt": prompt,
+                          "out": str(work / (c["slot"].replace(":", "_") + ".png"))})
+        if not items:
+            return {"status": "ok", "total": 0, "ai": ai_info(slug)}
+        p = ai_paths()
+        fake = os.environ.get("SIGN2MV_CARD_AI") == "fake"
+        payload = {"items": [{k: i[k] for k in ("slot", "prompt", "seed", "out")} for i in items],
+                   "negative": cardprompt.NEGATIVE, "width": 1280, "height": 720, "steps": 20, "guidance": 4.5,
+                   "size": [1920, 1080], "pkgs": str(p["pkgs"]), "lock": str(p["lock"]), "repo": AI_REPO,
+                   "revision": AI_REVISION, "fake": fake,
+                   "fake_wait": float(os.environ.get("SIGN2MV_CARD_AI_WAIT", "0") or 0)}
+        env = {"HF_HOME": str(p["home"]), "HF_HUB_DISABLE_SYMLINKS_WARNING": "1"}
+        job = ctx.submit(kind="card_sana", lane="gpu", script="card_sana.py", input=payload,
+                         title=f"AI 圖卡: {proj.get('title') or proj.get('name') or slug}", song_id=proj["song_id"],
+                         timeout_s=4 * 3600, extra_env=env, env_name="server" if fake else "engine")
+        ai_run.update(job=job["id"], slug=slug, items=items, placed=[], skipped=[], total=len(items), error="",
+                      tone=tone, dir=str(work), ended=0.0)
+        ai_run["task"] = threading.Thread(target=ai_watch, args=(job["id"],), name="ai-cards", daemon=True)
+        ai_run["task"].start()
+        return {"status": "ok", "total": len(items), "ai": ai_info(slug)}
+
+    @r.post("/api/mv/cards/ai_state")
+    async def api_cards_ai_state(request: Request):
+        configure()
+        body = await request.json()
+        return {"status": "ok", "ai": ai_info(str(body.get("slug", "")))}
+
+    @r.post("/api/mv/cards/ai_stop")
+    async def api_cards_ai_stop(request: Request):
+        configure()
+        body = await request.json()
+        if ai_job() and ai_run["slug"] == str(body.get("slug", "")):
+            ctx.jobs.cancel(ai_run["job"])
+        return {"status": "ok", "ai": ai_info(str(body.get("slug", "")))}
 
     @r.post("/api/mv/cards/remove")
     async def api_cards_remove(request: Request):
