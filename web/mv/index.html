@@ -472,14 +472,16 @@
       from { transform: scale(1); }
       to { transform: scale(1.05); }
     }
+    /* [SIGN2MV 2026-11-17] 使用者要求：這排按鈕不要蓋在照片上 → 放在照片下面自己一列 */
     .scene-card-actions-top {
-      position: absolute;
-      top: 6px;
-      right: 6px;
       display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
       gap: 4px;
+      padding: 5px 6px 0;
     }
     .scene-mini-btn {
+      white-space: nowrap;
       background: rgba(9, 13, 22, 0.85);
       color: #fff;
       border: 1px solid rgba(255,255,255,0.25);
@@ -1091,7 +1093,7 @@
                 <option value="night">夜藍</option>
                 <option value="manga">黑白漫畫</option>
               </select>
-              <span id="cardsRedrawHint" style="font-size:12px; color:#f5d0fe; flex:0 1 auto; white-space:normal;">💡 AI 畫的圖卡哪一張不滿意，按那一張右上角的「🎨 重畫」，只重畫那一張</span>
+              <span id="cardsRedrawHint" style="font-size:12px; color:#f5d0fe; flex:0 1 auto; white-space:normal;">💡 AI 畫的圖卡哪一張不滿意，按那一張圖下面的「🎨 重畫」，只重畫那一張</span>
             </span>
           </div>
         </div>
@@ -1757,12 +1759,12 @@
               <input type="checkbox" class="chk-scene-item" data-scene-id="${sc.scene_id}" onchange="updateSelectedScenesCount()" style="width:14px; height:14px; accent-color:var(--gold); cursor:pointer;" />
               <span>Scene ${String(sc.scene_id).padStart(2, '0')}</span>
             </label>
-            <div class="scene-card-actions-top">
+          </div>
+          <div class="scene-card-actions-top">
               ${primaryIdx >= 0 ? `<button class="scene-mini-btn" title="即時合成預覽這張照片＋歌詞，並跳到上面的播放器看" onclick="event.stopPropagation(); previewAndJump(${primaryIdx})">👁️ 預覽</button>` : ''}
               ${primaryIdx >= 0 ? `<button class="scene-mini-btn" title="跳轉試聽這張照片對應的歌聲" onclick="event.stopPropagation(); auditionSegment(${primaryIdx})">🎧</button>` : ''}
               <button class="scene-mini-btn" title="上傳更換這張照片" onclick="event.stopPropagation(); triggerUploadScene(${sc.scene_id})">📤 換圖</button>
               ${sc.exists ? `<button class="scene-mini-btn" title="刪除此張分鏡照片" style="color:#fca5a5; border-color:rgba(239,68,68,0.4);" onclick="event.stopPropagation(); deleteSingleSceneImage(${sc.scene_id})">🗑️ 刪圖</button>` : ''}
-            </div>
           </div>
           <div class="scene-card-body">
             <div class="scene-order-bar" style="display:flex; justify-content:space-between; align-items:center; gap:4px; font-size:11px; color:var(--text-muted); margin-bottom:4px;">
@@ -1877,12 +1879,12 @@
             ${url ? `<img src="${url}" alt="${label}" />` : `<div class="scene-card-empty"><span>📥 點擊或拖曳放入專屬照片</span><span>（自動轉 1920x1080）</span></div>`}
             <span class="inst-tag">${label}</span>
             <span class="inst-src${own ? ' own' : ''}">${own ? '✔ 專屬照片' : `沿用 Scene ${String(seg.scene).padStart(2, '0')} 照片（尚未放專屬照片）`}</span>
-            <div class="scene-card-actions-top">
+          </div>
+          <div class="scene-card-actions-top">
               <button class="scene-mini-btn" title="即時合成預覽這段，並跳到上面的播放器看" onclick="event.stopPropagation(); previewAndJump(${idx})">👁️ 預覽</button>
               <button class="scene-mini-btn" title="跳到這段試聽" onclick="event.stopPropagation(); auditionSegment(${idx})">🎧</button>
               <button class="scene-mini-btn" title="放入／更換這段的專屬照片" onclick="event.stopPropagation(); triggerUploadInst(${idx})">📤 ${own ? '換圖' : '專屬照片'}</button>
               ${own ? `<button class="scene-mini-btn" title="刪掉專屬照片（改回沿用 Scene 照片）" style="color:#fca5a5; border-color:rgba(239,68,68,0.4);" onclick="event.stopPropagation(); deleteInstPhoto(${idx})">🗑️ 刪圖</button>` : ''}
-            </div>
           </div>
           <div class="scene-card-body">
             <div class="inst-row" style="justify-content:space-between; margin-bottom:4px;">

@@ -29,6 +29,20 @@ def state(client, slug):
     return data, sorted(s["scene_id"] for s in data["scenes"] if s.get("exists"))
 
 
+def test_a_new_project_starts_with_random_transitions(client, root):
+    """[2026-11-17] A new project: random transitions, with a seed of its own so the same project renders the same
+    way every time; a project made before (no such field) is still one fixed transition."""
+    from app.mvstudio import core
+    sid, slug, pdir = project(client, root)
+    data = client.get(f"/api/mv/project/{slug}").json()["project"]
+    assert data["transition_mode"] == "random" and 0 < data["transition_seed"] <= 0x7FFFFFFF
+    plan = core.transition_plan(data, 12)
+    assert len(set(plan)) > 3 and plan == core.transition_plan(data, 12)
+    assert all(a != b for a, b in zip(plan, plan[1:]))
+    old = {k: v for k, v in data.items() if not k.startswith("transition_")}
+    assert set(core.transition_plan(old, 12)) == {"fade"}
+
+
 def test_files_written_by_something_else_are_not_used(client, root):
     sid, slug, pdir = project(client, root)
     scenes = pdir / "scenes"

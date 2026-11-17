@@ -422,7 +422,11 @@ def router(ctx: Context) -> APIRouter:
                 # old MV Studio started new projects with this picture style filled in
                 "style_theme": body.get("style_theme") or STYLE_THEME_DEFAULT[lang], "audio_file": audio_file,
                 "output_mv": f"{core.safe_file_title(title, name)}_MV.mp4", "scene_count": scene_count, "slots_follow_lines": scene_count == 0,
-                "early_lead_sec": -0.70, "tail_extend_sec": 2.50, "timeline": []}
+                "early_lead_sec": -0.70, "tail_extend_sec": 2.50, "timeline": [],
+                # [2026-11-17] asked for by the user: a new project starts with random transitions (a project
+                # made before keeps what it has; one without the field is still one fixed cross-fade)
+                "transition_mode": "random",
+                "transition_seed": (int(hashlib.sha256(slug.encode("utf-8")).hexdigest()[:8], 16) & 0x7FFFFFFF) or 1}
         proj["outro_desc"] = core.default_outro(proj)
         (Path(core.project_dir(slug)) / "scenes").mkdir(parents=True, exist_ok=True)
         core.accepted_photos(str(Path(core.project_dir(slug)) / "scenes"))    # starts the (empty) list of photos

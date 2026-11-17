@@ -671,7 +671,7 @@
   "這一張不滿意：用 AI 再畫一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。畫風選單選著哪一種 AI 畫法就用哪一種，選著「極簡」時照這一張原本的畫法": "Not happy with this one: let the AI draw it again (same line, same scene, another picture; about 25 s). It uses the AI way chosen in the style menu, or the way this card was drawn when the menu says “Simple”",
   "即時合成預覽這張照片＋歌詞，並跳到上面的播放器看": "Preview this photo with its lyric, and jump to the player above to see it",
   "即時合成預覽這段，並跳到上面的播放器看": "Preview this part, and jump to the player above to see it",
-  "💡 AI 畫的圖卡哪一張不滿意，按那一張右上角的「🎨 重畫」，只重畫那一張": "💡 Not happy with one AI card? Press “🎨 Redraw” at its top right: only that card is drawn again"
+  "💡 AI 畫的圖卡哪一張不滿意，按那一張圖下面的「🎨 重畫」，只重畫那一張": "💡 Not happy with one AI card? Press “🎨 Redraw” under it: only that card is drawn again"
  },
  "patterns": [
   {
