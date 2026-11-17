@@ -35,6 +35,9 @@
 - MV page: a click on a photo opens it big (it started an upload; changing the photo is the 「📤 換圖」 button or a
   drop); ‹ › and the arrow keys go to the previous and the next photo; closing (✕, Esc, a click beside the
   picture) scrolls back to the card of the photo that was on show and lights it up for a moment.
+- MV page: while cards are drawn or redrawn (AI or simple) every control of the page is off, as during a
+  render, and comes back as it was afterwards; what stays on is 「停止」 and the big photo view. Cards and
+  tables rebuilt while the cards come in are off too (asked for by the user).
 - AI picture cards: the six hair colours of a card world are said by name: the blue-grey and the wine-red of
   the simple cards are dark hair ("black", "dark auburn"), where "dark blue" made the model paint bright blue hair.
 - MV page: 「🎵 即時對字幕」 and 「🎬 播放成品 MV」 start playing when pressed (they only changed the view).

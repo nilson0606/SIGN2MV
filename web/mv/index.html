@@ -4293,6 +4293,7 @@
         [['', '🎨 重畫…'], ['same', '🎨 原模式'], ['away', '🎨 不露臉'], ['none', '🎨 純風景']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; btn.appendChild(o); });
         btn.onclick = (ev) => ev.stopPropagation();
         btn.onchange = () => { const v = btn.value; btn.value = ''; if (v) aiRedrawCard(c.slot, v); };
+        if (cardsBusy) { btn.dataset.preCardsDisabled = 'false'; btn.disabled = true; }
         bar.insertBefore(btn, bar.firstChild);
       });
       if (ai.running && !aiPolling) aiFollow(currentSlug, ai.total || 0, false);   // a run begun before this page was opened
@@ -4326,11 +4327,29 @@
       previewSegmentFrame(0);   // the preview above still shows the picture from before
     }
 
+    // [SIGN2MV 2026-11-17] 使用者要求：抽圖卡、重畫的時候，MV 頁的各種按鈕先全部關掉（跟輸出 MV 時一樣），畫完再還原。
+    // 留著能用的只有「停止」和看大圖的 ✕ ‹ ›。畫的途中圖卡會一張一張換上來（卡片是重做的），所以進度每動一次就再鎖一次。
     function cardsLock(on) {
       cardsBusy = on;
-      ['btnSimpleCards', 'selCardTone', 'selCardStyle'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = on; });
-      document.querySelectorAll('.ai-redraw-btn').forEach(el => { el.disabled = on; });
+      document.body.classList.toggle('cards-drawing', on);
+      document.querySelectorAll('button, input, select, textarea').forEach(el => {
+        if (el.classList.contains('btn-abort-action') || el.closest('#photoViewer')) return;
+        if (on) {
+          if (el.dataset.preCardsDisabled === undefined) el.dataset.preCardsDisabled = el.disabled ? 'true' : 'false';
+          el.disabled = true;
+        } else if (el.dataset.preCardsDisabled !== undefined) {
+          el.disabled = el.dataset.preCardsDisabled === 'true';
+          delete el.dataset.preCardsDisabled;
+        }
+      });
     }
+
+    // 畫的途中重做出來的卡片、表格也要是關著的：這幾個「重畫畫面」的函式做完就再鎖一次
+    ['renderSceneGallery', 'renderInstrumentalPanel', 'renderTimelineTable', 'renderProjectTabs'].forEach(name => {
+      const draw = window[name];
+      if (typeof draw !== 'function') return;
+      window[name] = function () { const out = draw.apply(this, arguments); if (cardsBusy) cardsLock(true); return out; };
+    });
 
     // AI 繪圖：伺服器用一個背景工作一張一張畫，畫好一張就放進那一格；這裡每秒問一次進度
     const aiEsc = (t) => String(t || '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
@@ -4350,6 +4369,7 @@
         catch (e) { if (++misses > 5) { ai = { error: e.message }; break; } }
         const pr = document.getElementById('cardsProgress');
         if (pr) pr.innerHTML = aiProgressText(ai, ai.total || total);
+        cardsLock(true);
         if ((ai.done || 0) > shown) {
           shown = ai.done;
           try { cardsTakePhotos(await cardsCall('done')); } catch (e) { /* the next round shows it */ }
