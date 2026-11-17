@@ -27,6 +27,14 @@
 - MV page: the card row says that one AI card can be drawn again on its own (「🎨 重畫」 under the picture).
 - MV page: the small buttons of a photo card (重畫, 預覽, 🎧, 換圖, 刪圖) are a row of their own under the
   picture; they covered the top of it.
+- AI picture cards, two options to compare (asked for by the user): a third way 「AI 繪圖・加強引導＋30 步」
+  (both of the above together), and a tick 「遠景不露正臉」: in every shot that shows the people from head
+  to foot no face looks at the viewer (backs, side views, faces turned away), because a small face seen
+  from the front is what the model draws worst; upper-body and close shots are as before. A card remembers
+  both. And the six hair colours of a card world are said by name: the blue-grey and the wine-red of the
+  simple cards are dark hair ("black", "dark auburn"), where "dark blue" made the model paint bright blue hair.
+- MV page: 「🎵 即時對字幕」 and 「🎬 播放成品 MV」 start playing when pressed (they only changed the view); pressed
+  again while playing, they pause.
 - MV: a new project starts with 「轉場變化：隨機」 (it was 「固定一種」), with a seed of its own. Projects made
   before keep what they have.
 - Simple cards: a second way of drawing, 「畫法：標準」, beside the first (「簡易」, unchanged). A standard

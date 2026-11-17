@@ -1356,7 +1356,7 @@ def router(ctx: Context) -> APIRouter:
                                  "look": int(info.get("look", 0) or 0), "tone": info["tone"], "file": fn, "print": pr,
                                  "style": "ai" if info.get("style") == "ai" else "",
                                  "aiseed": int(info.get("aiseed", 0) or 0),
-                                 "aiway": str(info.get("aiway") or "")})
+                                 "aiway": str(info.get("aiway") or ""), "aiaway": bool(info.get("aiaway"))})
         # The song's look. While cards are there it is theirs, so that cards added later match: a world of
         # its own (cardworld), or for cards from before songs had worlds the scenes of the first cards.
         # With no card left the song gets a new world, away from what the songs before it used, and another
@@ -1434,6 +1434,8 @@ def router(ctx: Context) -> APIRouter:
                 out[c["print"]].update(style="ai", aiseed=c.get("aiseed", 0))
                 if c.get("aiway"):
                     out[c["print"]]["aiway"] = c["aiway"]
+                if c.get("aiaway"):
+                    out[c["print"]]["aiaway"] = True
         return out
 
     def card_placed(proj: Dict[str, Any], slot: str, out_path: Path) -> None:
@@ -1536,8 +1538,10 @@ def router(ctx: Context) -> APIRouter:
     # cards whose faces had come out odd; the first way, 20 plain steps, was dropped):
     #   "pag"    perturbed-attention guidance beside the usual guidance (steadier shapes)
     #   "steps"  30 steps instead of 20
+    #   "both"   the two together (added to compare)
     AI_WAYS: Dict[str, Dict[str, float]] = {"pag": {"steps": 20, "guidance": 5.0, "pag": 2.0},
-                                            "steps": {"steps": 30, "guidance": 4.5, "pag": 0.0}}
+                                            "steps": {"steps": 30, "guidance": 4.5, "pag": 0.0},
+                                            "both": {"steps": 30, "guidance": 5.0, "pag": 2.0}}
     ai_run: Dict[str, Any] = {"job": "", "slug": "", "items": [], "placed": [], "skipped": [], "total": 0, "error": "",
                               "tone": "fresh", "dir": "", "task": None, "ended": 0.0}
     ai_gpu: Dict[str, Any] = {}
@@ -1630,7 +1634,8 @@ def router(ctx: Context) -> APIRouter:
         if img.size != (1920, 1080):
             img = img.resize((1920, 1080), Image.LANCZOS)
         card_save(illust_dir, out_path, item["card"], int(item.get("look", 0)), tone, state, card_keep(state),
-                  old_print, slug, img=img, extra={"style": "ai", "aiseed": int(item["seed"]), "aiway": item["way"]})
+                  old_print, slug, img=img, extra=dict({"style": "ai", "aiseed": int(item["seed"]), "aiway": item["way"]},
+                                                        **({"aiaway": True} if item.get("away") else {})))
         card_placed(proj, item["slot"], out_path)
         return True
 
@@ -1687,28 +1692,31 @@ def router(ctx: Context) -> APIRouter:
             if not hit:
                 return jerr(409, "這一格不是 AI 圖卡，沒有重畫")
             picked = [dict(hit, redraw=True, seed=int(hit.get("aiseed", 0)) + 1)]
-            way = way or (hit.get("aiway") if hit.get("aiway") in AI_WAYS else "")      # as the card was drawn
+            if not way:                                     # as the card was drawn
+                way = hit.get("aiway") if hit.get("aiway") in AI_WAYS else ""
+                body = dict(body, away=hit.get("aiaway"))
         else:
             base = int(state["seed"] or 0) % 1000003
             picked = [dict(c, redraw=False, **{"print": ""}, seed=base * 1000 + i * 7 + 1)
                       for i, c in enumerate(state["empty"])]
         way = way or "pag"
         how = AI_WAYS[way]
+        away = bool(body.get("away"))        # faces turned away where the people are small (cardprompt.AWAY)
         items = []
         work = ctx.paths.tmp / f"sana_{secrets.token_hex(6)}"
         for c in picked:
-            prompt = cardprompt.build(c["card"], state["world"])
+            prompt = cardprompt.build(c["card"], state["world"], away)
             if not prompt:
                 return jerr(409, "這首歌的圖卡是舊版的畫法，請先按「🎲 圖卡抽抽樂」清掉重抽，再用 AI 繪圖")
             items.append({"slot": c["slot"], "card": c["card"], "look": c.get("look", 0), "print": c.get("print", ""),
-                          "redraw": c["redraw"], "seed": c["seed"], "prompt": prompt, "way": way,
+                          "redraw": c["redraw"], "seed": c["seed"], "prompt": prompt, "way": way, "away": away,
                           "out": str(work / (c["slot"].replace(":", "_") + ".png"))})
         if not items:
             return {"status": "ok", "total": 0, "ai": ai_info(slug)}
         p = ai_paths()
         fake = os.environ.get("SIGN2MV_CARD_AI") == "fake"
         payload = {"items": [{k: i[k] for k in ("slot", "prompt", "seed", "out")} for i in items],
-                   "negative": cardprompt.NEGATIVE, "width": 1280, "height": 720, "steps": int(how["steps"]),
+                   "negative": cardprompt.NEGATIVE + (cardprompt.NEGATIVE_AWAY if away else ""), "width": 1280, "height": 720, "steps": int(how["steps"]),
                    "guidance": how["guidance"], "pag": how["pag"],
                    "size": [1920, 1080], "pkgs": str(p["pkgs"]), "lock": str(p["lock"]), "repo": AI_REPO,
                    "revision": AI_REVISION, "fake": fake,

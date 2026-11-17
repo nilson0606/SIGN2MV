@@ -1019,8 +1019,8 @@
         <div class="panel-header">
           <div class="panel-title">🖼️ 即時 1080p 畫面合成預覽 ＆ 成品 MV 播放器</div>
           <div style="display:flex; gap:8px; align-items:center;">
-            <button class="btn btn-sm" id="btnLiveSync" onclick="switchPreviewMode('live')" title="播放音檔時即時顯示當下的分鏡圖與字幕（時間點照成品規則：換段前 0.4 秒淡入），不用出影片就能對字幕">🎵 即時對字幕</button>
-            <button class="btn btn-sm btn-gold" id="btnPlayMv" disabled title="尚未渲染成品 MV" onclick="switchPreviewMode('video')">🎬 播放成品 MV (.mp4)</button>
+            <button class="btn btn-sm" id="btnLiveSync" onclick="playPreview('live')" title="按下就開始播：播放音檔時即時顯示當下的分鏡圖與字幕（時間點照成品規則：換段前 0.4 秒淡入），不用出影片就能對字幕。播放中再按一次是暫停">🎵 即時對字幕</button>
+            <button class="btn btn-sm btn-gold" id="btnPlayMv" disabled title="尚未渲染成品 MV" onclick="playPreview('video')">🎬 播放成品 MV (.mp4)</button>
             <button class="btn btn-sm" id="btnDownloadMvVideo" style="border-color:#22c55e; color:#86efac; display:none;" onclick="downloadRenderedMv()" title="將已渲染完成的 1080p 60fps MP4 影片下載至本機">⬇️ 匯出/下載 MV 影片</button>
             <button class="btn btn-sm" id="btnOpenMvFolder" style="display:none;" onclick="openMvFolder()" title="在檔案總管顯示已輸出的 MV 檔案">📂 開啟資料夾</button>
           </div>
@@ -1085,7 +1085,10 @@
                 <option value="simple">極簡</option>
                 <option value="pag">AI 繪圖・加強引導</option>
                 <option value="steps">AI 繪圖・30 步</option>
+                <option value="both">AI 繪圖・加強引導＋30 步</option>
               </select>
+              <label style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto; cursor:pointer;" title="只用在 AI 繪圖：人在畫面裡比較小的鏡頭（全身、遠景）不畫正臉，改成背影、側身或臉轉開。小小的正臉是 AI 最容易畫壞的地方；半身和特寫照常畫臉">
+                <input type="checkbox" id="chkCardAway" onchange="cardStyleChanged()" style="width:14px; height:14px; accent-color:#e879f9;" />遠景不露正臉</label>
               <label for="selCardTone" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">色調</label>
               <select id="selCardTone" title="整首歌的簡易圖卡用同一種色調" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
                 <option value="fresh">清新</option>
@@ -3398,6 +3401,19 @@
       showToast(`✔ 已將間奏前與片尾前共 ${count} 處歌詞尾韻往後延展 +${extSec}s！`);
     }
 
+    // [SIGN2MV 2026-11-17] 使用者要求：按「即時對字幕」「播放成品 MV」就直接播（原本只換畫面，還要再去按播放）。
+    // 已經在那個畫面而且正在播，再按一次是暫停。
+    function playPreview(mode) {
+      const vid = document.getElementById('mvVideoPlayer');
+      const was = mode === 'live' ? liveMode : vid.style.display === 'block';
+      switchPreviewMode(mode);
+      const el = mode === 'live' ? audioEl : vid, other = mode === 'live' ? vid : audioEl;
+      if (!el) return;
+      if (was && !el.paused) { el.pause(); return; }
+      if (other && !other.paused) other.pause();          // one sound at a time
+      const p = el.play();
+      if (p && p.catch) p.catch(() => {});                // nothing to play yet: the player says so itself
+    }
     function switchPreviewMode(mode) {
       const img = document.getElementById('framePreviewImg');
       const vid = document.getElementById('mvVideoPlayer');
@@ -4184,7 +4200,9 @@
 
     // [SIGN2MV 2026-11-17] 畫風：極簡（程式自己畫）或 AI 繪圖（顯示卡上的繪圖模型，照同一份規劃畫）
     let cardsState = null, aiPolling = false;
-    const AI_STYLES = { pag: 'AI 繪圖・加強引導', steps: 'AI 繪圖・30 步' };
+    const AI_STYLES = { pag: 'AI 繪圖・加強引導', steps: 'AI 繪圖・30 步', both: 'AI 繪圖・加強引導＋30 步' };
+    const AI_SECS = { pag: 14, steps: 14, both: 17 };      // 每張大約幾秒（RTX 4060 Laptop 上量的；both 是估的）
+    function cardAway() { const c = document.getElementById('chkCardAway'); return !!(c && c.checked); }
     function cardStyle() {      // 'simple', or one of the AI ways
       const sel = document.getElementById('selCardStyle');
       const opt = sel && sel.options[sel.selectedIndex];
@@ -4192,7 +4210,7 @@
     }
     function cardStyleChanged() {
       const sel = document.getElementById('selCardStyle');
-      try { localStorage.setItem('sign2mv.cardStyle', sel.value); } catch (e) { /* private mode */ }
+      try { localStorage.setItem('sign2mv.cardStyle', sel.value); localStorage.setItem('sign2mv.cardAway', cardAway() ? '1' : ''); } catch (e) { /* private mode */ }
       const tone = document.getElementById('selCardTone');
       if (tone) tone.title = AI_STYLES[sel.value] ? '色調只用在極簡圖卡；AI 繪圖有自己的畫風' : '整首歌的簡易圖卡用同一種色調';
     }
@@ -4213,6 +4231,7 @@
           let want = 'simple';
           try { want = localStorage.getItem('sign2mv.cardStyle') || 'simple'; } catch (e) { /* private mode */ }
           if (want === 'ai') want = 'pag';          // the first AI way is gone
+          try { document.getElementById('chkCardAway').checked = localStorage.getItem('sign2mv.cardAway') === '1'; } catch (e) { /* private mode */ }
           style.value = AI_STYLES[want] && ai.available ? want : 'simple';
           cardStyleChanged();
         }
@@ -4226,7 +4245,7 @@
         const btn = document.createElement('button');
         btn.className = 'scene-mini-btn ai-redraw-btn';
         btn.textContent = '🎨 重畫';
-        btn.title = '這一張不滿意：用 AI 再畫一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。畫風選單選著哪一種 AI 畫法就用哪一種，選著「極簡」時照這一張原本的畫法';
+        btn.title = '這一張不滿意：用 AI 再畫一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。畫風選單選著哪一種 AI 畫法（和「遠景不露正臉」有沒有勾）就照那樣畫，選著「極簡」時照這一張原本的畫法';
         btn.onclick = (ev) => { ev.stopPropagation(); aiRedrawCard(c.slot); };
         bar.insertBefore(btn, bar.firstChild);
       });
@@ -4263,7 +4282,7 @@
 
     function cardsLock(on) {
       cardsBusy = on;
-      ['btnSimpleCards', 'selCardTone', 'selCardStyle'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = on; });
+      ['btnSimpleCards', 'selCardTone', 'selCardStyle', 'chkCardAway'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = on; });
       document.querySelectorAll('.ai-redraw-btn').forEach(el => { el.disabled = on; });
     }
 
@@ -4316,7 +4335,7 @@
       if (isRenderingInProgress) { showToast('正在輸出 MV，等它完成再重畫', true); return; }
       const sel = document.getElementById('selCardTone');
       const way = cardStyle();
-      await aiStart(Object.assign({ slot, tone: sel ? sel.value : 'fresh' }, way === 'simple' ? {} : { way }), 1, true);
+      await aiStart(Object.assign({ slot, tone: sel ? sel.value : 'fresh' }, way === 'simple' ? {} : { way, away: cardAway() }), 1, true);
     }
 
     async function makeSimpleCards() {
@@ -4345,13 +4364,14 @@
       if (cardStyle() !== 'simple') {
         const ai = state.ai || {};
         if (ai.busy) { setInlineStatus('step2StatusBox', 'err', '⚠️ AI 繪圖正在畫另一首歌的圖卡，等它畫完再按。'); return; }
-        const mins = Math.max(1, Math.round(todo.length * 14 / 60));
+        const each = AI_SECS[cardStyle()] || 14;
+        const mins = Math.max(1, Math.round(todo.length * each / 60));
         if (!ai.installed && ai.model) {
           if (!confirm(`第一次用 AI 繪圖，要先安裝它的程式庫（約 0.3 GB，需要網路，只有這一次）。\n\n裝完會接著畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘。\n要開始嗎？`)) return;
         } else if (!ai.installed) {
           if (!confirm(`第一次用 AI 繪圖，要先下載繪圖模型（約 10 GB）和程式庫（約 0.3 GB），放在 SIGN2MV 的資料夾裡。\n下載只有這一次，需要網路；之後畫圖不用網路。\n\n下載完會接著畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘。\n要開始嗎？`)) return;
-        } else if (!confirm(`用 AI 畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘（每張約 14 秒）。\n畫的時候顯示卡會被佔用，翻唱和字幕辨識會排在後面。\n\n要開始嗎？`)) return;
-        await aiStart({ tone, way: cardStyle() }, todo.length, false);
+        } else if (!confirm(`用 AI 畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘（每張約 ${each} 秒）。\n畫的時候顯示卡會被佔用，翻唱和字幕辨識會排在後面。\n\n要開始嗎？`)) return;
+        await aiStart({ tone, way: cardStyle(), away: cardAway() }, todo.length, false);
         return;
       }
       cardsLock(true); cardsStop = false;

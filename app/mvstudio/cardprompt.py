@@ -23,6 +23,13 @@ NEGATIVE = ("letterbox, black bars, border, picture frame, text, caption, speech
 # has few pixels for a face that is small in the picture. So a feeling is said quietly (a mood, where the
 # eyes look), never as a strong expression, and every card that shows a face asks for a calm, simple one.
 CALM = "simple soft anime face with a calm natural expression, closed mouth"
+# [2026-11-17] An option to compare: where the people are small in the picture (every shot that shows them from
+# head to foot) no face looks at the viewer: backs, side views, faces turned away. Of the first 41 AI cards the
+# ones seen from behind or from far were all fine; the bad ones were small figures drawn face on.
+AWAY = "seen from behind or in side view, faces turned away from the viewer"
+NEGATIVE_AWAY = ", face looking at the viewer, front view of a face"
+SMALL_FRAMES = ("wide", "mid", "far", "sil", "mirror", "moon", "split", "window", "photo", "globe", "memory",
+                "tilt", "give", "under", "toward")
 
 
 # ---- the people -------------------------------------------------------------------------------------------
@@ -46,8 +53,16 @@ def colour(rgb: Sequence[int]) -> str:
     return name
 
 
+# the hair colours a card world is made from, as an image model should hear them: the simple cards' blue-grey
+# and wine-red are shades of dark hair there, and said as "dark blue" the model paints bright blue hair
+_HAIR = {(92, 70, 70): "dark brown", (52, 48, 62): "black", (134, 88, 62): "brown", (182, 134, 88): "light brown",
+         (116, 62, 70): "dark auburn", (70, 84, 110): "black"}
+
+
 def hair(rgb: Sequence[int]) -> str:
     r, g, b = (int(v) for v in rgb[:3])
+    if (r, g, b) in _HAIR:
+        return _HAIR[(r, g, b)]
     h, s, v = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
     if v < 0.32 or (s < 0.25 and v < 0.45):
         return "black"
@@ -352,9 +367,10 @@ def place(name: str) -> str:
     return ", ".join(out)
 
 
-def build(spec: str, world: Optional[Dict[str, Any]]) -> Optional[str]:
+def build(spec: str, world: Optional[Dict[str, Any]], away: bool = False) -> Optional[str]:
     """The prompt of a card, or None for a card that is not one of a song's world (the first cards had
-    no people of their own and no plan to read)."""
+    no people of their own and no plan to read). away: no face looks at the viewer in the shots where the
+    people are small (AWAY)."""
     if not world or not cardworld.parse(spec) or not cardworld.valid_world(world):
         return None
     p = str(spec).split("|")
@@ -371,8 +387,12 @@ def build(spec: str, world: Optional[Dict[str, Any]]) -> Optional[str]:
         if subject.startswith("solo") and who in cardworld.CAST:
             # someone of the family beside the lead: the card shows both
             doing = doing + ", with {b} beside"
+        hidden = away and frame in SMALL_FRAMES
+        if hidden:
+            doing = doing.replace("standing and facing the viewer", "standing, seen from behind").replace(
+                ", facing the viewer", ", seen from behind").replace("coming toward the viewer", "walking away")
         bits.append(doing.format(**ppl))
-        if FACE.get(face):
+        if FACE.get(face) and not hidden:
             bits.append(FACE[face])
         if SIDE.get(pos) and subject.startswith(("solo", "other")):
             bits.append(SIDE[pos])
@@ -383,8 +403,11 @@ def build(spec: str, world: Optional[Dict[str, Any]]) -> Optional[str]:
     bits.append(LIGHT.get(light, ""))
     if WEATHER.get(weather):
         bits.append(WEATHER[weather])
-    bits.append(FRAME.get(frame, FRAME["wide"]))
-    if doing and frame not in ("sil", "far"):
+    bits.append(FRAME.get(frame, FRAME["wide"]).replace("coming toward the viewer", "walking away")
+                if doing and away and frame in SMALL_FRAMES else FRAME.get(frame, FRAME["wide"]))
+    if doing and away and frame in SMALL_FRAMES:
+        bits.append(AWAY)
+    elif doing and frame not in ("sil", "far"):
         bits.append(CALM)
     bits.append(STYLE)
     out = []
