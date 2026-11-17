@@ -3,7 +3,8 @@
 Input (stdin, one JSON document):
   items     [{"slot": ..., "prompt": ..., "seed": int, "out": path of the PNG to write}, ...]
   negative  what the pictures must not show
-  width, height, steps, guidance   how the model draws (1280x720, 20 steps)
+  width, height, steps, guidance   how the model draws (1280x720)
+  pag       above 0: perturbed-attention guidance of this strength beside the usual one (SanaPAGPipeline)
   size      [w, h] of the card that is written (1920x1080)
   pkgs      folder of the libraries (runtime/sana/pkgs); installed there on first use
   lock      the libraries' lock file (installer/requirements/sana.lock.txt)
@@ -115,10 +116,16 @@ def main() -> None:
     if not torch.cuda.is_available():
         fail("sana_no_gpu", "AI 繪圖需要 NVIDIA 顯示卡")
     try:
-        from diffusers import SanaPipeline
+        pag = float(job.get("pag") or 0)
         path = model_dir(str(job["repo"]), str(job.get("revision") or ""))
         with Heartbeat(6, "load", "載入 AI 繪圖模型…"):
-            pipe = SanaPipeline.from_pretrained(path, variant="bf16", torch_dtype=torch.bfloat16)
+            if pag > 0:
+                from diffusers import SanaPAGPipeline
+                pipe = SanaPAGPipeline.from_pretrained(path, variant="bf16", torch_dtype=torch.bfloat16,
+                                                       pag_applied_layers="transformer_blocks.8")
+            else:
+                from diffusers import SanaPipeline
+                pipe = SanaPipeline.from_pretrained(path, variant="bf16", torch_dtype=torch.bfloat16)
             pipe.enable_model_cpu_offload()
     except Exception as exc:  # noqa: BLE001
         fail("sana_load_failed", f"{type(exc).__name__}: {str(exc)[:500]}")
@@ -132,8 +139,9 @@ def main() -> None:
         progress(8 + 92 * (i - 1) / n, "draw", f"{i}/{n}")
         try:
             gen = torch.Generator(device="cpu").manual_seed(int(item.get("seed") or 0))
+            more = {"pag_scale": pag} if pag > 0 else {}
             img = pipe(prompt=str(item["prompt"]), negative_prompt=negative, width=width, height=height,
-                       num_inference_steps=steps, guidance_scale=guidance, generator=gen).images[0]
+                       num_inference_steps=steps, guidance_scale=guidance, generator=gen, **more).images[0]
         except Exception as exc:  # noqa: BLE001
             fail("sana_draw_failed", f"{item.get('slot')}: {type(exc).__name__}: {str(exc)[:400]}")
         if img.size != size:

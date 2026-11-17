@@ -17,7 +17,12 @@ from . import card_icons, cardworld
 
 STYLE = "soft watercolor anime illustration, clean lines, gentle colors, the picture fills the whole frame"
 NEGATIVE = ("letterbox, black bars, border, picture frame, text, caption, speech bubble, watermark, "
-            "signature, extra people, crowd, deformed hands, extra fingers")
+            "signature, extra people, crowd, deformed hands, extra fingers, distorted face, creepy face, "
+            "exaggerated expression, wide open mouth, teeth, asymmetrical eyes, bad anatomy")
+# [2026-11-17] Faces. Asked for "crying" or "a sad face", the model draws a face so strong it frightens; and it
+# has few pixels for a face that is small in the picture. So a feeling is said quietly (a mood, where the
+# eyes look), never as a strong expression, and every card that shows a face asks for a calm, simple one.
+CALM = "simple soft anime face with a calm natural expression, closed mouth"
 
 
 # ---- the people -------------------------------------------------------------------------------------------
@@ -168,10 +173,10 @@ SUBJECT = {
     "solo_walk": "{a}, walking", "solo_sit": "{a}, sitting", "solo_reach": "{a}, reaching one hand up toward the sky",
     "solo_open": "{a}, standing with both arms wide open", "solo_wave": "{a}, waving goodbye with one hand",
     "solo_run": "{a}, running", "solo_hips": "{a}, standing with hands on the hips",
-    "solo_think": "{a}, one hand on the chin, thinking", "solo_cover": "{a}, covering the face with both hands",
-    "solo_heart": "{a}, one hand on the heart", "solo_cheer": "{a}, cheering with both fists raised",
+    "solo_think": "{a}, one hand on the chin, thinking", "solo_cover": "{a}, head lowered, hiding the face in both hands",
+    "solo_heart": "{a}, one hand on the heart", "solo_cheer": "{a}, raising both arms happily",
     "solo_point": "{a}, pointing into the distance", "solo_shade": "{a}, shading the eyes with one hand and looking far away",
-    "solo_pray": "{a}, hands together in prayer", "solo_head": "{a}, holding the head with both hands",
+    "solo_pray": "{a}, hands together in prayer", "solo_head": "{a}, head lowered, one hand on the forehead",
     "solo_jump": "{a}, jumping in the air", "solo_crouch": "{a}, crouching down with the head lowered",
     "solo_ground": "{a}, sitting on the ground hugging the knees", "solo_away": "{a}, walking away, seen from behind",
     "solo_give": "{a}, holding something out with both hands", "solo_look": "{a}, looking up at the sky",
@@ -183,7 +188,7 @@ SUBJECT = {
     "duo_face": "{a} and {b}, standing face to face, looking at each other", "duo_hug": "{a} and {b}, hugging each other",
     "duo_walk": "{a} and {b}, walking together", "duo_run": "{a} and {b}, running together",
     "duo_backs": "{a} and {b}, sitting back to back", "duo_lean": "{a} and {b}, one leaning on the other's shoulder",
-    "duo_cheer": "{a} and {b}, cheering together", "duo_point": "{a} and {b}, one pointing into the distance",
+    "duo_cheer": "{a} and {b}, raising their arms happily", "duo_point": "{a} and {b}, one pointing into the distance",
     "duo_follow": "{a} walking ahead and {b} following behind", "duo_wave": "{a} and {b}, waving to each other from a distance",
     "duo_dance": "{a} and {b}, dancing together", "duo_ground": "{a} and {b}, sitting on the ground side by side",
     "duo_stars": "{a} and {b}, lying on the ground looking up at the sky",
@@ -201,10 +206,10 @@ FRAME = {
     "give": "medium full shot, one handing something to the other", "under": "low angle, looking up",
     "toward": "medium full shot, coming toward the viewer",
 }
-FACE = {"smile": "smiling", "sad": "a sad face", "closed": "eyes closed", "wow": "a surprised face",
-        "laugh": "laughing", "wry": "a wry smile", "tear": "a tear on the cheek", "cry": "crying",
-        "angry": "an angry face", "shy": "blushing", "love": "a loving look", "worry": "a worried face",
-        "miss": "a longing look", "lonely": "a lonely look", "sleepy": "sleepy eyes", "firm": "a determined face"}
+FACE = {"smile": "a gentle smile", "sad": "a quiet sad look", "closed": "eyes closed", "wow": "a look of surprise",
+        "laugh": "a gentle smile", "wry": "a faint smile", "tear": "a quiet sad mood", "cry": "looking down, a quiet sad mood",
+        "angry": "a slight frown", "shy": "a shy look", "love": "a tender look", "worry": "a worried look",
+        "miss": "a longing look", "lonely": "a lonely look", "sleepy": "sleepy eyes", "firm": "a determined look"}
 SIDE = {"l": "on the left side of the picture", "r": "on the right side of the picture", "c": ""}
 
 # ---- what else is in the picture ----------------------------------------------------------------------------
@@ -212,23 +217,23 @@ PROP = {
     "none": "", "stars": "a sky full of stars", "shooting": "a shooting star", "bigmoon": "a huge full moon",
     "hearts": "a tender romantic mood", "letter": "holding a letter", "plane": "a paper plane flying",
     "birds": "birds in the sky", "balloons": "colorful balloons", "clover": "a four-leaf clover",
-    "petals": "petals drifting in the wind", "leaves": "leaves drifting in the wind", "tears": "tears on the face",
-    "dots": "a silent, speechless mood", "ask": "a puzzled look", "call": "calling out loud",
+    "petals": "petals drifting in the wind", "leaves": "leaves drifting in the wind", "tears": "a quiet sad mood",
+    "dots": "a silent, speechless mood", "ask": "a puzzled look", "call": "one hand beside the mouth, calling",
     "notes": "music in the air", "lantern": "holding a glowing lantern", "kite": "a kite in the sky",
     "rainbow": "a big rainbow across the sky", "fireflies": "fireflies glowing around", "umbrella": "holding an umbrella",
     "bike": "a bicycle", "thread": "a red thread tied to a finger", "wings": "small angel wings on the back",
     "frames": "old photographs hanging on a string", "clock": "a large clock", "bubbles": "soap bubbles floating",
     "hourglass": "an hourglass", "calendar": "a wall calendar", "suitcase": "a suitcase", "phone": "holding a phone",
     "key": "an old key", "candle": "a lit candle", "ring": "a ring", "cranes": "paper cranes", "dandelion": "dandelion seeds in the wind",
-    "broken": "a sorrowful, heartbroken mood", "wine": "a glass of wine", "guitar": "holding a guitar", "camera": "holding a camera",
+    "broken": "a quiet sad mood", "wine": "a glass of wine", "guitar": "holding a guitar", "camera": "holding a camera",
     "diary": "an open diary", "footprints": "footprints on the ground", "door": "a half-open door",
     "raincloud": "one dark rain cloud overhead", "rays": "rays of sunlight breaking through", "fireworks": "fireworks in the sky",
     "paperboat": "a paper boat on the water", "butterfly": "a butterfly flying nearby", "cat": "a cat nearby",
     "thought": "lost in thought", "dream": "eyes closed, a dreamy mood",
     # the icons that are a feeling, a sign or a mark rather than a thing
     "twohearts": "a tender romantic mood", "heartwings": "a tender romantic mood", "heartbeat": "a hand on the heart",
-    "question": "a puzzled look", "zzz": "sleepy", "sparkle": "sparkles of light", "angry": "an angry look",
-    "sweat": "a nervous look", "infinity": "a calm, endless horizon", "thumbs": "giving a thumbs up",
+    "question": "a puzzled look", "zzz": "sleepy", "sparkle": "sparkles of light", "angry": "a slight frown",
+    "sweat": "", "infinity": "a calm, endless horizon", "thumbs": "giving a thumbs up",
     "handshake": "shaking hands", "arrowup": "looking upward", "arrowleft": "looking back over the shoulder",
     "checkmark": "a relieved look", "yesterday": "the faded look of a memory", "moonbed": "a large crescent moon in the sky",
     "summit": "a mountain summit in the distance", "pill": "holding a small medicine capsule in an open palm",
@@ -236,7 +241,7 @@ PROP = {
     "mask": "a white face mask", "trash": "a trash bin", "stopsign": "a stop sign", "footpath": "a path leading away",
     "stormcloud": "dark storm clouds overhead", "hourhand": "a large clock", "photoframe": "a framed photograph",
     "bookopen": "an open book", "textbook": "a stack of school books", "tornado": "a whirlwind in the distance",
-    "constellation": "constellations in the sky", "dizzy": "a dizzy look",
+    "constellation": "constellations in the sky", "dizzy": "",
     "e_sun": "the bright sun large in the sky", "e_cloud": "heavy clouds gathering right overhead",
     "e_headphone": "wearing headphones", "e_crescent_moon": "a crescent moon in the sky",
     "e_rainbow": "a big rainbow across the sky", "e_umbrella": "holding an umbrella",
@@ -324,7 +329,7 @@ def prop(name: str, still: bool = False) -> str:
     if name.startswith("e_") and re.search(r"\bface\b|smil|grin|cry|tear|kiss|frown|angry|sleep", text):
         if "medical mask" in text:
             return "a white face mask" if still else "wearing a white face mask"
-        return "" if still else f"the look of a {text}"
+        return ""                             # an emoji face: a strong expression is what the model draws badly
     if still and name in PROP:
         text = re.sub(r"^(holding|wearing) ", "", PROP[name])
         return text + " on a table"
@@ -379,8 +384,14 @@ def build(spec: str, world: Optional[Dict[str, Any]]) -> Optional[str]:
     if WEATHER.get(weather):
         bits.append(WEATHER[weather])
     bits.append(FRAME.get(frame, FRAME["wide"]))
+    if doing and frame not in ("sil", "far"):
+        bits.append(CALM)
     bits.append(STYLE)
-    return ", ".join(b for b in bits if b)
+    out = []
+    for b in ", ".join(b for b in bits if b).split(", "):     # a mood said by the face and by the thing is said once
+        if b not in out:
+            out.append(b)
+    return ", ".join(out)
 
 
 def known_props() -> int:

@@ -642,12 +642,8 @@
   "貼的是含 [分:秒] 時間碼的歌詞（LRC）時，解析完把每一句都定錨：之後重跑 Whisper 對齊也不會動這些時間，Whisper 只用來讓字幕逐字變金。要微調某一句，先按那張卡片的 🔒 解鎖": "When the pasted lyrics carry [mm:ss] timecodes (LRC), every line is anchored after parsing: aligning with Whisper again keeps these times, and Whisper only colours the subtitles word by word. To fine-tune a line, first unlock its card with 🔒",
   "畫風": "Style",
   "極簡": "Simple",
-  "AI 繪圖": "AI drawing",
-  "AI 繪圖（這台電腦不能用）": "AI drawing (not on this computer)",
-  "極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 10 秒），第一次會先下載約 10 GB 的模型": "Simple: drawn by the app itself, fast, works on every computer. AI drawing: drawn on this computer's graphics card (about 10 s a card); the first time it downloads a model of about 10 GB",
   "色調只用在極簡圖卡；AI 繪圖有自己的畫風": "The tone is for the simple cards only; AI drawing has a look of its own",
   "🎨 重畫": "🎨 Redraw",
-  "這一張不滿意：用 AI 再畫一張（同一句歌詞、同一個場景，畫面會不一樣；約 20 秒）": "Not happy with this one: let the AI draw it again (same line, same scene, another picture; about 20 s)",
   "⏳ 準備 AI 繪圖…": "⏳ Getting AI drawing ready…",
   "⏳ AI 繪圖在排隊…": "⏳ AI drawing is waiting in the queue…",
   "⚠️ AI 繪圖正在畫另一首歌的圖卡，等它畫完再按。": "⚠️ AI drawing is busy with the cards of another song; press again when it is done.",
@@ -666,7 +662,15 @@
   "這台電腦不能用 AI 繪圖": "AI drawing is not available on this computer",
   "圖卡的資料不正確": "The card request is not valid",
   "已停止": "stopped",
-  "第一次用 AI 繪圖，要先安裝它的程式庫（約 0.3 GB，需要網路，只有這一次）。": "The first time, AI drawing installs its libraries (about 0.3 GB; needs the internet; only this once)."
+  "第一次用 AI 繪圖，要先安裝它的程式庫（約 0.3 GB，需要網路，只有這一次）。": "The first time, AI drawing installs its libraries (about 0.3 GB; needs the internet; only this once).",
+  "AI 繪圖・加強引導": "AI drawing · extra guidance",
+  "AI 繪圖・30 步": "AI drawing · 30 steps",
+  "AI 繪圖・加強引導（這台電腦不能用）": "AI drawing · extra guidance (not on this computer)",
+  "AI 繪圖・30 步（這台電腦不能用）": "AI drawing · 30 steps (not on this computer)",
+  "極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 14 秒），第一次會先下載約 10 GB 的模型。兩種 AI 畫法的臉都比較穩：「加強引導」多用一種引導讓形狀更穩，「30 步」是多畫幾步": "Simple: drawn by the app itself, fast, works on every computer. AI drawing: drawn on this computer's graphics card (about 14 s a card); the first time it downloads a model of about 10 GB. Both AI ways keep faces steadier: “extra guidance” adds a second guidance for steadier shapes, “30 steps” draws with more steps",
+  "這一張不滿意：用 AI 再畫一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。畫風選單選著哪一種 AI 畫法就用哪一種，選著「極簡」時照這一張原本的畫法": "Not happy with this one: let the AI draw it again (same line, same scene, another picture; about 25 s). It uses the AI way chosen in the style menu, or the way this card was drawn when the menu says “Simple”",
+  "即時合成預覽這張照片＋歌詞，並跳到上面的播放器看": "Preview this photo with its lyric, and jump to the player above to see it",
+  "即時合成預覽這段，並跳到上面的播放器看": "Preview this part, and jump to the player above to see it"
  },
  "patterns": [
   {
@@ -1882,8 +1886,8 @@
    "en": "Then it draws {0} card(s), about {1} minute(s)."
   },
   {
-   "zh": "用 AI 畫 {0} 張圖卡，大約 {1} 分鐘（每張約 10 秒）。",
-   "en": "The AI draws {0} card(s), about {1} minute(s) (about 10 s each)."
+   "zh": "用 AI 畫 {0} 張圖卡，大約 {1} 分鐘（每張約 14 秒）。",
+   "en": "The AI draws {0} card(s), about {1} minute(s) (about 14 s each)."
   },
   {
    "zh": "顯示卡記憶體 {0} GB 不夠（AI 繪圖要 6 GB 以上）",

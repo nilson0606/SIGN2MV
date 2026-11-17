@@ -754,9 +754,16 @@ def test_a_card_as_words_for_the_image_model():
     duo = cardprompt.build("w2|park.ferris.puddles.near|night|rain|duo_sit|none|wide|c|0|sad.1.m", world)
     still = cardprompt.build("w2|cafe|sunset|clear|solo_sit|hourglass|still|c|0", world)
     assert solo.startswith(me) and other not in solo and "rainbow" in solo and "clock tower in the background" in solo and "at dawn" in solo
-    assert me in duo and other in duo and "ferris wheel close by" in duo and "rain falling" in duo and "a sad face" in duo and "at night" in duo
+    assert me in duo and other in duo and "ferris wheel close by" in duo and "rain falling" in duo and "a quiet sad look" in duo and "at night" in duo
     assert "no people" in still and "hourglass" in still and me not in still and "inside a cafe" in still
     assert all(p.endswith(cardprompt.STYLE) for p in (solo, duo, still))
+    # faces: a feeling is said quietly and a calm face is asked for (a strong expression is what the model draws
+    # badly), once even when the face and the thing both say it; no face is described where none is seen
+    cry = cardprompt.build("w2|town.tram.none|day|clear|solo_wave|tears|mid|l|0|cry.1.m", world)
+    assert "crying" not in cry and "tears" not in cry and cry.count("a quiet sad mood") == 1 and cardprompt.CALM in cry
+    assert cardprompt.CALM in solo and cardprompt.CALM in duo and cardprompt.CALM not in still
+    assert cardprompt.CALM not in cardprompt.build("w2|road|dusk|clear|duo_far|none|far|c|0", world)
+    assert "exaggerated expression" in cardprompt.NEGATIVE and "cheering" not in cardprompt.SUBJECT["solo_cheer"]
     assert solo == cardprompt.build("w2|peaks.clocktower.stones|dawn|clear|solo_reach|rainbow|mid|c|0", world)      # the same card, the same words
     # someone of the family stands where the other one would
     mum = cardprompt.build("w2|park.ferris.puddles|day|clear|duo_hands|none|mid|c|0|smile.1.a", world)
@@ -799,12 +806,14 @@ def test_ai_cards_are_drawn_by_a_job_and_put_in_one_by_one(client, root, monkeyp
     plan = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium").json()
     assert plan["ai"]["available"] and plan["ai"]["installed"] and not plan["ai"]["running"]
     n = len(plan["empty"])
-    got = _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh").json()
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", way="plain").status_code == 400
+    got = _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", way="steps").json()
     assert got["total"] == n >= 3, got
     ai = _ai_wait(client, slug)
     assert ai["done"] == n and not ai["error"], ai
     done = _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()
     assert done["empty"] == [] and len(done["cards"]) == n and all(c["style"] == "ai" for c in done["cards"])
+    assert {c["aiway"] for c in done["cards"]} == {"steps"}                    # the way each card was drawn is kept
     assert done["world"] == plan["world"]
     assert not [d for d in (root / "runtime" / "tmp").glob("sana_*")]          # the job's own folder is gone
     c = done["cards"][0]
@@ -819,7 +828,12 @@ def test_ai_cards_are_drawn_by_a_job_and_put_in_one_by_one(client, root, monkeyp
     assert path.read_bytes() != before
     again = _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()
     assert len(again["cards"]) == n and again["empty"] == []
-    assert next(x for x in again["cards"] if x["slot"] == c["slot"])["aiseed"] == c["aiseed"] + 1
+    one = next(x for x in again["cards"] if x["slot"] == c["slot"])
+    assert one["aiseed"] == c["aiseed"] + 1 and one["aiway"] == "steps"         # drawn again the way it was drawn
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="pag").json()["total"] == 1
+    assert not _ai_wait(client, slug)["error"]
+    one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
+    assert one["aiseed"] == c["aiseed"] + 2 and one["aiway"] == "pag"           # or the way the page asks for
     # a photo put into a slot while the AI draws stays: only parts that still show nothing get a card
     assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == n
     monkeypatch.setenv("SIGN2MV_CARD_AI_WAIT", "0.4")

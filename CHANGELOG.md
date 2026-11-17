@@ -15,6 +15,15 @@
   or more is not offered the style. Tried first as a script outside the app (three ways of loading, then
   the 23 cards of one song; a language model reading the lyrics was tried too and not kept:
   `claude/sana_trial_2026-11-16.md` in the project notes).
+- AI picture cards, faces: asked for "crying" or "a sad face" the model drew faces strong enough to frighten,
+  and a face that is small in the picture came out bent. Now a feeling is said quietly (a mood, where the
+  eyes look), every card that shows a face asks for a calm, simple one, and the negative prompt names
+  distorted faces and exaggerated expressions. The first way of drawing (20 plain steps) is gone; the style
+  menu has two AI ways, both tried beside it on eight cards with odd faces: 「AI 繪圖・加強引導」
+  (perturbed-attention guidance, `SanaPAGPipeline`, pag 2.0 with guidance 5.0) and 「AI 繪圖・30 步」
+  (30 steps), each about 13 s a card. A card remembers the way it was drawn; its 「🎨 重畫」 uses the way
+  chosen in the menu, or its own while the menu says 「極簡」.
+- MV page: 「👁️ 預覽」 on a photo also scrolls up to the player, where the preview is shown.
 - Simple cards: a second way of drawing, 「畫法：標準」, beside the first (「簡易」, unchanged). A standard
   world has ten places, six of them put together from a terrain (12), a landmark (45: lighthouse, Ferris wheel,
   chapel, phone booth, campfire, castle, ...) and a foreground (9), 392 fitting terrain and landmark pairs in
