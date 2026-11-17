@@ -874,13 +874,14 @@ def test_ai_cards_are_drawn_by_a_job_and_put_in_one_by_one(client, root, monkeyp
     assert plan["ai"]["available"] and plan["ai"]["installed"] and not plan["ai"]["running"]
     n = len(plan["empty"])
     assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", way="plain").status_code == 400
-    got = _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", way="steps").json()
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", way="pag").status_code == 400      # (Sana's ways are gone)
+    got = _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", way="klein").json()
     assert got["total"] == n >= 3, got
     ai = _ai_wait(client, slug)
     assert ai["done"] == n and not ai["error"], ai
     done = _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()
     assert done["empty"] == [] and len(done["cards"]) == n and all(c["style"] == "ai" for c in done["cards"])
-    assert {c["aiway"] for c in done["cards"]} == {"steps"}                    # the way each card was drawn is kept
+    assert {c["aiway"] for c in done["cards"]} == {"klein"}                    # the way each card was drawn is kept
     assert done["world"] == plan["world"]
     assert not [d for d in (root / "runtime" / "tmp").glob("sana_*")]          # the job's own folder is gone
     c = done["cards"][0]
@@ -896,36 +897,36 @@ def test_ai_cards_are_drawn_by_a_job_and_put_in_one_by_one(client, root, monkeyp
     again = _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()
     assert len(again["cards"]) == n and again["empty"] == []
     one = next(x for x in again["cards"] if x["slot"] == c["slot"])
-    assert one["aiseed"] == c["aiseed"] + 1 and one["aiway"] == "steps"         # drawn again the way it was drawn
-    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="pag").json()["total"] == 1
+    assert one["aiseed"] == c["aiseed"] + 1 and one["aiway"] == "klein"         # drawn again the way it was drawn
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="klein").json()["total"] == 1
     assert not _ai_wait(client, slug)["error"]
     one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
-    assert one["aiseed"] == c["aiseed"] + 2 and one["aiway"] == "pag" and not one["aipeople"]      # or the way the page asks for
+    assert one["aiseed"] == c["aiseed"] + 2 and one["aiway"] == "klein" and not one["aipeople"]      # or the way the page asks for
     # who is shown is a choice of each drawing, and of each redraw: as planned, no faces, scenery only
     assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="both").status_code == 400      # no third way
-    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="steps", people="away").json()["total"] == 1
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="klein", people="away").json()["total"] == 1
     assert not _ai_wait(client, slug)["error"]
     one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
-    assert one["aiway"] == "steps" and one["aipeople"] == "away"
+    assert one["aiway"] == "klein" and one["aipeople"] == "away"
     assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"]).json()["total"] == 1      # again, as it was drawn
     assert not _ai_wait(client, slug)["error"]
     one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
-    assert one["aiseed"] == c["aiseed"] + 4 and one["aiway"] == "steps" and one["aipeople"] == "away"
+    assert one["aiseed"] == c["aiseed"] + 4 and one["aiway"] == "klein" and one["aipeople"] == "away"
     # the redraw menu of a card says who is shown and leaves the way to the card: its own way, the people asked for
     assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], people="").json()["total"] == 1
     assert not _ai_wait(client, slug)["error"]
     one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
-    assert one["aiway"] == "steps" and one["aipeople"] == ""
-    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="pag", people="everyone").status_code == 400
-    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="pag", people="none").json()["total"] == 1
+    assert one["aiway"] == "klein" and one["aipeople"] == ""
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="klein", people="everyone").status_code == 400
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], way="klein", people="none").json()["total"] == 1
     assert not _ai_wait(client, slug)["error"]
     one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
-    assert one["aiway"] == "pag" and one["aipeople"] == "none"
+    assert one["aiway"] == "klein" and one["aipeople"] == "none"
     # small figures are a mode of their own (they were a part of the scenery mode): every card asked so is drawn so
     assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], people="small").json()["total"] == 1
     assert not _ai_wait(client, slug)["error"]
     one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
-    assert one["aiway"] == "pag" and one["aipeople"] == "small"
+    assert one["aiway"] == "klein" and one["aipeople"] == "small"
     # a photo put into a slot while the AI draws stays: only parts that still show nothing get a card
     assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == n
     monkeypatch.setenv("SIGN2MV_CARD_AI_WAIT", "0.4")
@@ -947,14 +948,14 @@ def test_ai_cards_are_drawn_by_a_job_and_put_in_one_by_one(client, root, monkeyp
     assert not _ai_wait(client, slug)["error"]
     state = _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()
     one = next(x for x in state["cards"] if x["slot"] == c["slot"])
-    assert one["aiway"] == "klein" and one["aipeople"] == "away" and "flux2" in state["ai"]
+    assert one["aiway"] == "klein" and one["aipeople"] == "away"
     assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"]).json()["total"] == 1
     assert not _ai_wait(client, slug)["error"]
     one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
     assert one["aiway"] == "klein" and one["aipeople"] == "away"
     # the tone of the cards is for the AI cards too: black and white comes out with no colour in it
     assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == len(end["cards"])
-    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="manga", way="pag").json()["total"] >= 1
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="manga", way="klein").json()["total"] >= 1
     assert not _ai_wait(client, slug)["error"]
     end = _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()
     grey = next(x for x in end["cards"] if x["slot"].startswith("scene:"))

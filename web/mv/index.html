@@ -1089,17 +1089,12 @@
             <span class="cards-tools" style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 12px; border:1.5px solid rgba(232,121,249,0.75); border-radius:12px; white-space:nowrap; background:linear-gradient(135deg, rgba(168,85,247,0.22), rgba(236,72,153,0.16)); box-shadow:0 0 14px rgba(217,70,239,0.25);">
               <button class="btn btn-sm" id="btnSimpleCards" style="border:none; color:#fff; font-weight:800; letter-spacing:0.5px; background:linear-gradient(135deg, #a855f7, #ec4899); box-shadow:0 2px 10px rgba(236,72,153,0.45); flex:0 0 auto;" onclick="makeSimpleCards()" title="沒有照片的畫面，由程式依歌詞抽一組簡單的圖卡補上。已經有圖卡時會先問你要不要清掉重抽。不需要網路，不會動你放的照片；畫好的圖卡跟一般照片一樣，可以再換成自己的照片">🎲 圖卡抽抽樂</button>
               <label for="selCardStyle" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">畫風</label>
-              <select id="selCardStyle" onchange="cardStyleChanged(); cardThemeFill(true)" title="極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫，有兩個繪圖模型，第一次用會先下載模型。FLUX（約 15 GB，每張約 9 秒）：水彩質感，每張圖卡是同一對人物；Sana（約 10 GB，每張約 14 秒）：同一張重畫變化比較大。模式：「一般」照圖卡的計畫畫、看得到臉（Sana 的「加強引導」「30 步」是它的兩種一般畫法）；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」只畫場景、光線、天氣和東西，沒有人；「小人物」是風景裡有遠遠的小小人影" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
+              <select id="selCardStyle" onchange="cardStyleChanged(); cardThemeFill(true)" title="極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 9 秒），第一次會先下載約 15 GB 的模型；水彩質感，每張圖卡是同一對人物。AI 有四種：「一般」照圖卡的計畫畫、看得到臉；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」只畫場景、光線、天氣和東西，沒有人；「小人物」是風景裡有遠遠的小小人影" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
                 <option value="simple">極簡</option>
-                <option value="kplain">AI 繪圖 FLUX・一般</option>
-                <option value="kaway">AI 繪圖 FLUX・不露臉</option>
-                <option value="knone">AI 繪圖 FLUX・純風景</option>
-                <option value="ksmall">AI 繪圖 FLUX・小人物</option>
-                <option value="pag">AI 繪圖・加強引導</option>
-                <option value="steps">AI 繪圖・30 步</option>
-                <option value="away">AI 繪圖・不露臉</option>
-                <option value="none">AI 繪圖・純風景</option>
-                <option value="small">AI 繪圖・小人物</option>
+                <option value="kplain">AI 繪圖・一般</option>
+                <option value="kaway">AI 繪圖・不露臉</option>
+                <option value="knone">AI 繪圖・純風景</option>
+                <option value="ksmall">AI 繪圖・小人物</option>
               </select>
               <label for="selCardTone" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">色調</label>
               <select id="selCardTone" onchange="cardThemeFill(true)" title="整首歌的圖卡用同一種色調，極簡和 AI 繪圖都會套用（已經畫好的圖卡要重畫才會換）" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
@@ -4258,9 +4253,9 @@
     // [SIGN2MV 2026-11-17] 畫風：極簡（程式自己畫）或 AI 繪圖（顯示卡上的繪圖模型，照同一份規劃畫）
     let cardsState = null, aiPolling = false;
     // AI 的四種模式：前兩種是畫法（都照規劃畫人、會畫臉）；後兩種是「畫誰」，畫法用加強引導
-    const AI_STYLES = { kplain: 'AI 繪圖 FLUX・一般', kaway: 'AI 繪圖 FLUX・不露臉', knone: 'AI 繪圖 FLUX・純風景', ksmall: 'AI 繪圖 FLUX・小人物', pag: 'AI 繪圖・加強引導', steps: 'AI 繪圖・30 步', away: 'AI 繪圖・不露臉', none: 'AI 繪圖・純風景', small: 'AI 繪圖・小人物' };
-    // [2026-11-18] 兩個繪圖模型：way 'klein' 是 FLUX.2 klein 4B，'pag'／'steps' 是 Sana；people 是露臉的方式
-    const AI_MODES = { kplain: { way: 'klein', people: '' }, kaway: { way: 'klein', people: 'away' }, knone: { way: 'klein', people: 'none' }, ksmall: { way: 'klein', people: 'small' }, pag: { way: 'pag', people: '' }, steps: { way: 'steps', people: '' }, away: { way: 'pag', people: 'away' }, none: { way: 'pag', people: 'none' }, small: { way: 'pag', people: 'small' } };
+    // [2026-11-18] AI 繪圖只有一個模型（FLUX.2 klein 4B；Sana 拿掉了），四種模式差在人物怎麼露面
+    const AI_STYLES = { kplain: 'AI 繪圖・一般', kaway: 'AI 繪圖・不露臉', knone: 'AI 繪圖・純風景', ksmall: 'AI 繪圖・小人物' };
+    const AI_MODES = { kplain: { way: 'klein', people: '' }, kaway: { way: 'klein', people: 'away' }, knone: { way: 'klein', people: 'none' }, ksmall: { way: 'klein', people: 'small' } };
     function cardStyle() {      // 'simple', or one of the AI ways
       const sel = document.getElementById('selCardStyle');
       const opt = sel && sel.options[sel.selectedIndex];
@@ -4308,7 +4303,7 @@
           style.dataset.ready = '1';
           let want = 'simple';
           try { want = localStorage.getItem('sign2mv.cardStyle') || 'simple'; } catch (e) { /* private mode */ }
-          if (want === 'ai') want = 'pag';          // the first AI way is gone
+          want = ({ ai: 'kplain', pag: 'kplain', steps: 'kplain', away: 'kaway', none: 'knone', small: 'ksmall' })[want] || want;   // 之前 Sana 時期記住的畫風，對到現在的四種
           style.value = AI_STYLES[want] && ai.available ? want : 'simple';
           cardStyleChanged();
         }
@@ -4462,17 +4457,12 @@
       if (cardStyle() !== 'simple') {
         const ai = state.ai || {};
         if (ai.busy) { setInlineStatus('step2StatusBox', 'err', '⚠️ AI 繪圖正在畫另一首歌的圖卡，等它畫完再按。'); return; }
-        const flux = AI_MODES[cardStyle()].way === 'klein';      // FLUX：每張約 9 秒、模型約 15 GB；Sana：14 秒、10 GB
-        const mins = Math.max(1, Math.round(todo.length * (flux ? 9 : 14) / 60));
-        if (flux && !ai.flux2) {
-          if (!confirm(`第一次用這個 AI 繪圖模型，要先下載它（約 15 GB），放在 SIGN2MV 的資料夾裡。\n下載只有這一次，需要網路；之後畫圖不用網路。\n\n下載完會接著畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘。\n要開始嗎？`)) return;
-        } else if (flux) {
-          if (!confirm(`用 AI 畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘（每張約 9 秒）。\n畫的時候顯示卡會被佔用，翻唱和字幕辨識會排在後面。\n\n要開始嗎？`)) return;
-        } else if (!ai.installed && ai.model) {
+        const mins = Math.max(1, Math.round(todo.length * 9 / 60));
+        if (!ai.installed && ai.model) {
           if (!confirm(`第一次用 AI 繪圖，要先安裝它的程式庫（約 0.3 GB，需要網路，只有這一次）。\n\n裝完會接著畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘。\n要開始嗎？`)) return;
         } else if (!ai.installed) {
-          if (!confirm(`第一次用 AI 繪圖，要先下載繪圖模型（約 10 GB）和程式庫（約 0.3 GB），放在 SIGN2MV 的資料夾裡。\n下載只有這一次，需要網路；之後畫圖不用網路。\n\n下載完會接著畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘。\n要開始嗎？`)) return;
-        } else if (!confirm(`用 AI 畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘（每張約 14 秒）。\n畫的時候顯示卡會被佔用，翻唱和字幕辨識會排在後面。\n\n要開始嗎？`)) return;
+          if (!confirm(`第一次用 AI 繪圖，要先下載繪圖模型（約 15 GB）和程式庫（約 0.4 GB），放在 SIGN2MV 的資料夾裡。\n下載只有這一次，需要網路；之後畫圖不用網路。\n\n下載完會接著畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘。\n要開始嗎？`)) return;
+        } else if (!confirm(`用 AI 畫 ${todo.length} 張圖卡，大約 ${mins} 分鐘（每張約 9 秒）。\n畫的時候顯示卡會被佔用，翻唱和字幕辨識會排在後面。\n\n要開始嗎？`)) return;
         cardThemeFill(true);
         await aiStart(Object.assign({ tone }, AI_MODES[cardStyle()]), todo.length, false);
         return;

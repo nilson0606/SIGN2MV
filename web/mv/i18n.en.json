@@ -648,7 +648,6 @@
   "✅ 這一張已經用 AI 重畫。還是不滿意可以再按一次「🎨 重畫」，或直接換成自己的照片。": "✅ This card was drawn again by the AI. Still not happy? Press “🎨 Redraw” once more, or put your own photo there.",
   "✔ 已重畫": "✔ Redrawn",
   "正在輸出 MV，等它完成再重畫": "The MV is being rendered; redraw when it is done",
-  "第一次用 AI 繪圖，要先下載繪圖模型（約 10 GB）和程式庫（約 0.3 GB），放在 SIGN2MV 的資料夾裡。": "The first time, AI drawing downloads its model (about 10 GB) and libraries (about 0.3 GB) into the SIGN2MV folder.",
   "下載只有這一次，需要網路；之後畫圖不用網路。": "Only this once, and it needs the internet; drawing afterwards does not.",
   "畫的時候顯示卡會被佔用，翻唱和字幕辨識會排在後面。": "The graphics card is busy while it draws; covers and subtitle recognition wait their turn.",
   "要開始嗎？": "Start?",
@@ -695,16 +694,10 @@
   "鮮豔": "Vivid",
   "青橘電影感": "Teal and orange cinema",
   "紫粉夢幻": "Purple-pink dream",
-  "極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫，有兩個繪圖模型，第一次用會先下載模型。FLUX（約 15 GB，每張約 9 秒）：水彩質感，每張圖卡是同一對人物；Sana（約 10 GB，每張約 14 秒）：同一張重畫變化比較大。模式：「一般」照圖卡的計畫畫、看得到臉（Sana 的「加強引導」「30 步」是它的兩種一般畫法）；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」只畫場景、光線、天氣和東西，沒有人；「小人物」是風景裡有遠遠的小小人影": "Simple: drawn by the app itself, fast, works on every computer. AI drawing: drawn on this computer's graphics card, with two models; a model is downloaded the first time it is used. FLUX (about 15 GB, about 9 s a card): a watercolour look, the same two people on every card; Sana (about 10 GB, about 14 s a card): a card drawn again changes more. Modes: “plain” draws the card as planned, faces showing (Sana's “extra guidance” and “30 steps” are its two plain ways); “no faces” shows everyone from behind, from the side or with the face turned away; “scenery only” draws the place with its light, weather and things, and nobody; “small figures” is the scenery with small figures far away",
-  "AI 繪圖 FLUX・一般": "AI drawing FLUX · plain",
-  "AI 繪圖 FLUX・一般（這台電腦不能用）": "AI drawing FLUX · plain (not on this computer)",
-  "AI 繪圖 FLUX・不露臉": "AI drawing FLUX · no faces",
-  "AI 繪圖 FLUX・不露臉（這台電腦不能用）": "AI drawing FLUX · no faces (not on this computer)",
-  "AI 繪圖 FLUX・純風景": "AI drawing FLUX · scenery only",
-  "AI 繪圖 FLUX・純風景（這台電腦不能用）": "AI drawing FLUX · scenery only (not on this computer)",
-  "AI 繪圖 FLUX・小人物": "AI drawing FLUX · small figures",
-  "AI 繪圖 FLUX・小人物（這台電腦不能用）": "AI drawing FLUX · small figures (not on this computer)",
-  "第一次用這個 AI 繪圖模型，要先下載它（約 15 GB），放在 SIGN2MV 的資料夾裡。": "The first time, this AI drawing model is downloaded (about 15 GB) into the SIGN2MV folder."
+  "極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 9 秒），第一次會先下載約 15 GB 的模型；水彩質感，每張圖卡是同一對人物。AI 有四種：「一般」照圖卡的計畫畫、看得到臉；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」只畫場景、光線、天氣和東西，沒有人；「小人物」是風景裡有遠遠的小小人影": "Simple: drawn by the app itself, fast, works on every computer. AI drawing: drawn on this computer's graphics card (about 9 s a card); the first time it downloads a model of about 15 GB; a watercolour look, the same two people on every card. Four AI modes: “plain” draws the card as planned, faces showing; “no faces” shows everyone from behind, from the side or with the face turned away; “scenery only” draws the place with its light, weather and things, and nobody; “small figures” is the scenery with small figures far away",
+  "第一次用 AI 繪圖，要先下載繪圖模型（約 15 GB）和程式庫（約 0.4 GB），放在 SIGN2MV 的資料夾裡。": "The first time, AI drawing downloads its model (about 15 GB) and libraries (about 0.4 GB) into the SIGN2MV folder.",
+  "AI 繪圖・一般": "AI drawing · plain",
+  "AI 繪圖・一般（這台電腦不能用）": "AI drawing · plain (not on this computer)"
  },
  "patterns": [
   {

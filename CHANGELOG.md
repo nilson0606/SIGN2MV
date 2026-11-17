@@ -55,6 +55,10 @@
   colour; a man in pink trousers came out as a second woman).
 - AI picture cards: 「小人物」 (small figures) is a mode of its own, the fifth, in the style menu and in the redraw
   menu of a card. 「純風景」 is scenery with nobody on every card (it had small figures on one scene in four).
+- AI picture cards are drawn by FLUX.2 klein 4B alone: Sana (the first painter, never released) is taken out, with
+  its two ways of drawing and its five menu entries. The style menu is 極簡 and four AI modes (plain, no faces,
+  scenery, small figures); a card drawn by Sana is drawn again by klein. The entries about Sana below are how it
+  got here.
 - AI picture cards: a second painter, FLUX.2 klein 4B (way `klein`; four entries in the style menu: plain, no
   faces, scenery, small figures). Picked from a night of trials on the user's card against seven other models
   (`claude/model_trials_2026-11-18.md`): 8.9 s a picture and 6.0 GB of the card against Sana's 13.1 s and 6.8 GB,

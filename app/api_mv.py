@@ -1534,20 +1534,16 @@ def router(ctx: Context) -> APIRouter:
     # model on the graphics card instead of by the app's own painter. One job draws the cards of a run one
     # after the other (the model is loaded once); each finished card is put into its slot while the job
     # runs, so the page sees them come in. The model and its libraries are fetched the first time only.
-    AI_REPO = "Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers"
-    AI_REVISION = "e2b3c0cbffebcd09d83805e88b9f5f106afc74ac"
+    # [2026-11-18] One AI painter: FLUX.2 klein 4B. Sana was the first one (2026-11-17, two ways of drawing, "pag"
+    # and "steps"); after a night of trials on the user's card against eight models
+    # (claude/model_trials_2026-11-18.md) the user had it taken out: klein is faster (8.9 s a picture against
+    # 13.1 s), takes less of the card, and draws the same two people on every card. The folders and the worker
+    # keep the name they had (runtime/sana, models/sana, card_sana.py): what is installed stays where it is.
+    AI_REPO = "black-forest-labs/FLUX.2-klein-4B"
+    AI_REVISION = "e7b7dc27f91deacad38e78976d1f2b499d76a294"
     AI_MIN_VRAM_MB = 6000
-    # [2026-11-17] Two ways of drawing, both with the quiet faces of cardprompt (tried side by side on eight
-    # cards whose faces had come out odd; the first way, 20 plain steps, was dropped):
-    #   "pag"    perturbed-attention guidance beside the usual guidance (steadier shapes)
-    #   "steps"  30 steps instead of 20
-    #   "klein"  [2026-11-18] the second painter, FLUX.2 klein 4B (workers/card_sana.py says why): 4 steps
-    AI_WAYS: Dict[str, Dict[str, Any]] = {"pag": {"steps": 20, "guidance": 5.0, "pag": 2.0},
-                                          "steps": {"steps": 30, "guidance": 4.5, "pag": 0.0},
-                                          "klein": {"steps": 4, "guidance": 1.0, "pag": 0.0, "model": "flux2"}}
-    AI_MODELS: Dict[str, Dict[str, str]] = {
-        "sana": {"repo": AI_REPO, "revision": AI_REVISION},
-        "flux2": {"repo": "black-forest-labs/FLUX.2-klein-4B", "revision": "e7b7dc27f91deacad38e78976d1f2b499d76a294"}}
+    # The ways of drawing: one. A card drawn the old ways ("pag", "steps") is drawn again this way.
+    AI_WAYS: Dict[str, Dict[str, Any]] = {"klein": {"steps": 4, "guidance": 1.0}}
     ai_run: Dict[str, Any] = {"job": "", "slug": "", "items": [], "placed": [], "skipped": [], "total": 0, "error": "",
                               "tone": "fresh", "dir": "", "task": None, "ended": 0.0}
     ai_gpu: Dict[str, Any] = {}
@@ -1585,15 +1581,11 @@ def router(ctx: Context) -> APIRouter:
     def ai_have() -> Dict[str, bool]:
         """What AI drawing needs and is on the disk already: its libraries, its model."""
         p = ai_paths()
-        out = {"libs": any(p["pkgs"].glob(".installed-*"))}
-        for name, m in AI_MODELS.items():
-            snap = p["home"] / "hub" / ("models--" + m["repo"].replace("/", "--")) / "snapshots" / m["revision"]
-            out["model" if name == "sana" else name] = (snap / "model_index.json").exists()
-        return out
+        snap = p["home"] / "hub" / ("models--" + AI_REPO.replace("/", "--")) / "snapshots" / AI_REVISION
+        return {"libs": any(p["pkgs"].glob(".installed-*")), "model": (snap / "model_index.json").exists()}
 
     def ai_installed() -> bool:
-        have = ai_have()
-        return have["libs"] and have["model"]
+        return all(ai_have().values())
 
     def ai_job() -> Optional[Dict[str, Any]]:
         job = ctx.jobs.get(ai_run["job"]) if ai_run["job"] else None
@@ -1606,10 +1598,9 @@ def router(ctx: Context) -> APIRouter:
         task = ai_run.get("task")
         live = bool(job) or bool(task and task.is_alive())      # the last cards are still being put in
         mine = live and ai_run["slug"] == slug
-        have = {"libs": True, "model": True, "flux2": True} if fake else ai_have()
+        have = {"libs": True, "model": True} if fake else ai_have()
         out = {"available": bool(gpu["ok"]), "reason": gpu["reason"], "gpu": gpu["name"],
-               "installed": have["libs"] and have["model"], "libs": have["libs"], "model": have["model"],
-               "flux2": have["flux2"],
+               "installed": all(have.values()), "libs": have["libs"], "model": have["model"],
                "running": mine, "busy": live and not mine,
                "done": len(ai_run["placed"]) if ai_run["slug"] == slug else 0,
                "total": ai_run["total"] if ai_run["slug"] == slug else 0,
@@ -1712,7 +1703,7 @@ def router(ctx: Context) -> APIRouter:
             base = int(state["seed"] or 0) % 1000003
             picked = [dict(c, redraw=False, **{"print": ""}, seed=base * 1000 + i * 7 + 1)
                       for i, c in enumerate(state["empty"])]
-        way = way or "pag"
+        way = way or "klein"
         how = AI_WAYS[way]
         # who is shown: "" as planned, "away" no face (cardprompt.AWAY), "none" scenery only, "small" the scenery
         # with the people of the card as small figures far away
@@ -1735,10 +1726,9 @@ def router(ctx: Context) -> APIRouter:
         fake = os.environ.get("SIGN2MV_CARD_AI") == "fake"
         payload = {"items": [{k: i[k] for k in ("slot", "prompt", "negative", "seed", "out")} for i in items],
                    "negative": cardprompt.NEGATIVE + {"away": cardprompt.NEGATIVE_AWAY, "none": cardprompt.NEGATIVE_SCENERY, "small": cardprompt.NEGATIVE_SCENERY}.get(people, ""), "width": 1280, "height": 720, "steps": int(how["steps"]),
-                   "guidance": how["guidance"], "pag": how["pag"],
+                   "guidance": how["guidance"],
                    "size": [1920, 1080], "pkgs": str(p["pkgs"]), "lock": str(p["lock"]),
-                   "model": how.get("model", "sana"), "repo": AI_MODELS[how.get("model", "sana")]["repo"],
-                   "revision": AI_MODELS[how.get("model", "sana")]["revision"], "fake": fake,
+                   "repo": AI_REPO, "revision": AI_REVISION, "fake": fake,
                    "fake_wait": float(os.environ.get("SIGN2MV_CARD_AI_WAIT", "0") or 0)}
         env = {"HF_HOME": str(p["home"]), "HF_HUB_DISABLE_SYMLINKS_WARNING": "1"}
         job = ctx.submit(kind="card_sana", lane="gpu", script="card_sana.py", input=payload,
