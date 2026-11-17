@@ -53,6 +53,8 @@
   prompt of its own by its number of people (no second person; no third, no two women, no two men; nobody).
   A man is said to be tall and wears no pink or purple (the simple cards' world gives either of them any
   colour; a man in pink trousers came out as a second woman).
+- AI picture cards: 「小人物」 (small figures) is a mode of its own, the fifth, in the style menu and in the redraw
+  menu of a card. 「純風景」 is scenery with nobody on every card (it had small figures on one scene in four).
 - AI picture cards take the tone of the cards (they ignored it: 黑白漫畫 was chosen and the pictures came in
   colour). A finished AI picture gets the same change of colours as a simple card (`cards.toned`); the
   black-and-white tone is also drawn as one (ink lines and screentone asked for, colour refused). The theme

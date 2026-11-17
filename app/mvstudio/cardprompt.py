@@ -34,10 +34,10 @@ CALM = "simple soft anime face with a calm natural expression, closed mouth"
 # from behind were all fine; the frightening ones were faces.)
 AWAY = "seen from behind or in side view, faces turned away from the viewer, no face visible"
 NEGATIVE_AWAY = ", face looking at the viewer, front view of a face"
-# [2026-11-17] And one more: scenery. The place of the card with its light, its weather and its thing fills the
-# picture and nobody is in it; on fewer than a third of the cards (scenery_people: one scene in four) the people
-# of the card are there as small figures far away (asked for by the user: on a small figure a bad face or a bad
-# limb does not show, and most of the cards should stay scenery).
+# [2026-11-17] And two more, each a mode of its own (they were one at first, with the small figures on one scene in
+# four; the user: 純風景就純風景，小人物就小人物分開). Scenery ("none"): the place of the card with its light, its
+# weather and its thing fills the picture and nobody is in it. Small figures ("small"): the same scenery with the
+# people of the card as small figures far away, on which a bad face or a bad limb does not show.
 SCENERY = "wide scenery shot, nobody in the picture"
 SCENERY_SMALL = ("extreme wide scenery shot, the landscape fills the picture, the figures very small and far away, "
                  "no face visible")
@@ -153,13 +153,6 @@ def negative(spec: str, people: str = "", tone: str = "") -> str:
         # the pair of the song is a man and a woman; a mother or a child beside the lead may be of the lead's own sex
         return out + ", three people, third person, group" + ("" if who in cardworld.CAST else ", two women, two men")
     return out
-
-
-def scenery_people(slot: str) -> str:
-    """For a card of the scenery mode: "small" (its people as small figures far away) for one scene in four,
-    spread through the song and the same every time for the same scene, else "none" (nobody)."""
-    m = re.fullmatch(r"scene:(\d+)", str(slot))
-    return "small" if m and int(m.group(1)) % 4 == 2 else "none"
 
 
 def brief(look: Dict[str, Any], kind: str) -> str:

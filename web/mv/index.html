@@ -1089,12 +1089,13 @@
             <span class="cards-tools" style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 12px; border:1.5px solid rgba(232,121,249,0.75); border-radius:12px; white-space:nowrap; background:linear-gradient(135deg, rgba(168,85,247,0.22), rgba(236,72,153,0.16)); box-shadow:0 0 14px rgba(217,70,239,0.25);">
               <button class="btn btn-sm" id="btnSimpleCards" style="border:none; color:#fff; font-weight:800; letter-spacing:0.5px; background:linear-gradient(135deg, #a855f7, #ec4899); box-shadow:0 2px 10px rgba(236,72,153,0.45); flex:0 0 auto;" onclick="makeSimpleCards()" title="沒有照片的畫面，由程式依歌詞抽一組簡單的圖卡補上。已經有圖卡時會先問你要不要清掉重抽。不需要網路，不會動你放的照片；畫好的圖卡跟一般照片一樣，可以再換成自己的照片">🎲 圖卡抽抽樂</button>
               <label for="selCardStyle" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">畫風</label>
-              <select id="selCardStyle" onchange="cardStyleChanged(); cardThemeFill(true)" title="極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 14 秒），第一次會先下載約 10 GB 的模型。AI 有四種：「加強引導」多用一種引導讓形狀更穩；「30 步」是多畫幾步；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」只畫場景、光線、天氣和東西；少數幾張（不到三分之一）會有遠遠的小小人影，看不出臉和手腳" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
+              <select id="selCardStyle" onchange="cardStyleChanged(); cardThemeFill(true)" title="極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 14 秒），第一次會先下載約 10 GB 的模型。AI 有五種：「加強引導」多用一種引導讓形狀更穩；「30 步」是多畫幾步；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」只畫場景、光線、天氣和東西，沒有人；「小人物」是風景裡有遠遠的小小人影，看不出臉和手腳" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
                 <option value="simple">極簡</option>
                 <option value="pag">AI 繪圖・加強引導</option>
                 <option value="steps">AI 繪圖・30 步</option>
                 <option value="away">AI 繪圖・不露臉</option>
                 <option value="none">AI 繪圖・純風景</option>
+                <option value="small">AI 繪圖・小人物</option>
               </select>
               <label for="selCardTone" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">色調</label>
               <select id="selCardTone" onchange="cardThemeFill(true)" title="整首歌的圖卡用同一種色調，極簡和 AI 繪圖都會套用（已經畫好的圖卡要重畫才會換）" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
@@ -1103,7 +1104,7 @@
                 <option value="night">夜藍</option>
                 <option value="manga">黑白漫畫</option>
               </select>
-              <span id="cardsRedrawHint" style="font-size:12px; color:#f5d0fe; flex:0 1 auto; white-space:normal;">💡 AI 畫的圖卡哪一張不滿意，用那一張圖下面的「🎨 重畫…」選單只重畫那一張（可選原模式、不露臉、純風景）</span>
+              <span id="cardsRedrawHint" style="font-size:12px; color:#f5d0fe; flex:0 1 auto; white-space:normal;">💡 AI 畫的圖卡哪一張不滿意，用那一張圖下面的「🎨 重畫…」選單只重畫那一張（可選原模式、不露臉、純風景、小人物）</span>
             </span>
           </div>
         </div>
@@ -4247,8 +4248,8 @@
     // [SIGN2MV 2026-11-17] 畫風：極簡（程式自己畫）或 AI 繪圖（顯示卡上的繪圖模型，照同一份規劃畫）
     let cardsState = null, aiPolling = false;
     // AI 的四種模式：前兩種是畫法（都照規劃畫人、會畫臉）；後兩種是「畫誰」，畫法用加強引導
-    const AI_STYLES = { pag: 'AI 繪圖・加強引導', steps: 'AI 繪圖・30 步', away: 'AI 繪圖・不露臉', none: 'AI 繪圖・純風景' };
-    const AI_MODES = { pag: { way: 'pag', people: '' }, steps: { way: 'steps', people: '' }, away: { way: 'pag', people: 'away' }, none: { way: 'pag', people: 'none' } };
+    const AI_STYLES = { pag: 'AI 繪圖・加強引導', steps: 'AI 繪圖・30 步', away: 'AI 繪圖・不露臉', none: 'AI 繪圖・純風景', small: 'AI 繪圖・小人物' };
+    const AI_MODES = { pag: { way: 'pag', people: '' }, steps: { way: 'steps', people: '' }, away: { way: 'pag', people: 'away' }, none: { way: 'pag', people: 'none' }, small: { way: 'pag', people: 'small' } };
     function cardStyle() {      // 'simple', or one of the AI ways
       const sel = document.getElementById('selCardStyle');
       const opt = sel && sel.options[sel.selectedIndex];
@@ -4310,8 +4311,8 @@
         if (!bar || c.style !== 'ai' || bar.querySelector('.ai-redraw-btn')) return;
         const btn = document.createElement('select');        // 重畫這一張，並選這一次畫不畫人、露不露臉
         btn.className = 'scene-mini-btn ai-redraw-btn';
-        btn.title = '這一張不滿意：選一種，用 AI 只重畫這一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。原模式＝照這一張原本的畫法再畫一次；不露臉＝人物改成背影、側身；純風景＝只畫風景（少數幾張有遠遠的小人影）';
-        [['', '🎨 重畫…'], ['same', '🎨 原模式'], ['away', '🎨 不露臉'], ['none', '🎨 純風景']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; btn.appendChild(o); });
+        btn.title = '這一張不滿意：選一種，用 AI 只重畫這一張（同一句歌詞、同一個場景，畫面會不一樣；約 25 秒）。原模式＝照這一張原本的畫法再畫一次；不露臉＝人物改成背影、側身；純風景＝只畫風景，沒有人；小人物＝風景裡有遠遠的小小人影';
+        [['', '🎨 重畫…'], ['same', '🎨 原模式'], ['away', '🎨 不露臉'], ['none', '🎨 純風景'], ['small', '🎨 小人物']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; btn.appendChild(o); });
         btn.onclick = (ev) => ev.stopPropagation();
         btn.onchange = () => { const v = btn.value; btn.value = ''; if (v) aiRedrawCard(c.slot, v); };
         if (cardsBusy) { btn.dataset.preCardsDisabled = 'false'; btn.disabled = true; }
@@ -4417,11 +4418,11 @@
         await aiFollow(slug, got.total || total, one);
       } catch (e) { setInlineStatus('step2StatusBox', 'err', `❌ AI 繪圖沒有開始：${aiEsc(e.message)}`); }
     }
-    async function aiRedrawCard(slot, how) {      // how: 'same' 照這一張原本的模式；'away' 不露臉；'none' 純風景（畫法照這一張原本的）
+    async function aiRedrawCard(slot, how) {      // how: 'same' 照這一張原本的模式；'away' 不露臉；'none' 純風景；'small' 小人物（畫法照這一張原本的）
       if (!currentSlug || cardsBusy) return;
       if (isRenderingInProgress) { showToast('正在輸出 MV，等它完成再重畫', true); return; }
       const sel = document.getElementById('selCardTone');
-      await aiStart(Object.assign({ slot, tone: sel ? sel.value : 'fresh' }, how === 'away' || how === 'none' ? { people: how } : {}), 1, true);
+      await aiStart(Object.assign({ slot, tone: sel ? sel.value : 'fresh' }, how === 'away' || how === 'none' || how === 'small' ? { people: how } : {}), 1, true);
     }
 
     async function makeSimpleCards() {

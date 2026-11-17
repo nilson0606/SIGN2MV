@@ -774,7 +774,7 @@ def test_a_card_as_words_for_the_image_model():
     assert cardprompt.AWAY in cardprompt.build(close, world, people="away") and cardprompt.CALM in cardprompt.build(close, world)
     assert cardprompt.build(still.split(",")[0] and "w2|cafe|sunset|clear|solo_sit|hourglass|still|c|0", world, people="away") == still
     # and one more: scenery. The place, the light, the weather and the thing fill the picture and nobody is in it;
-    # on fewer than a third of the cards the people of the card are small figures far away (a few words each, only
+    # the small figures, a mode of its own: the people of the card are small figures far away (a few words each, only
     # standing, sitting or walking)
     plan = "w2|lake.cherry.fence.near|sunset|rain|solo_sit|letter|mid|c|0|sad.1.m"
     empty = cardprompt.build(plan, world, people="none")
@@ -791,9 +791,6 @@ def test_a_card_as_words_for_the_image_model():
     assert "figure" not in nobody and cardprompt.SCENERY in nobody and "kite" in nobody
     assert cardprompt.build("w2|cafe|sunset|clear|solo_sit|hourglass|still|c|0", world, people="small") == still
     assert "person" not in cardprompt.NEGATIVE_SCENERY and "portrait" in cardprompt.NEGATIVE_SCENERY
-    with_people = [n for n in range(1, 41) if cardprompt.scenery_people(f"scene:{n}") == "small"]
-    assert with_people == list(range(2, 41, 4)) and len(with_people) / 40 < 1 / 3
-    assert cardprompt.scenery_people("inst:intro") == "none"
     # how many: one person is said to be alone, the two of the song are said to be a man and a woman, and each
     # card says what must not come by its own number of people; a man is tall and wears no pink or purple
     assert cardprompt.ONE in solo and cardprompt.PAIR not in solo and cardprompt.PAIR in duo and cardprompt.ONE not in duo
@@ -910,6 +907,11 @@ def test_ai_cards_are_drawn_by_a_job_and_put_in_one_by_one(client, root, monkeyp
     assert not _ai_wait(client, slug)["error"]
     one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
     assert one["aiway"] == "pag" and one["aipeople"] == "none"
+    # small figures are a mode of their own (they were a part of the scenery mode): every card asked so is drawn so
+    assert _post(client, "/api/mv/cards/ai", slug=slug, tone="fresh", slot=c["slot"], people="small").json()["total"] == 1
+    assert not _ai_wait(client, slug)["error"]
+    one = next(x for x in _post(client, "/api/mv/cards/done", slug=slug, grade="premium").json()["cards"] if x["slot"] == c["slot"])
+    assert one["aiway"] == "pag" and one["aipeople"] == "small"
     # a photo put into a slot while the AI draws stays: only parts that still show nothing get a card
     assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == n
     monkeypatch.setenv("SIGN2MV_CARD_AI_WAIT", "0.4")

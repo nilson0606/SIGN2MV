@@ -1704,20 +1704,19 @@ def router(ctx: Context) -> APIRouter:
                       for i, c in enumerate(state["empty"])]
         way = way or "pag"
         how = AI_WAYS[way]
-        # who is shown: "" as planned, "away" no face (cardprompt.AWAY), "none" scenery only
+        # who is shown: "" as planned, "away" no face (cardprompt.AWAY), "none" scenery only, "small" the scenery
+        # with the people of the card as small figures far away
         people = str(body.get("people") or "")
-        if people not in ("", "away", "none"):
+        if people not in ("", "away", "none", "small"):
             return jerr(400, "圖卡的資料不正確")
         items = []
         work = ctx.paths.tmp / f"sana_{secrets.token_hex(6)}"
         for c in picked:
-            # the scenery mode: nobody, and on one scene in four the card's people as small figures far away
-            shown = cardprompt.scenery_people(c["slot"]) if people == "none" else people
-            prompt = cardprompt.build(c["card"], state["world"], shown, tone)
+            prompt = cardprompt.build(c["card"], state["world"], people, tone)
             if not prompt:
                 return jerr(409, "這首歌的圖卡是舊版的畫法，請先按「🎲 圖卡抽抽樂」清掉重抽，再用 AI 繪圖")
             items.append({"slot": c["slot"], "card": c["card"], "look": c.get("look", 0), "print": c.get("print", ""),
-                          "negative": cardprompt.negative(c["card"], shown, tone),
+                          "negative": cardprompt.negative(c["card"], people, tone),
                           "redraw": c["redraw"], "seed": c["seed"], "prompt": prompt, "way": way, "people": people,
                           "out": str(work / (c["slot"].replace(":", "_") + ".png"))})
         if not items:
@@ -1725,7 +1724,7 @@ def router(ctx: Context) -> APIRouter:
         p = ai_paths()
         fake = os.environ.get("SIGN2MV_CARD_AI") == "fake"
         payload = {"items": [{k: i[k] for k in ("slot", "prompt", "negative", "seed", "out")} for i in items],
-                   "negative": cardprompt.NEGATIVE + {"away": cardprompt.NEGATIVE_AWAY, "none": cardprompt.NEGATIVE_SCENERY}.get(people, ""), "width": 1280, "height": 720, "steps": int(how["steps"]),
+                   "negative": cardprompt.NEGATIVE + {"away": cardprompt.NEGATIVE_AWAY, "none": cardprompt.NEGATIVE_SCENERY, "small": cardprompt.NEGATIVE_SCENERY}.get(people, ""), "width": 1280, "height": 720, "steps": int(how["steps"]),
                    "guidance": how["guidance"], "pag": how["pag"],
                    "size": [1920, 1080], "pkgs": str(p["pkgs"]), "lock": str(p["lock"]), "repo": AI_REPO,
                    "revision": AI_REVISION, "fake": fake,
