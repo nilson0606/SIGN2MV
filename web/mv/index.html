@@ -4282,10 +4282,19 @@
       // 「極簡清新」；AI 的名字裡已經有「・」，色調也用「・」接：「AI 繪圖・純風景・黑白漫畫」
       return a + (a.includes('・') ? '・' : (cjk.test(a.slice(-1)) && cjk.test(b.slice(0, 1)) ? '' : ' · ')) + b;
     }
+    // [SIGN2MV 2026-11-18] 使用者：「畫風跟色調選啥就帶入啥，default 極簡清新」。開專案時這一欄如果是之前代填的字
+    // （極簡…／AI 繪圖… 加上一種色調），就換成現在選單選的那一組；之前只在空白或舊預設字時才代填，所以會出現選單是
+    // 「極簡・清新」、這一欄還寫著「AI 繪圖・一般・清新」。自己打的字照舊不動。
+    function cardThemeIsOurs(text) {
+      const tn = document.getElementById('selCardTone');
+      const tones = Object.values(CARD_TONES).concat(tn ? [...tn.options].map(o => o.textContent.trim()) : []);
+      return OLD_THEMES.includes(text) ||
+        (['極簡', 'AI 繪圖', 'Simple', 'AI drawing'].some(h => text.startsWith(h)) && tones.some(x => x && text.endsWith(x)));
+    }
     function cardThemeFill(force) {
       const inp = document.getElementById('inpStyleTheme');
       if (!inp || !currentProject) return;
-      if (!force && inp.value.trim() && !OLD_THEMES.includes(inp.value.trim())) return;
+      if (!force && inp.value.trim() && !cardThemeIsOurs(inp.value.trim())) return;
       const text = cardThemeText();
       if (inp.value === text) return;
       inp.value = text;
