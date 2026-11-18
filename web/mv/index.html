@@ -4367,6 +4367,9 @@
       document.body.classList.toggle('cards-drawing', on);
       document.querySelectorAll('button, input, select, textarea').forEach(el => {
         if (el.classList.contains('btn-abort-action') || el.closest('#photoViewer')) return;
+        // [SIGN2MV 2026-11-18] 播放器的控制不鎖：使用者在畫 AI 圖卡時正播著即時字幕，按「暫停」沒有反應（被這裡關掉了）。
+        // 播放、暫停、前後跳、拖時間軸都不會改到專案，鎖住只會讓聲音停不下來。
+        if (el.closest('#liveControls') || el.id === 'btnLiveSync' || el.id === 'btnPlayMv') return;
         if (on) {
           if (el.dataset.preCardsDisabled === undefined) el.dataset.preCardsDisabled = el.disabled ? 'true' : 'false';
           el.disabled = true;
