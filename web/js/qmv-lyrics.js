@@ -42,6 +42,10 @@ export function lyricsEditor(keys = {}) {
   } });
   const alignBtn = el('button', { class: 'btn small primary', onclick: () => align(false) });
   const evenBtn = el('button', { class: 'btn small', onclick: () => align(true) });
+  // [2026-11-18] 「重新辨識」: Whisper listens to the whole song again and then, with the lyrics as they are now, to
+  // the stretches whose lines are not placed. The user changed the lyrics and wanted a way to make it listen
+  // again; 「自動對時間」 keeps what was heard and only listens again where lines are not placed.
+  const forceBtn = el('button', { class: 'btn small', onclick: () => { if (confirm(t('qmvl.force_ask'))) align(false, 0, true, true); } });
   const addBtn = el('button', { class: 'btn small', onclick: () => {
     const at = r2(player.currentTime || (lines.length ? lines[lines.length - 1].end : 0));
     lines.push({ start: at, end: r2(at + 3), text: t('qmvl.new_line') });
@@ -66,7 +70,7 @@ export function lyricsEditor(keys = {}) {
   const foldTitle = el('span', {});
   const box = el('div', { class: 'qmv-lyrics' },
     head, hint,
-    el('div', { class: 'row' }, pasteBtn, alignBtn, evenBtn), area, status, jb.el,
+    el('div', { class: 'row' }, pasteBtn, alignBtn, evenBtn, forceBtn), area, status, jb.el,
     el('details', { class: 'qmv-adjust' }, el('summary', { style: 'cursor:pointer;margin:6px 0' }, foldTitle), ...adjust));
 
   function texts() {
@@ -76,6 +80,8 @@ export function lyricsEditor(keys = {}) {
     pasteBtn.textContent = t('qmvl.paste');
     alignBtn.textContent = t('qmvl.align');
     evenBtn.textContent = t('qmvl.even');
+    forceBtn.textContent = t('qmvl.force');
+    forceBtn.title = t('qmvl.force_tip');
     addBtn.textContent = t('qmvl.add');
     saveBtn.textContent = t('qmvl.save');
     clearBtn.textContent = t('qmvl.clear');
@@ -133,27 +139,27 @@ export function lyricsEditor(keys = {}) {
   }
 
   // round: how many Whisper jobs this press has waited for (the first listening, then one listening again)
-  async function align(even, round = 0, again = true) {
+  async function align(even, round = 0, again = true, fresh = false) {
     if (!songId) return;
     if (!area.value.trim()) { toast(t('qmvl.need_text'), true); return; }
     // keys.beforeAlign: a last question before Whisper is asked (it separates the vocals first); LRC lines
     // carry their own times and "even" only spreads the lines, so neither separates anything
     if (!even && !round && keys.beforeAlign && !/^\s*\[\d{1,3}:\d{2}/m.test(area.value) && !(await keys.beforeAlign())) return;
-    alignBtn.disabled = evenBtn.disabled = true;
+    alignBtn.disabled = evenBtn.disabled = forceBtn.disabled = true;
     try {
       const res = await api.post(`/api/songs/${songId}/quickmv/lyrics/align`,
-        { text: area.value, even, lines: lines.map((x) => ({ ...x })), relisten: again });
+        { text: area.value, even, lines: lines.map((x) => ({ ...x })), relisten: again, refresh: fresh && !round });
       if (res.job && round < 3) {
         status.textContent = res.relisten ? t('qmvl.relisten_running', res.relisten) : t('qmvl.whisper_running');
         const fin = await jb.follow(res.job);
         if (fin.status !== 'succeeded') {
           if (!res.relisten) { status.textContent = t('qmvl.whisper_failed'); return; }
           toast(t('qmvl.relisten_failed'), true);
-          alignBtn.disabled = evenBtn.disabled = false;
+          alignBtn.disabled = evenBtn.disabled = forceBtn.disabled = false;
           await align(false, round + 1, false);      // place the lines by what was heard before
           return;
         }
-        alignBtn.disabled = evenBtn.disabled = false;
+        alignBtn.disabled = evenBtn.disabled = forceBtn.disabled = false;
         await align(false, round + 1, again);
         return;
       }
@@ -170,7 +176,7 @@ export function lyricsEditor(keys = {}) {
       render();
       await save(false);
     } catch (err) { toast(errorText(err), true); }
-    finally { alignBtn.disabled = evenBtn.disabled = false; }
+    finally { alignBtn.disabled = evenBtn.disabled = forceBtn.disabled = false; }
   }
 
   async function save(say) {

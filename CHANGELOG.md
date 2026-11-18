@@ -59,6 +59,10 @@
   as the hint, without the user locking lines first, and again when its lines change. Before, a second press of
   「自動對時間」 only matched the same recognized words again (the first listening has only the title as a hint),
   so changing the line breaks of a Taiwanese song with 15 of 24 lines placed changed nothing.
+- Lyrics timing: a 「🔄 重新辨識」 button makes Whisper listen to the whole song again (the API's `refresh`, which no
+  button asked for) and then to the unplaced stretches with the lyrics as they are now.
+- MV page: the player's controls (play, pause, seek, replay) stay usable while AI cards are drawn; the player's
+  buttons sit in one left-aligned row at one size.
 - AI picture cards are drawn by FLUX.2 klein 4B alone: Sana (the first painter, never released) is taken out, with
   its two ways of drawing and its five menu entries. The style menu is 極簡 and four AI modes (plain, no faces,
   scenery, small figures); a card drawn by Sana is drawn again by klein. The entries about Sana below are how it
