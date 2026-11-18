@@ -138,16 +138,27 @@ def card_singers_line(proj: Dict[str, Any], orig: str, cover: str) -> str:
     return f"{line}        {L(proj, 'cover')}{cover}" if cover else line
 
 
+AI_STYLE_WORDS = ("AI 繪圖", "AI drawing")
+
+
 def sanitize_no_ai(text: str, default_val: str = "") -> str:
     """Golden rule #1 of the MV workspace: the video never shows "AI" / "AI 翻唱" / "AI Cover"."""
     if not text:
         return default_val
     singer = BRAND["singer"]
     cover_word = f"{singer} 翻唱" if singer else "翻唱"
-    cleaned = re.sub(r'(?i)AI\s*翻唱', cover_word, str(text))
+    # [2026-11-18] One thing may say AI: the style of the picture cards ("AI 繪圖" / "AI drawing"), which the user
+    # asked to have on the first name card with the tone. The rule is about the singing (no "AI 翻唱"), and
+    # without this the line came out as "<singer> 繪圖".
+    text = str(text)
+    for n, keep in enumerate(AI_STYLE_WORDS):
+        text = text.replace(keep, f"\x00{n}\x00")
+    cleaned = re.sub(r'(?i)AI\s*翻唱', cover_word, text)
     cleaned = re.sub(r'(?i)AI\s*Cover', cover_word, cleaned)
     cleaned = re.sub(r'(?i)(?<![a-zA-Z])AI(?![a-zA-Z])', singer, cleaned)
     cleaned = re.sub(r"\s{2,}", " ", cleaned) if not singer else cleaned
+    for n, keep in enumerate(AI_STYLE_WORDS):
+        cleaned = cleaned.replace(f"\x00{n}\x00", keep)
     return cleaned.strip() or default_val
 
 

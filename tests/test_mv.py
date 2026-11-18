@@ -172,6 +172,9 @@ def test_mv_no_ai_text(client, root, tmp_path):
     assert core.sanitize_no_ai("AI Cover") == "Ann 翻唱"
     core.configure(root / "library", "", "", "zh")
     assert "AI" not in core.sanitize_no_ai("AI 翻唱 by AI")
+    # the style of the picture cards may say AI (the user's own words for the first name card)
+    assert core.sanitize_no_ai("AI 繪圖・清新 · 立體聲珍藏母帶") == "AI 繪圖・清新 · 立體聲珍藏母帶"
+    assert core.sanitize_no_ai("AI drawing · Fresh, an AI Cover") == "AI drawing · Fresh, an Ann 翻唱"
     assert core.default_badge() == "翻唱" and core.default_badge("en") == "Cover"
 
 

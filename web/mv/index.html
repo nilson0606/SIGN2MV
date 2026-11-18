@@ -4275,12 +4275,30 @@
     // [SIGN2MV 2026-11-17] 使用者要求：圖卡的畫風、色調帶進上面「分鏡美學主題描述」那一欄（預設「極簡清新」）。
     // 選單一改、或按抽抽樂開始畫，就寫進去；開專案時只有那一欄是空的或還是舊的預設字才代填，自己打的字不會被蓋掉。
     const OLD_THEMES = ['電影級寫實敘事畫風（人物故事線＋純風景空鏡穿插）', 'Cinematic realistic storytelling (a character story line mixed with pure scenery shots)'];
+    // [SIGN2MV 2026-11-18] 使用者定的：畫風只寫「極簡」或「AI 繪圖」兩種（不寫 AI 的四種模式），色調是那十種。
+    // 「極簡清新」「AI 繪圖・清新」。同一段字也放進第一頁名牌卡最下面那一行（cardIntroFill）。
     function cardThemeText() {
       const st = document.getElementById('selCardStyle'), tn = document.getElementById('selCardTone');
-      const a = st.options[st.selectedIndex].textContent.trim();
-      const b = tn.options[tn.selectedIndex].textContent.trim(), cjk = /[\u3400-\u9fff]/;
-      // 「極簡清新」；AI 的名字裡已經有「・」，色調也用「・」接：「AI 繪圖・純風景・黑白漫畫」
-      return a + (a.includes('・') ? '・' : (cjk.test(a.slice(-1)) && cjk.test(b.slice(0, 1)) ? '' : ' · ')) + b;
+      const zh = st.options[0].textContent.trim() === '極簡';
+      const b = tn.options[tn.selectedIndex].textContent.trim();
+      if (AI_STYLES[st.value]) return (zh ? 'AI 繪圖・' : 'AI drawing · ') + b;
+      return zh ? '極簡' + b : st.options[0].textContent.trim() + ' · ' + b;
+    }
+    // 第一頁名牌卡最下面那一行：「<畫風色調> · 立體聲珍藏母帶」。只換程式自己代填過的字（原本的預設、或之前代填的），自己打的不動
+    const INTRO_TAILS = [' · 立體聲珍藏母帶', ' · Stereo master'];
+    function cardIntroFill() {
+      const inp = document.getElementById('inpIntroDesc'), st = document.getElementById('selCardStyle');
+      if (!inp || !st || !currentProject) return;
+      const now = inp.value.trim();
+      const tail = INTRO_TAILS.find(x => now.endsWith(x));
+      const head = tail ? now.slice(0, -tail.length) : '';
+      const ours = !now || (tail && (['高畫質敘事分鏡與空鏡美學', 'Narrative storyboard'].includes(head) || cardThemeIsOurs(head)));
+      if (!ours) return;
+      const text = cardThemeText() + (st.options[0].textContent.trim() === '極簡' ? INTRO_TAILS[0] : INTRO_TAILS[1]);
+      if (inp.value === text) return;
+      inp.value = text;
+      syncProjectFields();
+      scheduleAutoSave();
     }
     // [SIGN2MV 2026-11-18] 使用者：「畫風跟色調選啥就帶入啥，default 極簡清新」。開專案時這一欄如果是之前代填的字
     // （極簡…／AI 繪圖… 加上一種色調），就換成現在選單選的那一組；之前只在空白或舊預設字時才代填，所以會出現選單是
@@ -4294,6 +4312,7 @@
     function cardThemeFill(force) {
       const inp = document.getElementById('inpStyleTheme');
       if (!inp || !currentProject) return;
+      cardIntroFill();
       if (!force && inp.value.trim() && !cardThemeIsOurs(inp.value.trim())) return;
       const text = cardThemeText();
       if (inp.value === text) return;

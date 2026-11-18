@@ -37,9 +37,14 @@ function sign2mvLabel(p, key) {
 function sign2mvNoAI(v) {
   const singer = MV_BRAND.singer || '';
   const coverWord = singer ? `${singer} 翻唱` : '翻唱';
-  let t = String(v || '').replace(/AI\s*翻唱/gi, coverWord).replace(/AI\s*Cover/gi, coverWord)
+  // [2026-11-18] 圖卡的畫風「AI 繪圖」／"AI drawing" 可以留著（使用者要它跟色調一起出現在第一頁名牌卡）；規則管的是「AI 翻唱」
+  const keep = ['AI 繪圖', 'AI drawing'];
+  let t = String(v || '');
+  keep.forEach((k, n) => { t = t.split(k).join(`\u0000${n}\u0000`); });
+  t = t.replace(/AI\s*翻唱/gi, coverWord).replace(/AI\s*Cover/gi, coverWord)
     .replace(/(?<![a-zA-Z])AI(?![a-zA-Z])/gi, singer);
   if (!singer) t = t.replace(/\s{2,}/g, ' ');
+  keep.forEach((k, n) => { t = t.split(`\u0000${n}\u0000`).join(k); });
   return t;
 }
 

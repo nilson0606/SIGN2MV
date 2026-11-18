@@ -63,6 +63,10 @@
   button asked for) and then to the unplaced stretches with the lyrics as they are now.
 - MV page: the player's controls (play, pause, seek, replay) stay usable while AI cards are drawn; the player's
   buttons sit in one left-aligned row at one size.
+- MV: the style of the picture cards (極簡 or AI 繪圖, the user's two words) and the tone are written on the first
+  name card's bottom line (「極簡清新 · 立體聲珍藏母帶」), and the theme field says the same; both follow the menus
+  when a project opens, unless the user typed a text of their own. "AI 繪圖" / "AI drawing" pass the no-"AI" rule,
+  which is about the singing.
 - AI picture cards are drawn by FLUX.2 klein 4B alone: Sana (the first painter, never released) is taken out, with
   its two ways of drawing and its five menu entries. The style menu is 極簡 and four AI modes (plain, no faces,
   scenery, small figures); a card drawn by Sana is drawn again by klein. The entries about Sana below are how it
