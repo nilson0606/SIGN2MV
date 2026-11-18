@@ -422,8 +422,19 @@ a { color:var(--accent); }
 <li>Limits to know: the sections are guessed from repeated lines, so a song whose lines hardly repeat is treated as one long verse (it is still drawn, only without the chorus that returns to one place); some shots are put together from two painted cards, so a card takes a moment.</li>
 </ul></li>
 <li><b>Your photos are not touched</b>: only empty parts are filled. A card is a photo like any other: click it to put your own photo there, or drag it to reorder.</li>
-<li><b>Tone</b>: Fresh, Warm vintage, Night blue, Black and white. One tone for the whole song; after choosing another tone, press Card lottery again to draw a new set in it.</li>
+<li><b>Tone</b>: ten of them (Fresh, Warm vintage, Night blue, Black and white, Old photo sepia, Faded film, Soft pastel, Vivid, Teal and orange cinema, Purple-pink dream). One tone for the whole song; after choosing another tone, press Card lottery again to draw a new set in it.</li>
 <li><b>Drawing again</b>: when there are cards already, <b>🎲 Card lottery</b> first asks whether to clear them and draw a new set. OK clears the cards the app drew and draws a new set with another look, in the tone now chosen; Cancel does nothing. Your photos and the timeline stay (“Delete all” also resets the timeline).</li>
+</ul>
+<h3 id="ai-cards">AI picture cards (an NVIDIA graphics card is needed)</h3>
+<p>For richer pictures than the simple cards, change the <b>style</b> in the card row from “Simple” to <b>AI drawing</b> and press <b>🎲 Card lottery</b>. The plan of the cards (which line gets which place, light and people) is the same as for the simple cards; the pictures are drawn on this computer's graphics card by an image model (FLUX.2 klein 4B) in a watercolour look, with the same two people on every card.</p>
+<ul>
+<li><b>Needs</b>: an NVIDIA graphics card with 6 GB of memory or more (about 9 s a card on an 8 GB RTX 4060, about 6 minutes for a song of 40 cards). Otherwise the menu says “not on this computer”; the simple style still works.</li>
+<li><b>First use downloads</b>: the model (about 15 GB) and libraries (about 0.4 GB) into the SIGN2MV folder; you are asked first. Only this needs the network. Installing SIGN2MV does not download them.</li>
+<li><b>Four modes</b>: “plain” draws the card as planned, faces showing; “no faces” shows people from behind, from the side or with the face turned away; “scenery only” draws the place and nobody; “small figures” is the scenery with small figures far away.</li>
+<li><b>Tone</b>: the ten tones apply to AI cards too (one tone menu for both styles).</li>
+<li><b>Drawing one card again</b>: under a card you are not happy with, <b>🎨 Redraw…</b> offers “same mode / no faces / scenery only / small figures” and draws only that card again (about 25 s). The AI sometimes gets the number of people or man and woman wrong; draw the card again.</li>
+<li><b>While it draws</b>: buttons that change the project are switched off; play, pause and “Stop” still work. The graphics card is busy, so covers and lyric recognition wait.</li>
+<li>Click any card to see it large; the arrow keys go to the previous and the next one.</li>
 </ul>
 </section>
 

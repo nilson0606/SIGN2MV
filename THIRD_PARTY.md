@@ -45,7 +45,7 @@ check the model page. File sizes and SHA-256 hashes are in `installer/manifest.j
 | RMVPE (`rmvpe.pt`) | pitch | from huggingface.co/lj1995/VoiceConversionWebUI (MIT) |
 | ContentVec, HiFi-GAN pretrained G/D | Applio conversion and training | downloaded by Applio (see Applio) |
 | chinese-hubert-base (TencentGameMate, via Applio's model repository) | optional feature model for training | MIT |
-| FLUX.2 klein 4B (Black Forest Labs, [black-forest-labs/FLUX.2-klein-4B](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B), revision e7b7dc2; with its Qwen3 4B text encoder) | AI picture cards (downloaded on first use, not shipped) | Apache-2.0 as tagged on the model page (to be read in full before a release) |
+| FLUX.2 klein 4B (Black Forest Labs, [black-forest-labs/FLUX.2-klein-4B](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B), revision e7b7dc2; with its Qwen3 4B text encoder) | AI picture cards (downloaded on first use, not shipped) | Apache-2.0 (the model card: open weights for commercial use under Apache 2.0; it also lists out-of-scope uses and a usage policy, which bind whoever runs the model). Not shipped: each user downloads it from Hugging Face |
 | faster-whisper medium / small (Systran) | lyric alignment | MIT (OpenAI Whisper weights) |
 | GeneralUser GS 2.0.3 (S. Christian Collins) | steel guitar / yangqin sounds | GeneralUser GS License v2.0: free use and redistribution |
 
