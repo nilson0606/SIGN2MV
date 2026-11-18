@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2026.11.18
+
 - Picture cards, a second style: 「畫風：AI 繪圖」 beside 「極簡」 (which stays the default and is unchanged).
   The plan of a card is the same (where, in what light, who does what, what else is there);
   `app/mvstudio/cardprompt.py` says it as one English prompt, the song's two people described the same way
