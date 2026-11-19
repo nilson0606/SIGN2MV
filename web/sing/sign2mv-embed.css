@@ -67,11 +67,15 @@ html[data-sign2mv] #segment-open:disabled { opacity: .55; }
 /* [SIGN2MV 2026-11-19] 延遲校正 */
 .latency-check{grid-column:1/-1}
 .latency-check .fold-caption output{color:var(--accent);font-variant-numeric:tabular-nums}
-.lc-notes{display:flex;gap:10px;flex-wrap:wrap;align-items:center;min-height:64px;margin:14px 0;font-size:24px;font-weight:700;color:var(--soft)}
-.lc-notes span{min-width:58px;text-align:center;padding:8px 6px;border-radius:10px;border:1px solid var(--line)}
-.lc-notes span.on{color:var(--button-text);background:var(--accent);border-color:var(--accent)}
-.lc-notes span.done{opacity:.45}
-.lc-notes[data-count]{font-size:30px;color:var(--accent)}
+.lc-notes{display:flex;flex-direction:column;gap:10px;min-height:150px;margin:14px 0}
+.lc-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:24px;font-weight:700;color:var(--soft)}
+.lc-row span{min-width:58px;text-align:center;padding:8px 6px;border-radius:10px;border:2px solid var(--line)}
+.lc-row span.next{border-color:var(--accent);color:var(--text)}
+.lc-row span.on{color:var(--button-text);background:var(--accent);border-color:var(--accent)}
+.lc-row span.done{opacity:.45}
+.lc-row-next{font-size:15px;opacity:.55}
+.lc-row-next span{min-width:44px;padding:4px 4px;border-width:1px}
+.lc-count{font-size:56px;font-weight:800;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
 .lc-score{font-size:15px;color:var(--text);margin:14px 0 8px}
 .lc-score strong{font-size:44px;color:var(--accent);margin:0 6px;font-variant-numeric:tabular-nums}
 .lc-delay-row{align-items:center;max-width:620px}

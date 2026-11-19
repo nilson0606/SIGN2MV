@@ -11,7 +11,7 @@ import { translateMessage } from './i18n.mjs';
 
 const $ = id => document.getElementById(id);
 export const STATE_KEY = 'sign2mv.latency-check.v1';   // 'done' or 'skipped': the guide asks once
-const BPM = 96, BEAT = 60 / BPM, COUNT_IN = 4, LEAD = .4, STEP = .1;
+const BPM = 96, BEAT = 60 / BPM, COUNT_IN = 5, LEAD = .4, STEP = .1;   // five count-in beats: 5 4 3 2 1
 // C4 = 60. Each phrase: six quarter notes and a half note.
 const PHRASES = [
   [60, 60, 67, 67, 69, 69, 67], [65, 65, 64, 64, 62, 62, 60],
@@ -47,7 +47,7 @@ export function calibrationReference() {
 // The song, rendered here from the notes: count-in clicks, a soft beat, the chord roots and (optionally)
 // the melody to sing along with. Clicks are above the pitch range scored, so a speaker leaking into the
 // microphone does not pass for the singer (headphones are still asked for).
-export async function renderCalibrationSong(guide = true, rate = 44100) {
+export async function renderCalibrationSong(guide = true, rate = 44100, melodyOnly = false) {
   const ctx = new OfflineAudioContext(1, Math.ceil(SONG_SECONDS * rate), rate);
   const out = ctx.createGain(); out.gain.value = .9; out.connect(ctx.destination);
   const tone = (freq, start, duration, level, type = 'sine', attack = .012, release = .08) => {
@@ -59,6 +59,7 @@ export async function renderCalibrationSong(guide = true, rate = 44100) {
     g.gain.linearRampToValueAtTime(0, start + duration);
     o.start(start); o.stop(start + duration + .01);
   };
+  if (!melodyOnly) {
   for (let b = 0; b < COUNT_IN; b++) tone(b ? 1760 : 2093, LEAD + b * BEAT, .07, .5, 'sine', .002, .05);
   const beats = PHRASES.length * 8;
   for (let b = 0; b < beats; b++) tone(1760, SONG_START + b * BEAT, .04, .12, 'sine', .002, .03);
@@ -67,6 +68,7 @@ export async function renderCalibrationSong(guide = true, rate = 44100) {
     tone(hz(root - 24), at, BEAT * 2 - .04, .22, 'triangle', .02, .15);
     tone(hz(root - 17), at, BEAT * 2 - .04, .08, 'triangle', .02, .15);   // the fifth below
   }));
+  }
   if (guide) for (const n of calibrationNotes()) {
     tone(hz(n.midi), n.start, n.duration - .06, .22);
     tone(hz(n.midi) * 2, n.start, n.duration - .06, .05);
@@ -75,28 +77,67 @@ export async function renderCalibrationSong(guide = true, rate = 44100) {
   return new Blob([pcmHeader(data.length, 1, rate), pcm16(data, 0, data.length)], { type: 'audio/wav' });
 }
 
-// Rhythm at a delay, and the scan the 「自動找」 button shows. The best delay is the middle of the widest
-// run of the highest strict-rhythm score (the standard rule is flat over about 200 ms; strict is narrower).
+// The reference a take is scored against comes from RMVPE, and RMVPE (a ~64 ms window) hears a note start a little
+// early. So the calibration reference is not written from the notes: the melody alone is rendered and analysed
+// with the same RMVPE, then put on 100 ms cells the way a prepared song is (median of the 9 frames around a cell
+// when more than half are 65–1000 Hz; only stable runs). Both sides then carry the same analysis, as with a song.
+export function cellsFromF0(analysis, seconds = SONG_SECONDS) {
+  const f0 = analysis.f0, hop = analysis.hop, cells = Math.ceil(seconds / STEP), raw = [];
+  const median = v => { const a = [...v].sort((x, y) => x - y), n = a.length; return n % 2 ? a[n >> 1] : (a[n / 2 - 1] + a[n / 2]) / 2; };
+  for (let i = 0; i < cells; i++) {
+    const c = Math.round(i * STEP / hop), v = [];
+    let n = 0;
+    for (let j = c - 4; j <= c + 4; j++) { if (j < 0 || j >= f0.length) continue; n++; if (f0[j] >= 65 && f0[j] <= 1000) v.push(f0[j]); }
+    raw.push(n && v.length > n / 2 ? Math.round(median(v) * 100) / 100 : null);
+  }
+  return raw.map((cur, i) => {
+    if (cur == null) return null;
+    const near = [raw[i - 1], cur, raw[i + 1]].filter(x => x != null);
+    return near.length < 2 ? null : near.length === 3 ? Math.round(median(near) * 100) / 100 : cur;
+  });
+}
+export function referenceFrom(analysis) {
+  return { ...calibrationReference(), frames: cellsFromF0(analysis) };
+}
+// Rhythm at a delay (what the singer sees), and the scan behind 「自動找」. The rhythm rule works on 100 ms cells, so
+// its best run can sit up to about 30 ms off; the delay is therefore found on the RMVPE frames themselves (10 ms):
+// at each delay, the share of sung frames that are on the note the melody has at that song time (octave folded,
+// within a semitone). Note changes decide it; the best delay is the middle of the run of the highest share.
 export function rhythmAt(post, analysis, ms, difficulty = 'standard') {
   return rescoreRecordingRmvpe({ ...post, scoring: { ...post.scoring, difficulty } }, analysis, ms).rhythm;
 }
-export function scanDelays(post, analysis, from = 0, to = 900, step = 10) {
+export function frameMatch(post, analysis, ms, melody) {
+  let on = 0, all = 0;
+  const segs = post.segments, ref = melody.f0, hop = melody.hop;
+  for (let k = 0; k < analysis.f0.length; k++) {
+    const f = analysis.f0[k]; if (!(f > 0)) continue;
+    const r = k * analysis.hop;
+    const seg = segs.find((g, i) => r >= g.offset && (i === segs.length - 1 || r < g.offset + g.duration)); if (!seg) continue;
+    const t = seg.songTime + (r - seg.offset) - ms / 1000, want = ref[Math.round(t / hop)];
+    if (!(want > 0)) continue;
+    let c = 1200 * Math.log2(f / want) % 1200; if (c > 600) c -= 1200; if (c < -600) c += 1200;
+    all++; if (Math.abs(c) < 100) on++;
+  }
+  return all ? on / all : 0;
+}
+export function scanDelays(post, analysis, melody, from = 0, to = 900, step = 10) {
   const rows = [];
-  for (let ms = from; ms <= to; ms += step) rows.push({ ms, rhythm: rhythmAt(post, analysis, ms), strict: rhythmAt(post, analysis, ms, 'strict') });
-  const top = Math.max(...rows.map(r => r.strict));
+  for (let ms = from; ms <= to; ms += step) rows.push({ ms, rhythm: rhythmAt(post, analysis, ms), match: frameMatch(post, analysis, ms, melody) });
+  const top = Math.max(...rows.map(r => r.match));
   let best = null, run = null;
   for (const r of rows) {
-    if (r.strict === top) { run ||= { from: r.ms, to: r.ms }; run.to = r.ms; }
-    if (run && (r.strict !== top || r === rows.at(-1))) { if (!best || run.to - run.from > best.to - best.from) best = run; run = null; }
+    if (r.match >= top - 1e-9) { run ||= { from: r.ms, to: r.ms }; run.to = r.ms; }
+    if (run && (r.match < top - 1e-9 || r === rows.at(-1))) { if (!best || run.to - run.from > best.to - best.from) best = run; run = null; }
   }
-  return { rows, best: Math.round((best.from + best.to) / 2 / step) * step, top };
+  return { rows, best: Math.round((best.from + best.to) / 2 / step) * step, top: Math.round(top * 100) };
 }
 
 export function createLatencyCheck(options) {
   const say = text => { $('lc-status').textContent = translateMessage(text); };
   let songUrl = null, songGuide = null, run = null, last = null, busy = false;
   const audio = new Audio(); audio.preload = 'auto'; audio.id = 'lc-audio';
-  const notes = calibrationNotes(), reference = calibrationReference();
+  const notes = calibrationNotes();
+  let melody = null;   // RMVPE of the melody alone: the reference (analysed once per page)
 
   function showCurrent() {
     const text = $('offset-value')?.textContent || `${$('offset').value} ms`;
@@ -105,22 +146,32 @@ export function createLatencyCheck(options) {
   new MutationObserver(showCurrent).observe($('offset-value'), { childList: true, characterData: true, subtree: true });
   showCurrent();
 
-  function drawNotes(t = -1) {
-    const box = $('lc-notes');
-    let phrase = notes.findIndex(n => t >= n.start - BEAT * .5 && t < n.start + n.duration) >= 0
-      ? notes.find(n => t >= n.start - BEAT * .5 && t < n.start + n.duration).phrase : (t >= SONG_START ? PHRASES.length - 1 : 0);
-    if (t >= 0 && t < SONG_START) {
-      const left = Math.max(1, Math.ceil((SONG_START - t) / BEAT));
-      box.dataset.count = String(left); box.textContent = `${translateMessage('預備')} ${left}`; return;
-    }
-    delete box.dataset.count;
-    const row = notes.filter(n => n.phrase === phrase);
-    box.replaceChildren(...row.map(n => {
+  // Two rows: the line being sung and, smaller, the next one, so what comes is always in sight. The next note
+  // is announced (outline) half a beat early; it lights exactly on its beat, so the cue never pulls the singer
+  // ahead of the music (that would make the delay found too small). The count-in shows 5 4 3 2 1 on its clicks.
+  function rowOf(phrase, t) {
+    const row = document.createElement('div'); row.className = 'lc-row';
+    row.append(...notes.filter(n => n.phrase === phrase).map(n => {
       const s = document.createElement('span'); s.textContent = n.name;
-      if (t >= n.start && t < n.start + n.duration) s.className = 'on';
-      else if (t >= n.start + n.duration) s.className = 'done';
+      if (t >= n.start && t < n.start + n.duration - .03) s.className = 'on';
+      else if (t >= n.start + n.duration - .03) s.className = 'done';
+      else if (t >= n.start - BEAT / 2) s.className = 'next';
       return s;
     }));
+    return row;
+  }
+  function drawNotes(t = -1) {
+    const box = $('lc-notes'), last = PHRASES.length - 1;
+    const counting = t >= 0 && t < SONG_START;
+    let phrase = 0;
+    if (t >= SONG_START) phrase = Math.min(last, Math.floor((t - SONG_START) / (8 * BEAT)));
+    // the count line keeps its place (empty while singing), so the rows never jump
+    const beat = Math.floor((t - LEAD) / BEAT), count = document.createElement('div');
+    count.className = 'lc-count'; count.textContent = counting ? (beat >= 0 ? String(COUNT_IN - beat) : translateMessage('預備')) : '\u00a0';
+    const parts = [count];
+    parts.push(rowOf(phrase, t));
+    if (phrase < last) { const next = rowOf(phrase + 1, -1); next.classList.add('lc-row-next'); parts.push(next); }
+    box.replaceChildren(...parts);
   }
   drawNotes();
 
@@ -132,7 +183,7 @@ export function createLatencyCheck(options) {
     $('lc-skip').disabled = !!run || busy;
     for (const id of ['lc-rescore', 'lc-auto', 'lc-apply', 'lc-delay']) $(id).disabled = busy || !!run || !last;
     window.dispatchEvent(new Event('sign2mv-latency-check'));   // the step guide follows
-    if (!run && !busy && !last) say(ready ? '戴上耳機，按「開始校正」。四下預備拍之後跟著提示唱。' : '先在「03 即時音高與收音」開好麥克風，再開始校正。');
+    if (!run && !busy && !last) say(ready ? '戴上耳機，按「開始校正」。倒數 5、4、3、2、1 之後跟著提示唱。' : '先在「03 即時音高與收音」開好麥克風，再開始校正。');
   }
 
   async function song() {
@@ -208,7 +259,8 @@ export function createLatencyCheck(options) {
       const analysis = await analyseRecordingRmvpe(blob, p => say(`正在分析歌聲（RMVPE）… ${p}%`));
       const voiced = analysis.f0.filter(v => v > 0).length * analysis.hop;
       if (voiced < 4) throw new Error(translateMessage('幾乎沒有聽到歌聲，請靠近麥克風、戴耳機再唱一次。'));
-      last = { post: { reference, scoring: { allowOctave: true, rangeMode: 'full', difficulty: 'standard' }, segments: r.segments }, analysis, scan: null };
+      if (!melody) { say('正在分析校正歌的基準（RMVPE）…'); melody = await analyseRecordingRmvpe(await renderCalibrationSong(true, 16000, true)); }
+      last = { post: { reference: referenceFrom(melody), scoring: { allowOctave: true, rangeMode: 'full', difficulty: 'standard' }, segments: r.segments }, analysis, melody, scan: null };
       busy = false;
       $('lc-delay').value = String(Number($('offset').value));
       $('lc-result').hidden = false; $('lc-curve').replaceChildren();
@@ -232,10 +284,10 @@ export function createLatencyCheck(options) {
 
   function auto() {
     if (!last) return;
-    last.scan = scanDelays(last.post, last.analysis);
+    last.scan = scanDelays(last.post, last.analysis, last.melody);
     $('lc-delay').value = String(last.scan.best);
     score();
-    say(`自動找到 ${last.scan.best} ms（進拍最高的那段的中間）。滿意就按「套用並結束」。`);
+    say(`自動找到 ${last.scan.best} ms（音和拍對得最準的延遲）。滿意就按「套用並結束」。`);
   }
 
   function drawCurve(at) {

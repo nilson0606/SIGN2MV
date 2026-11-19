@@ -4,15 +4,19 @@
 
 - Sing page: 「04 延遲校正」 (optional) takes the place of 「看節拍，調延遲」, which is no longer shown (its code and
   the input latency slider stay; the beat lights and the five-note test were never relied on). The singer sings
-  Twinkle Twinkle Little Star (public domain), built into the page: rendered from its notes (count-in, a soft
-  beat, chord roots, an optional melody cue), with a reference made from the same notes, so no song has to be
-  prepared. It is played through a media element and recorded with the take's own microphone, capture and PCM
+  Twinkle Twinkle Little Star (public domain), built into the page: rendered from its notes (a 5-4-3-2-1 count-in, a soft
+  beat, chord roots, an optional melody cue); its reference is the melody alone analysed with the same RMVPE and
+  put on 100 ms cells like a prepared song (RMVPE hears a note start a little early, so a reference written from
+  the notes would make the delay found about 30 ms too small), so no song has to be prepared. Two rows of note
+  names (this line and the next); the next note is announced with an outline half a beat early and lights on its
+  beat, so the cue never pulls the singer ahead of the music. It is played through a media element and recorded with the take's own microphone, capture and PCM
   recorder (song time noted when playback starts, as a take does), analysed with RMVPE and marked with the
-  take's own rhythm rule. Only 進拍 counts: change the delay and 「重新評分」, or 「自動找」 (0–900 ms; the middle of
-  the widest run of the best strict rhythm, with the curve drawn), then 「套用並結束」 saves it as the input
+  take's own rhythm rule. Only 進拍 counts: change the delay and 「重新評分」, or 「自動找」 (0–900 ms; at each delay the share of
+  10 ms RMVPE frames on the melody's note, octave folded; the middle of the best run; the rhythm curve is drawn), then 「套用並結束」 saves it as the input
   latency. The step guide has a new step 3 of 9, 延遲校正, with 「略過」; done or skipped is remembered
-  (`sign2mv.latency-check.v1`). `web/sing/latency-check.mjs`. In the browser, the song itself delayed by 260 and
-  380 ms inside the page was found at exactly 260 and 380 ms.
+  (`sign2mv.latency-check.v1`). `web/sing/latency-check.mjs`. In the browser, the song itself delayed by 260, 300,
+  330 and 380 ms inside the page (pitch answered by a simple tracker standing in for RMVPE) was found at 270, 310,
+  340 and 390 ms, rhythm 100.
 - Sing page: the 「原唱延後」 field is gone; the original-vocal test comes in the input latency later, so it always
   lines up with the scoring.
 
