@@ -700,8 +700,6 @@
   "AI 繪圖・一般（這台電腦不能用）": "AI drawing · plain (not on this computer)",
   "排法": "Order",
   "故事線": "Story line",
-  "照歌詞（測試）": "Follow the lyrics (test)",
-  "故事線：整首歌從早走到晚、副歌固定一個地方。照歌詞（測試）：歌詞提到的時段和場景就照它（副歌也是），沒提到的照故事線。已經有圖卡的歌，要按「🎲 圖卡抽抽樂」重抽才會換排法": "Story line: the song goes from morning to night and every chorus keeps one place. Follow the lyrics (test): the time of day and the place a line names are used (in a chorus too); lines that name none follow the story line. A song that has cards already keeps its order until you press \"🎲 Card lottery\" to draw them again",
   "🔁 只換音軌": "🔁 Swap audio only",
   "成品 MV 的畫面不動，只把聲音換成目前「選音檔」選的音檔，幾秒就好，不用重新渲染。字幕時間和頻譜跳動線條是照渲染時的音檔做的，同一首歌換一版混音或換人唱都適合；換成別的音樂請重新渲染": "Keeps the picture of the finished MV and only puts the audio chosen in \"Select audio\" under it: a few seconds, no render. The subtitle times and the spectrum bars were made from the audio the MV was rendered with, so this fits another mix of the same song or someone else singing it; for other music, render again",
   "⏳ 換音軌中…": "⏳ Swapping audio…",
@@ -713,7 +711,9 @@
   "要換嗎？": "Swap it?",
   "MV 正在渲染，等它完成再換音軌": "The MV is rendering; swap the audio when it is done",
   "還沒有成品 MV，請先渲染一次": "There is no finished MV yet; render it once first",
-  "❌ 換音軌失敗": "❌ Audio swap failed"
+  "❌ 換音軌失敗": "❌ Audio swap failed",
+  "照歌詞": "Follow the lyrics",
+  "照歌詞（預設）：歌詞提到的時段和場景就照它（副歌也是），沒提到的照故事線。故事線：整首歌從早走到晚、副歌固定一個地方。已經有圖卡的歌，要按「🎲 圖卡抽抽樂」重抽才會換排法": "Follow the lyrics (default): the time of day and the place a line names are used (in a chorus too); lines that name none follow the story line. Story line: the song goes from morning to night and every chorus keeps one place. A song that has cards already keeps its order until you press \"🎲 Card lottery\" to draw them again"
  },
  "patterns": [
   {

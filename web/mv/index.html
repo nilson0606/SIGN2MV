@@ -1096,9 +1096,9 @@
             <span class="cards-tools" style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 12px; border:1.5px solid rgba(232,121,249,0.75); border-radius:12px; white-space:nowrap; background:linear-gradient(135deg, rgba(168,85,247,0.22), rgba(236,72,153,0.16)); box-shadow:0 0 14px rgba(217,70,239,0.25);">
               <button class="btn btn-sm" id="btnSimpleCards" style="border:none; color:#fff; font-weight:800; letter-spacing:0.5px; background:linear-gradient(135deg, #a855f7, #ec4899); box-shadow:0 2px 10px rgba(236,72,153,0.45); flex:0 0 auto;" onclick="makeSimpleCards()" title="沒有照片的畫面，由程式依歌詞抽一組簡單的圖卡補上。已經有圖卡時會先問你要不要清掉重抽。不需要網路，不會動你放的照片；畫好的圖卡跟一般照片一樣，可以再換成自己的照片">🎲 圖卡抽抽樂</button>
               <label for="selCardFollow" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">排法</label>
-              <select id="selCardFollow" onchange="cardFollowChanged()" title="故事線：整首歌從早走到晚、副歌固定一個地方。照歌詞（測試）：歌詞提到的時段和場景就照它（副歌也是），沒提到的照故事線。已經有圖卡的歌，要按「🎲 圖卡抽抽樂」重抽才會換排法" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto;">
+              <select id="selCardFollow" onchange="cardFollowChanged()" title="照歌詞（預設）：歌詞提到的時段和場景就照它（副歌也是），沒提到的照故事線。故事線：整首歌從早走到晚、副歌固定一個地方。已經有圖卡的歌，要按「🎲 圖卡抽抽樂」重抽才會換排法" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto;">
+                <option value="lyrics">照歌詞</option>
                 <option value="story">故事線</option>
-                <option value="lyrics">照歌詞（測試）</option>
               </select>
               <span id="cardsFollowNote" style="display:none; font-size:12px; color:#fde68a; flex:0 1 auto; white-space:normal;"></span>
               <label for="selCardStyle" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">畫風</label>
@@ -4326,7 +4326,7 @@
       const opt = sel && sel.options[sel.selectedIndex];
       return opt && AI_STYLES[sel.value] && !opt.disabled ? sel.value : 'simple';
     }
-    // [SIGN2MV 2026-11-19] 排法：故事線（從早走到晚）或照歌詞（測試：歌詞提到的時段、場景照它）。選單記住使用者選的；
+    // [SIGN2MV 2026-11-19] 排法：照歌詞（預設：歌詞提到的時段、場景照它）或故事線（從早走到晚）。選單記住使用者選的；
     // 已經有圖卡的歌照它自己存的排法補畫，要重抽才換，所以兩者不同時在旁邊註明
     function cardFollow() {
       const sel = document.getElementById('selCardFollow');
@@ -4346,7 +4346,7 @@
     }
     function cardFollowChanged() {
       const sel = document.getElementById('selCardFollow');
-      try { localStorage.setItem('sign2mv.cardFollow', sel.value); } catch (e) { /* private mode */ }
+      try { localStorage.setItem('sign2mv.cardOrder', sel.value); } catch (e) { /* private mode */ }
       cardFollowNote();
     }
     function cardStyleChanged() {
@@ -4410,9 +4410,10 @@
       const follow = document.getElementById('selCardFollow');
       if (follow && !follow.dataset.ready) {
         follow.dataset.ready = '1';
-        let want = 'story';
-        try { want = localStorage.getItem('sign2mv.cardFollow') || 'story'; } catch (e) { /* private mode */ }
-        follow.value = want === 'lyrics' ? 'lyrics' : 'story';
+        // 預設照歌詞（11-19 起；測試期間記的 sign2mv.cardFollow 不沿用，大家先回到新的預設）
+        let want = 'lyrics';
+        try { want = localStorage.getItem('sign2mv.cardOrder') || 'lyrics'; } catch (e) { /* private mode */ }
+        follow.value = want === 'story' ? 'story' : 'lyrics';
       }
       cardFollowNote();
       const style = document.getElementById('selCardStyle'), ai = state.ai || {};

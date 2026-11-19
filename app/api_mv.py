@@ -1359,8 +1359,8 @@ def router(ctx: Context) -> APIRouter:
     card_plan_lock = threading.Lock()
 
     def card_follow(body: Dict[str, Any]) -> bool:
-        """[2026-11-19] The page's 排法: True = 照歌詞 (the words' own time and place, a test mode), False = 故事線."""
-        return body.get("follow") is True
+        """[2026-11-19] The page's 排法: True = 照歌詞 (the words' own time and place; the default), False = 故事線."""
+        return body.get("follow") is not False
 
     def card_state(proj: Dict[str, Any], grade: str = "simple", follow: bool = False) -> Dict[str, Any]:
         """What the cards button would do now. "empty": the parts of the timeline that show no photo, each with

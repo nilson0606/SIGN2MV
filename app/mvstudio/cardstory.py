@@ -28,7 +28,7 @@ from . import card_icons, cardgrammar, cardphrase, cardwords
 from . import cardworld as cw
 
 ORDER = ("dawn", "day", "golden", "sunset", "dusk", "night")
-# [2026-11-19] "follow the words" (world["follow"], a test mode next to the story): the time of day a line
+# [2026-11-19] "follow the words" (world["follow"]; 照歌詞, the default since 11-19, beside 故事線): the time of day a line
 # names is the time of its card, earlier or later, in a chorus too; the place a line names is its place, in a
 # chorus too. Only words that name a time count (not a mood: rain, tears, happy). One-character words count
 # only as a whole word of the line (jieba), so 太晚了 / 夢想 / 星期 are no night.

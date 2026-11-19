@@ -975,7 +975,7 @@ def test_ai_cards_are_drawn_by_a_job_and_put_in_one_by_one(client, root, monkeyp
 
 
 def test_premium_follow_the_words_time_and_place():
-    """[2026-11-19] 排法「照歌詞（測試）」: the time and the place a line names are its card's, in a chorus too,
+    """[2026-11-19] 排法「照歌詞」 (the default): the time and the place a line names are its card's, in a chorus too,
     earlier or later; lines that name none follow the story; one-character words only as whole words."""
     from app.mvstudio import cardgrammar, cardstory
     w = cardworld._simple
@@ -1024,9 +1024,9 @@ def test_the_page_keeps_the_way_cards_were_ordered(client, root):
     """The 排法 the page sent goes into the song's world when its cards are planned, and stays with its cards:
     cards added later are planned the same way whatever the page sends; drawn again, the new 排法 is used."""
     sid, slug, pdir = _aligned_project(client, root)
-    story = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium").json()
+    story = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium", follow=False).json()
     assert story["follow"] is False and "follow" not in story["world"]
-    plan = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium", follow=True).json()
+    plan = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium").json()     # 照歌詞 is the default
     assert plan["follow"] is True and plan["world"]["follow"] is True and plan["cards"] == []
     first = plan["empty"][0]
     assert _post(client, "/api/mv/cards/draw", slug=slug, slot=first["slot"], tone="fresh", grade="premium", follow=True).status_code == 200
@@ -1035,5 +1035,5 @@ def test_the_page_keeps_the_way_cards_were_ordered(client, root):
         assert st["follow"] is True and st["world"] == plan["world"] and [c["card"] for c in st["cards"]] == [first["card"]]
         assert st["empty"] == plan["empty"][1:]
     assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == 1
-    again = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium").json()
+    again = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium", follow=False).json()
     assert again["follow"] is False and "follow" not in again["world"]
