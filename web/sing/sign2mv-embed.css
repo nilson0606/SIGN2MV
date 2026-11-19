@@ -66,6 +66,19 @@ html[data-sign2mv] #segment-open:disabled { opacity: .55; }
 
 /* [SIGN2MV 2026-11-19] 延遲校正 */
 .latency-check{grid-column:1/-1}
+/* [SIGN2MV 2026-11-20] the input latency is a key setting of the whole page: the calibration has its own colour
+   (bright green; the cards' edge is already gold in SIGN2MV), on its tab in the nav and throughout the panel */
+#latency-check,.nav-links a[href="#latency-check"]{--accent:#8df07a;--accent-glow:#8df07a40;--button-text:#0b2a10;
+  --signal-button:linear-gradient(180deg,#a8f79a,#5fd86c);--notice-bg:#14281a;--notice-border:#3f7a45;
+  --studio-selected:#1d3a22;--studio-edge:#8df07a55;--studio-light:#8df07a14;--choice-border:#5fb86a;--choice-bg:#173020}
+#latency-check{--line:#3d6b44}
+html[data-sign2mv] #latency-check.card,#latency-check.card{border-color:#8df07a99 !important;border-left:5px solid #8df07a !important;
+  background:linear-gradient(180deg,#14261a,var(--card) 70%)}
+html[data-sign2mv] #latency-check.card:focus-within,#latency-check.card:focus-within{border-color:#8df07a !important;
+  box-shadow:0 0 0 1px #8df07a55,0 30px 50px -12px #000d,0 0 28px #8df07a2e,inset 0 1px #ffffff12}
+#latency-check button:not(.secondary):not(.song-choice):not(:disabled){box-shadow:inset 0 1px #ffffff73,inset 0 -3px #00000040,0 3px #12401b,0 8px 18px #5fd86c38}
+#latency-check button:not(.secondary):not(.song-choice){color:var(--button-text)}
+.nav-links a[href="#latency-check"]{color:#8df07a;border-color:#8df07a66}
 .latency-check .fold-caption output{color:var(--accent);font-variant-numeric:tabular-nums}
 .lc-notes{display:flex;flex-direction:column;gap:10px;min-height:150px;margin:14px 0}
 .lc-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:24px;font-weight:700;color:var(--soft)}
