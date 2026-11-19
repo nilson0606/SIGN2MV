@@ -697,7 +697,23 @@
   "極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 9 秒），第一次會先下載約 15 GB 的模型；水彩質感，每張圖卡是同一對人物。AI 有四種：「一般」照圖卡的計畫畫、看得到臉；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」只畫場景、光線、天氣和東西，沒有人；「小人物」是風景裡有遠遠的小小人影": "Simple: drawn by the app itself, fast, works on every computer. AI drawing: drawn on this computer's graphics card (about 9 s a card); the first time it downloads a model of about 15 GB; a watercolour look, the same two people on every card. Four AI modes: “plain” draws the card as planned, faces showing; “no faces” shows everyone from behind, from the side or with the face turned away; “scenery only” draws the place with its light, weather and things, and nobody; “small figures” is the scenery with small figures far away",
   "第一次用 AI 繪圖，要先下載繪圖模型（約 15 GB）和程式庫（約 0.4 GB），放在 SIGN2MV 的資料夾裡。": "The first time, AI drawing downloads its model (about 15 GB) and libraries (about 0.4 GB) into the SIGN2MV folder.",
   "AI 繪圖・一般": "AI drawing · plain",
-  "AI 繪圖・一般（這台電腦不能用）": "AI drawing · plain (not on this computer)"
+  "AI 繪圖・一般（這台電腦不能用）": "AI drawing · plain (not on this computer)",
+  "排法": "Order",
+  "故事線": "Story line",
+  "照歌詞（測試）": "Follow the lyrics (test)",
+  "故事線：整首歌從早走到晚、副歌固定一個地方。照歌詞（測試）：歌詞提到的時段和場景就照它（副歌也是），沒提到的照故事線。已經有圖卡的歌，要按「🎲 圖卡抽抽樂」重抽才會換排法": "Story line: the song goes from morning to night and every chorus keeps one place. Follow the lyrics (test): the time of day and the place a line names are used (in a chorus too); lines that name none follow the story line. A song that has cards already keeps its order until you press \"🎲 Card lottery\" to draw them again",
+  "🔁 只換音軌": "🔁 Swap audio only",
+  "成品 MV 的畫面不動，只把聲音換成目前「選音檔」選的音檔，幾秒就好，不用重新渲染。字幕時間和頻譜跳動線條是照渲染時的音檔做的，同一首歌換一版混音或換人唱都適合；換成別的音樂請重新渲染": "Keeps the picture of the finished MV and only puts the audio chosen in \"Select audio\" under it: a few seconds, no render. The subtitle times and the spectrum bars were made from the audio the MV was rendered with, so this fits another mix of the same song or someone else singing it; for other music, render again",
+  "⏳ 換音軌中…": "⏳ Swapping audio…",
+  "⏳ 正在換 MV 的音軌（畫面不重新渲染）…": "⏳ Swapping the MV's audio (the picture is not rendered again)…",
+  "🔁 正在換 MV 的音軌（畫面不重新渲染）…": "🔁 Swapping the MV's audio (the picture is not rendered again)…",
+  "把成品 MV 的聲音換成：": "Put this audio under the finished MV:",
+  "畫面不重新渲染（字幕時間、頻譜跳動線條照渲染時的音檔），換好會蓋過原本那支 MV。": "The picture is not rendered again (subtitle times and spectrum bars stay those of the rendered audio); the new MV replaces the old one.",
+  "不一樣的歌請改用「🎬 啟動 1080p 60fps NVENC 極速渲染」。": "For a different song, use \"🎬 Start 1080p 60fps NVENC fast render\" instead.",
+  "要換嗎？": "Swap it?",
+  "MV 正在渲染，等它完成再換音軌": "The MV is rendering; swap the audio when it is done",
+  "還沒有成品 MV，請先渲染一次": "There is no finished MV yet; render it once first",
+  "❌ 換音軌失敗": "❌ Audio swap failed"
  },
  "patterns": [
   {
@@ -1939,6 +1955,54 @@
   {
    "zh": "Scene {0}（{1}／{2}）",
    "en": "Scene {0} ({1} / {2})"
+  },
+  {
+   "zh": "（這首歌現有的圖卡是用「{0}」排的，按「🎲 圖卡抽抽樂」重抽才會換）",
+   "en": "(this song's cards were ordered by \"{0}\"; press \"🎲 Card lottery\" to draw them again in the new order)"
+  },
+  {
+   "zh": "成品 MV：{0}",
+   "en": "Finished MV: {0}"
+  },
+  {
+   "zh": "新音檔：{0}",
+   "en": "New audio: {0}"
+  },
+  {
+   "zh": "⚠️ 新音檔比成品 MV 長 {0} 秒：字幕時間可能對不上；新音檔多出來的結尾會被切掉。",
+   "en": "⚠️ The new audio is {0} s longer than the MV: the subtitle times may not match; the extra end of the audio is cut off."
+  },
+  {
+   "zh": "⚠️ 新音檔比成品 MV 短 {0} 秒：字幕時間可能對不上；MV 會跟著變短。",
+   "en": "⚠️ The new audio is {0} s shorter than the MV: the subtitle times may not match; the MV becomes shorter too."
+  },
+  {
+   "zh": "✅ 已換好音軌（{0}s）：{1}，MV 長度 {2}。按「🎬 播放成品 MV」聽聽看。",
+   "en": "✅ Audio swapped ({0} s): {1}, MV length {2}. Press \"🎬 Play finished MV\" to hear it."
+  },
+  {
+   "zh": "🔁 已換好音軌（{0}s）",
+   "en": "🔁 Audio swapped ({0} s)"
+  },
+  {
+   "zh": "❌ 沒有換好音軌：{0}（原本的 MV 沒有被改）",
+   "en": "❌ The audio was not swapped: {0} (the MV was not changed)"
+  },
+  {
+   "zh": "❌ 換音軌失敗：{0}",
+   "en": "❌ Audio swap failed: {0}"
+  },
+  {
+   "zh": "❌ 沒有換音軌：{0}",
+   "en": "❌ The audio was not swapped: {0}"
+  },
+  {
+   "zh": "找不到這首歌目前選的音檔：{0}",
+   "en": "The audio chosen for this song is not there: {0}"
+  },
+  {
+   "zh": "換音軌失敗：{0}",
+   "en": "Audio swap failed: {0}"
   }
  ]
 }

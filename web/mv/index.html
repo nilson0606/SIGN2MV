@@ -1036,6 +1036,8 @@
             <button class="btn btn-sm" id="btnDownloadMvVideo" style="border-color:#22c55e; color:#86efac; display:none;" onclick="downloadRenderedMv()" title="將已渲染完成的 1080p 60fps MP4 影片下載至本機">⬇️ 匯出/下載 MV 影片</button>
             <button class="btn btn-sm" id="btnOpenMvFolder" style="display:none;" onclick="openMvFolder()" title="在檔案總管顯示已輸出的 MV 檔案">📂 開啟資料夾</button>
             <button class="btn btn-sm btn-crimson" id="btnRenderMV" onclick="triggerFullRender()">🎬 啟動 1080p 60fps NVENC 極速渲染</button>
+            <!-- [SIGN2MV 2026-11-19] 使用者要求：渲染旁加「只換音軌」，畫面沿用已渲染的成品，不用重新渲染 -->
+            <button class="btn btn-sm" id="btnSwapAudio" style="display:none;" onclick="swapMvAudio()" title="成品 MV 的畫面不動，只把聲音換成目前「選音檔」選的音檔，幾秒就好，不用重新渲染。字幕時間和頻譜跳動線條是照渲染時的音檔做的，同一首歌換一版混音或換人唱都適合；換成別的音樂請重新渲染">🔁 只換音軌</button>
           </div>
         </div>
 
@@ -1093,6 +1095,12 @@
             <!-- [SIGN2MV] simple picture cards: drawn by the app for the parts that have no photo -->
             <span class="cards-tools" style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 12px; border:1.5px solid rgba(232,121,249,0.75); border-radius:12px; white-space:nowrap; background:linear-gradient(135deg, rgba(168,85,247,0.22), rgba(236,72,153,0.16)); box-shadow:0 0 14px rgba(217,70,239,0.25);">
               <button class="btn btn-sm" id="btnSimpleCards" style="border:none; color:#fff; font-weight:800; letter-spacing:0.5px; background:linear-gradient(135deg, #a855f7, #ec4899); box-shadow:0 2px 10px rgba(236,72,153,0.45); flex:0 0 auto;" onclick="makeSimpleCards()" title="沒有照片的畫面，由程式依歌詞抽一組簡單的圖卡補上。已經有圖卡時會先問你要不要清掉重抽。不需要網路，不會動你放的照片；畫好的圖卡跟一般照片一樣，可以再換成自己的照片">🎲 圖卡抽抽樂</button>
+              <label for="selCardFollow" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">排法</label>
+              <select id="selCardFollow" onchange="cardFollowChanged()" title="故事線：整首歌從早走到晚、副歌固定一個地方。照歌詞（測試）：歌詞提到的時段和場景就照它（副歌也是），沒提到的照故事線。已經有圖卡的歌，要按「🎲 圖卡抽抽樂」重抽才會換排法" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto;">
+                <option value="story">故事線</option>
+                <option value="lyrics">照歌詞（測試）</option>
+              </select>
+              <span id="cardsFollowNote" style="display:none; font-size:12px; color:#fde68a; flex:0 1 auto; white-space:normal;"></span>
               <label for="selCardStyle" style="font-size:12px; color:#f5d0fe; font-weight:600; flex:0 0 auto;">畫風</label>
               <select id="selCardStyle" onchange="cardStyleChanged(); cardThemeFill(true)" title="極簡：程式自己畫，很快，每台電腦都能用。AI 繪圖：用這台電腦的顯示卡畫（每張約 9 秒），第一次會先下載約 15 GB 的模型；水彩質感，每張圖卡是同一對人物。AI 有四種：「一般」照圖卡的計畫畫、看得到臉；「不露臉」人物都畫成背影、側身或臉轉開；「純風景」只畫場景、光線、天氣和東西，沒有人；「小人物」是風景裡有遠遠的小小人影" style="font-size:12px; padding:3px 6px; width:auto; min-width:0; flex:0 0 auto; border-color:rgba(232,121,249,0.6);">
                 <option value="simple">極簡</option>
@@ -3786,6 +3794,8 @@
       if (btnVid) btnVid.style.display = exists ? 'inline-flex' : 'none';
       const btnOpen = document.getElementById('btnOpenMvFolder');
       if (btnOpen) btnOpen.style.display = exists ? 'inline-flex' : 'none';
+      const btnSwap = document.getElementById('btnSwapAudio');
+      if (btnSwap) btnSwap.style.display = exists ? 'inline-flex' : 'none';
       if (btnTop) {
         if (exists) {
           btnTop.style.borderColor = '#22c55e';
@@ -3816,6 +3826,56 @@
       a.click();
       document.body.removeChild(a);
       showToast(`⬇️ 正在匯出下載《${safeTitle}》成品 MV 影片 (${downloadName})...`);
+    }
+
+    // [SIGN2MV 2026-11-19] 只換音軌：成品 MV 的畫面不動，聲音換成目前選的音檔（伺服器用 ffmpeg 複製畫面、重編聲音）。
+    // 先問伺服器兩邊的長度：差超過 0.5 秒先警告（字幕時間是照渲染時的音檔排的；成品長度不變，長的音檔結尾會被切掉）
+    let swapAudioBusy = false;
+    function fmtSec(t) { const m = Math.floor(t / 60), s = t - m * 60; return `${m}:${s.toFixed(1).padStart(4, '0')}`; }
+    async function swapMvAudio() {
+      if (!currentProject || !currentSlug || swapAudioBusy) return;
+      if (isRenderingInProgress) { showToast('MV 正在渲染，等它完成再換音軌', true); return; }
+      const slug = currentSlug, btn = document.getElementById('btnSwapAudio');
+      syncProjectFields();
+      let info;
+      try {
+        const res = await fetch('/api/mv/swap_audio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug, check: true }) });
+        info = await res.json();
+        if (!res.ok || info.status !== 'ok') throw new Error(info.detail || `HTTP ${res.status}`);
+      } catch (e) { showToast('❌ 沒有換音軌：' + e.message, true); return; }
+      const d = info.diff_sec, gap = Math.abs(d).toFixed(1);
+      let msg = `把成品 MV 的聲音換成：\n${info.audio_name}\n\n成品 MV：${fmtSec(info.mv_sec)}\n新音檔：${fmtSec(info.audio_sec)}\n\n畫面不重新渲染（字幕時間、頻譜跳動線條照渲染時的音檔），換好會蓋過原本那支 MV。`;
+      if (info.warn) msg += `\n\n⚠️ 新音檔比成品 MV ${d > 0 ? '長' : '短'} ${gap} 秒：字幕時間可能對不上；` + (d > 0 ? '新音檔多出來的結尾會被切掉。' : 'MV 會跟著變短。') + '\n不一樣的歌請改用「🎬 啟動 1080p 60fps NVENC 極速渲染」。';
+      msg += '\n\n要換嗎？';
+      if (!confirm(msg)) return;
+      swapAudioBusy = true;
+      const label = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ 換音軌中…'; }
+      const render = document.getElementById('btnRenderMV');
+      if (render) render.disabled = true;
+      // the player lets go of the old MV first: Windows does not let a file that is open be replaced
+      try { const v = document.getElementById('mvVideoPlayer'); if (v) { v.pause(); v.removeAttribute('src'); v.load(); } } catch (e) {}
+      const status = (html) => { const el = document.getElementById('mvFileStatus'); if (el && slug === currentSlug) el.innerHTML = html; };
+      status('<span style="color:#fde68a;">⏳ 正在換 MV 的音軌（畫面不重新渲染）…</span>');
+      try {
+        const res = await fetch('/api/mv/swap_audio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug }) });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'ok') throw new Error(data.detail || `HTTP ${res.status}`);
+        status(`<span style="color:#86efac;">✅ 已換好音軌（${data.elapsed_sec}s）：${aiEsc(data.audio_name)}，MV 長度 ${fmtSec(data.duration || data.mv_sec)}。按「🎬 播放成品 MV」聽聽看。</span>`);
+        showToast(`🔁 已換好音軌（${data.elapsed_sec}s）`);
+        if (slug === currentSlug) {
+          const v = document.getElementById('mvVideoPlayer');
+          if (v) v.src = `/api/mv/media?path=${encodeURIComponent(data.output_mv)}&t=${Date.now()}`;
+        }
+      } catch (e) {
+        status(`<span style="color:#fca5a5;">❌ 沒有換好音軌：${aiEsc(e.message)}（原本的 MV 沒有被改）</span>`);
+        showToast('❌ 換音軌失敗：' + e.message, true);
+        try { const v = document.getElementById('mvVideoPlayer'); if (v && slug === currentSlug && currentProject.output_mv) v.src = `/api/mv/media?path=${encodeURIComponent(currentProject.output_mv)}&t=${Date.now()}`; } catch (e2) {}
+      } finally {
+        swapAudioBusy = false;
+        if (btn) { btn.disabled = false; btn.textContent = label || '🔁 只換音軌'; }
+        if (render && !isRenderingInProgress) render.disabled = false;
+      }
     }
 
     let renderAbortController = null;
@@ -4248,7 +4308,7 @@
     async function cardsCall(path, body) {
       const res = await fetch('/api/mv/cards/' + path, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.assign({ slug: currentSlug, grade: cardGrade() }, body || {}))
+        body: JSON.stringify(Object.assign({ slug: currentSlug, grade: cardGrade(), follow: cardFollow() }, body || {}))
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.status !== 'ok') throw new Error(data.detail || `HTTP ${res.status}`);
@@ -4265,6 +4325,29 @@
       const sel = document.getElementById('selCardStyle');
       const opt = sel && sel.options[sel.selectedIndex];
       return opt && AI_STYLES[sel.value] && !opt.disabled ? sel.value : 'simple';
+    }
+    // [SIGN2MV 2026-11-19] 排法：故事線（從早走到晚）或照歌詞（測試：歌詞提到的時段、場景照它）。選單記住使用者選的；
+    // 已經有圖卡的歌照它自己存的排法補畫，要重抽才換，所以兩者不同時在旁邊註明
+    function cardFollow() {
+      const sel = document.getElementById('selCardFollow');
+      return !!sel && sel.value === 'lyrics';
+    }
+    function cardFollowNote() {
+      const note = document.getElementById('cardsFollowNote'), sel = document.getElementById('selCardFollow');
+      if (!note || !sel) return;
+      const has = !!(cardsState && (cardsState.cards || []).length);
+      const song = has && cardsState.follow ? 'lyrics' : 'story';
+      if (has && song !== sel.value) {
+        note.textContent = `（這首歌現有的圖卡是用「${sel.querySelector(`option[value="${song}"]`).textContent}」排的，按「🎲 圖卡抽抽樂」重抽才會換）`;
+        note.style.display = '';
+      } else {
+        note.textContent = ''; note.style.display = 'none';
+      }
+    }
+    function cardFollowChanged() {
+      const sel = document.getElementById('selCardFollow');
+      try { localStorage.setItem('sign2mv.cardFollow', sel.value); } catch (e) { /* private mode */ }
+      cardFollowNote();
     }
     function cardStyleChanged() {
       const sel = document.getElementById('selCardStyle');
@@ -4324,6 +4407,14 @@
       cardsState = state;
       const sel = document.getElementById('selCardTone');
       if (sel && !cardsBusy && state.tone && CARD_TONES[state.tone]) sel.value = state.tone;
+      const follow = document.getElementById('selCardFollow');
+      if (follow && !follow.dataset.ready) {
+        follow.dataset.ready = '1';
+        let want = 'story';
+        try { want = localStorage.getItem('sign2mv.cardFollow') || 'story'; } catch (e) { /* private mode */ }
+        follow.value = want === 'lyrics' ? 'lyrics' : 'story';
+      }
+      cardFollowNote();
       const style = document.getElementById('selCardStyle'), ai = state.ai || {};
       if (style) {
         [...style.options].forEach(opt => {

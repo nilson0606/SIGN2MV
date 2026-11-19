@@ -28,6 +28,57 @@ from . import card_icons, cardgrammar, cardphrase, cardwords
 from . import cardworld as cw
 
 ORDER = ("dawn", "day", "golden", "sunset", "dusk", "night")
+# [2026-11-19] "follow the words" (world["follow"], a test mode next to the story): the time of day a line
+# names is the time of its card, earlier or later, in a chorus too; the place a line names is its place, in a
+# chorus too. Only words that name a time count (not a mood: rain, tears, happy). One-character words count
+# only as a whole word of the line (jieba), so 太晚了 / 夢想 / 星期 are no night.
+FOLLOW_TIME: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("dawn", ("清晨", "早晨", "黎明", "天亮", "日出", "破曉", "天明", "晨光", "晨曦", "清早", "早上", "一早", "朝霞", "朝陽", "曙光", "第一縷",
+              "morning", "dawn", "sunrise")),
+    ("day", ("白天", "白晝", "中午", "正午", "晴天", "陽光", "太陽", "豔陽", "艷陽", "烈日", "晴空", "noon", "daylight", "sunshine")),
+    ("golden", ("午後", "下午", "afternoon")),
+    ("sunset", ("夕陽", "黃昏", "日落", "晚霞", "落日", "傍晚", "昏黃", "紅霞", "彩霞", "斜陽", "夕照", "sunset")),
+    ("dusk", ("暮色", "薄暮", "入夜", "dusk", "twilight")),
+    ("night", ("夜晚", "晚上", "夜裡", "夜裏", "深夜", "今晚", "今夜", "晚安", "黑夜", "午夜", "半夜", "夜空", "夜色", "夜深", "深宵",
+               "天黑", "黑暗", "漆黑", "星空", "星星", "繁星", "月光", "月亮", "明月", "月色", "流星", "螢火", "銀河", "煙火",
+               "night", "tonight", "midnight", "moon", "stars", "star")),
+)
+FOLLOW_TIME_ONE = {"夜": "night", "晚": "night", "夢": "night", "星": "night", "晨": "dawn", "晴": "day"}
+
+
+@functools.lru_cache(maxsize=1)
+def _follow_words() -> Tuple[Tuple[str, str], ...]:
+    """(simplified word, light) for every time word of FOLLOW_TIME, the longest first."""
+    out = [(w if w.isascii() else cw._simple(w), light) for light, ws in FOLLOW_TIME for w in ws]
+    return tuple(sorted(set(out), key=lambda x: -len(x[0])))
+
+
+def lyric_time(line: str, tokens: Sequence[str] = ()) -> Optional[str]:
+    """The time of day the (simplified) line names, or None. The longest word wins; of two as long, the
+    later one in the line (從清晨到黃昏: 黃昏). `tokens`: the line's whole words (simplified), for the
+    one-character words; without them those do not count."""
+    best: Tuple[int, int, str] = (0, -1, "")
+    toks = _latin(line)
+    for w, light in _follow_words():
+        if len(w) < best[0]:
+            break
+        if w.isascii():
+            at = [n for n, t in enumerate(toks) if t == w and (n == 0 or toks[n - 1] not in NEG_EN)]
+            pos = 1000 + at[-1] if at else -1
+        else:
+            at = [j for j in _found(line, w) if not _negated(line, j)]
+            pos = at[-1] if at else -1
+        if pos >= 0 and (len(w), pos) > best[:2]:
+            best = (len(w), pos, light)
+    if not best[2]:
+        one = {cw._simple(k): v for k, v in FOLLOW_TIME_ONE.items()}
+        for t in tokens:
+            if t in one:
+                j = line.find(t)
+                if j >= 0 and not _negated(line, j):
+                    best = (1, j, one[t])
+    return best[2] or None
+
 NEG = ("沒有", "不再", "不是", "不會", "不必", "不用", "不要", "未曾", "別", "沒", "無")
 NEG_EN = {"not", "no", "never", "dont", "without", "nothing"}
 FILLER = "喔哦啊呀耶噢嗚啦"
@@ -449,6 +500,7 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
     """A card for every part of the timeline (as cardworld.plan()), and the story it was told with."""
     st = story(parts, world, title)
     secs, arc, keep = st["secs"], st["arc"], st["keep"]
+    follow = bool(world.get("follow"))     # [2026-11-19] the words' own time and place, before the story's
     rows = _rows()
     phrase_rows = [(ws, what) for ws, what in rows if what.get("prop") and what["prop"] not in NOT_A_THING]
     place_rows = [(ws, what) for ws, what in rows if what.get("place") or what.get("terrain") or what.get("landmark")]
@@ -536,7 +588,7 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
                 wi += 1
             stay -= 1
             pl = place
-        if sec != "chorus":
+        if sec != "chorus" or follow:
             if h.get("place"):
                 pl = h["place"]
             elif h.get("terrain") or h.get("landmark"):
@@ -554,14 +606,17 @@ def plan_premium(parts: Sequence[Tuple[str, str]], seed: int, world: Dict[str, A
         if light_now in arc and arc.index(base) < arc.index(light_now):
             base = light_now
         light_now = light = base
+        named = lyric_time(line, [cw._simple(w) for w, _f in g["words"]] if g else ()) if follow else None
         want = h.get("light") or more.get("light")
-        if want in arc and arc.index(want) > arc.index(base) and sec != "chorus":   # the words move it on a step, for this card
+        if named:
+            light = named               # follow: the time the line names, for this card (the story goes on after it)
+        elif not follow and want in arc and arc.index(want) > arc.index(base) and sec != "chorus":   # the words move it on a step, for this card
             light = arc[arc.index(base) + 1]
         weather = h.get("weather", "clear")
         if weather != "clear" and light in ("day", "golden"):
             light = "overcast"
-        elif feel <= -2 and light in ("day", "golden") and sec != "chorus":
-            light = "overcast"
+        elif feel <= -2 and light in ("day", "golden") and sec != "chorus" and not named:
+            light = "overcast"          # (a sad line that names its sunshine keeps it)
         if pl in rooms:
             weather = "clear"
         dark = light in ("dusk", "night")

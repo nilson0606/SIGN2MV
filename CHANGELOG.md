@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- MV page: 「🔁 只換音軌」 beside the render button. The finished MV gets the audio chosen now in 「選音檔」
+  without a render: the picture is copied as it is (`-c:v copy`), the sound is encoded as a render does
+  (AAC 320k, ending with the shorter of the two), a second or so. The page asks first and says both
+  lengths; more than 0.5 s apart it warns (the subtitles were timed for the rendered audio). The spectrum
+  bars stay those of the rendered audio. `core.audio_swap_check` / `core.swap_mv_audio`,
+  `POST /api/mv/swap_audio` (`check: true` only measures); not while the MV renders.
+- Picture cards: 「排法」 menu beside 「畫風」 — 故事線 (as before, the default) or 照歌詞（測試）. In the test
+  mode the time of day a line names is its card's time, earlier or later, in a chorus too, and the place a
+  line names is its place in a chorus too; lines that name neither follow the story. Only words that name a
+  time count (`cardstory.FOLLOW_TIME`; not moods such as rain or tears); 夜／晚／夢／星／晨／晴 count only as
+  whole words (jieba), so 太晚了, 夢想 and 星期 are no night. The choice goes into the song's world
+  (`world["follow"]`, cards.json) when its cards are planned, so cards added later and single redraws keep
+  it; the page notes when the menu differs from the song's cards (draw them again to change). Story-line
+  plans are unchanged (1,135 cards of 40 songs compared card by card).
+
 ## 2026.11.18
 
 - Picture cards, a second style: 「畫風：AI 繪圖」 beside 「極簡」 (which stays the default and is unchanged).

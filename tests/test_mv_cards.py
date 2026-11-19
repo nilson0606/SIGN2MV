@@ -972,3 +972,68 @@ def test_ai_cards_are_drawn_by_a_job_and_put_in_one_by_one(client, root, monkeyp
     _post(client, "/api/mv/cards/ai_stop", slug=slug)
     ai = _ai_wait(client, slug)
     assert ai["error"] == "已停止" and 0 < ai["done"] < left, ai
+
+
+def test_premium_follow_the_words_time_and_place():
+    """[2026-11-19] 排法「照歌詞（測試）」: the time and the place a line names are its card's, in a chorus too,
+    earlier or later; lines that name none follow the story; one-character words only as whole words."""
+    from app.mvstudio import cardgrammar, cardstory
+    w = cardworld._simple
+
+    def told(text):
+        line = w(text)
+        g = cardgrammar.read(line, cardstory._rows())
+        return cardstory.lyric_time(line, [w(x) for x, _f in g["words"]] if g else ())
+
+    assert told("深夜我一個人走") == "night" and told("清晨的街道很安靜") == "dawn" and told("從清晨到黃昏") == "sunset"
+    assert told("陽光照在窗台上") == "day" and told("不是黑夜") is None and told("想起你說過的話") is None
+    assert told("等著陽光刺破黑暗 第一縷朝霞") == "dawn"            # the longest word: 第一縷
+    if cardgrammar.read(w("太晚了"), cardstory._rows()):          # whole words need jieba
+        assert told("太晚了") is None and told("我的夢想") is None and told("星期天的早上") == "dawn"
+        assert told("晚安我的愛") == "night" and told("在夢裡") == "night"
+    verse = ["深夜我一個人走", "想起你說過的話", "清晨的街道很安靜", "我一個人走過轉角"]
+    chorus = ["唱出雨中的約定", "黃昏我們在海邊", "你笑著說不分開", "直到天亮"]
+    lines = ([("intro", "")] + [("lyric", t) for t in verse + chorus] + [("interlude", "")]
+             + [("lyric", t) for t in verse + chorus] + [("outro", "")])
+    for seed in (3, 11, 27):
+        story = cardstory.prepare(cardworld.make_world(seed, "premium"), lines, "雨中的約定")
+        follow = dict(story, follow=True)
+        assert cardworld.valid_world(follow)
+        s_specs = cardstory.plan_premium(lines, seed, story, "雨中的約定")[0]
+        f_specs, st = cardstory.plan_premium(lines, seed, follow, "雨中的約定")
+        assert len(f_specs) == len(lines) and len(set(f_specs)) == len(f_specs)
+        secs = cardstory.sections(lines, "雨中的約定")
+        got = {t: [] for _k, t in lines}
+        for (k, t), sp in zip(lines, f_specs):
+            got[t].append(cardworld.parse(sp))
+        assert all(g[1] == "night" for g in got["深夜我一個人走"])
+        assert all(g[1] == "dawn" for g in got["清晨的街道很安靜"])          # back to the morning, after the night
+        assert all(g[1] == "sunset" for g in got["黃昏我們在海邊"])          # in a chorus too
+        assert all(g[1] == "dawn" for g in got["直到天亮"])
+        assert all(g[0].split(".")[0] == "coast" or g[0] == "sea" for g in got["黃昏我們在海邊"])   # the sea, in a chorus too
+        assert [s["sec"] for s in secs if s["sec"] == "chorus"]
+        # lines that name nothing are planned as in the story
+        for (k, t), a, b in zip(lines, s_specs, f_specs):
+            if t in ("想起你說過的話", "我一個人走過轉角") and k == "lyric":
+                assert cardworld.parse(a)[1] == cardworld.parse(b)[1]
+        for sp in f_specs[:2]:
+            assert cardworld.draw(sp, follow, 1).size == (1920, 1080)
+
+
+def test_the_page_keeps_the_way_cards_were_ordered(client, root):
+    """The 排法 the page sent goes into the song's world when its cards are planned, and stays with its cards:
+    cards added later are planned the same way whatever the page sends; drawn again, the new 排法 is used."""
+    sid, slug, pdir = _aligned_project(client, root)
+    story = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium").json()
+    assert story["follow"] is False and "follow" not in story["world"]
+    plan = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium", follow=True).json()
+    assert plan["follow"] is True and plan["world"]["follow"] is True and plan["cards"] == []
+    first = plan["empty"][0]
+    assert _post(client, "/api/mv/cards/draw", slug=slug, slot=first["slot"], tone="fresh", grade="premium", follow=True).status_code == 200
+    for follow in (True, False):        # the song has cards: they keep their own 排法
+        st = _post(client, "/api/mv/cards/done", slug=slug, grade="premium", follow=follow).json()
+        assert st["follow"] is True and st["world"] == plan["world"] and [c["card"] for c in st["cards"]] == [first["card"]]
+        assert st["empty"] == plan["empty"][1:]
+    assert _post(client, "/api/mv/cards/remove", slug=slug).json()["removed"] == 1
+    again = _post(client, "/api/mv/cards/plan", slug=slug, grade="premium").json()
+    assert again["follow"] is False and "follow" not in again["world"]

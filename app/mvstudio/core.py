@@ -1274,6 +1274,47 @@ def render_karaoke_strip(text: str, seg_type: str, n_gold: int) -> Image.Image:
     return im
 
 
+AUDIO_SWAP_WARN_SEC = 0.5
+
+
+def audio_swap_check(output_mv: str, audio_file: str) -> Dict[str, Any]:
+    """[2026-11-19] 「只換音軌」, before it runs: the MV's length, the new audio's, and how far apart they are.
+    The subtitles were timed for the audio the MV was rendered with, so a length that differs by more than
+    AUDIO_SWAP_WARN_SEC is said first (the MV keeps its own length: a longer audio is cut at its end)."""
+    mv, au = probe_media_file(output_mv), probe_media_file(audio_file)
+    if not mv.get("exists") or not mv.get("video_codec"):
+        raise FileNotFoundError("還沒有成品 MV，請先渲染一次")
+    if not au.get("exists") or not au.get("audio_codec"):
+        raise FileNotFoundError(f"找不到這首歌目前選的音檔：{audio_file}")
+    diff = round(float(au["duration"]) - float(mv["duration"]), 3)
+    return {"mv_sec": mv["duration"], "audio_sec": au["duration"], "diff_sec": diff,
+            "warn": abs(diff) > AUDIO_SWAP_WARN_SEC, "audio_name": os.path.basename(audio_file)}
+
+
+def swap_mv_audio(output_mv: str, audio_file: str) -> Dict[str, Any]:
+    """[2026-11-19] Put another audio under a rendered MV without rendering it again: the picture is copied
+    as it is (not encoded again), the sound is encoded as a render does (AAC 320k), ending with the shorter
+    of the two (as a render does). The spectrum bars stay those of the audio the MV was rendered with."""
+    info = audio_swap_check(output_mv, audio_file)
+    t0 = time.time()
+    tmp_out = os.path.splitext(output_mv)[0] + ".swap.tmp.mp4"
+    cmd = [FFMPEG, "-hide_banner", "-y", "-i", output_mv, "-i", audio_file, "-map", "0:v:0", "-map", "1:a:0",
+           "-c:v", "copy", "-c:a", "aac", "-b:a", "320k", "-shortest", "-movflags", "+faststart", tmp_out]
+    try:
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1800, creationflags=NO_WINDOW)
+        if res.returncode != 0 or not os.path.exists(tmp_out) or os.path.getsize(tmp_out) == 0:
+            raise RuntimeError("換音軌失敗：" + (res.stderr or b"").decode("utf-8", errors="replace").strip()[-300:])
+        _install_rendered_mv(tmp_out, output_mv)
+    finally:
+        if os.path.exists(tmp_out):
+            try:
+                os.remove(tmp_out)
+            except OSError:
+                pass
+    after = probe_media_file(output_mv)
+    return dict(info, elapsed_sec=round(time.time() - t0, 1), duration=after.get("duration"), output_mv=output_mv)
+
+
 def _install_rendered_mv(tmp_out: str, output_mv: str) -> None:
     """[Claude 2026-10-26] 把編好的暫存檔換成正式成品。
     Windows 上舊 MV 若正被開著（網頁播放器透過 /media/file 讀取、外部播放器），改名會 WinError 5：

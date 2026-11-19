@@ -988,6 +988,34 @@ def router(ctx: Context) -> APIRouter:
                      f"編碼器：{res.get('encoder', '')} | 輸出：{res.get('output_mv', '')}")
         return res
 
+    @r.post("/api/mv/swap_audio")
+    async def api_swap_audio(request: Request):
+        """[2026-11-19] 「只換音軌」: the rendered MV with the song's audio as it is chosen now, picture as it is.
+        "check": true only says the lengths (the page asks first); otherwise it swaps."""
+        configure()
+        body = await request.json()
+        try:
+            proj = load_project_dict(str(body.get("slug", "")))
+        except ProjectNotFound as exc:
+            return jerr(404, str(exc))
+        job = job_state()
+        if job and current["kind"] == "render":
+            return jerr(409, "MV 正在渲染，等它完成再換音軌")
+        output_mv = proj.get("output_mv") or core.default_output_mv(proj)
+        try:
+            if body.get("check"):
+                return {"status": "ok", **(await asyncio.to_thread(core.audio_swap_check, output_mv, proj.get("audio_file", "")))}
+            local_update(True, "swap_audio", 30, "🔁 正在換 MV 的音軌（畫面不重新渲染）…", os.path.basename(proj.get("audio_file", "")))
+            res = await asyncio.to_thread(core.swap_mv_audio, output_mv, proj.get("audio_file", ""))
+        except FileNotFoundError as e:
+            local_update(False, "swap_audio", 0, "", "")
+            return jerr(409, str(e))
+        except Exception as e:  # noqa: BLE001
+            local_update(False, "swap_audio", 0, "❌ 換音軌失敗", str(e)[:300])
+            return jerr(500, str(e))
+        local_update(False, "swap_audio", 100, f"🔁 已換好音軌（{res['elapsed_sec']}s）", res["audio_name"])
+        return {"status": "ok", **res}
+
     @r.post("/api/mv/verify")
     async def api_verify_mv(request: Request):
         configure()
@@ -1330,7 +1358,11 @@ def router(ctx: Context) -> APIRouter:
     card_plans: "OrderedDict[str, Tuple[Any, List[Any]]]" = OrderedDict()
     card_plan_lock = threading.Lock()
 
-    def card_state(proj: Dict[str, Any], grade: str = "simple") -> Dict[str, Any]:
+    def card_follow(body: Dict[str, Any]) -> bool:
+        """[2026-11-19] The page's 排法: True = 照歌詞 (the words' own time and place, a test mode), False = 故事線."""
+        return body.get("follow") is True
+
+    def card_state(proj: Dict[str, Any], grade: str = "simple", follow: bool = False) -> Dict[str, Any]:
         """What the cards button would do now. "empty": the parts of the timeline that show no photo, each with
         the card chosen for it (the choice goes over the whole timeline, so a card drawn later still differs
         from its neighbours). "cards": the photos in the project that are cards, with what each one is."""
@@ -1373,6 +1405,10 @@ def router(ctx: Context) -> APIRouter:
             seed = cards.song_seed(f"{slug}#{rnd}" if rnd else slug)
             # (the song's own last world is among them too, so cards made again do not look like the ones taken out)
             world = cardworld.choose_world(seed, [h["world"] for h in cards.read_history(core.LIBRARY_ROOT)], grade)
+            if world and follow:
+                # the song keeps the way its cards were planned while it has cards (cards.json), so cards added
+                # later and single redraws are planned the same way
+                world = dict(world, follow=True)
         # [2026-11-16] The plan of a song is kept while its lines, its seed and its world stay what they are: the
         # page asks for one card at a time, and every one of those calls planned the whole song again (a
         # hundred cards: a hundred plans).
@@ -1426,7 +1462,7 @@ def router(ctx: Context) -> APIRouter:
                 empty.append({"slot": slot, "card": name, "look": look})
         return {"empty": empty, "cards": have, "tone": rec["tone"] or "fresh", "tones": list(cards.TONES),
                 "timeline": len(tl), "seed": seed, "world": world, "round": rnd,
-                "grade": (world or {}).get("grade", "simple"), "ai": ai_info(slug)}
+                "grade": (world or {}).get("grade", "simple"), "follow": bool((world or {}).get("follow")), "ai": ai_info(slug)}
 
     def card_keep(state: Dict[str, Any]) -> Dict[str, Any]:
         """The record of the cards that are there, as it is written back with a new card."""
@@ -1489,7 +1525,7 @@ def router(ctx: Context) -> APIRouter:
             proj = load_project_dict(str(body.get("slug", "")))
         except ProjectNotFound as exc:
             return jerr(404, str(exc))
-        return {"status": "ok", **(await asyncio.to_thread(card_state, proj, card_grade(body)))}
+        return {"status": "ok", **(await asyncio.to_thread(card_state, proj, card_grade(body), card_follow(body)))}
 
     @r.post("/api/mv/cards/draw")
     async def api_cards_draw(request: Request):
@@ -1506,7 +1542,7 @@ def router(ctx: Context) -> APIRouter:
         out_path = card_slot_path(illust_dir, slot)
         if out_path is None or tone not in cards.TONES:
             return jerr(400, "簡易圖卡的資料不正確")
-        state = await asyncio.to_thread(card_state, proj, card_grade(body))
+        state = await asyncio.to_thread(card_state, proj, card_grade(body), card_follow(body))
         old_print = ""
         if body.get("redraw"):
             hit = next((c for c in state["cards"] if c["slot"] == slot), None)
@@ -1621,7 +1657,7 @@ def router(ctx: Context) -> APIRouter:
         out_path = card_slot_path(illust_dir, item["slot"])
         if out_path is None:
             return False
-        state = card_state(proj, "premium")
+        state = card_state(proj, "premium", bool(item.get("follow")))
         old_print = ""
         if item.get("redraw"):
             hit = next((c for c in state["cards"] if c["slot"] == item["slot"] and c["print"] == item["print"]), None)
@@ -1685,7 +1721,7 @@ def router(ctx: Context) -> APIRouter:
             return jerr(409, info["reason"] or "這台電腦不能用 AI 繪圖")
         if info["running"] or info["busy"]:
             return jerr(409, "AI 繪圖正在畫另一批圖卡，等它畫完再試")
-        state = await asyncio.to_thread(card_state, proj, "premium")
+        state = await asyncio.to_thread(card_state, proj, "premium", card_follow(body))
         one = str(body.get("slot") or "")
         way = str(body.get("way") or "")
         if way and way not in AI_WAYS:
@@ -1719,6 +1755,7 @@ def router(ctx: Context) -> APIRouter:
             items.append({"slot": c["slot"], "card": c["card"], "look": c.get("look", 0), "print": c.get("print", ""),
                           "negative": cardprompt.negative(c["card"], people, tone),
                           "redraw": c["redraw"], "seed": c["seed"], "prompt": prompt, "way": way, "people": people,
+                          "follow": bool(state["world"] and state["world"].get("follow")),
                           "out": str(work / (c["slot"].replace(":", "_") + ".png"))})
         if not items:
             return {"status": "ok", "total": 0, "ai": ai_info(slug)}
@@ -1789,7 +1826,7 @@ def router(ctx: Context) -> APIRouter:
             return jerr(404, str(exc))
         return {"status": "ok", "all_scenes": _scene_payload(proj),
                 "instrument_photos": list_instrumental_photos(proj["illust_dir"], proj.get("timeline", [])),
-                **(await asyncio.to_thread(card_state, proj, card_grade(body)))}
+                **(await asyncio.to_thread(card_state, proj, card_grade(body), card_follow(body)))}
 
     @r.post("/api/mv/scenes/delete_shift")
     async def api_delete_scenes_shift(request: Request):
