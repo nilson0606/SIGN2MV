@@ -13,7 +13,10 @@
   recorder (song time noted when playback starts, as a take does), analysed with RMVPE and marked with the
   take's own rhythm rule. Only 進拍 counts: change the delay and 「重新評分」, or 「自動找」 (0–900 ms; at each delay the share of
   10 ms RMVPE frames on the melody's note, octave folded; the middle of the best run; the rhythm curve is drawn), then 「套用並結束」 saves it as the input
-  latency. The step guide has a new step 3 of 9, 延遲校正, with 「略過」; done or skipped is remembered
+  latency. The first line is a warm-up, marked 「暖身 · 不計分」: the reference is empty up to the first note of line
+  2, and 「自動找」 leaves it out. 「開始校正」 opens a closed microphone itself, the way 「從頭開始唱且評分」 does (the
+  device and capture mode chosen in 03); if it cannot, the reason is shown in the calibration panel.
+  The step guide has a new step 3 of 9, 延遲校正, with 「略過」; done or skipped is remembered
   (`sign2mv.latency-check.v1`). `web/sing/latency-check.mjs`. In the browser, the song itself delayed by 260, 300,
   330 and 380 ms inside the page (pitch answered by a simple tracker standing in for RMVPE) was found at 270, 310,
   340 and 390 ms, rhythm 100.

@@ -559,6 +559,7 @@ calibration = createCalibration({ context: () => context, micReady: () => !!stre
 // [SIGN2MV 2026-11-19] 延遲校正: the same microphone, capture and recorder as a take; 「套用」 saves the input latency
 latencyCheck = createLatencyCheck({ context: () => context, stream: () => stream, inputSource: () => nativeCapture?.source,
   micReady: () => !!stream && context?.state === 'running', beforeStart: () => singing.pauseForCalibration(),
+  startMic, micMessage: () => $('mic-status').textContent,   // 開始校正 opens a closed microphone itself
   apply: ms => { $('offset').value = String(ms); $('offset').dispatchEvent(new Event('input')); } });
 window.sign2mvLatencyCheck = latencyCheck;
 

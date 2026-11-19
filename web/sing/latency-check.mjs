@@ -24,6 +24,9 @@ const SOLFEGE = { 60: 'Do', 62: 'Re', 64: 'Mi', 65: 'Fa', 67: 'Sol', 69: 'La' };
 const hz = midi => 440 * 2 ** ((midi - 69) / 12);
 export const SONG_START = LEAD + COUNT_IN * BEAT;
 export const SONG_SECONDS = SONG_START + PHRASES.length * 8 * BEAT + 1.2;
+// The first phrase is a warm-up: shown as such, not scored, and left out of 「自動找」. Scoring starts with phrase 2.
+const WARM_UP = 1;
+export const SCORED_FROM = SONG_START + WARM_UP * 8 * BEAT;
 
 export function calibrationNotes() {
   const notes = [];
@@ -41,7 +44,16 @@ export function calibrationReference() {
     const t = i * STEP, n = notes.find(x => t >= x.start - 1e-9 && t < x.start + x.duration - .05);
     if (n) frames[i] = Math.round(hz(n.midi) * 100) / 100;
   }
-  return { version: 1, videoId: 'local_' + '0'.repeat(63) + '1', title: translateMessage('延遲校正 · 小星星'), step: STEP, frames, masks: [], duration: SONG_SECONDS };
+  return { version: 1, videoId: 'local_' + '0'.repeat(63) + '1', title: translateMessage('延遲校正 · 小星星'), step: STEP, frames: dropWarmUp(frames), masks: [], duration: SONG_SECONDS };
+}
+// The warm-up has no reference: its cells are emptied up to the first cell on the first scored note. Emptying by
+// time alone would leave the tail of the warm-up's last (held) note standing alone, which the rhythm rule would
+// read as a note start of its own; emptied this way, the first scored note starts after silence, as after a rest.
+function dropWarmUp(frames) {
+  const first = hz(PHRASES[WARM_UP][0]), near = f => f != null && Math.abs(1200 * Math.log2(f / first)) < 100;
+  let i = 0;
+  while (i < frames.length && (i * STEP < SCORED_FROM - .25 || (!near(frames[i]) && i * STEP < SCORED_FROM + .3))) i++;
+  return frames.map((f, k) => (k < i ? null : f));
 }
 
 // The song, rendered here from the notes: count-in clicks, a soft beat, the chord roots and (optionally)
@@ -97,7 +109,7 @@ export function cellsFromF0(analysis, seconds = SONG_SECONDS) {
   });
 }
 export function referenceFrom(analysis) {
-  return { ...calibrationReference(), frames: cellsFromF0(analysis) };
+  return { ...calibrationReference(), frames: dropWarmUp(cellsFromF0(analysis)) };
 }
 // Rhythm at a delay (what the singer sees), and the scan behind 「自動找」. The rhythm rule works on 100 ms cells, so
 // its best run can sit up to about 30 ms off; the delay is therefore found on the RMVPE frames themselves (10 ms):
@@ -114,7 +126,7 @@ export function frameMatch(post, analysis, ms, melody) {
     const r = k * analysis.hop;
     const seg = segs.find((g, i) => r >= g.offset && (i === segs.length - 1 || r < g.offset + g.duration)); if (!seg) continue;
     const t = seg.songTime + (r - seg.offset) - ms / 1000, want = ref[Math.round(t / hop)];
-    if (!(want > 0)) continue;
+    if (t < SCORED_FROM - BEAT / 2 || !(want > 0)) continue;   // the warm-up does not count
     let c = 1200 * Math.log2(f / want) % 1200; if (c > 600) c -= 1200; if (c < -600) c += 1200;
     all++; if (Math.abs(c) < 100) on++;
   }
@@ -158,6 +170,8 @@ export function createLatencyCheck(options) {
       else if (t >= n.start - BEAT / 2) s.className = 'next';
       return s;
     }));
+    // after the notes, so this line's notes stay above the next line's
+    if (phrase < WARM_UP) { const tag = document.createElement('em'); tag.className = 'lc-tag'; tag.textContent = translateMessage('暖身 · 不計分'); row.append(tag); }
     return row;
   }
   function drawNotes(t = -1) {
@@ -177,13 +191,13 @@ export function createLatencyCheck(options) {
 
   function controls() {
     const ready = options.micReady();
-    $('lc-start').disabled = busy || !!run || !ready;
+    $('lc-start').disabled = busy || !!run;   // a closed microphone is opened by 開始校正 itself
     $('lc-stop').disabled = !run;
     $('lc-guide').disabled = !!run || busy;
     $('lc-skip').disabled = !!run || busy;
     for (const id of ['lc-rescore', 'lc-auto', 'lc-apply', 'lc-delay']) $(id).disabled = busy || !!run || !last;
     window.dispatchEvent(new Event('sign2mv-latency-check'));   // the step guide follows
-    if (!run && !busy && !last) say(ready ? '戴上耳機，按「開始校正」。倒數 5、4、3、2、1 之後跟著提示唱。' : '先在「03 即時音高與收音」開好麥克風，再開始校正。');
+    if (!run && !busy && !last) say(ready ? '戴上耳機，按「開始校正」。倒數 5、4、3、2、1 之後跟著提示唱。' : '戴上耳機，按「開始校正」（會自動開麥克風）。倒數 5、4、3、2、1 之後跟著提示唱。');
   }
 
   async function song() {
@@ -196,11 +210,27 @@ export function createLatencyCheck(options) {
   }
 
   async function start() {
-    if (run || busy || !options.micReady()) return;
-    busy = true; controls(); say('正在準備校正歌…');
+    if (run || busy) return;
+    busy = true; controls();
+    options.beforeStart?.();
+    // the microphone is opened the way 03 and 「從頭開始唱且評分」 open it (same device and capture mode)
+    if (!options.micReady()) {
+      say('正在開麥克風…（第一次會請你允許使用麥克風）');
+      try { await options.startMic?.(); } catch { /* the reason is shown by the microphone panel */ }
+      if (!options.micReady()) {
+        busy = false; controls();
+        const why = options.micMessage?.() || '';
+        say(why ? '沒有開始校正：' + why : '沒有開始校正：麥克風沒有開起來，請再按一次「開始校正」。');
+        return;
+      }
+    }
+    say('正在準備校正歌…');
+    let mine = null;
     try {
-      options.beforeStart?.();
       void warmRmvpe();
+      // the song is rendered before the recorder is armed, so nothing heavy runs while the recorder is live
+      const url = await song();
+      if (!options.micReady()) throw new Error(translateMessage('麥克風已關閉，請再按一次「開始校正」。'));
       const context = options.context(), stream = options.stream();
       const mic = window.__latencyCheckInput?.(context, audio) || options.inputSource?.() || context.createMediaStreamSource(stream);
       const silent = context.createGain(); silent.gain.value = 0;
@@ -208,29 +238,30 @@ export function createLatencyCheck(options) {
       const chunks = [];
       rawRecorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
       const done = new Promise(resolve => { rawRecorder.onstop = resolve; });
-      recorder.onerror = e => { if (run) run.error = e.error; stop(); };
-      run = { context, recorder, rawRecorder, chunks, done, segments: [], segment: null, frame: 0, error: null, silent, mic };
-      audio.src = await song(); audio.currentTime = 0;
       const elapsed = () => recorder.clock.frames(context.currentTime) / context.sampleRate;
-      run.elapsed = elapsed;
+      mine = run = { context, recorder, rawRecorder, chunks, done, segments: [], segment: null, frame: 0, error: null, silent, mic, elapsed };
+      const open = () => { run.segment = { offset: elapsed(), songTime: audio.currentTime, duration: 0 }; run.segments.push(run.segment); };
+      const close = () => { if (run?.segment) { run.segment.duration = Math.max(0, elapsed() - run.segment.offset); run.segment = null; } };
+      run.close = close;
+      // everything stop() needs is in place before the recorder can report an error
+      recorder.onerror = e => { if (run !== mine) return; run.error = e.error; stop(); };
       const follow = () => {
-        if (!run) return;
+        if (run !== mine) return;
         const t = audio.currentTime;
         if (run.segment && Math.abs(run.segment.songTime + elapsed() - run.segment.offset - t) >= .15) close();
         if (!run.segment && !audio.paused && recorder.state === 'recording') open();
         drawNotes(t);
         run.frame = requestAnimationFrame(follow);
       };
-      const open = () => { run.segment = { offset: elapsed(), songTime: audio.currentTime, duration: 0 }; run.segments.push(run.segment); };
-      const close = () => { if (run?.segment) { run.segment.duration = Math.max(0, elapsed() - run.segment.offset); run.segment = null; } };
-      run.close = close;
-      audio.onplaying = () => { if (!run) return; if (recorder.state === 'inactive') recorder.start(); close(); open(); };
+      audio.src = url; audio.currentTime = 0;
+      audio.onplaying = () => { if (run !== mine) return; if (recorder.state === 'inactive') recorder.start(); close(); open(); };
       audio.onended = () => stop();
       busy = false; controls(); say('● 校正中：跟著提示唱《小星星》（唱名或「啦」都可以）。');
       await audio.play();
-      run.frame = requestAnimationFrame(follow);
+      if (run === mine) run.frame = requestAnimationFrame(follow);
     } catch (error) {
-      busy = false; cleanup(); say('沒有開始校正：' + (error.message || error)); controls();
+      if (mine && run !== mine) return;   // already stopped, with its own message
+      busy = false; cleanup(); controls(); say('沒有開始校正：' + (error.message || error));
     }
   }
 
@@ -248,10 +279,11 @@ export function createLatencyCheck(options) {
     cancelAnimationFrame(r.frame); audio.pause(); r.close();
     const finished = audio.currentTime >= SONG_SECONDS - 1.5;
     if (r.recorder.state !== 'inactive') { r.recorder.stop(); await Promise.race([r.done, new Promise(res => setTimeout(res, 6000))]); }
+    else { try { r.recorder.dispose(); } catch { /* already disconnected */ } }   // stopped before it started
     run = null; audio.onplaying = audio.onended = null; drawNotes();
-    if (r.error) { say('收音中斷，請重新校正：' + r.error.message); controls(); return; }
-    if (!r.segments.length || !r.chunks.length) { say('沒有錄到聲音，請確認麥克風後再試一次。'); controls(); return; }
-    if (!finished && audio.currentTime < SONG_START + 8 * BEAT * 2) { say('唱得太短，至少唱完兩句再停止；請重新校正。'); controls(); return; }
+    if (r.error) { controls(); say('收音中斷，請重新校正：' + r.error.message); return; }
+    if (!r.segments.length || !r.chunks.length) { controls(); say('沒有錄到聲音，請確認麥克風後再試一次。'); return; }
+    if (!finished && audio.currentTime < SCORED_FROM + 8 * BEAT * 2) { controls(); say('唱得太短，暖身之後至少再唱兩句才停止；請重新校正。'); return; }
     busy = true; controls(); say('正在分析歌聲（RMVPE）…');
     try {
       r.chunks[0] = r.recorder.voiceHeader();
@@ -266,7 +298,7 @@ export function createLatencyCheck(options) {
       $('lc-result').hidden = false; $('lc-curve').replaceChildren();
       score();
     } catch (error) {
-      busy = false; last = null; $('lc-result').hidden = true; say('分析失敗：' + (error.message || error)); controls();
+      busy = false; last = null; $('lc-result').hidden = true; controls(); say('分析失敗：' + (error.message || error));
     }
   }
 
@@ -334,7 +366,7 @@ export function createLatencyCheck(options) {
   setInterval(() => { const ready = options.micReady(); if (ready !== wasReady) { wasReady = ready; if (!run && !busy) controls(); } }, 500);
   return {
     controls,
-    cancel() { if (run) { cleanup(); drawNotes(); say('校正已停止（播放器開始播放）。'); controls(); } },
+    cancel() { if (run) { cleanup(); drawNotes(); controls(); say('校正已停止（播放器開始播放）。'); } },
     get running() { return !!run || busy; },
     // test and support aid
     summary: () => last && { segments: last.post.segments, voicedSeconds: last.analysis.f0.filter(v => v > 0).length * last.analysis.hop, scan: last.scan && { best: last.scan.best, top: last.scan.top } },

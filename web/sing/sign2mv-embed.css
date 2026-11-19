@@ -74,6 +74,7 @@ html[data-sign2mv] #segment-open:disabled { opacity: .55; }
 .lc-row span.on{color:var(--button-text);background:var(--accent);border-color:var(--accent)}
 .lc-row span.done{opacity:.45}
 .lc-row-next{font-size:15px;opacity:.55}
+.lc-tag{font-size:13px;font-style:normal;font-weight:600;padding:4px 10px;border-radius:999px;border:1px dashed var(--line);color:var(--soft)}
 .lc-row-next span{min-width:44px;padding:4px 4px;border-width:1px}
 .lc-count{font-size:56px;font-weight:800;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
 .lc-score{font-size:15px;color:var(--text);margin:14px 0 8px}
