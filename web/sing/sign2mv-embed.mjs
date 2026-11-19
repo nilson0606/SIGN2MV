@@ -93,7 +93,7 @@ $('local-media-load').addEventListener('click',async e=>{
   const sel=$('local-media-saved');sel.value=vid;
   passThrough=true;try{$('local-media-load').click();}finally{passThrough=false;}
   sel.value=value;
-  $('song-key').value=String(key);$('key-formant').checked=fm;$('song-key').dispatchEvent(new Event('change'));
+  $('song-key').value=String(key);$('key-formant').checked=key?fm:true;$('song-key').dispatchEvent(new Event('change'));   // a new song starts ticked
   for(let i=0;i<100&&!$('player-status').textContent.includes('已載入');i++)await new Promise(r=>setTimeout(r,100));
   $('prepare-status').textContent=keyNote(key,fm);
 },true);

@@ -50,6 +50,9 @@ export function createKaraokeSession(options) {
   let previewUrl = null, previewRequest = null, previewSerial = 0, restartToken = 0, segmented = null;
   let wholeGuide = null, requestedKey=0, requestedFormant=false, requestedLegacy=false, pendingLegacy=false;
   const formantWanted=()=>Number($('song-key').value)!==0&&$('key-formant').checked;
+  // 「人聲保留原唱音色」 shows a key version's own setting; an original-key version has none, so the box goes back
+  // to its default (ticked) and a key picked next starts ticked
+  const showFormant=(shift,formant)=>{$('key-formant').checked=shift?!!formant:true;};
   function pauseGuide(c = wholeGuide) {
     for (const node of c?.nodes || []) { try { node.stop(); } catch {} node.disconnect(); }
     if (c) c.nodes = [];
@@ -383,7 +386,7 @@ export function createKaraokeSession(options) {
     if (!reference || take || ['preparing','finishing','restarting'].includes(phase)) return;
     selectMediaSource(reference.videoId);
     $('clip-seconds').value = String(reference.rangeSeconds);
-    $('song-key').value=String(reference.pitchShift || 0);$('key-formant').checked=!!reference.keyFormant;
+    $('song-key').value=String(reference.pitchShift || 0);showFormant(reference.pitchShift,reference.keyFormant);
     $('vocal-mode').value=reference.vocalMode||'all';$('separation-model').value=reference.separationModel||'demucs';$('pitch-method').value=reference.pitchMethod||'yin';$('separation-method').value=reference.separationMethod||'single';
     prepareSong(true, true);
   });
@@ -392,7 +395,7 @@ export function createKaraokeSession(options) {
     selectMediaSource(reference.videoId);
     $('clip-seconds').value = String(reference.rangeSeconds);
     $('vocal-mode').value = reference.vocalMode || 'all';
-    $('song-key').value=String(reference.pitchShift || 0);$('key-formant').checked=!!reference.keyFormant;
+    $('song-key').value=String(reference.pitchShift || 0);showFormant(reference.pitchShift,reference.keyFormant);
     $('separation-model').value = reference.separationModel || 'demucs';
     $('pitch-method').value = reference.pitchMethod || 'yin';
     $('separation-method').value = reference.separationMethod || 'single';
@@ -449,7 +452,7 @@ export function createKaraokeSession(options) {
           window.dispatchEvent(new CustomEvent('karaoke-library-selected',{detail:{cacheId:song.id,videoId:song.videoId,vocalMode:song.vocalMode}}));
           if (reference?.cacheId === song.id) {
             syncMediaMenu(reference.videoId,reference.pitchShift?`${reference.pitchShift}${reference.keyFormant?'f':''}`:0);
-            $('song-key').value=String(reference.pitchShift || 0);$('key-formant').checked=!!reference.keyFormant;
+            $('song-key').value=String(reference.pitchShift || 0);showFormant(reference.pitchShift,reference.keyFormant);
             $('separation-model').value = reference.separationModel;
             $('vocal-mode').value = reference.vocalMode;
             $('pitch-method').value = reference.pitchMethod;
@@ -461,7 +464,7 @@ export function createKaraokeSession(options) {
           $('separation-model').value = song.separationModel || 'demucs';
           $('pitch-method').value = song.pitchMethod || 'yin';
           $('separation-method').value = song.separationMethod || 'single';
-          $('song-key').value=String(song.pitchShift || 0);$('key-formant').checked=!!song.keyFormant;
+          $('song-key').value=String(song.pitchShift || 0);showFormant(song.pitchShift,song.keyFormant);
           $('clip-seconds').value = String(song.seconds); $('vocal-mode').value = song.vocalMode || 'all';
           pendingLegacy=!!song.keyLegacy;   // an old-method version is loaded as it is, never made again
           prepareSong(false, true);
@@ -604,7 +607,7 @@ export function createKaraokeSession(options) {
         if (reference.separationMethod !== requestedMethod || reference.pitchMethod !== requestedPitch || reference.separationModel !== requestedModel || reference.vocalMode !== requestedVocalMode) throw new Error('本機回傳的分離模式與所選模式不符，請更新頁面與本機工具後重試。');
         if (reference.videoId !== loadedVideo) throw new Error('影片已切換，請重新準備歌曲。');
         updateMaskView(); maskEditor.render();
-        $('song-key').value=String(reference.pitchShift);$('key-formant').checked=reference.keyFormant;
+        $('song-key').value=String(reference.pitchShift);showFormant(reference.pitchShift,reference.keyFormant);
         $('song-key-status').textContent=keyText(reference.pitchShift,reference.keyFormant,reference.keyLegacy)+' · 已隨歌曲版本保存。';
         await keyPlayback.load(reference);if(current!==generation)return;
         phase = 'ready';

@@ -23,7 +23,9 @@
 - Sing page: the 「原唱延後」 field is gone; the original-vocal test comes in the input latency later, so it always
   lines up with the scoring.
 
-- Sing page: 「人聲保留原唱音色」 is ticked when the page opens (a loaded key version still shows its own setting).
+- Sing page: 「人聲保留原唱音色」 is ticked by default: when the page opens, for a new song, and whenever an
+  original-key version is loaded (loading one used to untick it, so the key picked next started unticked); a
+  loaded key version still shows its own setting.
 
 - MV page: 「🔁 只換音軌」 beside the render button. The finished MV gets the audio chosen now in 「選音檔」
   without a render: the picture is copied as it is (`-c:v copy`), the sound is encoded as a render does
