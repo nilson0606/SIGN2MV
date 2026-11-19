@@ -27,6 +27,13 @@ export const SONG_SECONDS = SONG_START + PHRASES.length * 8 * BEAT + 1.2;
 // The first phrase is a warm-up: shown as such, not scored, and left out of 「自動找」. Scoring starts with phrase 2.
 const WARM_UP = 1;
 export const SCORED_FROM = SONG_START + WARM_UP * 8 * BEAT;
+// A real song is scored against the original singer, and a sung note's pitch starts a little after the beat; the
+// calibration tone starts right on it. Measured 2026-11-19 with one method for both (beats from the accompaniment's
+// spectral flux, note starts from RMVPE): a studio vocal (one ballad, 187 note starts) +9 ms from the beat, the
+// calibration tone -32 ms, so 41 ms apart. The reference (what the take is scored and 「自動找」 matched against) is
+// therefore the melody 41 ms later than it is played: the singer still hears the tone on the beat, and the delay
+// found compares like with like, as in a song.
+export const HUMAN_ONSET_LAG = .041;
 
 export function calibrationNotes() {
   const notes = [];
@@ -41,7 +48,7 @@ export function calibrationNotes() {
 export function calibrationReference() {
   const notes = calibrationNotes(), cells = Math.ceil(SONG_SECONDS / STEP), frames = new Array(cells).fill(null);
   for (let i = 0; i < cells; i++) {
-    const t = i * STEP, n = notes.find(x => t >= x.start - 1e-9 && t < x.start + x.duration - .05);
+    const t = i * STEP - HUMAN_ONSET_LAG, n = notes.find(x => t >= x.start - 1e-9 && t < x.start + x.duration - .05);
     if (n) frames[i] = Math.round(hz(n.midi) * 100) / 100;
   }
   return { version: 1, videoId: 'local_' + '0'.repeat(63) + '1', title: translateMessage('延遲校正 · 小星星'), step: STEP, frames: dropWarmUp(frames), masks: [], duration: SONG_SECONDS };
@@ -59,7 +66,8 @@ function dropWarmUp(frames) {
 // The song, rendered here from the notes: count-in clicks, a soft beat, the chord roots and (optionally)
 // the melody to sing along with. Clicks are above the pitch range scored, so a speaker leaking into the
 // microphone does not pass for the singer (headphones are still asked for).
-export async function renderCalibrationSong(guide = true, rate = 44100, melodyOnly = false) {
+// lag: seconds the melody is moved later (only the melody rendered for the reference uses HUMAN_ONSET_LAG)
+export async function renderCalibrationSong(guide = true, rate = 44100, melodyOnly = false, lag = 0) {
   const ctx = new OfflineAudioContext(1, Math.ceil(SONG_SECONDS * rate), rate);
   const out = ctx.createGain(); out.gain.value = .9; out.connect(ctx.destination);
   const tone = (freq, start, duration, level, type = 'sine', attack = .012, release = .08) => {
@@ -82,8 +90,8 @@ export async function renderCalibrationSong(guide = true, rate = 44100, melodyOn
   }));
   }
   if (guide) for (const n of calibrationNotes()) {
-    tone(hz(n.midi), n.start, n.duration - .06, .22);
-    tone(hz(n.midi) * 2, n.start, n.duration - .06, .05);
+    tone(hz(n.midi), n.start + lag, n.duration - .06, .22);
+    tone(hz(n.midi) * 2, n.start + lag, n.duration - .06, .05);
   }
   const buffer = await ctx.startRendering(), data = buffer.getChannelData(0);
   return new Blob([pcmHeader(data.length, 1, rate), pcm16(data, 0, data.length)], { type: 'audio/wav' });
@@ -291,7 +299,7 @@ export function createLatencyCheck(options) {
       const analysis = await analyseRecordingRmvpe(blob, p => say(`正在分析歌聲（RMVPE）… ${p}%`));
       const voiced = analysis.f0.filter(v => v > 0).length * analysis.hop;
       if (voiced < 4) throw new Error(translateMessage('幾乎沒有聽到歌聲，請靠近麥克風、戴耳機再唱一次。'));
-      if (!melody) { say('正在分析校正歌的基準（RMVPE）…'); melody = await analyseRecordingRmvpe(await renderCalibrationSong(true, 16000, true)); }
+      if (!melody) { say('正在分析校正歌的基準（RMVPE）…'); melody = await analyseRecordingRmvpe(await renderCalibrationSong(true, 16000, true, HUMAN_ONSET_LAG)); }
       last = { post: { reference: referenceFrom(melody), scoring: { allowOctave: true, rangeMode: 'full', difficulty: 'standard' }, segments: r.segments }, analysis, melody, scan: null };
       busy = false;
       $('lc-delay').value = String(Number($('offset').value));
