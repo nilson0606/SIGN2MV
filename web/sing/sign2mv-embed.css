@@ -69,14 +69,14 @@ html[data-sign2mv] #segment-open:disabled { opacity: .55; }
 .latency-check .fold-caption output{color:var(--accent);font-variant-numeric:tabular-nums}
 .lc-notes{display:flex;flex-direction:column;gap:10px;min-height:150px;margin:14px 0}
 .lc-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:24px;font-weight:700;color:var(--soft)}
-/* both rows use the same box width, so each note of the next line sits right under the one above */
-.lc-row span{box-sizing:border-box;flex:0 0 74px;width:74px;text-align:center;padding:8px 4px;border-radius:10px;border:2px solid var(--line)}
+/* both rows use the same box size, so each note of the next line sits right under the one above */
+.lc-row span{box-sizing:border-box;flex:0 0 74px;width:74px;height:50px;display:flex;align-items:center;justify-content:center;padding:0 4px;border-radius:10px;border:2px solid var(--line)}
 .lc-row span.next{border-color:var(--accent);color:var(--text)}
 .lc-row span.on{color:var(--button-text);background:var(--accent);border-color:var(--accent)}
 .lc-row span.done{opacity:.45}
 .lc-row-next{font-size:20px;opacity:.55}
 .lc-tag{font-size:13px;font-style:normal;font-weight:600;padding:4px 10px;border-radius:999px;border:1px dashed var(--line);color:var(--soft)}
-.lc-row-next span{padding:5px 4px;border-width:1px}
+.lc-row-next span{border-width:1px}
 .lc-count{font-size:56px;font-weight:800;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
 .lc-score{font-size:15px;color:var(--text);margin:14px 0 8px}
 .lc-score strong{font-size:44px;color:var(--accent);margin:0 6px;font-variant-numeric:tabular-nums}
