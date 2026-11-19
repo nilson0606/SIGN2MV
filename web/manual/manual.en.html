@@ -116,7 +116,7 @@ a { color:var(--accent); }
 <li>At the end (or whenever you want to stop) press <b>Finish and score</b>.</li>
 </ol>
 <p><b>It worked when:</b> the total score and the pitch, timing and completeness scores appear; the take waits under <i>Whole-song recordings · Pending review</i>, where you can listen to it and press <b>Save for post-production</b> if you like it.</p>
-<p class="note">A low score, or a pitch line that is always a little behind the original, usually means the input latency is off (400 ms by default; it differs per computer). Measure it with the latency test on the sing page, or try a few values with <i>Rescore</i> (chapter 6) without singing again.</p>
+<p class="note">A low score, or a pitch line that is always a little behind the original, usually means the input latency is off (400 ms by default; it differs per computer). Find it with <i>04 Latency calibration</i> on the sing page (sing a bit of Twinkle Twinkle Little Star), or try a few values with <i>Rescore</i> (chapter 6) without singing again.</p>
 
 <h3>Step 8: Get a voice model</h3>
 <p>An AI cover needs a voice model, and none comes with the program. Press <b>AI Cover</b> at the top and, under <b>Voice models</b> on the right, either:</p>
@@ -268,7 +268,7 @@ a { color:var(--accent); }
 <ul>
 <li><b>Input mode</b>: <b>Browser capture</b> by default. If enabling the microphone makes the backing audio quieter, choose <b>Native capture</b> (Python on this computer records the microphone; the first time Windows asks to allow Python to use it).</li>
 <li>Press <b>Enable microphone</b> and check that the <i>Input level</i> moves. Wear headphones so the original vocal does not leak from the speakers into the microphone.</li>
-<li><b>Input latency</b> (under <i>Watch the beat, adjust timing</i>): 400 ms by default, meaning your voice arrives 400 ms after the song. It differs per computer and microphone; measure it with the <b>Do Re Mi Fa Sol latency test</b> and press <b>Apply suggested compensation</b>.</li>
+<li><b>Latency calibration</b> (the <i>04 Latency calibration</i> panel, optional): the input latency is 400 ms by default, meaning your voice arrives 400 ms after the song; it differs per computer and microphone. Press <b>Start calibration</b> and, after four count-in beats, sing Twinkle Twinkle Little Star with the cue (about 30 seconds; note names, “la” or the words). Only the <b>rhythm</b> score counts: change the delay and press <b>Score again</b>, or press <b>Find it</b>, then <b>Apply and finish</b>; scoring and recording use that number from then on. The step guide at the top asks you once to calibrate or skip.</li>
 </ul>
 <h3>Sing the whole song and get a score</h3>
 <ol>
@@ -289,7 +289,7 @@ a { color:var(--accent); }
 <li>Octave matching is saved with each recording; for older segment mixes saved without it, the current <i>Octave matching</i> setting is used.</li>
 </ul>
 <h3>Score the original vocal</h3>
-<p><b>🧪 Score the original vocal</b> uses the separated original vocal instead of the microphone and runs exactly the same scoring and recording as your own take. It shows what the song's reference and scoring give the original singer, so a low score can be traced to the reference or to the singing. The original vocal skips the “hear it from the speakers, then sing” delay a singer has, so <b>Delay the original vocal</b> (200 ms by default) brings it in that much later. The take is labelled “original vocal test” and does not change your input latency.</p>
+<p><b>🧪 Score the original vocal</b> uses the separated original vocal instead of the microphone and runs exactly the same scoring and recording as your own take. It shows what the song's reference and scoring give the original singer, so a low score can be traced to the reference or to the singing. The original vocal skips the “hear it from the speakers, then sing” delay a singer has, so it comes in the input latency later, and it is scored the same way as your singing. The take is labelled “original vocal test” and does not change your input latency.</p>
 <h3>Segment recording</h3>
 <ol>
 <li>Press the bright <b>Enable recording mode</b> button. While the song plays, press <b>Split here</b> where you want a boundary (splits can be undone, merged and fine-tuned).</li>

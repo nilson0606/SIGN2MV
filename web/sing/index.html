@@ -17,7 +17,7 @@
   <nav class="section-nav" aria-label="頁面區段導覽">
     <div class="nav-links">
       <a href="#voice-settings">收音設定</a><a href="#local-section">本機工具</a><a href="#library-panel">歌曲庫</a><a href="#player-section">播放／錄音</a><a href="#prepare-section">歌曲準備／Key</a><a href="#score-section">評分／結算</a><a href="#recording-post">錄音後處理</a>
-      <a href="#voice-section">收音測試</a><a href="#timing-section">延遲校正</a><a href="#recording-section">評分與錄音設定</a><a data-language-manual href="manual.html" target="_blank" rel="noopener">說明 ↗</a>
+      <a href="#voice-section">收音測試</a><a href="#latency-check">延遲校正</a><a href="#recording-section">評分與錄音設定</a><a data-language-manual href="manual.html" target="_blank" rel="noopener">說明 ↗</a>
     </div>
     <div class="nav-workflow" aria-label="錄唱下一步">
       <p id="workflow-message" role="status"><strong>1／8 確認收音</strong><span>先選收音方式與麥克風，再開麥試聲。</span></p>
@@ -434,7 +434,7 @@
     <p class="help">重新合成會另存一筆，並保存獨立的原始歌聲與後製資料，可再次編輯或轉 MP3；原錄音保留。配樂／和音需歌曲庫中的同版本音軌。舊成品或單獨匯出的 WAV／MP3 若沒有原始歌聲及時間資料，無法直接分軌後製。選「不保存錄音」時不保留後處理資料。</p>
     <details id="recordings-panel"><summary>整首演唱與已保存成品</summary><p class="help">此清單顯示整首演唱與明確保存的完整成品；分段錄音請在分段區挑選、試聽或刪除。停止錄音後自動保存於歌曲庫下的「錄音」目錄；Chrome 與 Edge 連到同一本機工具即可共用。既有瀏覽器錄音會自動搬存，成功確認後才清除舊副本；未搬存成功仍保留在瀏覽器。直接按 YouTube 播放只評分；要錄音請按「從頭開始唱且評分」。</p><div class="button-row"><button id="recording-refresh" class="secondary" type="button">重新整理／搬存錄音</button><button id="recording-delete-all" class="secondary" type="button">刪除此清單錄音</button></div><audio id="recording-audio" controls hidden></audio><ul id="recording-list" class="library-list"></ul></details>
   </section>
-    <details id="timing-section" tabindex="-1" class="card timing-card section-fold">
+    <details id="timing-section" tabindex="-1" class="card timing-card section-fold" hidden><!-- [SIGN2MV 2026-11-19] 不顯示：收音延遲改由「延遲校正」設定；程式與滑桿（設定值）保留 -->
       <summary><span class="step">04</span> 看節拍，調延遲 <span class="fold-caption">節拍燈 · 收音延遲 · 五音測試</span></summary>
       <div class="fold-body">
       <div class="timing-grid"><div><label for="bpm">手動節拍速度</label><div class="bpm-row"><input id="bpm" type="number" min="40" max="220" step="1" value="90"><span>BPM</span><button id="beat-toggle" class="secondary" type="button">啟動節拍燈</button></div><div id="beats" class="beats" aria-label="四拍節拍燈"><i></i><i></i><i></i><i></i></div><p id="beat-note" class="help">手動節拍燈；基準建立後，若能辨識節奏，改用自動估計拍點。</p></div>
@@ -449,6 +449,24 @@
         <p id="cal-status" class="status" role="status">選用測試，不會錄音或保存聲音，也不會自動改動收音延遲。</p>
       </details>
       <div class="notice muted">藍牙、有線、USB 與電腦內建麥克風請分別測試。換裝置不會改動收音延遲；不同裝置延遲不一樣時，請自己調整或用五音測試。</div>
+      </div>
+    </details>
+    <!-- [SIGN2MV 2026-11-19] 延遲校正：唱內建的《小星星》，只看進拍，調延遲重新評分，滿意就套用成收音延遲（latency-check.mjs） -->
+    <details id="latency-check" tabindex="-1" class="card section-fold latency-check">
+      <summary><span class="step">04</span> 延遲校正 <span class="fold-caption">可略過 · 目前收音延遲 <output id="lc-current">400 ms</output></span></summary>
+      <div class="fold-body">
+        <p class="help">唱歌時，你的聲音進到電腦會比歌晚一點（耳機或喇叭放出來、你聽到再唱、麥克風收進來）。這裡唱一段大家都會的《小星星》，找出這個延遲，以後評分和錄音都用它。請戴耳機，先在「03 即時音高與收音」開好麥克風。</p>
+        <p class="help">按「開始校正」後有四下預備拍，接著跟著提示唱（約 30 秒）。唱名、「啦」或歌詞都可以，男生唱低八度也可以。這裡只看「進拍」分數：改延遲再按「重新評分」，或按「自動找」，滿意就按「套用並結束」。</p>
+        <label class="check-option"><input id="lc-guide" type="checkbox" checked><span>播放提示旋律</span></label>
+        <div id="lc-notes" class="lc-notes" aria-hidden="true"></div>
+        <div class="button-row"><button id="lc-start" type="button">開始校正</button><button id="lc-stop" type="button" class="secondary" disabled>停止</button><button id="lc-skip" type="button" class="secondary">略過</button></div>
+        <p id="lc-status" class="status" role="status"></p>
+        <div id="lc-result" hidden>
+          <p class="lc-score">進拍 <strong id="lc-rhythm">–</strong> <span id="lc-at"></span></p>
+          <div class="input-row lc-delay-row"><label for="lc-delay">延遲</label><input id="lc-delay" type="number" min="-500" max="1000" step="10" value="400"><span>ms</span><button id="lc-rescore" type="button" class="secondary">重新評分</button><button id="lc-auto" type="button" class="secondary">自動找</button></div>
+          <svg id="lc-curve" class="lc-curve" role="img" aria-label="延遲與進拍分數的曲線"></svg>
+          <div class="button-row"><button id="lc-apply" type="button">套用並結束</button></div>
+        </div>
       </div>
     </details>
   <section id="recording-section" tabindex="-1" class="card score-card">

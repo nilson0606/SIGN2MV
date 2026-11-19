@@ -169,21 +169,13 @@ testButton.type='button';testButton.id='sign2mv-original-test';testButton.classN
 testButton.title='用分離出的原唱人聲代替麥克風，跑一次跟你演唱完全相同的評分與錄音流程';
 $('finish-song').after(testButton);
 // The original vocal is placed on the song time directly, so it skips the speaker / hearing part of the
-// latency loop that a singer has (hear the song, sing along); only the microphone part is replaced.
-// It is therefore placed this much later than the song time (default 200 ms, adjustable, remembered).
-const DELAY_KEY='sign2mv.original-test-delay.v1';
-const testDelay=document.createElement('input');
-testDelay.type='number';testDelay.id='sign2mv-original-delay';testDelay.min='0';testDelay.max='1000';testDelay.step='10';testDelay.value='200';
-try{const v=localStorage.getItem(DELAY_KEY);if(v!==null&&Number.isFinite(+v)&&+v>=0&&+v<=1000)testDelay.value=String(+v);}catch{}
-testDelay.addEventListener('change',()=>{const v=Math.max(0,Math.min(1000,Math.round(+testDelay.value||0)));testDelay.value=String(v);try{localStorage.setItem(DELAY_KEY,String(v));}catch{}});
-const testDelayLabel=document.createElement('label');testDelayLabel.className='sign2mv-original-delay';
-testDelayLabel.title='原唱少了「喇叭放出來、聽到再跟唱」那段延遲；這裡讓它晚這麼多才進來，模擬真人';
-testDelayLabel.append('原唱延後',testDelay,'ms');
-testButton.after(testDelayLabel);
+// latency loop that a singer has (hear the song, sing along). [2026-11-19] It comes in exactly the input
+// latency later (the delay a take is scored with), so the test always lines up; the 「原唱延後」 field is gone.
+const originalDelay=()=>Math.max(0,Math.min(1000,Number($('offset').value)||0));
 const testStatus=document.createElement('p');
 testStatus.id='sign2mv-original-test-status';testStatus.className='status';testStatus.setAttribute('role','status');testStatus.hidden=true;
 const testHint=document.createElement('p');testHint.className='sign2mv-original-hint';
-testHint.textContent='原唱延後＝原唱晚多少進來。結算用收音延遲往回扣；改評分延遲後，這首歌接著唱就用新值，換歌或重新整理回到收音延遲的設定（原唱測試那次不改）。';
+testHint.textContent='原唱測試會照收音延遲讓原唱晚進來，跟你唱歌走同一條評分；改評分延遲後，這首歌接著唱就用新值，換歌或重新整理回到收音延遲的設定（原唱測試那次不改）。';
 $('finish-song').parentElement.after(testHint);testHint.after(testStatus);
 function testSay(text){testStatus.textContent=text;testStatus.hidden=!text;}
 // 「重新評分」: score the take just sung again at another delay (no singing again). Uses the RMVPE
@@ -202,7 +194,7 @@ const rescoreTake=document.createElement('select');rescoreTake.id='sign2mv-resco
 const rescoreTakeLabel=document.createElement('label');rescoreTakeLabel.className='sign2mv-rescore-take';
 rescoreTakeLabel.title='剛唱完的這次、這首歌這個 Key 已存的整首錄音（待確認與已存到錄音後處理的都列），或這首歌這個 Key 的 AI 翻唱版本。已存的錄音第一次重新評分要先用 RMVPE 分析幾秒，結果存回那筆錄音；AI 翻唱每次開啟頁面分析一次，不寫進翻唱檔案，評分延遲從 0 開始，版本自己的音高（例如 −12）評分時補回';
 rescoreTakeLabel.append('評分對象',rescoreTake);
-testDelayLabel.after(rescoreTakeLabel);rescoreTakeLabel.after(rescoreButton);rescoreButton.after(rescoreLabel);
+testButton.after(rescoreTakeLabel);rescoreTakeLabel.after(rescoreButton);rescoreButton.after(rescoreLabel);
 const rescoreStatus=document.createElement('p');
 rescoreStatus.id='sign2mv-rescore-status';rescoreStatus.className='status';rescoreStatus.setAttribute('role','status');rescoreStatus.hidden=true;
 testStatus.after(rescoreStatus);
@@ -317,7 +309,7 @@ rescoreButton.addEventListener('click',async()=>{
 rescoreControls();void refreshTakes();
 function workflow(){try{return JSON.parse($('player-section').dataset.workflow||'{}');}catch{return {};}}
 // the button follows 「從頭開始唱且評分」 (same conditions) and is off while a test runs
-function testControls(){testButton.disabled=originalTest.active||$('sing-start').disabled||!workflow().reference;testDelay.disabled=originalTest.active;}
+function testControls(){testButton.disabled=originalTest.active||$('sing-start').disabled||!workflow().reference;}
 new MutationObserver(testControls).observe($('sing-start'),{attributes:true,attributeFilter:['disabled']});
 new MutationObserver(testControls).observe($('player-section'),{attributes:true,attributeFilter:['data-workflow']});
 testControls();
@@ -390,7 +382,7 @@ testButton.addEventListener('click',async()=>{
     // a microphone that is already open is closed first, so 「從頭開始唱且評分」 opens this one
     if(!$('mic-stop').disabled){$('mic-stop').click();if(!await waitFor(()=>$('mic-stop').disabled,5000))throw Error('麥克風沒有關閉，請先按「停止收音」再試。');}
     Object.assign(originalTest,{active:true,cacheId,seen:false,ending:false,began:Date.now(),buffer,mic:null,segment:null,
-      source:null,resyncs:0,captureMode:$('capture-mode').value,delay:Math.max(0,Math.min(1000,+testDelay.value||0))/1000});
+      source:null,resyncs:0,captureMode:$('capture-mode').value,delay:originalDelay()/1000});
     $('capture-mode').value='browser';   // the test input replaces the browser microphone; restored afterwards
     window.sign2mvTestInput=testInput;
     originalTest.timer=setInterval(followRecording,20);

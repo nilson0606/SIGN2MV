@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Sing page: 「04 延遲校正」 (optional) takes the place of 「看節拍，調延遲」, which is no longer shown (its code and
+  the input latency slider stay; the beat lights and the five-note test were never relied on). The singer sings
+  Twinkle Twinkle Little Star (public domain), built into the page: rendered from its notes (count-in, a soft
+  beat, chord roots, an optional melody cue), with a reference made from the same notes, so no song has to be
+  prepared. It is played through a media element and recorded with the take's own microphone, capture and PCM
+  recorder (song time noted when playback starts, as a take does), analysed with RMVPE and marked with the
+  take's own rhythm rule. Only 進拍 counts: change the delay and 「重新評分」, or 「自動找」 (0–900 ms; the middle of
+  the widest run of the best strict rhythm, with the curve drawn), then 「套用並結束」 saves it as the input
+  latency. The step guide has a new step 3 of 9, 延遲校正, with 「略過」; done or skipped is remembered
+  (`sign2mv.latency-check.v1`). `web/sing/latency-check.mjs`. In the browser, the song itself delayed by 260 and
+  380 ms inside the page was found at exactly 260 and 380 ms.
+- Sing page: the 「原唱延後」 field is gone; the original-vocal test comes in the input latency later, so it always
+  lines up with the scoring.
+
 - Sing page: 「人聲保留原唱音色」 is ticked when the page opens (a loaded key version still shows its own setting).
 
 - MV page: 「🔁 只換音軌」 beside the render button. The finished MV gets the audio chosen now in 「選音檔」

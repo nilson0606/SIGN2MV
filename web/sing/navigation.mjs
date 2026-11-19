@@ -69,7 +69,7 @@ function showStep(number,title,message,target,navTarget,actionLabel='',action=nu
   if ($('workflow-message').dataset.content===key) return;
   $('workflow-message').dataset.content=key;
   $('workflow-message').dataset.step=number;
-  const strong=document.createElement('strong');strong.textContent=`下一步 ${number}／8 · ${title}`;
+  const strong=document.createElement('strong');strong.textContent=`下一步 ${number}／9 · ${title}`;
   const span=document.createElement('span');span.textContent=message;
   $('workflow-message').replaceChildren(strong,span);
   const go=$('workflow-go');go.setAttribute('href','#'+target);go.textContent='前往'+title;
@@ -86,15 +86,15 @@ function updateGuide() {
   if (s.busy||s.hasTake||['restarting','finishing'].includes(s.phase)) {
     settingsConfirmed=true;
     const working=s.segmented&&$('segment-stop').disabled;
-    showStep(6,'錄唱',s.phase==='finishing'||working?'正在處理錄音，請等待完成。':'錄唱進行中；完成後停止並保存，再試聽。',s.segmented?(working?'segment-status':'segment-stop'):'finish-song','player-section');return;
+    showStep(7,'錄唱',s.phase==='finishing'||working?'正在處理錄音，請等待完成。':'錄唱進行中；完成後停止並保存，再試聽。',s.segmented?(working?'segment-status':'segment-stop'):'finish-song','player-section');return;
   }
-  if (saved) {showStep(8,'錄音後處理','已存入後處理，可調整效果、輸出音檔或 MV。','recording-post','recording-post');return;}
+  if (saved) {showStep(9,'錄音後處理','已存入後處理，可調整效果、輸出音檔或 MV。','recording-post','recording-post');return;}
   const pending=s.segmented ? !!$('segment-take').value : !$('recording-review').hidden;
   if (pending&&(settingsConfirmed||s.phase==='result')) {
     const heard=listened===reviewKey(s);
     if (heard) {
-      showStep(8,'滿意後保存',s.segmented?'分段需先試合完整一版；滿意後按「存到錄音後處理」。':'滿意後按「存到錄音後處理」；也可以重錄。',s.segmented?'segment-output-panel':'recording-review-save',s.segmented?'player-section':'score-section');
-    } else showStep(7,'試聽',s.segmented?'挑選各段版本並試聽，再試合完整一版。':'先試聽這次錄音，確認是否滿意。',s.segmented?'segment-versions-panel':'recording-review',s.segmented?'player-section':'score-section');
+      showStep(9,'滿意後保存',s.segmented?'分段需先試合完整一版；滿意後按「存到錄音後處理」。':'滿意後按「存到錄音後處理」；也可以重錄。',s.segmented?'segment-output-panel':'recording-review-save',s.segmented?'player-section':'score-section');
+    } else showStep(8,'試聽',s.segmented?'挑選各段版本並試聽，再試合完整一版。':'先試聽這次錄音，確認是否滿意。',s.segmented?'segment-versions-panel':'recording-review',s.segmented?'player-section':'score-section');
     return;
   }
   if (!micChecked && !nativeConfigured) {
@@ -103,18 +103,26 @@ function updateGuide() {
   }
   if (!localReady) {showStep(2,'本機工具','確認本機工具已啟動、歌曲庫可用，再開始選歌。','local-section','local-section');return;}
   if (!micChecked) {showStep(1,'確認收音','本機工具已就緒，現在開麥試聲，確認收音。','mic-start','voice-settings');return;}
-  if (!s.mediaId&&!s.reference) {showStep(3,'選歌','從歌曲庫選歌，或在播放器載入 YouTube／本機 MV。','library-panel','library-panel');return;}
+  // [SIGN2MV 2026-11-19] 延遲校正（可略過）: asked once; done or skipped is remembered (sign2mv.latency-check.v1)
+  let checked=null;try{checked=localStorage.getItem('sign2mv.latency-check.v1');}catch{}
+  if (!checked) {
+    const running=window.sign2mvLatencyCheck?.running;
+    showStep(3,'延遲校正',running?'校正中：跟著提示唱完，看進拍分數、調延遲，滿意就按「套用並結束」。':'可略過：唱一段《小星星》找出你的收音延遲，以後評分和錄音都用它；已經調好就按「略過」。','latency-check','latency-check',running?'':'略過',()=>{try{localStorage.setItem('sign2mv.latency-check.v1','skipped');}catch{}updateGuide();});
+    return;
+  }
+  if (!s.mediaId&&!s.reference) {showStep(4,'選歌','從歌曲庫選歌，或在播放器載入 YouTube／本機 MV。','library-panel','library-panel');return;}
   const formantOff=Number($('song-key').value)!==0&&$('key-formant').checked!==!!s.keyFormant;
   if (!s.prepared || Number($('song-key').value)!==s.pitchShift || formantOff) {
-    showStep(4,'歌曲準備與 Key',s.phase==='preparing'?'正在準備，完成後會繼續下一步。':'確認歌曲 Key；新版本需建立基準，已有版本可直接載入。','prepare-section','prepare-section');return;
+    showStep(5,'歌曲準備與 Key',s.phase==='preparing'?'正在準備，完成後會繼續下一步。':'確認歌曲 Key；新版本需建立基準，已有版本可直接載入。','prepare-section','prepare-section');return;
   }
   if (!settingsConfirmed) {
-    showStep(5,'演唱設定','確認帶唱方式、人聲／伴樂比例；沿用上次設定也可以。',s.segmented?'segment-guide-mode':'sing-guide-mode','player-section','設定已確認',()=>{settingsConfirmed=true;updateGuide();});return;
+    showStep(6,'演唱設定','確認帶唱方式、人聲／伴樂比例；沿用上次設定也可以。',s.segmented?'segment-guide-mode':'sing-guide-mode','player-section','設定已確認',()=>{settingsConfirmed=true;updateGuide();});return;
   }
-  showStep(6,'開始錄唱',s.segmented?'選好段落，按「錄這一段」。循環練唱不會錄音。':'按「從頭開始唱且評分」開始整首錄音；也可切換錄音模式。',s.segmented?'segment-record':'sing-start','player-section');
+  showStep(7,'開始錄唱',s.segmented?'選好段落，按「錄這一段」。循環練唱不會錄音。':'按「從頭開始唱且評分」開始整首錄音；也可切換錄音模式。',s.segmented?'segment-record':'sing-start','player-section');
 }
 function scheduleGuide() {if (!guideFrame) guideFrame=requestAnimationFrame(updateGuide);}
 $('workflow-confirm').addEventListener('click',()=>confirmAction?.());
+window.addEventListener('sign2mv-latency-check',()=>scheduleGuide());   // done or skipped
 for (const id of ['capture-mode','input-device']) $(id).addEventListener('change',()=>{micChecked=false;nativeConfigured=false;scheduleGuide();});
 for (const id of ['sing-guide-mode','segment-guide-mode','recording-manual','recording-voice-level','recording-backing-level','segment-manual','segment-voice-level','segment-backing-level','song-key','key-formant']) $(id).addEventListener('change',()=>{settingsConfirmed=false;saved=false;scheduleGuide();});
 for (const id of ['recording-review-take','segment-take','recording-review-mode','segment-take-mode-selected']) $(id).addEventListener('change',()=>{saved=false;listened='';scheduleGuide();});

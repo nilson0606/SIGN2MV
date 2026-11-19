@@ -6,6 +6,7 @@ import {initMono} from './mono-output.mjs';
 import {initializeLocalMedia,mediaRequest} from './local-media-client.mjs';
 import { youtubeId, noteOf, detectPitch, playerResponse, alignedTime } from './audio.mjs';
 import { createCalibration } from './calibration.mjs';
+import { createLatencyCheck } from './latency-check.mjs';   // [SIGN2MV 2026-11-19] 延遲校正
 import { createKaraokeSession } from './session.mjs';
 import {initRecordingDiagnostics} from './recording-diagnostics.mjs';
 initRecordingDiagnostics();
@@ -48,7 +49,7 @@ function tracePlayback(stage, extra={}) {
 }
 
 let player, playerReady, playerAttempt, apiPromise, stream, context, analyser, samples, micTimer;
-let calibration, micStartPromise, micPitch = null, nativeCapture = null, micAbort = null;
+let calibration, latencyCheck, micStartPromise, micPitch = null, nativeCapture = null, micAbort = null;
 try{if(localStorage.getItem('karaoke.capture-mode.v1')==='native')$('capture-mode').value='native';}catch{}
 let generation = 0, history = [], beatTimer, beatStart, probeController;
 const supported = window.isSecureContext && !!navigator.mediaDevices?.getUserMedia;
@@ -208,7 +209,7 @@ function initializePlayer(id) {
           if (!attempt.active) return;
           tracePlayback('youtube-state',{state:e.data});
           status(({ '-1': '尚未開始', 0: '影片結束', 1: '播放中', 2: '暫停', 3: '緩衝中', 5: '已就緒' }[e.data] || '播放器狀態變更'));
-          if (e.data === 1) calibration?.cancel(); singing.playerState(e.data);
+          if (e.data === 1) { calibration?.cancel(); latencyCheck?.cancel(); } singing.playerState(e.data);
         },
         onAutoplayBlocked: () => { if (attempt.active) status('請直接點影片上的播放按鈕。'); },
         onError: e => {
@@ -253,7 +254,7 @@ async function loadVideo(e) {
       const audioOnly=media.kind==='audio';selectMediaSource(id,document,media.kind);
       const video=$(audioOnly?'local-audio':'local-video');video.hidden=false;video.dataset.title=media.title;$('player').hidden=true;
       $('local-audio-panel').hidden=!audioOnly;$('local-audio-title').textContent=media.title;
-      player=localVideoPlayer(video,id,state=>{if(state===1)calibration?.cancel();singing.playerState(state);},status);
+      player=localVideoPlayer(video,id,state=>{if(state===1){calibration?.cancel();latencyCheck?.cancel();}singing.playerState(state);},status);
       await new Promise((resolve,reject)=>{
         const cleanup=()=>{clearTimeout(timer);video.removeEventListener('loadedmetadata',ready);video.removeEventListener('error',fail);};
         const ready=()=>{cleanup();resolve();},fail=()=>{cleanup();reject(Error('本機媒體載入失敗，請重新載入。'));};
@@ -341,7 +342,7 @@ $('probe').addEventListener('click', async () => {
 function latency(x) { return Number.isFinite(x) ? `${Math.round(x * 1000)} ms（估計）` : '未提供，不能當作 0 ms'; }
 $('offset').addEventListener('input', () => { showOffset(); saveOffset(); });
 async function stopMic(message = '收音已停止，麥克風已釋放；錄音結果請查看下方錄音狀態。', rewind = false, captureError = null) {
-  generation++; clearInterval(micTimer); calibration?.cancel(); voiceOutput.stop();
+  generation++; clearInterval(micTimer); calibration?.cancel(); latencyCheck?.cancel(); voiceOutput.stop();
   const recordingEnd = singing.stopRecording(captureError);
   micAbort?.abort(); micAbort=null; nativeCapture?.stop(); nativeCapture=null;
   const oldStream = stream, oldContext = context;
@@ -497,7 +498,7 @@ function hiddenCheck() {
 document.addEventListener('visibilitychange', () => {
   clearTimeout(hiddenTimer); hiddenTimer = 0;
   if (!document.hidden) return;
-  probeController?.abort(); stopBeats(); calibration?.cancel();
+  probeController?.abort(); stopBeats(); calibration?.cancel(); latencyCheck?.cancel();
   hiddenTimer = setTimeout(hiddenCheck, 60000);
 });
 window.addEventListener('pagehide', cleanup);
@@ -555,6 +556,11 @@ initMono(document.getElementById('guide-mono'),document.getElementById('guide-ea
 const singing = createKaraokeSession({ voiced: () => micPitch !== null, context: () => context, stream: () => stream, inputSource: () => nativeCapture?.source, player: () => player, micReady: () => !!stream && context?.state === 'running', stopMic: message => stopMic(message), startMic, stopBeats, loadVideo: () => loadVideo(), cancelCalibration: () => calibration?.cancel() });
 
 calibration = createCalibration({ context: () => context, micReady: () => !!stream && context?.state === 'running', beforeStart: () => singing.pauseForCalibration() });
+// [SIGN2MV 2026-11-19] 延遲校正: the same microphone, capture and recorder as a take; 「套用」 saves the input latency
+latencyCheck = createLatencyCheck({ context: () => context, stream: () => stream, inputSource: () => nativeCapture?.source,
+  micReady: () => !!stream && context?.state === 'running', beforeStart: () => singing.pauseForCalibration(),
+  apply: ms => { $('offset').value = String(ms); $('offset').dispatchEvent(new Event('input')); } });
+window.sign2mvLatencyCheck = latencyCheck;
 
 window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
 

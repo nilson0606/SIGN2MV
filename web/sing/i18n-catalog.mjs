@@ -1609,7 +1609,34 @@ export const messages = {
   "麥克風沒有關閉，請先按「停止收音」再試。": "The microphone did not close; click “Stop input” and try again.",
   "原唱測試進行中：用原唱人聲代替麥克風，從頭唱完整首（跟你演唱時一樣，約一首歌的時間）。可按「結束並結算」提早結束。": "Original vocal test running: the original vocal stands in for the microphone for the whole song (as long as the song, just like when you sing). Click “Finish and score” to stop early.",
   "原唱測試沒有完成，下次按「從頭開始唱且評分」會使用你的麥克風。": "The original vocal test did not finish; the next “Sing from the start and score” uses your microphone.",
-  "本段已錄完，收音已關閉；按「錄這一段」會自動重新開啟。": "This segment is recorded and the input is closed; Record this segment opens it again."
+  "本段已錄完，收音已關閉；按「錄這一段」會自動重新開啟。": "This segment is recorded and the input is closed; Record this segment opens it again.",
+  // [SIGN2MV 2026-11-19] 延遲校正
+  "可略過 · 目前收音延遲": "Optional · input latency now",
+  "唱歌時，你的聲音進到電腦會比歌晚一點（耳機或喇叭放出來、你聽到再唱、麥克風收進來）。這裡唱一段大家都會的《小星星》，找出這個延遲，以後評分和錄音都用它。請戴耳機，先在「03 即時音高與收音」開好麥克風。": "When you sing, your voice reaches the computer a little after the song (the headphones or speakers play it, you hear it and sing, the microphone picks you up). Sing a bit of Twinkle Twinkle Little Star here to find that delay; scoring and recording use it from then on. Wear headphones and open the microphone in “03 Live pitch and input” first.",
+  "按「開始校正」後有四下預備拍，接著跟著提示唱（約 30 秒）。唱名、「啦」或歌詞都可以，男生唱低八度也可以。這裡只看「進拍」分數：改延遲再按「重新評分」，或按「自動找」，滿意就按「套用並結束」。": "After “Start calibration” there are four count-in beats, then sing along with the cue (about 30 seconds). Note names, “la” or the words are all fine, and men may sing an octave lower. Only the rhythm score counts here: change the delay and press “Score again”, or press “Find it”; when you are happy, press “Apply and finish”.",
+  "播放提示旋律": "Play the melody cue",
+  "開始校正": "Start calibration",
+  "停止": "Stop",
+  "略過": "Skip",
+  "進拍": "Rhythm",
+  "延遲": "Delay",
+  "自動找": "Find it",
+  "套用並結束": "Apply and finish",
+  "延遲與進拍分數的曲線": "Rhythm score against delay",
+  "戴上耳機，按「開始校正」。四下預備拍之後跟著提示唱。": "Put on headphones and press “Start calibration”. Sing along with the cue after four count-in beats.",
+  "先在「03 即時音高與收音」開好麥克風，再開始校正。": "Open the microphone in “03 Live pitch and input” first, then start the calibration.",
+  "正在準備校正歌…": "Preparing the calibration song…",
+  "● 校正中：跟著提示唱《小星星》（唱名或「啦」都可以）。": "● Calibrating: sing Twinkle Twinkle Little Star with the cue (note names or “la” are fine).",
+  "沒有錄到聲音，請確認麥克風後再試一次。": "Nothing was recorded. Check the microphone and try again.",
+  "唱得太短，至少唱完兩句再停止；請重新校正。": "Too short: sing at least two lines before stopping. Please calibrate again.",
+  "正在分析歌聲（RMVPE）…": "Analysing the voice (RMVPE)…",
+  "幾乎沒有聽到歌聲，請靠近麥克風、戴耳機再唱一次。": "Hardly any singing was heard. Move closer to the microphone, wear headphones and sing again.",
+  "校正已停止（播放器開始播放）。": "Calibration stopped (the player started playing).",
+  "預備": "Ready",
+  "延遲校正 · 小星星": "Latency calibration · Twinkle Twinkle Little Star",
+  "校正中：跟著提示唱完，看進拍分數、調延遲，滿意就按「套用並結束」。": "Calibrating: sing to the end, look at the rhythm score, adjust the delay and press “Apply and finish” when you are happy.",
+  "可略過：唱一段《小星星》找出你的收音延遲，以後評分和錄音都用它；已經調好就按「略過」。": "Optional: sing a bit of Twinkle Twinkle Little Star to find your input latency, used for scoring and recording from then on; if it is already right, press “Skip”.",
+  "原唱測試會照收音延遲讓原唱晚進來，跟你唱歌走同一條評分；改評分延遲後，這首歌接著唱就用新值，換歌或重新整理回到收音延遲的設定（原唱測試那次不改）。": "The original-vocal test lets the original vocal come in the input latency later, so it is scored the same way as your singing; after changing the scoring delay, the next takes of this song use the new value, and another song or a reload goes back to the input latency setting (not changed by an original-vocal test).",
 };
 
 export const templates = [
@@ -1764,8 +1791,8 @@ export const templates = [
     ]
   ],
   [
-    "下一步 {0}／8 · {1}",
-    "Next {0}/8 · {1}",
+    "下一步 {0}／9 · {1}",
+    "Next {0}/9 · {1}",
     [
       0,
       1
@@ -3523,4 +3550,12 @@ export const templates = [
   ["未開始演唱：麥克風在「{0}」時關閉了（例如視窗被蓋住或縮小）。請再按一次「從頭開始唱且評分」，會重新開啟麥克風。", "Not started: the microphone closed while {0} (for example the window was covered or minimised). Press Sing from the start and score again; it opens the microphone again.", [0]],
   ["開始唱停在「{0}」超過 {1} 秒，已取消。請再按一次「從頭開始唱且評分」。", "The start was stuck {0} for more than {1} s, so it was cancelled. Press Sing from the start and score again.", [0]],
   ["結算時發生錯誤：{0}。錄音已保留，可直接按「從頭開始唱且評分」重新開始。", "Scoring failed: {0}. The recording is kept; press Sing from the start and score to start again.", [0]],
+  ["沒有開始校正：{0}", "Calibration not started: {0}", [0]],
+  ["收音中斷，請重新校正：{0}", "The input was interrupted; please calibrate again: {0}", [0]],
+  ["正在分析歌聲（RMVPE）… {0}%", "Analysing the voice (RMVPE)… {0}%", []],
+  ["分析失敗：{0}", "Analysis failed: {0}", [0]],
+  ["（延遲 {0} ms）", "(delay {0} ms)", []],
+  ["延遲 {0} ms 的進拍是 {1} 分。可以改延遲再按「重新評分」，或按「自動找」；滿意就按「套用並結束」。", "Rhythm at {0} ms: {1}. Change the delay and press “Score again”, or press “Find it”; when you are happy, press “Apply and finish”.", []],
+  ["自動找到 {0} ms（進拍最高的那段的中間）。滿意就按「套用並結束」。", "Found {0} ms (the middle of the best rhythm). Press “Apply and finish” if you are happy with it.", []],
+  ["已套用：收音延遲 {0} ms，以後唱歌都用這個數字。要重新校正隨時可以再來。", "Applied: input latency {0} ms, used for every take from now on. You can calibrate again any time.", []],
 ];

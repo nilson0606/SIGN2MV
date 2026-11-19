@@ -63,3 +63,25 @@ html[data-sign2mv] #segment-open:disabled { opacity: .55; }
 .sign2mv-rescore-take { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: .9em; min-width: 0; }
 .sign2mv-rescore-take select { flex: 1; min-width: 0; }
 .sign2mv-original-hint { margin: 6px 0 0; font-size: 11px; line-height: 1.6; color: var(--soft); }
+
+/* [SIGN2MV 2026-11-19] 延遲校正 */
+.latency-check{grid-column:1/-1}
+.latency-check .fold-caption output{color:var(--accent);font-variant-numeric:tabular-nums}
+.lc-notes{display:flex;gap:10px;flex-wrap:wrap;align-items:center;min-height:64px;margin:14px 0;font-size:24px;font-weight:700;color:var(--soft)}
+.lc-notes span{min-width:58px;text-align:center;padding:8px 6px;border-radius:10px;border:1px solid var(--line)}
+.lc-notes span.on{color:var(--button-text);background:var(--accent);border-color:var(--accent)}
+.lc-notes span.done{opacity:.45}
+.lc-notes[data-count]{font-size:30px;color:var(--accent)}
+.lc-score{font-size:15px;color:var(--text);margin:14px 0 8px}
+.lc-score strong{font-size:44px;color:var(--accent);margin:0 6px;font-variant-numeric:tabular-nums}
+.lc-delay-row{align-items:center;max-width:620px}
+.lc-delay-row label{margin:0;white-space:nowrap}
+.lc-delay-row input{width:110px;flex:0 0 110px}
+.lc-delay-row span{font-size:12px;color:var(--soft)}
+.lc-curve{width:100%;max-width:640px;height:auto;display:block;margin:12px 0}
+.lc-curve:empty{display:none}
+.lc-curve .lc-line{fill:none;stroke:var(--accent);stroke-width:2}
+.lc-curve .lc-axis{stroke:var(--line);stroke-width:1}
+.lc-curve .lc-best{stroke:var(--warm,#f0b35a);stroke-width:1.5;stroke-dasharray:4 3}
+.lc-curve .lc-at{fill:var(--text)}
+.lc-curve .lc-tick{fill:var(--soft);font-size:10px;text-anchor:middle}
