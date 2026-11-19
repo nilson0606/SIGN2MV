@@ -119,37 +119,24 @@ export function cellsFromF0(analysis, seconds = SONG_SECONDS) {
 export function referenceFrom(analysis) {
   return { ...calibrationReference(), frames: dropWarmUp(cellsFromF0(analysis)) };
 }
-// Rhythm at a delay (what the singer sees), and the scan behind 「自動找」. The rhythm rule works on 100 ms cells, so
-// its best run can sit up to about 30 ms off; the delay is therefore found on the RMVPE frames themselves (10 ms):
-// at each delay, the share of sung frames that are on the note the melody has at that song time (octave folded,
-// within a semitone). Note changes decide it; the best delay is the middle of the run of the highest share.
+// Rhythm at a delay: what the singer sees, and what 「自動找」 scans
 export function rhythmAt(post, analysis, ms, difficulty = 'standard') {
   return rescoreRecordingRmvpe({ ...post, scoring: { ...post.scoring, difficulty } }, analysis, ms).rhythm;
 }
-export function frameMatch(post, analysis, ms, melody) {
-  let on = 0, all = 0;
-  const segs = post.segments, ref = melody.f0, hop = melody.hop;
-  for (let k = 0; k < analysis.f0.length; k++) {
-    const f = analysis.f0[k]; if (!(f > 0)) continue;
-    const r = k * analysis.hop;
-    const seg = segs.find((g, i) => r >= g.offset && (i === segs.length - 1 || r < g.offset + g.duration)); if (!seg) continue;
-    const t = seg.songTime + (r - seg.offset) - ms / 1000, want = ref[Math.round(t / hop)];
-    if (t < SCORED_FROM - BEAT / 2 || !(want > 0)) continue;   // the warm-up does not count
-    let c = 1200 * Math.log2(f / want) % 1200; if (c > 600) c -= 1200; if (c < -600) c += 1200;
-    all++; if (Math.abs(c) < 100) on++;
-  }
-  return all ? on / all : 0;
-}
-export function scanDelays(post, analysis, melody, from = 0, to = 900, step = 10) {
+// 「自動找」 (run by itself when a calibration has been analysed): the rhythm score every 10 ms over 100-500 ms,
+// and the middle of the widest stretch at the top score (the user's choice, 2026-11-20: rhythm full marks span about
+// 100 ms either side, so the middle of that plateau is where the note starts sit best inside it)
+export const SCAN_FROM = 100, SCAN_TO = 500, SCAN_STEP = 10;
+export function scanDelays(post, analysis, from = SCAN_FROM, to = SCAN_TO, step = SCAN_STEP) {
   const rows = [];
-  for (let ms = from; ms <= to; ms += step) rows.push({ ms, rhythm: rhythmAt(post, analysis, ms), match: frameMatch(post, analysis, ms, melody) });
-  const top = Math.max(...rows.map(r => r.match));
+  for (let ms = from; ms <= to; ms += step) rows.push({ ms, rhythm: rhythmAt(post, analysis, ms) });
+  const top = Math.max(...rows.map(r => r.rhythm));
   let best = null, run = null;
   for (const r of rows) {
-    if (r.match >= top - 1e-9) { run ||= { from: r.ms, to: r.ms }; run.to = r.ms; }
-    if (run && (r.match < top - 1e-9 || r === rows.at(-1))) { if (!best || run.to - run.from > best.to - best.from) best = run; run = null; }
+    if (r.rhythm >= top) { run ||= { from: r.ms, to: r.ms }; run.to = r.ms; }
+    if (run && (r.rhythm < top || r === rows.at(-1))) { if (!best || run.to - run.from > best.to - best.from) best = run; run = null; }
   }
-  return { rows, best: Math.round((best.from + best.to) / 2 / step) * step, top: Math.round(top * 100) };
+  return { rows, best: Math.round((best.from + best.to) / 2 / step) * step, top, from: best.from, to: best.to };
 }
 
 export function createLatencyCheck(options) {
@@ -301,10 +288,11 @@ export function createLatencyCheck(options) {
       if (voiced < 4) throw new Error(translateMessage('幾乎沒有聽到歌聲，請靠近麥克風、戴耳機再唱一次。'));
       if (!melody) { say('正在分析校正歌的基準（RMVPE）…'); melody = await analyseRecordingRmvpe(await renderCalibrationSong(true, 16000, true, HUMAN_ONSET_LAG)); }
       last = { post: { reference: referenceFrom(melody), scoring: { allowOctave: true, rangeMode: 'full', difficulty: 'standard' }, segments: r.segments }, analysis, melody, scan: null };
+      say('正在自動找延遲…');
+      await new Promise(resolve => setTimeout(resolve, 30));   // let the status show before the scan
       busy = false;
-      $('lc-delay').value = String(Number($('offset').value));
-      $('lc-result').hidden = false; $('lc-curve').replaceChildren();
-      score();
+      $('lc-result').hidden = false;
+      auto();
     } catch (error) {
       busy = false; last = null; $('lc-result').hidden = true; controls(); say('分析失敗：' + (error.message || error));
     }
@@ -324,10 +312,12 @@ export function createLatencyCheck(options) {
 
   function auto() {
     if (!last) return;
-    last.scan = scanDelays(last.post, last.analysis, last.melody);
-    $('lc-delay').value = String(last.scan.best);
+    last.scan = scanDelays(last.post, last.analysis);
+    const { best, top, from, to } = last.scan;
+    $('lc-delay').value = String(best);
     score();
-    say(`自動找到 ${last.scan.best} ms（音和拍對得最準的延遲）。滿意就按「套用並結束」。`);
+    if (best <= SCAN_FROM || best >= SCAN_TO || from <= SCAN_FROM || to >= SCAN_TO) say(`自動找到 ${best} ms，但最高分碰到掃描範圍（${SCAN_FROM}～${SCAN_TO} ms）的邊，真正的延遲可能在範圍外；請自己改延遲按「重新評分」比較。`);
+    else say(`自動找到 ${best} ms：進拍最高 ${top} 分的範圍是 ${from}～${to} ms，取正中間。滿意就按「套用並結束」。`);
   }
 
   function drawCurve(at) {
@@ -336,7 +326,7 @@ export function createLatencyCheck(options) {
     const svg = $('lc-curve'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     const line = el('polyline', { points: rows.map(r => `${x(r.ms).toFixed(1)},${y(r.rhythm).toFixed(1)}`).join(' '), class: 'lc-line' });
     const parts = [el('line', { x1: 30, y1: y(0), x2: W - 10, y2: y(0), class: 'lc-axis' }), line];
-    for (const ms of [0, 200, 400, 600, 800]) if (ms >= rows[0].ms && ms <= rows.at(-1).ms) {
+    for (const ms of [100, 200, 300, 400, 500]) if (ms >= rows[0].ms && ms <= rows.at(-1).ms) {
       const t = el('text', { x: x(ms), y: H - 3, class: 'lc-tick' }); t.textContent = `${ms}`; parts.push(t);
     }
     parts.push(el('line', { x1: x(best), y1: 6, x2: x(best), y2: y(0), class: 'lc-best' }));

@@ -1613,7 +1613,7 @@ export const messages = {
   // [SIGN2MV 2026-11-19] 延遲校正
   "可略過 · 目前收音延遲": "Optional · input latency now",
   "唱歌時，你的聲音進到電腦會比歌晚一點（耳機或喇叭放出來、你聽到再唱、麥克風收進來）。這裡唱一段大家都會的《小星星》，找出這個延遲，以後評分和錄音都用它。請戴耳機；麥克風還沒開的話，按「開始校正」會自動打開（用「03 即時音高與收音」選的麥克風）。": "When you sing, your voice reaches the computer a little after the song (the headphones or speakers play it, you hear it and sing, the microphone picks you up). Sing a bit of Twinkle Twinkle Little Star here to find that delay; scoring and recording use it from then on. Wear headphones; if the microphone is not open yet, “Start calibration” opens it (the microphone chosen in “03 Live pitch and input”).",
-  "按「開始校正」後會倒數 5、4、3、2、1，接著跟著提示唱（約 30 秒）。第一句是暖身，不計分。唱名、「啦」或歌詞都可以，男生唱低八度也可以。這裡只看「進拍」分數：改延遲再按「重新評分」，或按「自動找」，滿意就按「套用並結束」。": "After “Start calibration” there is a 5-4-3-2-1 countdown, then sing along with the cue (about 30 seconds). The first line is a warm-up and is not scored. Note names, “la” or the words are all fine, and men may sing an octave lower. Only the rhythm score counts here: change the delay and press “Score again”, or press “Find it”; when you are happy, press “Apply and finish”.",
+  "按「開始校正」後會倒數 5、4、3、2、1，接著跟著提示唱（約 30 秒）。第一句是暖身，不計分。唱名、「啦」或歌詞都可以，男生唱低八度也可以。這裡只看「進拍」分數：唱完會自動找延遲（100～500 ms，每 10 ms 一格，取進拍最高分那段的正中間），也可以改延遲再按「重新評分」比較；滿意就按「套用並結束」。": "After “Start calibration” there is a 5-4-3-2-1 countdown, then sing along with the cue (about 30 seconds). The first line is a warm-up and is not scored. Note names, “la” or the words are all fine, and men may sing an octave lower. Only the rhythm score counts here: the latency is found by itself when you finish (100–500 ms in 10 ms steps, the middle of the stretch with the top rhythm score); you can still change the delay and press “Score again” to compare. When you are happy, press “Apply and finish”.",
   "播放提示旋律": "Play the melody cue",
   "開始校正": "Start calibration",
   "停止": "Stop",
@@ -1628,6 +1628,7 @@ export const messages = {
   "正在開麥克風…（第一次會請你允許使用麥克風）": "Opening the microphone… (the first time, you will be asked to allow it)",
   "沒有開始校正：麥克風沒有開起來，請再按一次「開始校正」。": "Calibration not started: the microphone did not open. Press “Start calibration” again.",
   "暖身 · 不計分": "Warm-up · not scored",
+  "正在自動找延遲…": "Finding the latency…",
   "麥克風已關閉，請再按一次「開始校正」。": "The microphone was closed. Press “Start calibration” again.",
   "正在準備校正歌…": "Preparing the calibration song…",
   "● 校正中：跟著提示唱《小星星》（唱名或「啦」都可以）。": "● Calibrating: sing Twinkle Twinkle Little Star with the cue (note names or “la” are fine).",
@@ -3561,6 +3562,7 @@ export const templates = [
   ["分析失敗：{0}", "Analysis failed: {0}", [0]],
   ["（延遲 {0} ms）", "(delay {0} ms)", []],
   ["延遲 {0} ms 的進拍是 {1} 分。可以改延遲再按「重新評分」，或按「自動找」；滿意就按「套用並結束」。", "Rhythm at {0} ms: {1}. Change the delay and press “Score again”, or press “Find it”; when you are happy, press “Apply and finish”.", []],
-  ["自動找到 {0} ms（音和拍對得最準的延遲）。滿意就按「套用並結束」。", "Found {0} ms (where the notes line up best). Press “Apply and finish” if you are happy with it.", []],
+  ["自動找到 {0} ms：進拍最高 {1} 分的範圍是 {2}～{3} ms，取正中間。滿意就按「套用並結束」。", "Found {0} ms: the top rhythm score, {1}, spans {2}–{3} ms and this is its middle. Press “Apply and finish” if you are happy with it.", []],
+  ["自動找到 {0} ms，但最高分碰到掃描範圍（{1}～{2} ms）的邊，真正的延遲可能在範圍外；請自己改延遲按「重新評分」比較。", "Found {0} ms, but the top score touches the edge of the range searched ({1}–{2} ms), so the real latency may lie outside it; change the delay yourself and press “Score again” to compare.", []],
   ["已套用：收音延遲 {0} ms，以後唱歌都用這個數字。要重新校正隨時可以再來。", "Applied: input latency {0} ms, used for every take from now on. You can calibrate again any time.", []],
 ];

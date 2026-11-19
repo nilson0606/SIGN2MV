@@ -17,7 +17,9 @@
   the original singer, whose note starts (RMVPE) sit 41 ms later against the beat than the calibration tone's (one
   studio ballad, 187 note starts, beats from the accompaniment's spectral flux, measured on the user's PC); the
   singer hears the tone on the beat as before. The calibration panel and its tab in the nav are bright green (the input
-  latency is a key setting; the cards' edge is already gold). The first line is a warm-up, marked 「暖身 · 不計分」: the reference is empty up to the first note of line
+  latency is a key setting; the cards' edge is already gold). 「自動找」 runs by itself once a calibration is analysed: the
+  rhythm score every 10 ms from 100 to 500 ms, and the middle of the stretch with the top score (a note when the top
+  touches the edge of the range). The first line is a warm-up, marked 「暖身 · 不計分」: the reference is empty up to the first note of line
   2, and 「自動找」 leaves it out. 「開始校正」 opens a closed microphone itself, the way 「從頭開始唱且評分」 does (the
   device and capture mode chosen in 03); if it cannot, the reason is shown in the calibration panel.
   The step guide has a new step 3 of 9, 延遲校正, with 「略過」; done or skipped is remembered
