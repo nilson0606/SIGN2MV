@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2026.11.20
+
 - Sing page, recording post-production: **vocal fade out / in** ranges under Region volume. 「淡出至 0」 takes the
   singer's vocal down to 0 over its range and keeps it at 0 until the next 「從 0 淡入」, which brings it back; any number
   of ranges, no overlap, they alternate (a first fade-in starts the song at 0). Equal-power curve; only the vocal, before
