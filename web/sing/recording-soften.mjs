@@ -23,6 +23,7 @@ export function recordingEffectsSuffix(meta) {
   if(meta.mode==='mix'&&Number.isFinite(volume.backing)&&volume.backing!==100)parts.push(`配樂${volume.backing}%`);
   const regions=Array.isArray(effects.regions)?effects.regions.filter(r=>Number.isFinite(r.volume)&&r.volume!==100):[];
   if(regions.length)parts.push(`局部音量${regions.length}段`);
+  if(Array.isArray(effects.fades)&&effects.fades.length)parts.push(`淡出淡入${effects.fades.length}段`);
   const eq=[['low','低'],['mid','中'],['high','高']].filter(([key])=>changed(effects.eq?.[key])).map(([key,label])=>label+signed(effects.eq[key])).join('');
   if(eq)parts.push('EQ'+eq);
   const compression={light:'輕度',medium:'中度'}[effects.compression];
@@ -62,6 +63,18 @@ export function vocalEffects(value={},duration=3600) {
     if(regions[i].end<=regions[i].start)throw new Error('局部音量的結束時間必須晚於開始時間。');
     if(i&&regions[i].start<regions[i-1].end)throw new Error('局部音量區段不可重疊，請調整開始／結束時間。');
   }
+  // [SIGN2MV 2026-11-20] vocal fades: a fade-out takes the singer to 0 and keeps it there until the next fade-in;
+  // a fade-in brings it back from 0. Any number of them; they alternate (a first fade-in starts the song at 0).
+  if(!Array.isArray(value.fades??[])||(value.fades?.length??0)>1000)throw Error('人聲淡出／淡入的區間太多。');
+  const fades=(value.fades??[]).map(f=>{
+    if(!['out','in'].includes(f.type))throw Error('人聲淡出／淡入的類型無效。');
+    return {start:number(f.start,NaN,0,duration,'淡出／淡入開始秒數'),end:number(f.end,NaN,0,duration,'淡出／淡入結束秒數'),type:f.type};
+  }).sort((a,b)=>a.start-b.start);
+  for(let i=0;i<fades.length;i++){
+    if(fades[i].end<=fades[i].start)throw Error('人聲淡出／淡入的結束時間必須晚於開始時間。');
+    if(i&&fades[i].start<fades[i-1].end)throw Error('人聲淡出／淡入的區間不可重疊，請調整開始／結束時間。');
+    if(i&&fades[i].type===fades[i-1].type)throw Error(fades[i].type==='out'?'人聲已經淡出到 0，下一個區間要用「從 0 淡入」。':'人聲已經淡入，下一個區間要用「淡出至 0」。');
+  }
   const profile=reverbProfile(value.reverbOptions);
   const custom=profile.space!=='classic'||profile.decay!==.8||profile.preDelayMs!==15;
   const tone={brightness:number(value.reverbTone?.brightness,0,-100,100,'殘響明亮度'),width:number(value.reverbTone?.width,100,0,100,'殘響寬度（%）')};
@@ -70,7 +83,20 @@ export function vocalEffects(value={},duration=3600) {
   if(!Array.isArray(value.effectRegions??[])||(value.effectRegions?.length??0)>20)throw Error('局部效果最多 20 個區段。');
   const effectRegions=(value.effectRegions??[]).map(r=>({start:number(r.start,NaN,0,duration,'效果開始秒數'),end:number(r.end,NaN,0,duration,'效果結束秒數'),reverb:number(r.reverb,reverb,0,100,'區段殘響（%）'),echo:number(r.echo,echo.amount,0,100,'區段回聲（%）'),decay:number(r.decay,profile.decay,.2,10,'區段尾音（秒）')})).sort((a,b)=>a.start-b.start);
   for(let i=0;i<effectRegions.length;i++)if(effectRegions[i].end<=effectRegions[i].start||(i&&effectRegions[i].start<effectRegions[i-1].end))throw Error('局部效果結束需晚於開始，且區段不可重疊。');
-  return {version:1,eq,compression,reverb,regions,...savedRepairSettings(value),...(custom?{reverbOptions:profile}:{}),...(tone.brightness||tone.width!==100?{reverbTone:tone}:{}),...(value.echo||effectRegions.some(r=>r.echo)?{echo}:{}),...(effectRegions.length?{effectRegions}:{})};
+  return {version:1,eq,compression,reverb,regions,...savedRepairSettings(value),...(custom?{reverbOptions:profile}:{}),...(tone.brightness||tone.width!==100?{reverbTone:tone}:{}),...(value.echo||effectRegions.some(r=>r.echo)?{echo}:{}),...(effectRegions.length?{effectRegions}:{}),...(fades.length?{fades}:{})};
+}
+// Equal-power curve (sine/cosine): sounds even all the way down, unlike a straight line that seems to drop off at the end.
+function fadeCurve(type,points=128){
+  return Float32Array.from({length:points},(_,i)=>{const x=i/(points-1)*Math.PI/2;return type==='out'?Math.cos(x):Math.sin(x);});
+}
+export function fadeLevel(fades,time){
+  let level=fades.length&&fades[0].type==='in'?0:1;
+  for(const f of fades){
+    if(time<f.start)break;
+    if(time<f.end){const x=(time-f.start)/(f.end-f.start)*Math.PI/2;return f.type==='out'?Math.cos(x):Math.sin(x);}
+    level=f.type==='out'?0:1;
+  }
+  return level;
 }
 
 export const vocalReverbTail=.8;
@@ -153,6 +179,12 @@ export function processedVoice(context,source,recipe) {
       local.gain.linearRampToValueAtTime(1,r.end);
     }
     append(local);
+  }
+  if(recipe.fades?.length){
+    const fade=context.createGain();
+    if(recipe.fades[0].start>0)fade.gain.setValueAtTime(recipe.fades[0].type==='in'?0:1,0);
+    for(const f of recipe.fades)fade.gain.setValueCurveAtTime(fadeCurve(f.type),f.start,f.end-f.start);
+    append(fade);
   }
   const sections=recipe.effectRegions??[];
   if(recipe.reverb||recipe.echo?.amount||sections.some(r=>r.reverb||r.echo)){

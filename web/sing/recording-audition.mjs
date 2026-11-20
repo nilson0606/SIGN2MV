@@ -31,10 +31,11 @@ export function settingDifferences(a,b,{includeBacking=true}={}){
   add('回聲位置',x.echo?.pingPong??false,y.echo?.pingPong??false,value=>value?'左右交替':'中央');
   for(const [key,label,fields] of [
     ['regions','局部音量',[['start','開始',' 秒'],['end','結束',' 秒'],['volume','音量','%']]],
-    ['effectRegions','局部效果',[['start','開始',' 秒'],['end','結束',' 秒'],['reverb','殘響','%'],['decay','尾音',' 秒'],['echo','回聲','%']]]
+    ['effectRegions','局部效果',[['start','開始',' 秒'],['end','結束',' 秒'],['reverb','殘響','%'],['decay','尾音',' 秒'],['echo','回聲','%']]],
+    ['fades','人聲淡出／淡入',[['start','開始',' 秒'],['end','結束',' 秒'],['type','類型',value=>({out:'淡出至 0',in:'從 0 淡入'})[value]??value]]]
   ]){
     const left=[...(x[key]??[])].sort((p,q)=>p.start-q.start),right=[...(y[key]??[])].sort((p,q)=>p.start-q.start);
-    for(let i=0;i<Math.max(left.length,right.length);i++)for(const [field,title,suffix] of fields)add(`${label} 第 ${i+1} 段 · ${title}`,left[i]?.[field],right[i]?.[field],unit(suffix));
+    for(let i=0;i<Math.max(left.length,right.length);i++)for(const [field,title,suffix] of fields)add(`${label} 第 ${i+1} 段 · ${title}`,left[i]?.[field],right[i]?.[field],typeof suffix==='function'?suffix:unit(suffix));
   }
   return rows;
 }

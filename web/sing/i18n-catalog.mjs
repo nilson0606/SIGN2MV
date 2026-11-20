@@ -522,6 +522,21 @@ export const messages = {
   "自訂空間效果": "Custom space effects",
   "一起帶入殘響音量、空間、尾音、預延遲、明亮度、寬度及回聲設定，之後可微調；另一組、EQ、壓縮、柔化、音量、校正與剪輯保留。局部區段的數值保留，空間音色與回聲間隔仍沿用上方。按「試聽 A／B」聽取新效果，按「重新合成」才另存。夢幻回聲以 600 ms 起步，可依歌曲節奏調整。": "Sets reverb level, space, decay, pre-delay, brightness, width, and delay, all adjustable afterward. Preserves the other set, EQ, compression, smoothing, levels, timing, and trim. Region values remain; space tone and delay interval still use the global settings. Preview A/B to listen, then render to save. Dreamy delay starts at 600 ms; adjust it to the song’s rhythm.",
   "局部音量": "Region volume",
+  "人聲淡出／淡入": "Vocal fade out / in",
+  "只動你的人聲，伴樂與和音不變。「淡出至 0」在區間內把人聲降到 0，之後一直保持 0，直到下一個「從 0 淡入」；「從 0 淡入」在區間內把人聲升回原本音量。區間數不限，不可重疊，淡出與淡入要輪流；第一個若是淡入，歌一開始人聲就是 0。秒數算法同局部音量。": "Only your vocal changes; the accompaniment and harmony stay as they are. “Fade out to 0” brings your vocal down to 0 over the range and keeps it at 0 until the next “Fade in from 0”, which brings it back up to its own level over its range. As many ranges as you like; they cannot overlap and must alternate between fade out and fade in. If the first one is a fade in, the song starts with your vocal at 0. Seconds are counted as for Region volume.",
+  "新增淡出／淡入（從目前播放位置）": "Add fade out / in (from current position)",
+  "類型": "Type",
+  "淡出至 0": "Fade out to 0",
+  "從 0 淡入": "Fade in from 0",
+  "移除區間": "Remove range",
+  "淡出／淡入開始秒數": "Fade start (seconds)",
+  "淡出／淡入結束秒數": "Fade end (seconds)",
+  "人聲淡出／淡入的區間太多。": "Too many vocal fade ranges.",
+  "人聲淡出／淡入的類型無效。": "Invalid vocal fade type.",
+  "人聲淡出／淡入的結束時間必須晚於開始時間。": "A vocal fade must end after it starts.",
+  "人聲淡出／淡入的區間不可重疊，請調整開始／結束時間。": "Vocal fade ranges cannot overlap. Adjust start / end times.",
+  "人聲已經淡出到 0，下一個區間要用「從 0 淡入」。": "Your vocal has already faded out to 0; the next range has to be “Fade in from 0”.",
+  "人聲已經淡入，下一個區間要用「淡出至 0」。": "Your vocal has already faded in; the next range has to be “Fade out to 0”.",
   "以套用延時後、尚未剪輯的完整錄音秒數設定，不是 YouTube 時間。「從目前播放位置」會自動換算已剪輯成品的位置。100% 不變、0% 靜音，區段不可重疊。變更延時後請重新核對位置；殘響會自然延伸到區段外。": "Use full recording seconds after timing correction and before trimming, not YouTube time. “From current position” converts trimmed playback time automatically. 100% is unchanged; 0% mutes. Regions cannot overlap. Recheck positions after timing changes. Reverb tails may extend beyond regions.",
   "新增區段（從目前播放位置）": "Add region (from current position)",
   "EQ 音色": "EQ tone",
@@ -2746,6 +2761,13 @@ export const templates = [
   [
     "局部音量{0}段",
     "VolumeRegions{0}",
+    [
+      0
+    ]
+  ],
+  [
+    "淡出淡入{0}段",
+    "Fades{0}",
     [
       0
     ]

@@ -386,6 +386,8 @@
         </div>
         <h3>局部音量</h3><p id="post-regions-help" class="help">以套用延時後、尚未剪輯的完整錄音秒數設定，不是 YouTube 時間。「從目前播放位置」會自動換算已剪輯成品的位置。100% 不變、0% 靜音，區段不可重疊。變更延時後請重新核對位置；殘響會自然延伸到區段外。</p>
         <div id="post-regions"></div><button id="post-region-add" type="button" class="secondary">新增區段（從目前播放位置）</button>
+        <h3>人聲淡出／淡入</h3><p id="post-fades-help" class="help">只動你的人聲，伴樂與和音不變。「淡出至 0」在區間內把人聲降到 0，之後一直保持 0，直到下一個「從 0 淡入」；「從 0 淡入」在區間內把人聲升回原本音量。區間數不限，不可重疊，淡出與淡入要輪流；第一個若是淡入，歌一開始人聲就是 0。秒數算法同局部音量。</p>
+        <div id="post-fades"></div><button id="post-fade-add" type="button" class="secondary">新增淡出／淡入（從目前播放位置）</button>
         <h3>EQ 音色</h3><div class="post-eq-grid">
           <div><label for="post-eq-low">低頻 · 厚度 <output id="post-eq-low-value">0 dB</output></label><input id="post-eq-low" type="range" min="-12" max="12" step="1" value="0"></div>
           <div><label for="post-eq-mid">中頻 · 存在感 <output id="post-eq-mid-value">0 dB</output></label><input id="post-eq-mid" type="range" min="-12" max="12" step="1" value="0"></div>

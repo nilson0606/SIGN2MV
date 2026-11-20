@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Sing page, recording post-production: **vocal fade out / in** ranges under Region volume. 「淡出至 0」 takes the
+  singer's vocal down to 0 over its range and keeps it at 0 until the next 「從 0 淡入」, which brings it back; any number
+  of ranges, no overlap, they alternate (a first fade-in starts the song at 0). Equal-power curve; only the vocal, before
+  the reverb/echo sends, so tails ring out naturally. Saved with the effects, listed in the A/B differences and the name.
 - Sing page: 「04 延遲校正」 (optional) takes the place of 「看節拍，調延遲」, which is no longer shown (its code and
   the input latency slider stay; the beat lights and the five-note test were never relied on). The singer sings
   Twinkle Twinkle Little Star (public domain), built into the page: rendered from its notes (a 5-4-3-2-1 count-in, a soft

@@ -96,6 +96,16 @@ export function createRecordingPost({store,stop,pause,download,onDelete,referenc
     }
     const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='移除區段';remove.addEventListener('click',()=>row.remove());row.append(remove);$('post-regions').append(row);
   }
+  function addFade(value){
+    const row=document.createElement('div');row.className='post-region-row post-fade-row';
+    for(const [key,label] of [['start','開始（秒）'],['end','結束（秒）']]){
+      const field=document.createElement('label'),input=document.createElement('input');field.textContent=label;input.type='number';input.dataset.field=key;input.min=0;input.max=3600;input.step=.01;input.value=value[key];field.append(input);row.append(field);
+    }
+    const field=document.createElement('label'),type=document.createElement('select');field.textContent='類型';type.dataset.field='type';
+    for(const [key,label] of [['out','淡出至 0'],['in','從 0 淡入']]){const option=document.createElement('option');option.value=key;option.textContent=label;type.append(option);}
+    type.value=value.type;field.append(type);row.append(field);
+    const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='移除區間';remove.addEventListener('click',()=>row.remove());row.append(remove);$('post-fades').append(row);
+  }
   function setEffects(value){
     const recipe=vocalEffects(value);
     const {cleanup:c,pitchCorrection:p}=repairSettings(recipe);
@@ -104,7 +114,8 @@ export function createRecordingPost({store,stop,pause,download,onDelete,referenc
     for(const band of ['low','mid','high'])$('post-eq-'+band).value=recipe.eq[band];
     $('post-compression').value=recipe.compression;setSpatialEffects(recipe);
     $('post-effect-regions').replaceChildren();(recipe.effectRegions??[]).forEach(addEffectRegion);
-    $('post-regions').replaceChildren();recipe.regions.forEach(addRegion);effectLabels();
+    $('post-regions').replaceChildren();recipe.regions.forEach(addRegion);
+    $('post-fades').replaceChildren();(recipe.fades??[]).forEach(addFade);effectLabels();
   }
   function addEffectRegion(value){
     const row=document.createElement('div');row.className='post-effect-region-row';
@@ -115,10 +126,11 @@ export function createRecordingPost({store,stop,pause,download,onDelete,referenc
   function readEffects(){
     const repair=repairSettings({cleanup:{noise:Number($('post-noise').value),deess:Number($('post-deess').value),deessHz:Number($('post-deess-hz').value),breath:Number($('post-breath').value)},pitchCorrection:{amount:Number($('post-pitch-correction').value),target:$('post-pitch-target').value,speedMs:Number($('post-pitch-speed').value),preserveVibrato:$('post-pitch-vibrato').value==='on'}});
     const regions=Array.from($('post-regions').children,row=>Object.fromEntries(Array.from(row.querySelectorAll('input'),input=>[input.dataset.field,input.value===''?NaN:Number(input.value)])));
+    const fades=Array.from($('post-fades').children,row=>Object.fromEntries(Array.from(row.querySelectorAll('input,select'),input=>[input.dataset.field,input.tagName==='SELECT'?input.value:input.value===''?NaN:Number(input.value)])));
     const effectRegions=Array.from($('post-effect-regions').children,row=>Object.fromEntries(Array.from(row.querySelectorAll('input'),input=>[input.dataset.field,input.value===''?NaN:Number(input.value)])));
     const echo={amount:Number($('post-echo-amount').value),timeMs:Number($('post-echo-time').value),repeats:Number($('post-echo-repeats').value),feedback:Number($('post-echo-feedback').value),pingPong:$('post-echo-pingpong').value==='on'};
     const customEcho=echo.amount||echo.timeMs!==300||echo.repeats!==3||echo.feedback!==40||echo.pingPong;
-    return vocalEffects({...repair,eq:Object.fromEntries(['low','mid','high'].map(band=>[band,Number($('post-eq-'+band).value)])),compression:$('post-compression').value,reverb:Number($('post-reverb').value),reverbOptions:{space:$('post-reverb-space').value,decay:Number($('post-reverb-decay').value),preDelayMs:Number($('post-reverb-predelay').value)},reverbTone:{brightness:Number($('post-reverb-brightness').value),width:Number($('post-reverb-width').value)},...(customEcho?{echo}:{}),effectRegions,regions});
+    return vocalEffects({...repair,eq:Object.fromEntries(['low','mid','high'].map(band=>[band,Number($('post-eq-'+band).value)])),compression:$('post-compression').value,reverb:Number($('post-reverb').value),reverbOptions:{space:$('post-reverb-space').value,decay:Number($('post-reverb-decay').value),preDelayMs:Number($('post-reverb-predelay').value)},reverbTone:{brightness:Number($('post-reverb-brightness').value),width:Number($('post-reverb-width').value)},...(customEcho?{echo}:{}),effectRegions,regions,fades});
   }
   function setEdit(value){
     const edit=recordingEdit(value);
@@ -285,6 +297,13 @@ export function createRecordingPost({store,stop,pause,download,onDelete,referenc
     const endLimit=selected?.sourceSeconds??selected?.seconds??0;
     const start=Math.min(Math.max(0,endLimit-.1),originalPlayhead());
     addRegion({start,end:Math.min(endLimit,start+5),volume:100});
+  });
+  $('post-fade-add').addEventListener('click',()=>{
+    const endLimit=selected?.sourceSeconds??selected?.seconds??0;
+    const start=Math.min(Math.max(0,endLimit-.1),originalPlayhead());
+    // alternate with the fade just before this position: after a fade-out comes a fade-in
+    const before=Array.from($('post-fades').children,row=>({start:Number(row.querySelector('[data-field="start"]').value),type:row.querySelector('[data-field="type"]').value})).filter(f=>f.start<=start).sort((a,b)=>a.start-b.start).at(-1);
+    addFade({start,end:Math.min(endLimit,start+3),type:before?.type==='out'?'in':'out'});
   });
   $('post-effect-region-add').addEventListener('click',()=>{
     if($('post-effect-regions').children.length>=20){status('局部效果最多 20 個區段。');return;}
