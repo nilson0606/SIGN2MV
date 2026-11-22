@@ -50,7 +50,7 @@ from .mvstudio.core import (Image, KARAOKE_TIMING_MODES, MAX_SCENES, FRAME_W, FR
                             probe_media_file, render_single_styled_frame, renumber_scene_files, resolve_scene_image_path,
                             restore_instrumentals, sanitize_no_ai, save_project_dict, splice_interlude, _scene_files,
                             _scene_payload, TRANSITION_STYLES, BLINDS_N, BLUR_MAX_PX, execute_mv_verification)
-from .renders import list_renders
+from .renders import list_renders, render_for_take, saved_takes, take_for_path
 from .util import media_response
 
 # [2026-11-17] asked for by the user: the field says the style and the tone of the picture cards (the page writes
@@ -261,12 +261,30 @@ def router(ctx: Context) -> APIRouter:
         return jerr(410, "SIGN2MV 不提供「清空全部專案」；請勾選要刪除的專案再刪除。")
 
     # ------------------------------------------------------------------ projects
+    def take_label(song_title: str, take: Dict[str, Any]) -> str:
+        """「後處理：11-22 15:28 · 降 1 Key · 分段合成」: the time first, as it tells apart takes with the same title
+        and the closed menu is narrow; the song's name is left out (the list is one song's)."""
+        t = str(take["title"] or "").strip()
+        if t == song_title:
+            t = ""
+        elif t.startswith(song_title + " · "):
+            t = t[len(song_title) + 3:].strip()
+        en = core.BRAND.get("lang") == "en"
+        parts = [time.strftime("%m-%d %H:%M", time.localtime(take["created"] / 1000)), t or ("whole song" if en else "整首")]
+        if take["mode"] == "voice":   # recorded without the backing: the file is the voice only
+            parts.append("vocals only" if en else "純人聲")
+        return "後處理：" + " · ".join(parts)
+
     def available_audios(cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
         out = []
         try:
             songs = ctx.library().list()
         except OSError:
             return out
+        from .api_sing import video_id_for
+        takes_by_video: Dict[str, List[Dict[str, Any]]] = {}
+        for take in saved_takes(ctx):
+            takes_by_video.setdefault(take["video_id"], []).append(take)
         for s in songs:
             src = s.get("source") or {}
             sid = s["song_id"]
@@ -275,11 +293,30 @@ def router(ctx: Context) -> APIRouter:
                 p = sdir / src["audio"]
                 out.append({"name": "原曲音訊", "folder": s["title"], "path": str(p), "song_id": sid, "kind": "mix",
                             "size_mb": round(p.stat().st_size / 1048576, 2)})
-            for rd in list_renders(ctx, sid):
+            renders = list_renders(ctx, sid)
+            takes = takes_by_video.get(video_id_for(sid), [])
+            # a take already copied for an MV (「完整 MV」 on the sing page, or picked here before) is shown once,
+            # as the take, and the copy is what is used
+            copied: Dict[str, Dict[str, Any]] = {}
+            for take in takes:
+                rd = next((rd for rd in renders if rd.get("kind") == "sing" and rd.get("recording_id") == take["id"]
+                           and rd.get("bytes") == take["bytes"]), None)
+                if rd:
+                    copied[take["id"]] = rd
+            merged = {rd["id"] for rd in copied.values()}
+            for rd in renders:
+                if rd["id"] in merged:
+                    continue
                 p = sdir / rd["path"]
                 label = {"sing": "唱錄", "cover": "翻唱"}.get(rd["kind"], rd["kind"])
                 out.append({"name": f"{label}：{rd['title']}", "folder": s["title"], "path": str(p), "song_id": sid,
                             "kind": rd["kind"], "render_id": rd["id"], "size_mb": round(p.stat().st_size / 1048576, 2)})
+            for take in takes:
+                rd = copied.get(take["id"])
+                p = (sdir / rd["path"]) if rd else Path(take["path"])
+                out.append({"name": take_label(s["title"], take), "folder": s["title"], "path": str(p), "song_id": sid,
+                            "kind": "take", "recording_id": take["id"], "render_id": rd["id"] if rd else "",
+                            "size_mb": round(take["bytes"] / 1048576, 2)})
             mvd = sdir / "mv"
             if mvd.is_dir():
                 for pd in sorted(mvd.iterdir()):
@@ -544,6 +581,16 @@ def router(ctx: Context) -> APIRouter:
         old_audio = proj.get("audio_file", "")
         sdir = core.song_dir(proj["song_id"]).resolve()
         if audio_file and os.path.isfile(audio_file):
+            # a saved take of this song (picked from the list, or its file chosen by hand): use the song's copy of
+            # it, made once, as the sing page's 「完整 MV」 does
+            take = take_for_path(ctx, audio_file)
+            from .api_sing import video_id_for
+            if take and take["video_id"] == video_id_for(proj["song_id"]):
+                try:
+                    rd = await asyncio.to_thread(render_for_take, ctx, proj["song_id"], take)
+                except (OSError, ValueError) as exc:
+                    return jerr(400, f"無法使用這筆錄音：{exc}")
+                audio_file = str(ctx.library().song_dir(proj["song_id"]) / rd["path"])
             inside = True
             try:
                 Path(audio_file).resolve().relative_to(sdir)

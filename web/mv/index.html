@@ -3219,6 +3219,7 @@
       infoEl.textContent = `⏳ 正在載入並以 ffprobe 檢測音源規格：${path} ...`;
       infoEl.style.color = 'var(--gold-bright)';
       syncProjectFields();
+      const prevAudio = currentProject.audio_file;
       currentProject.audio_file = path;
       try {
         const res = await fetch('/api/mv/select_audio', {
@@ -3234,6 +3235,10 @@
         if (res.ok && data.status === 'ok') {
           currentProject = data.project;
           updateAudioProbeUI(data.audio_probe, currentProject.audio_file);
+          if (currentProject.audio_file !== path) {   // [SIGN2MV] a copy is used: the path field and the menu show it
+            document.getElementById('inpAudioFile').value = currentProject.audio_file;
+            await sign2mvRefreshAudios().catch(() => {});
+          }
           renderSceneGallery();
           renderTimelineTable();
           if (data.audio_probe && data.audio_probe.exists) {
@@ -3241,8 +3246,15 @@
           } else {
             showToast(`⚠️ 找不到指定的音檔路徑：${path}`, true);
           }
+        } else {   // [SIGN2MV] a refused file says why instead of leaving 「正在載入」 on screen
+          throw new Error(data.detail || `HTTP ${res.status}`);
         }
       } catch (e) {
+        if (currentProject && currentProject.audio_file === path) {   // [SIGN2MV] not bound: the menu goes back
+          currentProject.audio_file = prevAudio;
+          const sel = document.getElementById('selAudioQuick');
+          if (sel) sel.value = prevAudio || '';
+        }
         infoEl.textContent = `❌ 檢測音檔失敗：${e.message}`;
         infoEl.style.color = '#ef4444';
         showToast(`❌ 檢測音檔失敗：${e.message}`, true);

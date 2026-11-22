@@ -60,6 +60,22 @@ function sign2mvFillAudioSelect() {
     sel.appendChild(opt);
   });
   if (currentProject && currentProject.audio_file) sel.value = currentProject.audio_file;
+  // the closed menu is narrow: the whole name on hover
+  sel.title = sel.selectedIndex > 0 ? sel.options[sel.selectedIndex].textContent : '';
+  if (!sel.dataset.sign2mvTitle) {
+    sel.dataset.sign2mvTitle = '1';
+    sel.addEventListener('change', () => { sel.title = sel.selectedIndex > 0 ? sel.options[sel.selectedIndex].textContent : ''; });
+  }
+}
+
+// [2026-11-22] the server can bind another file than the one picked (a saved take of the sing page becomes the
+// song's copy of it, a file from elsewhere a copy in the project): read the list again so the menu shows it
+async function sign2mvRefreshAudios() {
+  const res = await fetch('/api/mv/projects');
+  if (!res.ok) return;
+  const data = await res.json();
+  availableAudios = data.available_audios || [];
+  sign2mvFillAudioSelect();
 }
 
 function sign2mvFillModalSongs(preselect) {

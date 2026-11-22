@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- MV page: the 「這首歌的音檔」 menu also lists the song's saved takes of the sing page (the list of its 錄音後處理:
+  whole takes, segment mixes, versions saved from post-production; not single segments, not takes waiting in 待確認),
+  newest first, as 「後處理：11-22 15:28 · 降 1 Key · 分段合成」 (the time first: takes often share a title). Picking one
+  binds the song's copy of it (`renders/`, made once and the same copy the sing page's 「完整 MV」 makes), so the MV keeps
+  its sound when the take is deleted later; a take already copied is listed once. Choosing a take's file by hand does
+  the same. A refused file now says why instead of leaving 「正在載入」 on screen, and the menu goes back to the audio in use.
+
 ## 2026.11.20
 
 - Sing page, recording post-production: **vocal fade out / in** ranges under Region volume. 「淡出至 0」 takes the
