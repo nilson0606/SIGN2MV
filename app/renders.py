@@ -145,22 +145,37 @@ def _take(arc: RecordingArchive, rec_id: str) -> dict[str, Any] | None:
             "mode": m.get("mode") or "", "bytes": m["bytes"], "path": str(arc.dir(rec_id) / f"mix.{recording_ext(m['mime'])}")}
 
 
+_DELETED: dict[str, tuple[tuple[int, int], set[str]]] = {}
+
+
 def _deleted(arc: RecordingArchive) -> set[str]:
+    f = arc.root / ".deleted.json"
     try:
-        return set(arc.deleted())
-    except ArchiveError:
+        st = f.stat()
+    except OSError:
         return set()
+    stamp = (st.st_mtime_ns, st.st_size)
+    cached = _DELETED.get(str(f))
+    if cached and cached[0] == stamp:
+        return cached[1]
+    try:
+        ids = set(arc.deleted())
+    except ArchiveError:
+        ids = set()
+    _DELETED[str(f)] = (stamp, ids)
+    return ids
 
 
 def saved_takes(ctx: Context) -> list[dict[str, Any]]:
-    """Every take of the post-production list, newest first."""
+    """Every take of the post-production list, newest first. A take read before costs one stat (its folder is
+    removed as a whole when it is deleted, and its metadata changes when anything about it does)."""
     root = recordings_root(ctx)
     if not root.is_dir():
         return []
     arc = RecordingArchive(root)
     deleted, out, seen = _deleted(arc), [], set()
     for d in root.iterdir():
-        if not RECORDING_ID.match(d.name) or d.name in deleted or d.is_symlink() or not d.is_dir():
+        if not RECORDING_ID.match(d.name) or d.name in deleted:
             continue
         meta = d / "metadata.json"
         try:
@@ -173,9 +188,9 @@ def saved_takes(ctx: Context) -> list[dict[str, Any]]:
         if cached and cached[0] == stamp:
             row = cached[1]
         else:
-            row = _take(arc, d.name)
+            row = None if d.is_symlink() else _take(arc, d.name)   # _take checks the folder and its files
             _TAKES[key] = (stamp, row)
-        if row and os.path.isfile(row["path"]):
+        if row:
             out.append(row)
     prefix = str(root) + os.sep
     for key in [k for k in _TAKES if k.startswith(prefix) and k not in seen]:
