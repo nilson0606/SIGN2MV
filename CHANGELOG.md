@@ -8,6 +8,16 @@
   binds the song's copy of it (`renders/`, made once and the same copy the sing page's 「完整 MV」 makes), so the MV keeps
   its sound when the take is deleted later; a take already copied is listed once. Choosing a take's file by hand does
   the same. A refused file now says why instead of leaving 「正在載入」 on screen, and the menu goes back to the audio in use.
+- Manuals brought in line with the pages. Main manual (zh/en): 「人聲保留原唱音色」 is ticked by default (it only
+  matters for a key version); the full MV section now describes 「🎵 即時對字幕」, 「🔍 自動找間奏」 / 「＋ 新增間奏」 and
+  「🔁 只換音軌」. Sing page manual (zh): the selected-recording buttons are 試聽／只聽人聲／快速 MV／完整 MV／下載／後處理／刪除
+  and 「清除全部」 (it clears the whole post-production list, other songs included); the render button is
+  「重新合成（音量／延時／音色／剪輯）」; the A/B sets are taken with 「前往 A／B 後製設定」 or 「A 設定」／「B 設定」;
+  「還原 A／B 預設設定」 puts the correction back to the recording's own value and turns cleanup and pitch correction off;
+  「04 延遲校正」 replaces the removed 「看節拍調延遲」 in the layout and contents; a few other labels follow the page
+  (「目前位置設為起點／終點」, 「試合完整一版／滿意後保存」, 「存到錄音後處理」, 「用目前播放位置」, 「重設剪輯與淡入淡出」,
+  「片段試聽目前設定」). Sing page manual (en): rewritten as a full translation of the zh manual, same sections, anchors
+  and contents, with the labels of the English page.
 
 ## 2026.11.20
 
