@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2026.11.24
+
 - MV page: the 「這首歌的音檔」 menu also lists the song's saved takes of the sing page (the list of its 錄音後處理:
   whole takes, segment mixes, versions saved from post-production; not single segments, not takes waiting in 待確認),
   newest first, as 「後處理：11-22 15:28 · 降 1 Key · 分段合成」 (the time first: takes often share a title). Picking one
