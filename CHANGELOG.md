@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Segment recording and keys: the first time a key with no segment draft is opened, it starts from the boundaries and
+  part names of another key of the same version (same separation, same length) — the one changed last, or the
+  original key for drafts saved before this change. Takes are not carried (each key has its own recordings); the
+  status line says which key the boundaries came from, and 「復原分界」 goes back to one part. A key that already has a
+  draft is left as it is. Drafts now keep when they were saved. Sing manual (zh/en) updated.
+
 - Lyric timing panel (quick MV and lyric video, 「手動調整字幕時間」): the start and the end of a line are fine-tuned on
   their own. The −0.5／+0.5 beside the start move only the start, and a new −0.5／+0.5 beside the end move only the end
   (before, the one pair moved the whole line). Each side stops 0.3 s from the other and never pushes it; the start

@@ -5,7 +5,7 @@ import {segmentDraft,validateSegmentDraft,normalizeSegmentNames,splitSegment,mov
 import {remixRecording,wavBlob,delaySeconds,originalVocalRanges} from './recording-process.mjs';
 import {recordingSceneDefaultsVersion} from './recording-scenes.mjs';
 import {createRenderedRecordingPreview} from './recording-live-preview.mjs';
-import {guideStems,syncGuideSelect,guideModeLabel} from './song-key.mjs';
+import {guideStems,syncGuideSelect,guideModeLabel,keyText} from './song-key.mjs';
 
 const DELAY_KEY='sign2mv.segment-delay.v1';
 
@@ -38,7 +38,7 @@ export function createSegmentRecording(options) {
   function persist(undoHistory=history){
     if(!draft)return;
     if(conflict||localStorage.getItem(storageKey())!==savedText){conflict=true;throw Error('另一分頁已更新這份草稿，請重新整理頁面後繼續；錄音仍保留。');}
-    validateSegmentDraft(draft);const text=JSON.stringify({...draft,undoHistory});localStorage.setItem(storageKey(),text);savedText=text;
+    validateSegmentDraft(draft);const text=JSON.stringify({...draft,undoHistory,savedAt:Date.now()});localStorage.setItem(storageKey(),text);savedText=text;
   }
   function invalidate(){
     clearTakePreview();
@@ -245,12 +245,32 @@ export function createSegmentRecording(options) {
     $('loop').setAttribute('aria-pressed',String(loop));$('loop').textContent=loop?'停止循環練唱':'循環練唱本段';$('record').disabled=!!capture||conflict||!ref||(guideMode!=='original'&&!ref.hasPreview);
   }
   async function refresh(){const request=++loading,currentKey=key,list=await store.list();if(request!==loading||currentKey!==key)return;rows=list;render();}
+  // [2026-11-24] A key changes the pitch only, so song times line up across the keys of one version (cacheId
+  // <base> and <base>_key_<m|p><n>[_t|_f]). A key opened for the first time (no saved draft) starts from the
+  // boundaries and part names of the key last changed; takes are not carried (each key has its own recordings) and
+  // 「復原分界」 goes back to one part. Old drafts have no save time; the original key is then preferred.
+  function siblingBoundaries(ref){
+    const base=String(ref.sourceCacheId||String(ref.cacheId).replace(/_key_[mp]\d{1,2}(_[tf])?$/,'')),prefix='karaoke.segment-draft.v1.';let best=null;
+    const later=(a,b)=>{for(let k=0;k<a.length;k++)if(a[k]!==b[k])return a[k]>b[k];return false;};
+    for(let i=0;i<localStorage.length;i++){
+      const name=localStorage.key(i);if(!name?.startsWith(prefix+base))continue;
+      const id=name.slice(prefix.length),m=id===base?[]:/^_key_([mp])(\d{1,2})(_[tf])?$/.exec(id.slice(base.length));
+      if(!m||id===ref.cacheId)continue;
+      try{
+        const {undoHistory,savedAt=0,...d}=JSON.parse(localStorage.getItem(name));validateSegmentDraft(d);
+        if(d.key!==id||d.parts.length<2||Math.abs(d.duration-ref.duration)>.01)continue;
+        const shift=m.length?(m[1]==='m'?-1:1)*Number(m[2]):0,rank=[savedAt,shift===0?1:0,d.parts.length];
+        if(!best||later(rank,best.rank))best={draft:d,rank,label:keyText(shift,!!m[3],m[3]==='_f')};
+      }catch{}
+    }
+    return best;
+  }
   function referenceChanged(){
     const ref=reference(),next=ref?.cacheId||null;if(next===key){render();return;}
     serial++;loading++;enabled=false;loop=false;previewEnd=null;invalidate();key=next;draft=null;rows=[];history=[];selected=0;boundary=1;conflict=false;clearResult('');
     if(next){try{
       savedText=localStorage.getItem(storageKey());
-      const {undoHistory=[],...stored}=savedText?JSON.parse(savedText):segmentDraft(ref);
+      const {undoHistory=[],savedAt:ignoredSavedAt,...stored}=savedText?JSON.parse(savedText):segmentDraft(ref);
       draft=normalizeSegmentNames(validateSegmentDraft(stored));
       // The full-song base workflow is retired; keep recordings and explicit per-part choices.
       draft.baseId=null;
@@ -263,7 +283,18 @@ export function createSegmentRecording(options) {
         if(snapshot.key!==next||Math.abs(snapshot.duration-draft.duration)>.01)throw Error('復原紀錄歌曲不同。');
         return normalizeSegmentNames(snapshot);
       }):[];}catch{history=[];}
-      status(savedText?'已讀取分段草稿。':'可開啟錄音模式，邊播放邊加入分界。');refresh().catch(e=>status(e.message));
+      let inherited=null;
+      if(!savedText)try{
+        const from=siblingBoundaries(ref);
+        if(from){
+          const empty=structuredClone(draft);
+          draft.parts=from.draft.parts.map(p=>({id:crypto.randomUUID(),name:p.name,autoName:!!p.autoName,start:p.start,end:p.end,takeId:null}));
+          draft.parts.at(-1).end=draft.duration;normalizeSegmentNames(validateSegmentDraft(draft));
+          persist([empty]);history=[empty];inherited=from;
+        }
+      }catch{draft=segmentDraft(ref);history=[];}
+      status(inherited?`已沿用「${inherited.label}」的分界（${draft.parts.length} 段）。這個 Key 的錄音要重新錄；不需要這些分界，按「復原分界」回到整首一段。`
+        :savedText?'已讀取分段草稿。':'可開啟錄音模式，邊播放邊加入分界。');refresh().catch(e=>status(e.message));
     }catch(e){draft=null;status('無法開啟草稿：'+e.message);}}
     else status('載入歌曲後，可開啟錄音模式。');render();
   }

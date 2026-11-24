@@ -3361,6 +3361,7 @@ export const templates = [
       0
     ]
   ],
+  ["已沿用「{0}」的分界（{1} 段）。這個 Key 的錄音要重新錄；不需要這些分界，按「復原分界」回到整首一段。", "Boundaries taken from “{0}” ({1} segments). Record the takes again in this key; if you do not want these boundaries, press “Undo split” to go back to one segment.", [0]],
   [
     "已移除最後一道分界，剩 {0} 段。原始錄音保留。{1}",
     "Last boundary removed; {0} segments remain. Original recordings retained. {1}",
