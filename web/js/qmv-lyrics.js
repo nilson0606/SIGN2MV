@@ -1,5 +1,5 @@
 // Lyric subtitles for the quick MV studio look: the old AI cover "dynamic lyric MV" and its
-// per-line timing panel (▶ this line, ±0.5 s, start = player time, delete, add a line, save).
+// per-line timing panel (▶ this line, ±0.5 s on the start and on the end, start = player time, delete, add a line, save).
 // A line can be anchored (🔒, as on the MV page): its time is kept when the lines are timed again, the
 // lines between two anchors are matched only to what was heard between them, and a stretch between
 // anchors where lines were not heard at all is listened to again by Whisper (app/relisten.py).
@@ -110,7 +110,16 @@ export function lyricsEditor(keys = {}) {
         render();
       } });
       const tx = el('input', { type: 'text', value: ln.text, maxlength: 120, style: 'flex:1;min-width:160px', onchange: () => { ln.text = tx.value.trim() || ln.text; } });
-      const nudge = (d) => () => { ln.start = r2(Math.max(0, ln.start + d)); ln.end = r2(Math.max(ln.start + 0.3, ln.end + d)); render(); };
+      // the start and the end are tuned on their own: each pair of buttons moves only its side, stopping
+      // 0.3 s from the other side (never pushing it) and the start at 0
+      const nudgeStart = (d) => () => {
+        ln.start = r2(d < 0 ? Math.max(0, ln.start + d) : Math.min(ln.start + d, Math.max(ln.start, ln.end - 0.3)));
+        render();
+      };
+      const nudgeEnd = (d) => () => {
+        ln.end = r2(d > 0 ? ln.end + d : Math.max(ln.end + d, Math.min(ln.end, ln.start + 0.3)));
+        render();
+      };
       const lockBtn = el('button', {
         class: 'btn small', title: t(lk ? 'qmvl.locked_tip' : 'qmvl.lock_tip'),
         style: lk ? 'border-color:#86efac;color:#86efac;background:rgba(34,197,94,0.18);font-weight:700' : '',
@@ -123,12 +132,15 @@ export function lyricsEditor(keys = {}) {
           player.currentTime = ln.start; stopAt = ln.end; player.play().catch(() => {});
         } }, '▶'),
         st,
-        el('button', { class: 'btn small', onclick: nudge(-0.5) }, '−0.5'),
-        el('button', { class: 'btn small', onclick: nudge(0.5) }, '+0.5'),
+        el('button', { class: 'btn small', title: t('qmvl.start_earlier'), onclick: nudgeStart(-0.5) }, '−0.5'),
+        el('button', { class: 'btn small', title: t('qmvl.start_later'), onclick: nudgeStart(0.5) }, '+0.5'),
         el('button', { class: 'btn small', title: t('qmvl.set_start'), onclick: () => {
           const d = ln.end - ln.start; ln.start = r2(player.currentTime || 0); ln.end = r2(ln.start + d); lines.sort((a, b) => a.start - b.start); render();
         } }, '📍'),
-        en, lockBtn, tx,
+        en,
+        el('button', { class: 'btn small', title: t('qmvl.end_earlier'), onclick: nudgeEnd(-0.5) }, '−0.5'),
+        el('button', { class: 'btn small', title: t('qmvl.end_later'), onclick: nudgeEnd(0.5) }, '+0.5'),
+        lockBtn, tx,
         el('button', { class: 'btn small danger', title: t('common.delete'), onclick: () => { lines.splice(i, 1); render(); } }, '🗑'));
       if (lk) {      // an anchor: nothing about its time can be changed until it is freed
         [st, en].forEach((x) => { x.readOnly = true; x.title = t('qmvl.locked_tip'); });

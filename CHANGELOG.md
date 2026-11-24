@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Lyric timing panel (quick MV and lyric video, 「手動調整字幕時間」): the start and the end of a line are fine-tuned on
+  their own. The −0.5／+0.5 beside the start move only the start, and a new −0.5／+0.5 beside the end move only the end
+  (before, the one pair moved the whole line). Each side stops 0.3 s from the other and never pushes it; the start
+  stops at 0. 📍 is unchanged (it moves the line to the player time and keeps its length). Manuals updated.
+
 ## 2026.11.24
 
 - MV page: the 「這首歌的音檔」 menu also lists the song's saved takes of the sing page (the list of its 錄音後處理:
