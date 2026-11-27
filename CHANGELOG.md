@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- MV render: the encoding step shows how far it is. The bar stood at 70 % for the whole step (minutes with camera
+  motion); ffmpeg now reports its progress (`-progress pipe:1`) and about once a second the bar moves towards 91 % and
+  the detail line says 「已編碼 1:23／3:49（36%）· 速度 1.8 倍 · 約再 1 分 10 秒」, also when it falls back to another
+  encoder. The stage line stays the same, so the job log is not filled with updates. Stopping still stops at once.
+
 - MV page: the name-card fields (歌名, 作詞人, 作曲人, 原唱人, 翻唱者 …) take Zhuyin and other IME input again. Every
   keystroke there (and the autosave 0.45 s later) ran syncProjectFields(), which first took the focus away from the
   field being typed in, so an IME composition ended at its first key and only pasting worked. A text box being typed

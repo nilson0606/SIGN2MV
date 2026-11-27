@@ -25,6 +25,7 @@ import re
 import secrets
 import shutil
 import subprocess
+import threading
 import time
 from functools import lru_cache
 from pathlib import Path
@@ -992,6 +993,58 @@ def filter_script_args(path: str) -> List[str]:
     return ["-/filter_complex", path] if ffmpeg_major() >= 7 else ["-filter_complex_script", path]
 
 
+
+def _mmss(sec: float) -> str:
+    sec = max(0, int(round(sec)))
+    return f"{sec // 60}:{sec % 60:02d}"
+
+
+def _follow_encoder(proc: subprocess.Popen, total: float, stage: str) -> bytes:
+    """[SIGN2MV 2026-11-28] Wait for the encoder and show how far it is (asked for by the user: the bar stood
+    still at 70 % for minutes). ffmpeg writes "-progress pipe:1" blocks (out_time_us=…, speed=…x) on stdout;
+    about once a second the bar moves from 70 to 91 % and the detail line says
+    「已編碼 1:23／3:49（36%）· 速度 1.8 倍 · 約再 1 分 10 秒」. The stage line stays the same, so the job log
+    (one line per stage) is not filled with it. stderr is read on its own thread (a full pipe would stall
+    ffmpeg) and returned for the error message, as communicate() did."""
+    err: List[bytes] = []
+    reader = threading.Thread(target=lambda: err.append(proc.stderr.read() if proc.stderr else b""), daemon=True)
+    reader.start()
+    block: Dict[str, str] = {}
+    last = 0.0
+    for raw in iter(proc.stdout.readline, b"") if proc.stdout else ():
+        line = raw.decode("utf-8", errors="replace").strip()
+        if "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        block[key] = val
+        if key != "progress":
+            continue
+        now = time.time()
+        if total > 0 and (now - last >= 1.0 or val == "end"):
+            last = now
+            us = block.get("out_time_us") or block.get("out_time_ms") or ""
+            try:
+                done = max(0.0, min(total, int(us) / 1e6))
+            except ValueError:
+                done = 0.0
+            if val == "end":       # (the last block stops a few frames short of the length, e.g. at the audio's end)
+                done = total
+            frac = done / total
+            detail = f"已編碼 {_mmss(done)}／{_mmss(total)}（{int(frac * 100)}%）"
+            try:
+                speed = float(block.get("speed", "").rstrip("x"))
+            except ValueError:
+                speed = 0.0
+            if speed > 0 and val != "end":
+                left = (total - done) / speed
+                eta = f"{int(left // 60)} 分 {int(left % 60)} 秒" if left >= 60 else f"{int(left)} 秒"
+                detail += f" · 速度 {speed:.1f} 倍 · 約再 {eta}"
+            update_progress(True, "render", 70 + int(frac * 21), stage, detail)
+        block = {}
+    proc.wait()
+    reader.join(timeout=10)
+    return err[0] if err else b""
+
 def _motion_streams(proj: Dict[str, Any], timeline: List[Dict[str, Any]], base_frames: List[Tuple[Any, ...]],
                     text_paths: List[str], run_of: List[int], run_first: List[int], mplan: List[Tuple[str, int]],
                     amt: float, plan: List[str], trans_duration: float, trans_steps: int, frames_dir: str,
@@ -1704,9 +1757,9 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
     with open(concat_file, "w", encoding="utf-8") as f:
         f.writelines(concat_lines)
 
+    enc_stage = "🎬 [階段 3/4] 正在執行 NVENC 1080p 60fps 硬體加速編碼封裝..."
     update_progress(
-        True, "render", 70,
-        "🎬 [階段 3/4] 正在執行 NVENC 1080p 60fps 硬體加速編碼封裝...",
+        True, "render", 70, enc_stage,
         "🎥 運鏡：照片的每一格在這一步算出來，會比沒有運鏡久一些" if motion_on else "h264_nvenc (-preset p5 -b:v 8M -r 60) + AAC 320k 高音質母帶"
     )
     # [Claude 2026-10-26] 先編到暫存檔，成功才取代正式成品：失敗時舊 MV 不會被當成新成品驗收。
@@ -1784,7 +1837,9 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
         vf_args = ["-filter_complex", vfc, "-map", "[vout]", "-map", "1:a"] if vfc else []
         if motion_on:
             vf_args = [*filter_script_args(script), "-map", "[vout]", "-map", "1:a"]
-        return [FFMPEG, "-hide_banner", "-y", "-f", "concat", "-safe", "0", "-i", concat_file, "-i", audio_file, *kara_args, *text_args, *vf_args,
+        # -progress: ffmpeg says how far it is (read by _run_encoder, shown at 70 to 91 %)
+        return [FFMPEG, "-hide_banner", "-y", "-nostats", "-progress", "pipe:1",
+                "-f", "concat", "-safe", "0", "-i", concat_file, "-i", audio_file, *kara_args, *text_args, *vf_args,
                 *video_codec_args, "-r", "60", "-pix_fmt", pix_fmt,
                 "-c:a", "aac", "-b:a", "320k", "-shortest", tmp_out]
 
@@ -1807,13 +1862,13 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
                     fh.write("\n".join(failures))
             except OSError:
                 pass
-            update_progress(True, "render", 72,
-                            f"🎬 [階段 3/4] {ENCODER_LABELS[prev]} 編碼失敗，改用 {ENCODER_LABELS[enc_name]} 編碼"
-                            + ("，會比較慢..." if enc_name == "libx264" else "..."), encoder_reason(last_err))
+            enc_stage = (f"🎬 [階段 3/4] {ENCODER_LABELS[prev]} 編碼失敗，改用 {ENCODER_LABELS[enc_name]} 編碼"
+                         + ("，會比較慢..." if enc_name == "libx264" else "..."))
+            update_progress(True, "render", 70, enc_stage, encoder_reason(last_err))
         try:
             proc = subprocess.Popen(_encode_cmd(enc_args, pix_fmt), stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=NO_WINDOW)
             ACTIVE_RENDER_PROC = proc
-            _, err_b = proc.communicate()
+            err_b = _follow_encoder(proc, positions[-1][1] if positions else 0.0, enc_stage)
         finally:
             ACTIVE_RENDER_PROC = None
         _check_cancel()

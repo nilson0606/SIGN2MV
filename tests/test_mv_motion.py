@@ -287,3 +287,67 @@ def test_render_without_motion_shows_every_transition_frame(client, root, monkey
     assert len(changes) >= 16, (len(changes), [round(x, 1) for x in steps])
     # and it starts on its frame (the frame after the last held one), not up to 20 ms off
     assert abs(changes[0] - 1) <= 1, changes[:3]
+
+
+def test_encoding_shows_its_progress(client, root, monkeypatch):
+    """[2026-11-28] The encoding step reports how far it is: the bar goes from 70 towards 91 % and the detail line
+    says how much is encoded, the speed and the time left (it stood still at 70 % for minutes)."""
+    import re
+    fonts = sorted(__import__("pathlib").Path("/usr/share/fonts/opentype/noto").glob("NotoSansCJK-Regular.ttc"))
+    if not fonts:
+        pytest.skip("no CJK font in this environment")
+    monkeypatch.setenv("SIGN2MV_MV_FONT", str(fonts[0]))
+    monkeypatch.setenv("SIGN2MV_FORCE_CPU", "1")
+    sid, slug, pdir = _aligned_project(client, root)
+    client.post("/api/mv/upload_scene", data={"slug": slug, "scene_id": "1"},
+                files={"file": ("1.png", png_bytes(textured(1)), "image/png")})
+    seen = []
+    monkeypatch.setattr(core, "PROGRESS_HOOK", lambda active, task, pct, stage, detail="": seen.append((pct, stage, detail)))
+    out = core.execute_mv_render_pipeline(core.load_project_dict(slug))
+    assert out["status"] == "ok"
+    enc = [(p, d) for p, s, d in seen if "[階段 3/4]" in s and d.startswith("已編碼")]
+    assert len(enc) >= 2, [x for x in seen if "[階段 3/4]" in x[1]]
+    pcts = [p for p, _ in enc]
+    assert pcts == sorted(pcts) and 70 <= pcts[0] and pcts[-1] <= 91 and pcts[-1] >= 85
+    assert all(re.fullmatch(r"已編碼 \d+:\d\d／0:24（\d+%）( · 速度 \d+\.\d 倍 · 約再 (\d+ 分 )?\d+ 秒)?", d) for _, d in enc), enc
+    assert enc[-1][1].startswith("已編碼 0:24／0:24（100%）")
+    # one stage line through the step (the job log writes a line per stage, not per update)
+    assert len({s for p, s, d in seen if "[階段 3/4]" in s}) == 1
+
+
+def test_stopping_during_encoding_still_stops(client, root, monkeypatch):
+    """Reading ffmpeg's progress does not keep a stopped render going: killing the encoder (what a stop does)
+    ends the step at once."""
+    import threading as th
+    import time as tm
+    fonts = sorted(__import__("pathlib").Path("/usr/share/fonts/opentype/noto").glob("NotoSansCJK-Regular.ttc"))
+    if not fonts:
+        pytest.skip("no CJK font in this environment")
+    monkeypatch.setenv("SIGN2MV_MV_FONT", str(fonts[0]))
+    monkeypatch.setenv("SIGN2MV_FORCE_CPU", "1")
+    sid, slug, pdir = _aligned_project(client, root)
+    client.post("/api/mv/upload_scene", data={"slug": slug, "scene_id": "1"},
+                files={"file": ("1.png", png_bytes(textured(1)), "image/png")})
+    started = th.Event()
+
+    def hook(active, task, pct, stage, detail=""):
+        if "[階段 3/4]" in stage and str(detail).startswith("已編碼"):
+            started.set()
+    monkeypatch.setattr(core, "PROGRESS_HOOK", hook)
+    res = {}
+
+    def run():
+        try:
+            res["out"] = core.execute_mv_render_pipeline(core.load_project_dict(slug))
+        except Exception as exc:  # noqa: BLE001
+            res["err"] = exc
+    t = th.Thread(target=run)
+    t.start()
+    assert started.wait(120)
+    t0 = tm.time()
+    core.CANCEL_REQUESTED = True
+    core.ACTIVE_RENDER_PROC.kill()
+    t.join(30)
+    assert not t.is_alive() and tm.time() - t0 < 10
+    assert "err" in res and "out" not in res
+    core.CANCEL_REQUESTED = False
