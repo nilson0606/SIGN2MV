@@ -968,7 +968,7 @@ def compose_transition_frame(style: str, bgA: Image.Image, bgB: Image.Image, ovA
 # [SIGN2MV 2026-11-27] camera motion (運鏡): see motion.py
 # ---------------------------------------------------------------------------
 _FFMPEG_MAJOR: Dict[str, int] = {}
-M_RATE = "option framerate 60\n"      # a concat list's line: read this picture at 60 fps (see _motion_streams)
+M_RATE = "option framerate 60\n"      # a concat list's line: read this picture at 60 fps (every list of the render)
 
 
 def ffmpeg_major() -> int:
@@ -1646,7 +1646,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
             if lyric_video:
                 if idx == 0:
                     update_progress(True, "render", 65, "✨ [階段 2/4] 沒有照片：不做轉場，歌詞直接換句", "")
-                concat_lines.append(f"file '{curr_path}'\n")
+                concat_lines.append(f"file '{curr_path}'\n{M_RATE}")
                 concat_lines.append(f"duration {dur:.4f}\n")
                 continue
             style = plan[idx]
@@ -1661,7 +1661,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
             # [Claude 2026-10-26] 以實際照片檔判斷（間奏用專屬照片時，跟同 Scene 的歌詞段要照常轉場）
             same_photo = (curr_scp == next_scp) if (curr_scp or next_scp) else (curr_sc == next_sc)
             hold_dur = max(0.05, dur - TRANS_DURATION)
-            concat_lines.append(f"file '{curr_path}'\n")
+            concat_lines.append(f"file '{curr_path}'\n{M_RATE}")
             concat_lines.append(f"duration {hold_dur:.4f}\n")
 
             pair_sig = f"{curr_sig}_{next_sig}_{style}_{TRANS_DURATION:.3f}_{TRANS_STEPS}_{int(same_photo)}"
@@ -1685,10 +1685,10 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
                     sm = 0.5 - 0.5 * math.cos((step / float(TRANS_STEPS)) * math.pi)
                     compose_transition_frame(style, bgA, bgB, ovA, ovB, sm, same_photo).save(tp, compress_level=1)
             for tp in trans_paths:
-                concat_lines.append(f"file '{tp}'\n")
+                concat_lines.append(f"file '{tp}'\n{M_RATE}")
                 concat_lines.append(f"duration {step_dur:.4f}\n")
         else:
-            concat_lines.append(f"file '{curr_path}'\n")
+            concat_lines.append(f"file '{curr_path}'\n{M_RATE}")
             concat_lines.append(f"duration {dur:.4f}\n")
 
     with open(sig_file, "w", encoding="utf-8") as f:
@@ -1696,7 +1696,10 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
         # with its frames), so switching motion off and on does not draw everything again
         json.dump({**old_sigs, **new_sigs}, f, indent=2)
 
-    concat_lines.append(f"file '{base_frames[-1][0]}'\n" + (M_RATE if motion_on else ""))
+    # [SIGN2MV 2026-11-28] every picture of every list is read at 60 fps ("option framerate 60", see M_RATE): the
+    # concat input otherwise keeps the 1/25 s time base of the picture reader, rounds each start to 40 ms and
+    # drops pictures that fall on the same tick (a 0.4 s transition showed 10 of its 16 frames)
+    concat_lines.append(f"file '{base_frames[-1][0]}'\n{M_RATE}")
     concat_file = os.path.join(frames_dir, "concat.txt")
     with open(concat_file, "w", encoding="utf-8") as f:
         f.writelines(concat_lines)
@@ -1740,7 +1743,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
 
         k_lines: List[str] = []
 
-        k_rate = M_RATE if motion_on else ""     # motion: the strip on the same 1/60 s grid as the text under it
+        k_rate = M_RATE                          # the strip on the same 1/60 s grid as the text under it
 
         def _kadd(path: str, d: float):
             if d > 1e-4:

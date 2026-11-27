@@ -10,9 +10,14 @@
   photo shown for several lines moves from the transition that brings it in to the one that takes it away; the
   transition frames draw both photos at their pose, so nothing jumps. The render moves the photos with ffmpeg's
   perspective filter (sub-pixel; zoompan moves by whole pixels and stutters at these speeds) under the still text
-  layer; each piece starts on a whole frame at 60 fps (the motion lists read every picture at 60 fps: the concat input
-  otherwise rounds every start to 1/25 s). The live subtitle check moves the same way. Off, the render is exactly as
-  before. Manuals (zh/en) updated.
+  layer; each piece starts on a whole frame at 60 fps. The live subtitle check moves the same way. Off, the render
+  takes the same path as before. Manuals (zh/en) updated.
+
+- MV render: every picture list is read at 60 fps (「option framerate 60」 on each file of the photo, text and karaoke
+  lists). The concat input kept the picture reader's 1/25 s time base, so every start was rounded to 40 ms: of the
+  16 frames drawn for a 0.4 s transition only about 10 reached the video (pictures falling on the same tick were
+  dropped), and each line changed up to 20 ms off its time. Now every transition frame is shown and every change is
+  within half a frame (8 ms) of its time. Old projects render slightly differently for that reason.
 
 - Segment recording and keys: the first time a key with no segment draft is opened, it starts from the boundaries and
   part names of another key of the same version (same separation, same length) — the one changed last, or the

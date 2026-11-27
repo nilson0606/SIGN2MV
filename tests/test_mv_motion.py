@@ -244,3 +244,46 @@ def test_render_with_motion(client, root, monkeypatch):
     out = core.execute_mv_render_pipeline(core.load_project_dict(slug))
     assert out["status"] == "ok"
     assert {f.name: f.stat().st_mtime_ns for f in frames.glob("base_*.png")} == before
+
+
+def test_render_without_motion_shows_every_transition_frame(client, root, monkeypatch):
+    """[2026-11-28] The render without motion lists its pictures at 60 fps too: before, the concat input rounded
+    every start to 1/25 s, so of the 16 frames drawn for a 0.4 s transition only about 10 reached the video,
+    and each line changed up to 20 ms off its time."""
+    fonts = sorted(__import__("pathlib").Path("/usr/share/fonts/opentype/noto").glob("NotoSansCJK-Regular.ttc"))
+    if not fonts:
+        pytest.skip("no CJK font in this environment")
+    monkeypatch.setenv("SIGN2MV_MV_FONT", str(fonts[0]))
+    monkeypatch.setenv("SIGN2MV_FORCE_CPU", "1")
+    sid, slug, pdir = _aligned_project(client, root)
+    for n in (1, 2, 3):
+        client.post("/api/mv/upload_scene", data={"slug": slug, "scene_id": str(n)},
+                    files={"file": (f"{n}.png", png_bytes(textured(n)), "image/png")})
+    proj = client.get(f"/api/mv/project/{slug}").json()["project"]
+    proj.update(transition_mode="fixed", transition_style="slideleft")
+    client.post("/api/mv/project/save", json=proj)
+    p = core.load_project_dict(slug)
+    out = core.execute_mv_render_pipeline(p)
+    assert out["status"] == "ok"
+    frames = pdir / "frames"
+    assert not list(frames.glob("mbg_*.png"))                                  # the path without motion
+    lst = (frames / "concat.txt").read_text(encoding="utf-8")
+    assert lst.count("file '") == lst.count(core.M_RATE)                       # every picture at 60 fps
+    # a transition between two photos: every one of its 16 drawn frames is in the video, in order
+    tl = p["timeline"]
+    TR = 0.40
+    pos, starts = 0.0, []
+    for i, s in enumerate(tl):
+        d = max(0.1, s["end"] - s["start"])
+        starts.append(pos)
+        pos += (max(0.05, d - TR) + TR) if i < len(tl) - 1 else d
+    i = next(k for k in range(len(tl) - 1) if tl[k].get("scene") in (1, 2) and tl[k + 1].get("scene") in (2, 3)
+             and tl[k].get("scene") != tl[k + 1].get("scene"))
+    edge = starts[i + 1] - TR
+    fr = _frames(out["output_mv"], edge - 2 / 60, edge + TR + 2 / 60)
+    band = (slice(260, 800), slice(100, 1820))
+    steps = [np.abs(x[band] - y[band]).mean() for x, y in zip(fr, fr[1:])]
+    changes = [k for k, d in enumerate(steps) if d > 1.0]
+    assert len(changes) >= 16, (len(changes), [round(x, 1) for x in steps])
+    # and it starts on its frame (the frame after the last held one), not up to 20 ms off
+    assert abs(changes[0] - 1) <= 1, changes[:3]
