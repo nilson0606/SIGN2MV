@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- MV page: 「🎥 運鏡」 (camera motion), an option, off by default. Ticked, the photos of a full MV move slowly (push
+  in, pull out, pan left/right, pan up/down, push in and drift) while the title, subtitles, karaoke strip and spectrum
+  stay still. Chosen like the transitions (one kind / the five in turn / random, 🎲 draws another set), amount light 5 %
+  / medium 10 % / strong 20 %; each photo card (and an intro or interlude's own photo) can give its photo its own kind
+  or none, kept under the photo's fingerprint, so the choice follows the photo and is dropped when it is replaced. A
+  photo shown for several lines moves from the transition that brings it in to the one that takes it away; the
+  transition frames draw both photos at their pose, so nothing jumps. The render moves the photos with ffmpeg's
+  perspective filter (sub-pixel; zoompan moves by whole pixels and stutters at these speeds) under the still text
+  layer; each piece starts on a whole frame at 60 fps (the motion lists read every picture at 60 fps: the concat input
+  otherwise rounds every start to 1/25 s). The live subtitle check moves the same way. Off, the render is exactly as
+  before. Manuals (zh/en) updated.
+
 - Segment recording and keys: the first time a key with no segment draft is opened, it starts from the boundaries and
   part names of another key of the same version (same separation, same length) — the one changed last, or the
   original key for drafts saved before this change. Takes are not carried (each key has its own recordings); the

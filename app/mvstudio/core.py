@@ -33,6 +33,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+from . import motion
 from .align import TRAD_TO_SIMP, build_guaranteed_fallback_timeline
 
 NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
@@ -311,6 +312,7 @@ def save_project_dict(proj: Dict[str, Any]) -> Dict[str, Any]:
             proj["transition_seed"] = 1
     if proj.get("credit_lang") not in (None, "zh", "en"):
         proj["credit_lang"] = "zh"
+    motion.normalize(proj)
     sid, _ = parse_slug(slug)
     stored = {k: v for k, v in proj.items() if k not in ("illust_dir", "whisper_json", "song_id", "name", "slug")}
     stored["audio_file"] = _rel_audio(sid, str(proj.get("audio_file") or ""))
@@ -543,7 +545,8 @@ def list_scene_images(illust_dir: str, max_scene: int = 24) -> List[Dict[str, An
                 "path": p,
                 "filename": os.path.basename(p),
                 "size_kb": round(os.path.getsize(p) / 1024, 1),
-                "mtime": int(os.path.getmtime(p))
+                "mtime": int(os.path.getmtime(p)),
+                "print": _photo_print(p) or "",     # [SIGN2MV 2026-11-27] the key of the photo's own camera motion
             })
         else:
             scenes.append({
@@ -618,7 +621,7 @@ def list_instrumental_photos(illust_dir: str, timeline: List[Dict[str, Any]]) ->
         if key and key not in out:
             ip = instrumental_photo_path(illust_dir, key)
             if illust_dir and os.path.exists(ip) and photo_ok(illust_dir, ip):
-                out[key] = {"path": ip, "mtime": int(os.path.getmtime(ip))}
+                out[key] = {"path": ip, "mtime": int(os.path.getmtime(ip)), "print": _photo_print(ip) or ""}
     return out
 
 
@@ -960,6 +963,130 @@ def compose_transition_frame(style: str, bgA: Image.Image, bgB: Image.Image, ovA
 
 
 
+
+# ---------------------------------------------------------------------------
+# [SIGN2MV 2026-11-27] camera motion (運鏡): see motion.py
+# ---------------------------------------------------------------------------
+_FFMPEG_MAJOR: Dict[str, int] = {}
+M_RATE = "option framerate 60\n"      # a concat list's line: read this picture at 60 fps (see _motion_streams)
+
+
+def ffmpeg_major() -> int:
+    """Major version of the ffmpeg in use (99 when it cannot be told, e.g. a build from the master branch)."""
+    if FFMPEG not in _FFMPEG_MAJOR:
+        major = 99
+        try:
+            out = subprocess.run([FFMPEG, "-hide_banner", "-version"], capture_output=True, text=True, timeout=30,
+                                 creationflags=NO_WINDOW).stdout
+            m = re.search(r"version\s+n?(\d+)\.", out or "")
+            major = int(m.group(1)) if m else 99
+        except (OSError, subprocess.SubprocessError, ValueError):
+            pass
+        _FFMPEG_MAJOR[FFMPEG] = major
+    return _FFMPEG_MAJOR[FFMPEG]
+
+
+def filter_script_args(path: str) -> List[str]:
+    """Read -filter_complex from a file: "-/filter_complex" since ffmpeg 7 (SIGN2MV installs 8.1), the
+    older -filter_complex_script before."""
+    return ["-/filter_complex", path] if ffmpeg_major() >= 7 else ["-filter_complex_script", path]
+
+
+def _motion_streams(proj: Dict[str, Any], timeline: List[Dict[str, Any]], base_frames: List[Tuple[Any, ...]],
+                    text_paths: List[str], run_of: List[int], run_first: List[int], mplan: List[Tuple[str, int]],
+                    amt: float, plan: List[str], trans_duration: float, trans_steps: int, frames_dir: str,
+                    old_sigs: Dict[str, Any], new_sigs: Dict[str, Any], concat_lines: List[str],
+                    bg_cache: Dict[Any, Image.Image], overlay: Callable[[int], Image.Image],
+                    gold_at: Optional[Callable[[int, float], int]]) -> Tuple[str, List[Tuple[int, int, Any]]]:
+    """The two streams of an MV whose photos move.
+    concat_lines gets the photo stream: each line's photo alone for its hold (ffmpeg moves it), then the
+    transition frames drawn here (photos at their pose, text fading as always). The text stream (a concat
+    file, returned) has each line's text layer for its hold and nothing during the transitions. Every piece
+    starts on a whole frame at 60 fps (found from the times, so nothing drifts), and the pieces (first
+    frame, end frame, window line or None) are returned for motion.perspective_filter.
+    Every file in the two lists says "option framerate 60": without it the concat input keeps the picture
+    reader's 1/25 s time base, every start is rounded to 40 ms and a picture shown for one frame is lost."""
+    FPS = 60
+    last = len(base_frames) - 1
+    bounds: List[Tuple[int, int, int]] = []          # per line: hold start, hold end = transition start, transition end
+    pos = 0.0
+    for i, bf in enumerate(base_frames):
+        d = bf[5]
+        hold = d if i == last else max(0.05, d - trans_duration)
+        end = pos + hold + (0.0 if i == last else trans_duration)
+        bounds.append((int(round(pos * FPS)), int(round((pos + hold) * FPS)), int(round(end * FPS))))
+        pos = end
+    spans: List[Tuple[int, int]] = []                # per run: first and end frame the photo is seen
+    for r, i0 in enumerate(run_first):
+        i1 = run_first[r + 1] - 1 if r + 1 < len(run_first) else last
+        spans.append((bounds[i0 - 1][1] if i0 > 0 else 0, bounds[i1][2]))
+
+    def at(r: int, frame: float) -> Tuple[float, float, float, float]:
+        kind, var = mplan[r]
+        r0, r1 = spans[r]
+        return motion.rect(kind, var, amt, (frame - r0) / max(1, r1 - r0 - 1), FRAME_W, FRAME_H)
+
+    empty = os.path.join(frames_dir, "m_empty.png")
+    if not os.path.exists(empty):
+        _layer().save(empty)
+    pieces: List[Tuple[int, int, Any]] = []
+    text_lines: List[str] = []
+    n_pairs = max(1, last)
+    for idx in range(len(base_frames)):
+        _check_cancel()
+        fhs, fhe, fte = bounds[idx]
+        r = run_of[idx]
+        if fhe > fhs:
+            line = None
+            if mplan[r][0] != "none":
+                a, b = at(r, fhs), at(r, fhe - 1)
+                line = (a[0], b[0], a[1], b[1], a[2], b[2], a[3], b[3], fhs, fhe - 1)
+            pieces.append((fhs, fhe, line))
+            concat_lines.append(f"file '{base_frames[idx][0]}'\n{M_RATE}duration {(fhe - fhs) / FPS:.6f}\n")
+            text_lines.append(f"file '{text_paths[idx]}'\n{M_RATE}duration {(fhe - fhs) / FPS:.6f}\n")
+        if idx == last or fte <= fhe:
+            continue
+        style = plan[idx]
+        rb = run_of[idx + 1]
+        same = rb == r
+        update_progress(True, "render", 30 + int((idx + 1) / n_pairs * 35),
+                        f"✨ [階段 2/4] 正在生成 {trans_duration:.2f}s 轉場（{dict(TRANSITION_STYLES).get(style, style)}），照片跟著運鏡 ({idx + 1}/{n_pairs} 組)", "")
+        n_tr = fte - fhe
+        pieces.append((fhe, fte, None))
+        text_lines.append(f"file '{empty}'\n{M_RATE}duration {n_tr / FPS:.6f}\n")
+        steps = [(k, fhe + (k - 1) * n_tr // trans_steps, fhe + k * n_tr // trans_steps) for k in range(1, trans_steps + 1)]
+        steps = [x for x in steps if x[2] > x[1]]
+        gold_end = gold_at(idx, max(0.05, base_frames[idx][5] - trans_duration)) if gold_at else 0
+        # (frames counted from where each photo appears: editing an earlier line does not draw these again)
+        sig = "|".join([str(base_frames[idx][6]), str(base_frames[idx + 1][6]), style, f"{trans_duration:.3f}", str(trans_steps),
+                        str(int(same)), f"{amt}", repr(mplan[r]), repr(mplan[rb]), f"{n_tr}", f"k{gold_end}",
+                        f"{fhe - spans[r][0]},{spans[r][1] - spans[r][0]},{fhe - spans[rb][0]},{spans[rb][1] - spans[rb][0]}"])
+        key = f"mtrans_{idx:03d}"
+        new_sigs[key] = sig
+        paths = [os.path.join(frames_dir, f"mtrans_{idx:03d}_{k:02d}.png") for k, _, _ in steps]
+        if not (old_sigs.get(key) == sig and all(os.path.exists(p) for p in paths)):
+            bgA = render_background(proj, timeline[idx], bg_cache)
+            bgB = render_background(proj, timeline[idx + 1], bg_cache)
+            ovA, ovB = overlay(idx), overlay(idx + 1)
+            if gold_end:
+                ovA = ovA.copy()
+                ovA.alpha_composite(render_karaoke_strip(str(timeline[idx].get("text", "")), str(timeline[idx].get("type", "lyric")), gold_end), (0, KARAOKE_STRIP_Y))
+            for (k, fa, fb), p in zip(steps, paths):
+                if k % 4 == 0:
+                    _check_cancel()
+                mid = (fa + fb - 1) / 2.0
+                sm = 0.5 - 0.5 * math.cos((k / float(trans_steps)) * math.pi)
+                wa = motion.warp(bgA, at(r, mid))
+                wb = wa if same else motion.warp(bgB, at(rb, mid))
+                compose_transition_frame(style, wa, wb, ovA, ovB, sm, same).save(p, compress_level=1)
+        for (k, fa, fb), p in zip(steps, paths):
+            concat_lines.append(f"file '{p}'\n{M_RATE}duration {(fb - fa) / FPS:.6f}\n")
+    text_lines.append(f"file '{text_paths[-1]}'\n{M_RATE}")
+    text_concat = os.path.join(frames_dir, "motion_text_concat.txt")
+    with open(text_concat, "w", encoding="utf-8") as f:
+        f.writelines(text_lines)
+    return text_concat, pieces
+
 # ==== normalize ====
 def normalize_instrumental_fields(timeline: List[Dict[str, Any]]) -> bool:
     """[Claude 2026-10-26] 間奏段補上不重複的 6 碼 id（專屬照片用）；前奏／尾奏的 display 只能是 card 或 photo_text。
@@ -1019,12 +1146,14 @@ def spectrum_color_hex(proj: Dict[str, Any]) -> str:
 
 
 def build_video_filter(spec_ranges: Optional[List[Tuple[float, float]]], color_hex: str = "#f5d787",
-                       karaoke: bool = False) -> Optional[str]:
-    """合成最後一步的影片濾鏡：[0:v] 照片串 →（逐字金色字條 [2:v]）→（頻譜 [1:a]）→ [vout]。都沒有就回傳 None"""
-    if not spec_ranges and not karaoke:
+                       karaoke: bool = False, head: Optional[str] = None) -> Optional[str]:
+    """合成最後一步的影片濾鏡：[0:v] 照片串 →（逐字金色字條 [2:v]）→（頻譜 [1:a]）→ [vout]。都沒有就回傳 None
+    [SIGN2MV 2026-11-27] head: the chains that make [v0] instead of the plain photo stream (camera motion:
+    the moving photos with the still text layer on them); with it there is always a filter."""
+    if not spec_ranges and not karaoke and head is None:
         return None
     # 照片段是「一張圖停幾秒」：先轉 yuv420p 再補成每秒 60 格（顏色轉換每張圖只做一次），頻譜才會一直跳
-    parts = ["[0:v]format=yuv420p,fps=60[v0]"]
+    parts = [head or "[0:v]format=yuv420p,fps=60[v0]"]
     cur = "[v0]"
     if karaoke:
         parts.append("[2:v]format=rgba[kara]")
@@ -1410,6 +1539,27 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
             ov_cache[i] = render_overlay_rgba(proj, timeline[i])
         return ov_cache[i]
 
+    # [SIGN2MV 2026-11-27] camera motion (motion.py). A run is one photo on screen: consecutive lines with the
+    # same photo (the same test as the transitions below). The motion path is taken only when the option is on,
+    # the project has photos and at least one photo moves; otherwise everything below is as before.
+    seg_paths = [seg_photo_path(proj, s) for s in timeline]
+
+    def _same_photo(i: int, j: int) -> bool:
+        a, b = seg_paths[i], seg_paths[j]
+        return (a == b) if (a or b) else (int(timeline[i].get("scene", 1)) == int(timeline[j].get("scene", 1)))
+
+    run_of: List[int] = []
+    run_first: List[int] = []
+    for i in range(len(timeline)):
+        if i == 0 or not _same_photo(i - 1, i):
+            run_first.append(i)
+        run_of.append(len(run_first) - 1)
+    mplan = [] if lyric_video else motion.plan(proj, [
+        (_photo_print(seg_paths[i]) if seg_paths[i] and os.path.exists(seg_paths[i]) else None) for i in run_first])
+    motion_on = any(kind != "none" for kind, _ in mplan)
+    m_amt = motion.amount(proj)
+    m_text: List[str] = []
+
     for idx, seg in enumerate(timeline):
         _check_cancel()
         pct = 4 + int((idx + 1) / max(1, total_segs) * 26)
@@ -1430,11 +1580,21 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
         if os.path.basename(sc_path).startswith("inst_") or seg.get("display", "card") != "card":
             extra_sig = f"|{os.path.basename(sc_path)}|{seg.get('display', 'card')}"
         seg_sig = hashlib.md5(f"{header_sig}|{sc_id}|{sc_mtime}|{seg.get('type')}|{seg.get('text')}{extra_sig}".encode("utf-8")).hexdigest()
-        new_sigs[f"base_{idx:03d}"] = seg_sig
 
-        frame_path = os.path.join(frames_dir, f"base_{idx:03d}.png")
-        if not (old_sigs.get(f"base_{idx:03d}") == seg_sig and os.path.exists(frame_path)):
-            compose_frame(render_background(proj, seg, bg_cache), _overlay(idx)).save(frame_path, compress_level=1)
+        if motion_on:
+            # the photo alone (it moves under the text in the encoder) and the text layer alone
+            frame_path = os.path.join(frames_dir, f"mbg_{idx:03d}.png")
+            text_path = os.path.join(frames_dir, f"mov_{idx:03d}.png")
+            new_sigs[f"mbg_{idx:03d}"] = seg_sig
+            if not (old_sigs.get(f"mbg_{idx:03d}") == seg_sig and os.path.exists(frame_path) and os.path.exists(text_path)):
+                render_background(proj, seg, bg_cache).save(frame_path, compress_level=1)
+                _overlay(idx).save(text_path, compress_level=1)
+            m_text.append(text_path)
+        else:
+            new_sigs[f"base_{idx:03d}"] = seg_sig
+            frame_path = os.path.join(frames_dir, f"base_{idx:03d}.png")
+            if not (old_sigs.get(f"base_{idx:03d}") == seg_sig and os.path.exists(frame_path)):
+                compose_frame(render_background(proj, seg, bg_cache), _overlay(idx)).save(frame_path, compress_level=1)
         base_frames.append((frame_path, sc_id, sc_path, st, et, dur, seg_sig))
 
     # [Claude 2026-10-26] 轉場：照片層用 20 種樣式之一（固定／依序／隨機），文字層淡入淡出；
@@ -1470,7 +1630,16 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
                 n = k
         return n
 
-    for idx in range(len(base_frames)):
+    m_text_concat = ""
+    m_head: Optional[str] = None
+    if motion_on:
+        m_text_concat, m_pieces = _motion_streams(proj, timeline, base_frames, m_text, run_of, run_first, mplan, m_amt, plan,
+                                                  TRANS_DURATION, TRANS_STEPS, frames_dir, old_sigs, new_sigs, concat_lines,
+                                                  bg_cache, _overlay, (lambda i, off: _gold_at(i, off)) if kara_on else None)
+        m_head = (f"[0:v]format=yuv420p,fps=60,{motion.perspective_filter(m_pieces, FRAME_W, FRAME_H)}[mph];"
+                  f"[{3 if kara_on else 2}:v]format=yuva420p,fps=60[mtx];[mph][mtx]overlay=format=yuv420:eof_action=pass[v0]")
+
+    for idx in (range(len(base_frames)) if not motion_on else ()):
         _check_cancel()
         curr_path, curr_sc, curr_scp, st, et, dur, curr_sig = base_frames[idx]
         if idx < len(base_frames) - 1:
@@ -1523,9 +1692,11 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
             concat_lines.append(f"duration {dur:.4f}\n")
 
     with open(sig_file, "w", encoding="utf-8") as f:
-        json.dump(new_sigs, f, indent=2)
+        # [SIGN2MV 2026-11-27] old entries of the other path stay (a signature is only ever written together
+        # with its frames), so switching motion off and on does not draw everything again
+        json.dump({**old_sigs, **new_sigs}, f, indent=2)
 
-    concat_lines.append(f"file '{base_frames[-1][0]}'\n")
+    concat_lines.append(f"file '{base_frames[-1][0]}'\n" + (M_RATE if motion_on else ""))
     concat_file = os.path.join(frames_dir, "concat.txt")
     with open(concat_file, "w", encoding="utf-8") as f:
         f.writelines(concat_lines)
@@ -1533,7 +1704,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
     update_progress(
         True, "render", 70,
         "🎬 [階段 3/4] 正在執行 NVENC 1080p 60fps 硬體加速編碼封裝...",
-        "h264_nvenc (-preset p5 -b:v 8M -r 60) + AAC 320k 高音質母帶"
+        "🎥 運鏡：照片的每一格在這一步算出來，會比沒有運鏡久一些" if motion_on else "h264_nvenc (-preset p5 -b:v 8M -r 60) + AAC 320k 高音質母帶"
     )
     # [Claude 2026-10-26] 先編到暫存檔，成功才取代正式成品：失敗時舊 MV 不會被當成新成品驗收。
     # 原本的備援把 cmd[9]（音檔路徑）換成 libx264、cmd[11] 換成 veryfast，必失敗；而且兩次都不檢查結果。
@@ -1569,9 +1740,11 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
 
         k_lines: List[str] = []
 
+        k_rate = M_RATE if motion_on else ""     # motion: the strip on the same 1/60 s grid as the text under it
+
         def _kadd(path: str, d: float):
             if d > 1e-4:
-                k_lines.append(f"file '{path}'\nduration {d:.4f}\n")
+                k_lines.append(f"file '{path}'\n{k_rate}duration {d:.4f}\n")
 
         last_i = len(base_frames) - 1
         for i in range(len(base_frames)):
@@ -1589,16 +1762,26 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
             _kadd(_strip(i, cur_n), hold - cur_t)
             if i != last_i and not lyric_video:
                 _kadd(empty_p, TRANS_DURATION)
-        k_lines.append(f"file '{empty_p}'\n")
+        k_lines.append(f"file '{empty_p}'\n{k_rate}")
         kara_concat = os.path.join(frames_dir, "karaoke_concat.txt")
         with open(kara_concat, "w", encoding="utf-8") as f:
             f.writelines(k_lines)
         kara_args = ["-f", "concat", "-safe", "0", "-i", kara_concat]
-    vfc = build_video_filter(spec_ranges, spectrum_color_hex(proj), karaoke=kara_on)
+    vfc = build_video_filter(spec_ranges, spectrum_color_hex(proj), karaoke=kara_on, head=m_head)
+    text_args: List[str] = []
+    if motion_on:
+        # the photo stream is followed by the still text layer; the filter is long (the window of every line),
+        # so it goes in a file: Windows does not take command lines past 32 767 characters
+        text_args = ["-f", "concat", "-safe", "0", "-i", m_text_concat]
+        script = os.path.join(frames_dir, "motion_filter.txt")
+        with open(script, "w", encoding="utf-8") as f:
+            f.write(vfc or "")
 
     def _encode_cmd(video_codec_args: List[str], pix_fmt: str) -> List[str]:
         vf_args = ["-filter_complex", vfc, "-map", "[vout]", "-map", "1:a"] if vfc else []
-        return [FFMPEG, "-hide_banner", "-y", "-f", "concat", "-safe", "0", "-i", concat_file, "-i", audio_file, *kara_args, *vf_args,
+        if motion_on:
+            vf_args = [*filter_script_args(script), "-map", "[vout]", "-map", "1:a"]
+        return [FFMPEG, "-hide_banner", "-y", "-f", "concat", "-safe", "0", "-i", concat_file, "-i", audio_file, *kara_args, *text_args, *vf_args,
                 *video_codec_args, "-r", "60", "-pix_fmt", pix_fmt,
                 "-c:a", "aac", "-b:a", "320k", "-shortest", tmp_out]
 

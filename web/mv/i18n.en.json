@@ -713,7 +713,27 @@
   "還沒有成品 MV，請先渲染一次": "There is no finished MV yet; render it once first",
   "❌ 換音軌失敗": "❌ Audio swap failed",
   "照歌詞": "Follow the lyrics",
-  "照歌詞（預設）：歌詞提到的時段和場景就照它（副歌也是），沒提到的照故事線。故事線：整首歌從早走到晚、副歌固定一個地方。已經有圖卡的歌，要按「🎲 圖卡抽抽樂」重抽才會換排法": "Follow the lyrics (default): the time of day and the place a line names are used (in a chorus too); lines that name none follow the story line. Story line: the song goes from morning to night and every chorus keeps one place. A song that has cards already keeps its order until you press \"🎲 Card lottery\" to draw them again"
+  "照歌詞（預設）：歌詞提到的時段和場景就照它（副歌也是），沒提到的照故事線。故事線：整首歌從早走到晚、副歌固定一個地方。已經有圖卡的歌，要按「🎲 圖卡抽抽樂」重抽才會換排法": "Follow the lyrics (default): the time of day and the place a line names are used (in a chorus too); lines that name none follow the story line. Story line: the song goes from morning to night and every chorus keeps one place. A song that has cards already keeps its order until you press \"🎲 Card lottery\" to draw them again",
+  "🎥 運鏡": "🎥 Camera motion",
+  "勾選後照片會慢慢推近、拉遠或平移；歌名、字幕、金色字和頻譜不動。每張照片也可以在照片卡上自己選": "Tick it and the photos move slowly (push in, pull out or pan); the title, subtitles, golden words and spectrum stay still. Each photo can also have its own on its card",
+  "依序（五種輪流）": "In turn (the five, one after another)",
+  "推近": "Push in",
+  "拉遠": "Pull out",
+  "左右平移": "Pan left/right",
+  "上下平移": "Pan up/down",
+  "推近加平移": "Push in and drift",
+  "輕（放大 5%）": "Light (enlarged 5%)",
+  "中（放大 10%）": "Medium (enlarged 10%)",
+  "強（放大 20%）": "Strong (enlarged 20%)",
+  "照片放大多少來移動：越大動得越多，照片也越模糊": "How much the photo is enlarged to move: the more, the more it moves and the softer the photo",
+  "隨機模式：重新抽一組運鏡（同一組每次合成結果都一樣）": "Random mode: draw a new set of camera motions (the same set always renders the same way)",
+  "🎥 運鏡：": "🎥 Motion:",
+  "跟全片": "Like the whole MV",
+  "不動": "Still",
+  "這張照片自己的運鏡；要先勾上面的「🎥 運鏡」才有作用。換成別的照片就回到「跟全片」": "This photo's own camera motion; it works only when \"🎥 Camera motion\" above is ticked. Another photo put in its place goes back to \"Like the whole MV\"",
+  "✔ 已關閉運鏡：照片不動": "✔ Camera motion off: the photos stay still",
+  "五種輪流": "the five in turn",
+  "🎥 運鏡：照片的每一格在這一步算出來，會比沒有運鏡久一些": "🎥 Camera motion: every frame of the photos is computed in this step, so it takes longer than without motion"
  },
  "patterns": [
   {
@@ -2007,6 +2027,30 @@
   {
    "zh": "換音軌失敗：{0}",
    "en": "Audio swap failed: {0}"
+  },
+  {
+   "zh": "🎥 這張照片的運鏡：{0}",
+   "en": "🎥 This photo's camera motion: {0}"
+  },
+  {
+   "zh": "🎥 運鏡：全片「{0}」，幅度{1}（每張照片也可以在照片卡上自己選）",
+   "en": "🎥 Camera motion: \"{0}\" on every photo, {1} (each photo can also have its own on its card)"
+  },
+  {
+   "zh": "🎥 運鏡：{0}，幅度{1}（每張照片也可以在照片卡上自己選）",
+   "en": "🎥 Camera motion: {0}, {1} (each photo can also have its own on its card)"
+  },
+  {
+   "zh": "✨ [階段 2/4] 正在生成 {0}s 轉場（{1}），照片跟著運鏡 ({2}/{3} 組)",
+   "en": "✨ [Stage 2/4] Generating {0}s transitions ({1}), the photos moving with them ({2}/{3} pairs)"
+  },
+  {
+   "zh": "{0}　第 {1} 段 · Scene {2}　🎥 {3}　→ {4}",
+   "en": "{0}　Section {1} · Scene {2}　🎥 {3}　→ {4}"
+  },
+  {
+   "zh": "{0}　第 {1} 段 · Scene {2}　🎥 {3}",
+   "en": "{0}　Section {1} · Scene {2}　🎥 {3}"
   }
  ]
 }

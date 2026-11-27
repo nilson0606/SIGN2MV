@@ -1210,6 +1210,27 @@
             <select id="selTransStyle" onchange="onTransitionSettingChanged()" style="padding:4px 6px;"></select>
             <button type="button" class="btn btn-sm" id="btnTransReshuffle" onclick="reshuffleTransitions()" title="隨機模式：重新抽一組轉場（同一組每次合成結果都一樣）">🎲 重新抽</button>
           </div>
+          <!-- [SIGN2MV 2026-11-27] camera motion (app/mvstudio/motion.py): an option, off by default -->
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;" title="勾選後照片會慢慢推近、拉遠或平移；歌名、字幕、金色字和頻譜不動。每張照片也可以在照片卡上自己選">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" id="chkMotion" onchange="onMotionSettingChanged()" style="width:16px; height:16px; accent-color:var(--gold);" />
+              <span style="color:var(--gold); font-weight:800;">🎥 運鏡</span>
+            </label>
+            <span id="motionOpts" style="display:none; flex-basis:100%; align-items:center; gap:6px; flex-wrap:wrap;">
+              <select id="selMotionMode" onchange="onMotionSettingChanged()" style="padding:4px 6px;">
+                <option value="fixed">固定一種</option>
+                <option value="sequence">依序（五種輪流）</option>
+                <option value="random">隨機</option>
+              </select>
+              <select id="selMotionStyle" onchange="onMotionSettingChanged()" style="padding:4px 6px;"></select>
+              <select id="selMotionAmount" onchange="onMotionSettingChanged()" style="padding:4px 6px;" title="照片放大多少來移動：越大動得越多，照片也越模糊">
+                <option value="light">輕（放大 5%）</option>
+                <option value="medium">中（放大 10%）</option>
+                <option value="strong">強（放大 20%）</option>
+              </select>
+              <button type="button" class="btn btn-sm" id="btnMotionReshuffle" onclick="reshuffleMotion()" title="隨機模式：重新抽一組運鏡（同一組每次合成結果都一樣）">🎲 重新抽</button>
+            </span>
+          </div>
           <label style="display:flex; align-items:center; gap:6px; cursor:pointer;" title="唱歌（歌詞段）時在字幕下方顯示跟著音樂跳動的金色頻譜，不會蓋到字幕；前奏／間奏／尾奏不顯示">
             <input type="checkbox" id="chkSpectrum" checked onchange="onSpectrumToggle()" style="width:16px; height:16px; accent-color:var(--gold);" />
             <span style="color:var(--gold); font-weight:800;">🎚️ 唱歌時顯示頻譜跳動</span>
@@ -1674,6 +1695,7 @@
         { const el = parseFloat(currentProject.early_lead_sec); document.getElementById('inpEarlyLead').value = (Number.isFinite(el) ? el : -0.70).toFixed(2); }
         { const te = parseFloat(currentProject.tail_extend_sec); document.getElementById('inpTailExtend').value = (Number.isFinite(te) ? te : 2.50).toFixed(2); }
         loadTransitionControls();
+        loadMotionControls();
 
         updateAudioProbeUI(data.audio_probe, currentProject.audio_file || '');
 
@@ -1796,6 +1818,7 @@
               ${sc.exists ? `<button class="scene-mini-btn" title="刪除此張分鏡照片" style="color:#fca5a5; border-color:rgba(239,68,68,0.4);" onclick="event.stopPropagation(); deleteSingleSceneImage(${sc.scene_id})">🗑️ 刪圖</button>` : ''}
           </div>
           <div class="scene-card-body">
+            ${sc.exists ? photoMotionSelect(sc.print) : ''}
             <div class="scene-order-bar" style="display:flex; justify-content:space-between; align-items:center; gap:4px; font-size:11px; color:var(--text-muted); margin-bottom:4px;">
               <span style="display:flex; gap:3px; align-items:center;">順序
                 <button type="button" class="scene-time-btn scene-move-left" ${sc.scene_id <= 1 ? 'disabled style="opacity:0.3;"' : ''} title="跟前一張對調（歌詞不動：這一格的歌詞改顯示換過來的照片）" onclick="swapScenes(${sc.scene_id}, ${sc.scene_id - 1})">◀</button>
@@ -1916,6 +1939,7 @@
               ${own ? `<button class="scene-mini-btn" title="刪掉專屬照片（改回沿用 Scene 照片）" style="color:#fca5a5; border-color:rgba(239,68,68,0.4);" onclick="event.stopPropagation(); deleteInstPhoto(${idx})">🗑️ 刪圖</button>` : ''}
           </div>
           <div class="scene-card-body">
+            ${own ? photoMotionSelect(instrumentPhotos[key].print) : ''}
             <div class="inst-row" style="justify-content:space-between; margin-bottom:4px;">
               <span>⏱️ ${(seg.end - seg.start).toFixed(2)}s</span>
               <span style="display:flex; gap:4px;">
@@ -2967,6 +2991,11 @@
       currentProject.transition_mode = document.getElementById('selTransMode').value || 'fixed';
       currentProject.transition_style = document.getElementById('selTransStyle').value || 'fade';
       if (currentProject.transition_mode === 'random' && !currentProject.transition_seed) currentProject.transition_seed = 1;
+      currentProject.motion_enabled = document.getElementById('chkMotion').checked;
+      currentProject.motion_mode = document.getElementById('selMotionMode').value || 'random';
+      currentProject.motion_style = document.getElementById('selMotionStyle').value || 'zoomin';
+      currentProject.motion_amount = document.getElementById('selMotionAmount').value || 'light';
+      if (currentProject.motion_enabled && !currentProject.motion_seed) currentProject.motion_seed = 1 + Math.floor(Math.random() * 2147483646);
     }
 
     // ===== [Claude 2026-10-26] 20 種轉場（定義要跟 mv_studio_server.py 的 TRANSITION_STYLES／transition_plan／apply_bg_transition 一致）=====
@@ -3003,6 +3032,132 @@
       return out;
     }
     function transitionSteps(tr) { return Math.max(8, Math.min(60, Math.round((parseFloat(tr) || 0.4) * 40))); }
+
+    // ===== [SIGN2MV 2026-11-27] 運鏡（定義要跟 app/mvstudio/motion.py 的 plan／pose 一致）=====
+    const MOTION_STYLES = [['zoomin', '推近'], ['zoomout', '拉遠'], ['pan_lr', '左右平移'], ['pan_ud', '上下平移'], ['zoompan', '推近加平移']];
+    const MOTION_KEYS = MOTION_STYLES.map(x => x[0]);
+    const MOTION_AMOUNTS = { light: 0.05, medium: 0.10, strong: 0.20 };
+    const MOTION_CORNERS = [[1, -1], [-1, -1], [1, 1], [-1, 1]];
+    function motionLabel(k) { const f = MOTION_STYLES.find(x => x[0] === k); return f ? f[1] : (k === 'none' ? '不動' : k); }
+    function motionAmount(p) { return MOTION_AMOUNTS[(p && p.motion_amount) || 'light'] || MOTION_AMOUNTS.light; }
+    // 每一段連續同一張照片（run）用哪種運鏡：[種類, 變化]；prints[k]＝第 k 段照片的指紋（沒有照片＝''，不動）
+    function motionPlan(p, prints) {
+      if (!p || !p.motion_enabled) return prints.map(() => ['none', 0]);
+      const mode = ['fixed', 'sequence', 'random'].includes(p.motion_mode) ? p.motion_mode : 'random';
+      const style = MOTION_KEYS.includes(p.motion_style) ? p.motion_style : 'zoomin';
+      const seed = (parseInt(p.motion_seed) || 1) >>> 0, own = (p.photo_motion && typeof p.photo_motion === 'object') ? p.photo_motion : {};
+      const N = MOTION_KEYS.length, out = [];
+      let prev = -1;
+      prints.forEach((pr, k) => {
+        if (!pr) { out.push(['none', 0]); return; }
+        const mine = own[pr];
+        if (mine === 'none') { out.push(['none', 0]); return; }
+        if (MOTION_KEYS.includes(mine)) { out.push([mine, k]); return; }
+        if (mode === 'sequence') out.push([MOTION_KEYS[k % N], Math.floor(k / N)]);
+        else if (mode === 'random') {
+          let idx = mix32((Math.imul(seed, 0x9E3779B1) + Math.imul(k, 0x85EBCA77) + 7) >>> 0) % N;
+          if (idx === prev) idx = (idx + 1) % N;
+          prev = idx;
+          out.push([MOTION_KEYS[idx], mix32((Math.imul(seed, 0x85EBCA77) + Math.imul(k, 0x9E3779B1) + 11) >>> 0) & 3]);
+        } else out.push([style, k]);
+      });
+      return out;
+    }
+    // 視窗：[大小 s（照片寬高的比例）, 中心 cx, cy]；p＝0..1（這張照片從出現到消失）
+    function motionPose(kind, variant, amt, p) {
+      p = Math.min(1, Math.max(0, p));
+      const f = 1 / (1 + amt);
+      if (kind === 'zoomin') return [1 + (f - 1) * p, 0.5, 0.5];
+      if (kind === 'zoomout') return [f + (1 - f) * p, 0.5, 0.5];
+      if (kind === 'pan_lr' || kind === 'pan_ud') {
+        const q = variant % 2 === 0 ? p : 1 - p, c = f / 2 + (1 - f) * q;
+        return kind === 'pan_lr' ? [f, c, 0.5] : [f, 0.5, c];
+      }
+      if (kind === 'zoompan') {
+        const s = 1 + (f - 1) * p, [dx, dy] = MOTION_CORNERS[variant % 4];
+        return [s, 0.5 + 0.5 * dx * (1 - s), 0.5 + 0.3 * dy * (1 - s)];
+      }
+      return null;
+    }
+    function segPhotoPrint(seg) {
+      const k = instKey(seg), ph = k && instrumentPhotos[k];
+      if (ph) return ph.print || '';
+      const sc = liveScene(seg.scene);
+      return (sc && sc.exists && sc.print) || '';
+    }
+    function photoMotionSelect(print) {
+      if (!print) return '';
+      const p = currentProject || {}, mine = (p.photo_motion || {})[print] || 'follow', on = !!p.motion_enabled;
+      const opts = [['follow', '跟全片'], ...MOTION_STYLES, ['none', '不動']]
+        .map(([k, lab]) => `<option value="${k}" ${k === mine ? 'selected' : ''}>${lab}</option>`).join('');
+      return `<div class="photo-motion-row" style="display:flex; align-items:center; gap:4px; font-size:11px; color:var(--text-muted); margin-bottom:4px;${on ? '' : ' opacity:0.45;'}">
+        <span style="white-space:nowrap;">🎥 運鏡：</span><select class="photo-motion-sel" data-print="${print}" ${on ? '' : 'disabled'} onchange="onPhotoMotionChange(this)" style="flex:1; min-width:0; width:auto; font-size:11px; padding:1px 4px;" title="這張照片自己的運鏡；要先勾上面的「🎥 運鏡」才有作用。換成別的照片就回到「跟全片」">${opts}</select></div>`;
+    }
+    function onPhotoMotionChange(sel) {
+      if (!currentProject) return;
+      const pm = (currentProject.photo_motion && typeof currentProject.photo_motion === 'object') ? currentProject.photo_motion : {};
+      if (sel.value === 'follow') delete pm[sel.dataset.print]; else pm[sel.dataset.print] = sel.value;
+      currentProject.photo_motion = pm;
+      document.querySelectorAll('.photo-motion-sel').forEach(el => { if (el.dataset.print === sel.dataset.print) el.value = sel.value; });
+      liveLayerKeys = ['', '', ''];
+      scheduleAutoSave();
+      showToast(`🎥 這張照片的運鏡：${sel.value === 'follow' ? '跟全片' : motionLabel(sel.value)}`);
+    }
+    function updateMotionControlsUI() {
+      const on = document.getElementById('chkMotion').checked, mode = document.getElementById('selMotionMode').value;
+      document.getElementById('motionOpts').style.display = on ? 'flex' : 'none';
+      document.getElementById('selMotionStyle').style.display = mode === 'fixed' ? '' : 'none';
+      document.getElementById('btnMotionReshuffle').style.display = mode === 'random' ? '' : 'none';
+      document.querySelectorAll('.photo-motion-sel').forEach(el => { el.disabled = !on; el.parentElement.style.opacity = on ? '' : '0.45'; });
+    }
+    function loadMotionControls() {
+      const sel = document.getElementById('selMotionStyle');
+      if (sel && !sel.options.length) MOTION_STYLES.forEach(([k, lab]) => { const o = document.createElement('option'); o.value = k; o.textContent = lab; sel.appendChild(o); });
+      const p = currentProject || {};
+      document.getElementById('chkMotion').checked = !!p.motion_enabled;
+      document.getElementById('selMotionMode').value = ['fixed', 'sequence', 'random'].includes(p.motion_mode) ? p.motion_mode : 'random';
+      sel.value = MOTION_KEYS.includes(p.motion_style) ? p.motion_style : 'zoomin';
+      document.getElementById('selMotionAmount').value = MOTION_AMOUNTS[p.motion_amount] ? p.motion_amount : 'light';
+      updateMotionControlsUI();
+    }
+    function onMotionSettingChanged() {
+      if (!currentProject) { document.getElementById('chkMotion').checked = false; return; }
+      syncProjectFields();
+      updateMotionControlsUI();
+      liveLayerKeys = ['', '', ''];
+      scheduleAutoSave();
+      const p = currentProject;
+      if (!p.motion_enabled) { showToast('✔ 已關閉運鏡：照片不動'); return; }
+      const amt = { light: '輕（放大 5%）', medium: '中（放大 10%）', strong: '強（放大 20%）' }[p.motion_amount] || '輕（放大 5%）';
+      showToast(`🎥 運鏡：${p.motion_mode === 'fixed' ? '全片「' + motionLabel(p.motion_style) + '」' : (p.motion_mode === 'sequence' ? '五種輪流' : '隨機')}，幅度${amt}（每張照片也可以在照片卡上自己選）`);
+    }
+    function reshuffleMotion() {
+      if (!currentProject) return;
+      currentProject.motion_seed = 1 + Math.floor(Math.random() * 2147483646);
+      onMotionSettingChanged();
+    }
+    // 即時對字幕：這一刻每段照片的視窗（跟成品一樣：一張照片從轉進來開始動到轉出去為止）
+    function liveMotionPoses(out, t) {
+      const p = currentProject, tl = (p && p.timeline) || [];
+      if (!p || !p.motion_enabled || !tl.length) return null;
+      const runOf = [], first = [];
+      tl.forEach((seg, i) => {
+        let same = false;
+        if (i > 0) { const a = segPhotoUrl(tl[i - 1]), b = segPhotoUrl(seg); same = (a || b) ? a === b : parseInt(tl[i - 1].scene) === parseInt(seg.scene); }
+        if (!same) first.push(i);
+        runOf.push(first.length - 1);
+      });
+      const plan = motionPlan(p, first.map(i => (segPhotoUrl(tl[i]) ? segPhotoPrint(tl[i]) : '')));
+      const amt = motionAmount(p);
+      return (i) => {
+        if (i < 0 || i >= tl.length || !out[i]) return null;
+        const r = runOf[i], [kind, variant] = plan[r];
+        if (kind === 'none') return null;
+        const i0 = first[r], i1 = (r + 1 < first.length ? first[r + 1] : tl.length) - 1;
+        const a = i0 > 0 ? out[i0 - 1].holdEnd : 0, b = out[i1].to;
+        return Object.assign(motionPose(kind, variant, amt, (t - a) / Math.max(1e-6, b - a)), { kind });
+      };
+    }
     function loadTransitionControls() {
       const sel = document.getElementById('selTransStyle');
       if (sel && !sel.options.length) {
@@ -3523,7 +3678,12 @@
       el.innerHTML = html;
     }
     // 照片層：畫一張（跟合成一樣直接拉滿 16:9），沒照片或還沒載入就畫深色底＋場景名
-    function liveDrawPhoto(ctx, img, sceneId, x, y, w, h) {
+    // [SIGN2MV 2026-11-27] pose＝運鏡的視窗 [s, cx, cy]（motionPose）：只畫照片的那一塊
+    function liveDrawPhoto(ctx, img, sceneId, x, y, w, h, pose) {
+      if (img && pose) {
+        const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, [s, cx, cy] = pose;
+        ctx.drawImage(img, (cx - s / 2) * iw, (cy - s / 2) * ih, s * iw, s * ih, x, y, w, h); return;
+      }
       if (img) { ctx.drawImage(img, x, y, w, h); return; }
       const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#0e1422'); g.addColorStop(1, '#26304f');
       ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
@@ -3531,8 +3691,9 @@
       ctx.fillText(`Scene ${String(sceneId).padStart(2, '0')}（尚無照片）`, x + w / 2, y + h / 2);
     }
     // 照片轉場（同 apply_bg_transition）：A＝前一張、B＝下一張、s＝0..1（已平滑）
-    function liveDrawTransition(ctx, W, H, A, B, scA, scB, style, s) {
-      const dA = () => liveDrawPhoto(ctx, A, scA, 0, 0, W, H), dB = () => liveDrawPhoto(ctx, B, scB, 0, 0, W, H);
+    function liveDrawTransition(ctx, W, H, A, B, scA, scB, style, s, poseA, poseB) {
+      const drawA = (x, y, w, h) => liveDrawPhoto(ctx, A, scA, x, y, w, h, poseA), drawB = (x, y, w, h) => liveDrawPhoto(ctx, B, scB, x, y, w, h, poseB);
+      const dA = () => drawA(0, 0, W, H), dB = () => drawB(0, 0, W, H);
       const clipDraw = (path, drawInside) => { ctx.save(); ctx.beginPath(); path(); ctx.clip(); drawInside(); ctx.restore(); };
       const R = Math.hypot(W / 2, H / 2);
       ctx.globalAlpha = 1; ctx.filter = 'none';
@@ -3542,20 +3703,20 @@
           if (s < 0.5) { dA(); ctx.globalAlpha = 2 * s; } else { dB(); ctx.globalAlpha = 2 - 2 * s; }
           ctx.fillStyle = col; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; return;
         }
-        case 'slideleft': { const o = Math.round(s * W); liveDrawPhoto(ctx, A, scA, -o, 0, W, H); liveDrawPhoto(ctx, B, scB, W - o, 0, W, H); return; }
-        case 'slideright': { const o = Math.round(s * W); liveDrawPhoto(ctx, A, scA, o, 0, W, H); liveDrawPhoto(ctx, B, scB, o - W, 0, W, H); return; }
-        case 'slideup': { const o = Math.round(s * H); liveDrawPhoto(ctx, A, scA, 0, -o, W, H); liveDrawPhoto(ctx, B, scB, 0, H - o, W, H); return; }
-        case 'slidedown': { const o = Math.round(s * H); liveDrawPhoto(ctx, A, scA, 0, o, W, H); liveDrawPhoto(ctx, B, scB, 0, o - H, W, H); return; }
+        case 'slideleft': { const o = Math.round(s * W); drawA(-o, 0, W, H); drawB(W - o, 0, W, H); return; }
+        case 'slideright': { const o = Math.round(s * W); drawA(o, 0, W, H); drawB(o - W, 0, W, H); return; }
+        case 'slideup': { const o = Math.round(s * H); drawA(0, -o, W, H); drawB(0, H - o, W, H); return; }
+        case 'slidedown': { const o = Math.round(s * H); drawA(0, o, W, H); drawB(0, o - H, W, H); return; }
         case 'dooropen': {
           dB(); const half = W / 2, o = s * half;
           if (o < half) {
-            clipDraw(() => ctx.rect(0, 0, half - o, H), () => liveDrawPhoto(ctx, A, scA, -o, 0, W, H));
-            clipDraw(() => ctx.rect(half + o, 0, half - o, H), () => liveDrawPhoto(ctx, A, scA, o, 0, W, H));
+            clipDraw(() => ctx.rect(0, 0, half - o, H), () => drawA(-o, 0, W, H));
+            clipDraw(() => ctx.rect(half + o, 0, half - o, H), () => drawA(o, 0, W, H));
           }
           return;
         }
-        case 'zoomin': { const z = 1 + 0.3 * s; liveDrawPhoto(ctx, A, scA, (W - W * z) / 2, (H - H * z) / 2, W * z, H * z); ctx.globalAlpha = s; dB(); ctx.globalAlpha = 1; return; }
-        case 'zoomout': { const z = 1.3 - 0.3 * s; dA(); ctx.globalAlpha = s; liveDrawPhoto(ctx, B, scB, (W - W * z) / 2, (H - H * z) / 2, W * z, H * z); ctx.globalAlpha = 1; return; }
+        case 'zoomin': { const z = 1 + 0.3 * s; drawA((W - W * z) / 2, (H - H * z) / 2, W * z, H * z); ctx.globalAlpha = s; dB(); ctx.globalAlpha = 1; return; }
+        case 'zoomout': { const z = 1.3 - 0.3 * s; dA(); ctx.globalAlpha = s; drawB((W - W * z) / 2, (H - H * z) / 2, W * z, H * z); ctx.globalAlpha = 1; return; }
         case 'blur': {
           const k = BLUR_MAX_PX * W / 1920;
           ctx.filter = `blur(${(s * k).toFixed(2)}px)`; dA();
@@ -3603,13 +3764,14 @@
       const imgA = liveImg(urlA), imgB = nseg ? liveImg(urlB) : null;
       // 跟合成一樣以實際照片判斷（間奏有專屬照片時，跟同 Scene 的歌詞段照常轉場）
       const samePhoto = !!nseg && ((urlA || urlB) ? urlA === urlB : parseInt(seg.scene) === parseInt(nseg.scene));
-      if (!nseg || sm <= 0 || samePhoto) liveDrawPhoto(ctx, imgA, seg.scene, 0, 0, W, H);
-      else liveDrawTransition(ctx, W, H, imgA, imgB, seg.scene, nseg.scene, cur.style, sm);
-      window.__liveState = { segIdx, nextIdx, style: cur.style, s: sm, samePhoto, urlA, urlB };
+      const mp = liveMotionPoses(out, t), poseA = mp && mp(segIdx), poseB = mp && nseg ? mp(nextIdx) : null;
+      if (!nseg || sm <= 0 || samePhoto) liveDrawPhoto(ctx, imgA, seg.scene, 0, 0, W, H, poseA);
+      else liveDrawTransition(ctx, W, H, imgA, imgB, seg.scene, nseg.scene, cur.style, sm, poseA, poseB);
+      window.__liveState = { segIdx, nextIdx, style: cur.style, s: sm, samePhoto, urlA, urlB, poseA, poseB };
       liveDrawSpectrum(seg);
       liveUpdateKaraoke(A, segIdx, t);
       const transNote = (nseg && sm > 0) ? `　→ ${samePhoto ? '同一張照片' : transitionLabel(cur.style)}` : '';
-      hud.textContent = `${secToMmss(t)}　第 ${segIdx + 1} 段 · Scene ${String(seg.scene).padStart(2, '0')}${seg.locked ? ' 🔒' : ''}${transNote}`;
+      hud.textContent = `${secToMmss(t)}　第 ${segIdx + 1} 段 · Scene ${String(seg.scene).padStart(2, '0')}${seg.locked ? ' 🔒' : ''}${poseA ? '　🎥 ' + motionLabel(poseA.kind) : ''}${transNote}`;
       info.textContent = `第 ${segIdx + 1} 段 ${secToMmss(seg.start)} ~ ${secToMmss(seg.end)}：「${seg.text || ''}」　下一個轉場：${nseg ? (samePhoto ? '同一張照片（只換字幕）' : transitionLabel(cur.style)) : '（片尾）'}`;
       const pb = document.getElementById('btnLivePlay'); if (pb) pb.textContent = audioEl.paused ? '▶ 播放' : '⏸ 暫停';
       liveSeekShow(t);
