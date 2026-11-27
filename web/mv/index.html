@@ -2968,8 +2968,13 @@
     }
 
     function syncProjectFields() {
-      if (document.activeElement && typeof document.activeElement.blur === 'function') {
-        document.activeElement.blur();
+      // [SIGN2MV 2026-11-28] not while typing in a text box: the name-card fields call this on every input and the
+      // autosave 0.45 s later, and taking the focus away ended a Zhuyin (IME) composition at its first key, so
+      // nothing could be typed there; elsewhere (number boxes, menus, buttons) the focus goes as before
+      const act = document.activeElement;
+      const typing = act && ((act.tagName === 'INPUT' && /^(text|search|url|email|)$/i.test(act.type || '')) || act.tagName === 'TEXTAREA');
+      if (act && !typing && typeof act.blur === 'function') {
+        act.blur();
       }
       if (!currentProject) return;
       const stripAI = (v) => sign2mvNoAI(v);

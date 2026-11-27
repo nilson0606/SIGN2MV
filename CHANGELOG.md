@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- MV page: the name-card fields (歌名, 作詞人, 作曲人, 原唱人, 翻唱者 …) take Zhuyin and other IME input again. Every
+  keystroke there (and the autosave 0.45 s later) ran syncProjectFields(), which first took the focus away from the
+  field being typed in, so an IME composition ended at its first key and only pasting worked. A text box being typed
+  in now keeps the focus; number boxes, menus and buttons lose it as before.
+
 - MV page: 「🎥 運鏡」 (camera motion), an option, off by default. Ticked, the photos of a full MV move slowly (push
   in, pull out, pan left/right, pan up/down, push in and drift) while the title, subtitles, karaoke strip and spectrum
   stay still. Chosen like the transitions (one kind / the five in turn / random, 🎲 draws another set), amount light 5 %
