@@ -33,84 +33,121 @@ def png_bytes(im):
 
 
 def test_plan_off_fixed_sequence_random_and_own_choice():
-    prints = ["a", "b", None, "c", "d", "e", "f", "g"]
-    assert motion.plan({}, prints) == [motion.NONE] * 8                       # off unless asked for
-    assert motion.plan({"motion_enabled": False, "motion_mode": "fixed"}, prints) == [motion.NONE] * 8
+    prints = ["a", "b", None, "c", "d", "e", "f", "g", "h", "i", "j", "k"]
+    n = len(prints)
+    assert len(motion.MOTION_KEYS) == 9
+    assert motion.plan({}, prints) == [motion.NONE] * n                       # off unless asked for
+    assert motion.plan({"motion_enabled": False, "motion_mode": "fixed"}, prints) == [motion.NONE] * n
     fixed = motion.plan({"motion_enabled": True, "motion_mode": "fixed", "motion_style": "pan_lr"}, prints)
-    assert [k for k, _ in fixed] == ["pan_lr", "pan_lr", "none", "pan_lr", "pan_lr", "pan_lr", "pan_lr", "pan_lr"]
+    assert [k for k, _ in fixed] == ["none" if x is None else "pan_lr" for x in prints]
     assert fixed[0][1] % 2 != fixed[1][1] % 2                                  # the pans take turns in direction
     seq = motion.plan({"motion_enabled": True, "motion_mode": "sequence"}, prints)
-    assert [k for k, _ in seq][:2] == ["zoomin", "zoomout"] and seq[2] == motion.NONE and seq[5][0] == "zoomin"
+    assert [k for k, _ in seq][:2] == ["zoomin", "zoomout"] and seq[2] == motion.NONE
+    assert [k for k, _ in seq][3:9] == motion.MOTION_KEYS[3:9] and seq[9][0] == "zoomin"   # all nine in turn
     rnd = {"motion_enabled": True, "motion_mode": "random", "motion_seed": 12345}
     a, b = motion.plan(rnd, prints), motion.plan(dict(rnd), prints)
     assert a == b                                                              # the same seed, the same motion
     kinds = [k for k, _ in a if k != "none"]
-    assert all(x != y for x, y in zip(kinds, kinds[1:])) and len(set(kinds)) >= 3
+    assert all(x != y for x, y in zip(kinds, kinds[1:])) and len(set(kinds)) >= 5
     assert motion.plan(dict(rnd, motion_seed=999), prints) != a
-    own = dict(rnd, photo_motion={"b": "zoomout", "c": "none"})
+    own = dict(rnd, photo_motion={"b": "breathe", "c": "none"})
     mine = motion.plan(own, prints)
-    assert mine[1][0] == "zoomout" and mine[3] == motion.NONE and mine[0] == a[0]
+    assert mine[1][0] == "breathe" and mine[3] == motion.NONE and mine[0] == a[0]
     # what is saved is cleaned
-    p = {"motion_enabled": 1, "motion_mode": "x", "motion_style": "y", "motion_amount": "z", "motion_seed": "7",
-         "photo_motion": {"a": "pan_ud", "b": "spin", "c": "none"}}
+    p = {"motion_enabled": 1, "motion_ease": 0, "motion_mode": "x", "motion_style": "y", "motion_amount": "z",
+         "motion_seed": "7", "photo_motion": {"a": "pan_ud", "b": "spin", "c": "none", "d": "rotate"}}
     motion.normalize(p)
-    assert p == {"motion_enabled": True, "motion_mode": "random", "motion_style": "zoomin", "motion_amount": "light",
-                 "motion_seed": 7, "photo_motion": {"a": "pan_ud", "c": "none"}}
+    assert p == {"motion_enabled": True, "motion_ease": False, "motion_mode": "random", "motion_style": "zoomin",
+                 "motion_amount": "light", "motion_seed": 7, "photo_motion": {"a": "pan_ud", "c": "none", "d": "rotate"}}
+
+
+def _shape(c):
+    """width and height shares, the angle between the edges and the turn of a window from corners()."""
+    x0, y0, x1, y1, x2, y2, x3, y3 = c
+    top = np.hypot(x1 - x0, y1 - y0) / W
+    left = np.hypot(x2 - x0, y2 - y0) / H
+    dot = (x1 - x0) * (x2 - x0) + (y1 - y0) * (y2 - y0)
+    return top, left, dot, np.arctan2(y1 - y0, x1 - x0), (x3 - (x1 + x2 - x0), y3 - (y1 + y2 - y0))
 
 
 def test_every_window_stays_inside_the_photo():
     for kind in motion.MOTION_KEYS:
         for var in range(4):
             for amt in motion.MOTION_AMOUNTS.values():
-                for p in np.linspace(0, 1, 21):
-                    left, top, right, bottom = motion.rect(kind, var, amt, float(p), W, H)
-                    assert -1e-6 <= left < right <= W + 1e-6 and -1e-6 <= top < bottom <= H + 1e-6
-                    assert abs((right - left) / W - (bottom - top) / H) < 1e-9          # never stretched
-                s0, s1 = motion.pose(kind, var, amt, 0)[0], motion.pose(kind, var, amt, 1)[0]
-                assert abs(min(s0, s1) - 1 / (1 + amt)) < 1e-9                         # enlarged by the amount
+                for eased in (False, True):
+                    sizes = []
+                    for p in np.linspace(0, 1, 41):
+                        c = motion.corners(kind, var, amt, float(p), eased, W, H)
+                        xs, ys = c[0::2], c[1::2]
+                        assert min(xs) >= -1e-6 and max(xs) <= W + 1e-6 and min(ys) >= -1e-6 and max(ys) <= H + 1e-6, (kind, var, amt, p)
+                        top, left, dot, turn, off = _shape(c)
+                        assert abs(top - left) < 1e-9 and abs(dot) < 1e-6 and max(map(abs, off)) < 1e-6   # never stretched
+                        if kind != "rotate":
+                            assert abs(turn) < 1e-12
+                        sizes.append(top)
+                    assert abs(min(sizes) - 1 / (1 + amt)) < 1e-9, (kind, amt)                        # enlarged by the amount
+                    c0 = motion.corners(kind, var, amt, 0.0, eased, W, H)
+                    c1 = motion.corners(kind, var, amt, 1.0, eased, W, H)
+                    if kind == "breathe":
+                        assert max(abs(a - b) for a, b in zip(c0, motion.full(W, H))) < 1e-6
+                        assert max(abs(a - b) for a, b in zip(c1, motion.full(W, H))) < 1e-6
+                    if kind == "rotate":
+                        assert abs(abs(_shape(c1)[3]) - motion.turn_max(amt)) < 1e-9
+    # the turn follows the amount: about 1.4, 2.6 and 4.8 degrees
+    assert [round(np.degrees(motion.turn_max(a)), 1) for a in (0.05, 0.10, 0.20)] == [1.4, 2.6, 4.8]
+    # easing: the same ends, slower at both ends, faster in the middle
+    a = [motion.corners("pan_lr", 0, 0.1, p, False, W, H)[0] for p in (0, 0.05, 0.5, 1)]
+    e = [motion.corners("pan_lr", 0, 0.1, p, True, W, H)[0] for p in (0, 0.05, 0.5, 1)]
+    assert abs(a[0] - e[0]) < 1e-9 and abs(a[3] - e[3]) < 1e-9 and abs(a[2] - e[2]) < 1e-9 and e[1] - e[0] < 0.2 * (a[1] - a[0])
 
 
 @pytest.mark.skipif(not __import__("shutil").which("ffmpeg"), reason="no ffmpeg")
 def test_python_warp_samples_where_ffmpeg_does(tmp_path):
-    """A transition frame (Python) and the frame before it (ffmpeg) see the photo through the same window."""
+    """A transition frame (Python) and the frame before it (ffmpeg) see the photo through the same window,
+    turned or not."""
     im = textured(3)
     src = tmp_path / "src.png"
     im.save(src)
-    for r in [(40.3, 22.7, 1868.9, 1073.6), (0, 0, 1828.57, 1028.57), (91.4, 51.4, 1920, 1080)]:
+    windows = [(40.3, 22.7, 1868.9, 22.7, 40.3, 1073.6, 1868.9, 1073.6), motion.corners("zoomin", 0, 0.05, 1.0, False, W, H),
+               motion.corners("pan_lr", 1, 0.05, 1.0, False, W, H), motion.corners("rotate", 0, 0.2, 0.7, False, W, H),
+               motion.corners("rotate", 1, 0.1, 0.4, True, W, H), motion.corners("pan_diag", 2, 0.2, 0.3, False, W, H)]
+    for c in windows:
         out = tmp_path / "ff.png"
-        flt = (f"format=gbrp,perspective=x0={r[0]}:y0={r[1]}:x1={r[2]}:y1={r[1]}:x2={r[0]}:y2={r[3]}:x3={r[2]}:y3={r[3]}"
-               ":interpolation=linear,format=rgb24")
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-vf", flt, "-frames:v", "1", str(out)], check=True)
+        pts = ":".join(f"{n}={v}" for n, v in zip(("x0", "y0", "x1", "y1", "x2", "y2", "x3", "y3"), c))
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-vf", f"format=gbrp,perspective={pts}:interpolation=linear,format=rgb24",
+                        "-frames:v", "1", str(out)], check=True)
         ff = np.asarray(Image.open(out).convert("RGB"), dtype=np.float32)
-        py = np.asarray(motion.warp(im, r), dtype=np.float32)
+        py = np.asarray(motion.warp(im, c), dtype=np.float32)
         d = np.abs(ff - py)[2:-2, 2:-2]
-        assert d.mean() < 0.6 and np.percentile(d, 99.9) < 4, (r, d.mean(), np.percentile(d, 99.9))
+        assert d.mean() < 0.6 and np.percentile(d, 99.9) < 4, (c, d.mean(), np.percentile(d, 99.9))
         # half a pixel off would show: the check is sharp enough to see it
-        off = np.asarray(motion.warp(im, (r[0] + 0.5, r[1], r[2] + 0.5, r[3])), dtype=np.float32)
+        moved = tuple(v + (0.5 if k % 2 == 0 else 0) for k, v in enumerate(c))
+        off = np.asarray(motion.warp(im, moved), dtype=np.float32)
         assert np.abs(ff - off)[2:-2, 2:-2].mean() > 3 * d.mean()
 
 
-def test_perspective_filter_is_piecewise_and_shallow():
-    pieces = [(0, 10, (0, 9, 0, 0, 1920, 1929, 1080, 1080, 0, 9)), (10, 20, None), (20, 30, None), (30, 40, None)]
-    f = motion.perspective_filter(pieces, W, H)
-    assert f.startswith("perspective=") and "eval=frame" in f and "interpolation=linear" in f
-    assert "if(lt(in\\,11)" in f and "in\\,31" not in f          # (frame 10 is in = 11); identical neighbours merged
-    # many lines: the expression is a balanced tree, not 200 levels deep
-    many = [(i * 10, i * 10 + 10, (i, i + 1, 0, 0, W, W, H, H, i * 10, i * 10 + 9)) for i in range(200)]
-    expr = motion.perspective_filter(many, W, H).split(":")[0]
-    depth, worst = 0, 0
-    for ch in expr:
-        depth += ch == "("
-        depth -= ch == ")"
-        worst = max(worst, depth)
-    assert worst < 40
-
+def test_photo_chain_has_one_short_filter_per_moving_piece():
+    """perspective reads its expressions again on every frame: each moving piece gets its own short one, still
+    frames side by side share one branch without it."""
+    pieces = [(0, 10, ("pan_lr", 0, 0, 9)), (10, 20, None), (20, 30, None), (30, 40, ("rotate", 1, 20, 19))]
+    f = motion.photo_chain("[0:v]fps=60", pieces, 0.1, True, W, H, "[o]")
+    assert f.count("perspective=") == 2 and "concat=n=3:v=1:a=0[o]" in f and "split=3" in f
+    assert "trim=start_frame=10:end_frame=30" in f                       # the two still pieces: one branch
+    assert "(in+-1)" in f and "(in+9)" in f                              # frame f0 + in - 1, counted from the run's start
+    # a long song: the expressions stay short whatever its length
+    many = [(i * 10, i * 10 + 10, (motion.MOTION_KEYS[i % 9], i, i * 10, 9) if i % 2 == 0 else None) for i in range(400)]
+    flt = motion.photo_chain("[0:v]fps=60", many, 0.2, True, W, H, "[o]")
+    assert flt.count("perspective=") == 200
+    assert max(len(x) for x in flt.split("perspective=")[1:]) < 6000
+    one = motion.photo_chain("[0:v]fps=60", [(0, 50, ("zoomin", 0, 0, 49))], 0.1, False, W, H, "[o]")
+    assert "split" not in one and one.endswith("[o]") and one.count("perspective=") == 1
 
 
 @pytest.mark.skipif(not __import__("shutil").which("ffmpeg"), reason="no ffmpeg")
 def test_ffmpeg_moves_each_frame_where_python_expects(tmp_path):
     """The ffmpeg in use: a picture listed for one frame is that frame (the concat list's 60 fps), and the
-    window of frame f is the one perspective_filter wrote for f (its frame counter starts at 1)."""
+    window of frame f is the one photo_chain wrote for f (split, trim, each piece's perspective with its own
+    frame counter starting at 1, concat): turned, eased and straight."""
     w, h = 64, 36
     pic = textured(5, (w, h))
     pic.save(tmp_path / "p.png")
@@ -119,22 +156,25 @@ def test_ffmpeg_moves_each_frame_where_python_expects(tmp_path):
     lst = tmp_path / "c.txt"
     lst.write_text(f"file 'p.png'\n{rate}duration {30 / 60:.6f}\nfile 'm.png'\n{rate}duration {1 / 60:.6f}\n"
                    f"file 'p.png'\n{rate}duration {30 / 60:.6f}\nfile 'p.png'\n{rate}", encoding="utf-8")
-    a = (0.0, 6.0, 0.0, 3.0, 58.0, 64.0, 33.0, 36.0, 0, 29)           # left/top/right/bottom at frames 0 and 29
-    b = (6.0, 0.0, 3.0, 0.0, 64.0, 58.0, 36.0, 33.0, 31, 60)
-    flt = "format=gbrp,fps=60," + motion.perspective_filter([(0, 30, a), (30, 31, None), (31, 61, b)], w, h) + ",format=rgb24"
-    raw = subprocess.run(["ffmpeg", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(lst), "-vf", flt, "-f", "rawvideo",
-                          "-pix_fmt", "rgb24", "-"], capture_output=True, check=True, cwd=tmp_path).stdout
-    fr = np.frombuffer(raw, np.uint8).reshape(-1, h, w, 3).astype(np.float32)
-    assert len(fr) >= 61           # (the list's last picture, repeated as concat wants, adds a frame at the end)
-    assert fr[30][..., 2].min() > 200 and fr[29][..., 2].mean() < 200 and fr[31][..., 2].mean() < 200
+    for amt, eased, a, b in ((0.2, False, ("pan_lr", 0, 0, 29), ("zoomin", 0, 31, 29)),
+                             (0.2, True, ("rotate", 1, 0, 29), ("breathe", 0, 25, 40)),
+                             (0.1, True, ("pan_diag", 3, 0, 29), ("zoomout_pan", 2, 31, 29))):
+        flt = motion.photo_chain("[0:v]format=gbrp,fps=60", [(0, 30, a), (30, 31, None), (31, 61, b), (61, 70, None)],
+                                 amt, eased, w, h, "[m]") + ";[m]format=rgb24[o]"
+        raw = subprocess.run(["ffmpeg", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(lst), "-filter_complex", flt,
+                              "-map", "[o]", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, check=True, cwd=tmp_path).stdout
+        fr = np.frombuffer(raw, np.uint8).reshape(-1, h, w, 3).astype(np.float32)
+        assert len(fr) >= 61           # (the list's last picture, repeated as concat wants, adds a frame at the end)
+        assert fr[30][..., 2].min() > 200 and fr[29][..., 2].mean() < 200 and fr[31][..., 2].mean() < 200
 
-    def want(line, f):
-        t = (f - line[8]) / (line[9] - line[8])
-        r = tuple(line[2 * k] + (line[2 * k + 1] - line[2 * k]) * t for k in range(4))
-        return np.asarray(motion.warp(pic, (r[0], r[1], r[2], r[3])), dtype=np.float32)
-    for f, line in ((0, a), (15, a), (29, a), (31, b), (45, b), (60, b)):
-        best = min(range(-2, 3), key=lambda k: np.abs(fr[f] - want(line, f + k))[1:-1, 1:-1].mean())
-        assert best == 0, (f, best)
+        def want(spec, f):
+            kind, var, r0, den = spec
+            return np.asarray(motion.warp(pic, motion.corners(kind, var, amt, (f - r0) / den, eased, w, h)), dtype=np.float32)
+        for f, spec in ((0, a), (8, a), (15, a), (29, a), (31, b), (45, b), (60, b)):
+            errs = {k: np.abs(fr[f] - want(spec, f + k))[1:-1, 1:-1].mean() for k in range(-2, 3)}
+            # frame f matches its own window best (where an eased motion barely moves, neighbours tie)
+            assert errs[0] <= min(errs.values()) + 0.05, (amt, eased, spec, f, errs)
+            assert errs[0] < 2.0, (amt, eased, spec, f, errs)
 
 def _frames(mv, a, b):
     p = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", f"{a:.3f}", "-t", f"{b - a:.3f}", "-i", str(mv), "-f", "rawvideo",
@@ -171,9 +211,9 @@ def test_render_with_motion(client, root, monkeypatch):
     frames = pdir / "frames"
     assert list(frames.glob("base_*.png")) and not list(frames.glob("mbg_*.png")) and not (frames / "motion_filter.txt").exists()
 
-    # on: pan left/right, medium; scene 3 does not move (its own choice)
+    # on: push in while turning, strong; scene 3 does not move (its own choice)
     # (cross-fades: a slide or a wipe moves the picture by itself, which would hide a jump of the photo)
-    proj.update(motion_enabled=True, motion_mode="fixed", motion_style="pan_lr", motion_amount="medium",
+    proj.update(motion_enabled=True, motion_mode="fixed", motion_style="rotate", motion_amount="strong",
                 photo_motion={prints[3]: "none"}, transition_mode="fixed", transition_style="fade")
     saved = client.post("/api/mv/project/save", json=proj).json()
     assert saved["status"] == "ok" and saved["project"]["photo_motion"] == {prints[3]: "none"}

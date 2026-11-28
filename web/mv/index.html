@@ -1219,7 +1219,7 @@
             <span id="motionOpts" style="display:none; flex-basis:100%; align-items:center; gap:6px; flex-wrap:wrap;">
               <select id="selMotionMode" onchange="onMotionSettingChanged()" style="padding:4px 6px;">
                 <option value="fixed">固定一種</option>
-                <option value="sequence">依序（五種輪流）</option>
+                <option value="sequence">依序（輪流）</option>
                 <option value="random">隨機</option>
               </select>
               <select id="selMotionStyle" onchange="onMotionSettingChanged()" style="padding:4px 6px;"></select>
@@ -1228,6 +1228,9 @@
                 <option value="medium">中（放大 10%）</option>
                 <option value="strong">強（放大 20%）</option>
               </select>
+              <label style="display:flex; align-items:center; gap:4px; cursor:pointer;" title="勾選後每張照片的運鏡開頭慢、中間快、結尾慢；不勾就是從頭到尾一樣快">
+                <input type="checkbox" id="chkMotionEase" onchange="onMotionSettingChanged()" style="width:15px; height:15px; accent-color:var(--gold);" /><span>緩起緩停</span>
+              </label>
               <button type="button" class="btn btn-sm" id="btnMotionReshuffle" onclick="reshuffleMotion()" title="隨機模式：重新抽一組運鏡（同一組每次合成結果都一樣）">🎲 重新抽</button>
             </span>
           </div>
@@ -3000,6 +3003,7 @@
       currentProject.motion_mode = document.getElementById('selMotionMode').value || 'random';
       currentProject.motion_style = document.getElementById('selMotionStyle').value || 'zoomin';
       currentProject.motion_amount = document.getElementById('selMotionAmount').value || 'light';
+      currentProject.motion_ease = document.getElementById('chkMotionEase').checked;
       if (currentProject.motion_enabled && !currentProject.motion_seed) currentProject.motion_seed = 1 + Math.floor(Math.random() * 2147483646);
     }
 
@@ -3039,7 +3043,8 @@
     function transitionSteps(tr) { return Math.max(8, Math.min(60, Math.round((parseFloat(tr) || 0.4) * 40))); }
 
     // ===== [SIGN2MV 2026-11-27] 運鏡（定義要跟 app/mvstudio/motion.py 的 plan／pose 一致）=====
-    const MOTION_STYLES = [['zoomin', '推近'], ['zoomout', '拉遠'], ['pan_lr', '左右平移'], ['pan_ud', '上下平移'], ['zoompan', '推近加平移']];
+    const MOTION_STYLES = [['zoomin', '推近'], ['zoomout', '拉遠'], ['pan_lr', '左右平移'], ['pan_ud', '上下平移'], ['zoompan', '推近加平移'],
+                           ['pan_diag', '斜向平移'], ['zoomout_pan', '拉遠加平移'], ['rotate', '旋轉推近'], ['breathe', '推近再拉遠']];
     const MOTION_KEYS = MOTION_STYLES.map(x => x[0]);
     const MOTION_AMOUNTS = { light: 0.05, medium: 0.10, strong: 0.20 };
     const MOTION_CORNERS = [[1, -1], [-1, -1], [1, 1], [-1, 1]];
@@ -3068,21 +3073,29 @@
       });
       return out;
     }
-    // 視窗：[大小 s（照片寬高的比例）, 中心 cx, cy]；p＝0..1（這張照片從出現到消失）
-    function motionPose(kind, variant, amt, p) {
+    // 視窗的四個角（1920×1080 照片上的像素）：[x0,y0（左上）, x1,y1（右上）, x2,y2（左下）, x3,y3（右下）]；p＝0..1（這張照片從出現到消失）
+    // 跟 motion.py 的 corners() 一樣：s＝視窗大小（照片寬高的比例）、cx／cy＝中心、t＝轉的角度；eased＝緩起緩停
+    function motionTurnMax(amt) { return 0.9 * (1 - 1 / (1 + amt)) * 1080 / 1920; }
+    function motionCorners(kind, variant, amt, p, eased) {
+      const W = 1920, H = 1080;
       p = Math.min(1, Math.max(0, p));
-      const f = 1 / (1 + amt);
-      if (kind === 'zoomin') return [1 + (f - 1) * p, 0.5, 0.5];
-      if (kind === 'zoomout') return [f + (1 - f) * p, 0.5, 0.5];
-      if (kind === 'pan_lr' || kind === 'pan_ud') {
-        const q = variant % 2 === 0 ? p : 1 - p, c = f / 2 + (1 - f) * q;
-        return kind === 'pan_lr' ? [f, c, 0.5] : [f, 0.5, c];
-      }
-      if (kind === 'zoompan') {
-        const s = 1 + (f - 1) * p, [dx, dy] = MOTION_CORNERS[variant % 4];
-        return [s, 0.5 + 0.5 * dx * (1 - s), 0.5 + 0.3 * dy * (1 - s)];
-      }
-      return null;
+      const q = eased ? (1 - Math.cos(p * Math.PI)) / 2 : p, f = 1 / (1 + amt), [dx, dy] = MOTION_CORNERS[variant % 4];
+      let s = 1, cx = 0.5, cy = 0.5, t = 0;
+      if (kind === 'zoomin') s = 1 + (f - 1) * q;
+      else if (kind === 'zoomout') s = f + (1 - f) * q;
+      else if (kind === 'pan_lr' || kind === 'pan_ud') {
+        s = f; const c = f / 2 + (1 - f) * (variant % 2 === 0 ? q : 1 - q);
+        if (kind === 'pan_lr') cx = c; else cy = c;
+      } else if (kind === 'zoompan') { s = 1 + (f - 1) * q; cx = 0.5 + 0.5 * dx * (1 - s); cy = 0.5 + 0.3 * dy * (1 - s); }
+      else if (kind === 'pan_diag') { s = f; cx = 0.5 + dx * (1 - f) / 2 * (2 * q - 1); cy = 0.5 + dy * (1 - f) / 2 * (2 * q - 1); }
+      else if (kind === 'zoomout_pan') { s = f + (1 - f) * q; cx = 0.5 + 0.5 * dx * (1 - s); cy = 0.5 + 0.3 * dy * (1 - s); }
+      else if (kind === 'rotate') { s = 1 + (f - 1) * q; t = (variant % 2 === 0 ? 1 : -1) * motionTurnMax(amt) * q; }
+      else if (kind === 'breathe') s = 1 + (f - 1) * Math.sin(q * Math.PI);
+      else return null;
+      const hw = s * (W / 2), hh = s * (H / 2), mx = cx * W, my = cy * H;
+      if (t === 0) return [mx - hw, my - hh, mx + hw, my - hh, mx - hw, my + hh, mx + hw, my + hh];
+      const co = Math.cos(t), si = Math.sin(t), ax = hw * co, ay = hw * si, bx = -(hh * si), by = hh * co;
+      return [mx - ax - bx, my - ay - by, mx + ax - bx, my + ay - by, mx - ax + bx, my - ay + by, mx + ax + bx, my + ay + by];
     }
     function segPhotoPrint(seg) {
       const k = instKey(seg), ph = k && instrumentPhotos[k];
@@ -3123,6 +3136,7 @@
       document.getElementById('selMotionMode').value = ['fixed', 'sequence', 'random'].includes(p.motion_mode) ? p.motion_mode : 'random';
       sel.value = MOTION_KEYS.includes(p.motion_style) ? p.motion_style : 'zoomin';
       document.getElementById('selMotionAmount').value = MOTION_AMOUNTS[p.motion_amount] ? p.motion_amount : 'light';
+      document.getElementById('chkMotionEase').checked = !!p.motion_ease;
       updateMotionControlsUI();
     }
     function onMotionSettingChanged() {
@@ -3134,7 +3148,7 @@
       const p = currentProject;
       if (!p.motion_enabled) { showToast('✔ 已關閉運鏡：照片不動'); return; }
       const amt = { light: '輕（放大 5%）', medium: '中（放大 10%）', strong: '強（放大 20%）' }[p.motion_amount] || '輕（放大 5%）';
-      showToast(`🎥 運鏡：${p.motion_mode === 'fixed' ? '全片「' + motionLabel(p.motion_style) + '」' : (p.motion_mode === 'sequence' ? '五種輪流' : '隨機')}，幅度${amt}（每張照片也可以在照片卡上自己選）`);
+      showToast(`🎥 運鏡：${p.motion_mode === 'fixed' ? '全片「' + motionLabel(p.motion_style) + '」' : (p.motion_mode === 'sequence' ? '九種輪流' : '隨機')}，幅度${amt}${p.motion_ease ? '・緩起緩停' : ''}（每張照片也可以在照片卡上自己選）`);
     }
     function reshuffleMotion() {
       if (!currentProject) return;
@@ -3160,7 +3174,7 @@
         if (kind === 'none') return null;
         const i0 = first[r], i1 = (r + 1 < first.length ? first[r + 1] : tl.length) - 1;
         const a = i0 > 0 ? out[i0 - 1].holdEnd : 0, b = out[i1].to;
-        return Object.assign(motionPose(kind, variant, amt, (t - a) / Math.max(1e-6, b - a)), { kind });
+        return Object.assign(motionCorners(kind, variant, amt, (t - a) / Math.max(1e-6, b - a), !!p.motion_ease), { kind });
       };
     }
     function loadTransitionControls() {
@@ -3683,11 +3697,19 @@
       el.innerHTML = html;
     }
     // 照片層：畫一張（跟合成一樣直接拉滿 16:9），沒照片或還沒載入就畫深色底＋場景名
-    // [SIGN2MV 2026-11-27] pose＝運鏡的視窗 [s, cx, cy]（motionPose）：只畫照片的那一塊
+    // [SIGN2MV 2026-11-27] pose＝運鏡視窗的四個角（motionCorners，1920×1080 照片上的像素）：只畫照片的那一塊（可能轉了一點）
     function liveDrawPhoto(ctx, img, sceneId, x, y, w, h, pose) {
       if (img && pose) {
-        const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, [s, cx, cy] = pose;
-        ctx.drawImage(img, (cx - s / 2) * iw, (cy - s / 2) * ih, s * iw, s * ih, x, y, w, h); return;
+        const [x0, y0, x1, y1, x2, y2] = pose;
+        // 視窗：畫面 (X, Y) 看照片的 (x0, y0) + X/1920·(x1−x0, y1−y0) + Y/1080·(x2−x0, y2−y0)；畫布要的是反過來（照片 → 畫面）
+        const a = (x1 - x0) / 1920, b = (x2 - x0) / 1080, c = (y1 - y0) / 1920, d = (y2 - y0) / 1080, det = a * d - b * c;
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+        ctx.translate(x, y); ctx.scale(w / 1920, h / 1080);
+        ctx.transform(d / det, -c / det, -b / det, a / det, (b * y0 - d * x0) / det, (c * x0 - a * y0) / det);
+        ctx.drawImage(img, 0, 0, 1920, 1080);
+        ctx.restore();
+        return;
       }
       if (img) { ctx.drawImage(img, x, y, w, h); return; }
       const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#0e1422'); g.addColorStop(1, '#26304f');

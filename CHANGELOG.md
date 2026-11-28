@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- MV camera motion: four more kinds and 「緩起緩停」 (ease in and out). Pan corner to corner, pull out from a corner,
+  push in while turning (the turn follows the amount: about 1.4, 2.6, 4.8 degrees, small enough for the turned
+  window to stay inside the photo) and push in then pull back; nine kinds in all, 「依序」 takes all nine in turn and
+  random draws from the nine (projects set to these two get other kinds than before; one fixed kind and each photo's
+  own kind stay). With ease in and out each photo's motion starts and ends slowly. The window is now four corners
+  (turned or not), written once in motion.corners(): with the frame counter it gives ffmpeg's expressions (exact
+  sin/cos), with a number the corners the transition frames and tests use; motion.warp samples turned windows where
+  perspective does. The live subtitle check draws the same window. Manuals (zh/en) updated.
+- MV camera motion renders faster: each moving photo gets its own short perspective filter (split, trim, concat)
+  instead of one expression for the whole song. perspective reads its expressions again on every frame, so a
+  long song's single expression (30–140 KB) made every frame slower; 600 frames with 60 photos took 14.5 s
+  (straight pan) and 22.9 s (turning, eased) before, 12.2 s and 13.6 s now.
+
 ## 2026.11.28
 
 - MV render: the encoding step shows how far it is. The bar stood at 70 % for the whole step (minutes with camera

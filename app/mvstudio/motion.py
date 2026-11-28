@@ -7,33 +7,41 @@ slowly while the title, the subtitles, the golden karaoke strip and the spectrum
   photo are one run (their subtitles change, the photo does not). The motion of a run goes from the first
   frame the photo is seen (the start of the transition that brings it in) to the last one (the end of the
   transition that takes it away), at an even speed: a photo that stays longer moves more slowly.
-* Five kinds: push in, pull out, pan left/right, pan up/down, push in while drifting to a corner. The project
-  chooses them like the transitions (one kind for every photo / the five in turn / random with a seed); a
-  photo can have its own kind, or none, kept under the photo's fingerprint so the choice follows the photo
-  when it is moved and is forgotten when it is replaced.
-* How far: light (the picture enlarged by 5 %), medium (10 %), strong (20 %).
+* Nine kinds: push in, pull out, pan left/right, pan up/down, push in while drifting to a corner, and since
+  2026-11-28 pan corner to corner, pull out from a corner, push in while turning a little, push in then pull
+  back. The project chooses them like the transitions (one kind for every photo / all in turn / random with a
+  seed); a photo can have its own kind, or none, kept under the photo's fingerprint so the choice follows the
+  photo when it is moved and is forgotten when it is replaced.
+* How far: light (the picture enlarged by 5 %), medium (10 %), strong (20 %). The turn follows the amount
+  (about 1.4, 2.6 and 4.8 degrees), small enough for the turned window to stay inside the photo.
+* Ease in and out (2026-11-28, an option): the motion starts and ends slowly instead of at an even speed.
 
-The picture of a pose is the part of the 1920x1080 photo inside a window (same aspect ratio) stretched to
-the frame. In the encoder the window is moved by ffmpeg's perspective filter (sub-pixel, linear: its own
-zoompan filter only moves by whole pixels and stutters at these speeds); the transition frames drawn by
-Python use warp(), which samples the photo at exactly the same points, so the two meet without a jump.
-The MV page's live preview (web/mv/index.html, motionPlan/motionPose) uses the same definitions: change
+The picture of a pose is the part of the 1920x1080 photo inside a window (same aspect ratio, maybe turned)
+stretched to the frame. In the encoder the window is moved by ffmpeg's perspective filter (sub-pixel: its
+own zoompan filter only moves by whole pixels and stutters at these speeds), one short filter per moving piece (photo_chain);
+the transition frames drawn by Python use warp(), which samples the photo at exactly the same points, so the two meet without a jump.
+corners() is written once for both: with a number it gives the window's corners, with an Ex (the frame
+counter in ffmpeg's expression language) it gives the expressions ffmpeg evaluates on every frame.
+The MV page's live preview (web/mv/index.html, motionPlan/motionCorners) uses the same definitions: change
 them together.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+import math
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from PIL import Image
 
 MOTION_STYLES = [("zoomin", "推近"), ("zoomout", "拉遠"), ("pan_lr", "左右平移"), ("pan_ud", "上下平移"),
-                 ("zoompan", "推近加平移")]
+                 ("zoompan", "推近加平移"), ("pan_diag", "斜向平移"), ("zoomout_pan", "拉遠加平移"),
+                 ("rotate", "旋轉推近"), ("breathe", "推近再拉遠")]
 MOTION_KEYS = [k for k, _ in MOTION_STYLES]
 MOTION_MODES = ("fixed", "sequence", "random")
 MOTION_AMOUNTS = {"light": 0.05, "medium": 0.10, "strong": 0.20}
 PHOTO_CHOICES = tuple(MOTION_KEYS) + ("none",)     # what a photo may have of its own ("follow" = not stored)
 NONE = ("none", 0)
-# where "push in while drifting" ends: right/left, up/down (the vertical drift is smaller)
+# where "push in while drifting" ends (and "pull out from a corner" or the diagonal pan starts or ends):
+# right/left, up/down (the vertical drift of the drifting kinds is smaller)
 _CORNERS = ((1, -1), (-1, -1), (1, 1), (-1, 1))
 
 
@@ -52,10 +60,16 @@ def amount(proj: Dict[str, Any]) -> float:
     return MOTION_AMOUNTS.get(str(proj.get("motion_amount") or "light"), MOTION_AMOUNTS["light"])
 
 
+def ease(proj: Dict[str, Any]) -> bool:
+    return bool(proj.get("motion_ease"))
+
+
 def normalize(proj: Dict[str, Any]) -> None:
     """Clean the motion fields of a project before it is saved (only the fields that are there)."""
     if "motion_enabled" in proj:
         proj["motion_enabled"] = bool(proj["motion_enabled"])
+    if "motion_ease" in proj:
+        proj["motion_ease"] = bool(proj["motion_ease"])
     if proj.get("motion_mode") is not None and proj["motion_mode"] not in MOTION_MODES:
         proj["motion_mode"] = "random"
     if proj.get("motion_style") is not None and proj["motion_style"] not in MOTION_KEYS:
@@ -108,42 +122,118 @@ def plan(proj: Dict[str, Any], prints: Sequence[Optional[str]]) -> List[Tuple[st
     return out
 
 
-def pose(kind: str, variant: int, amt: float, p: float) -> Tuple[float, float, float]:
-    """The window at p (0..1 through the run): its size s (share of the photo's width and height) and its
-    centre (cx, cy) as shares of the photo. Every value is linear in p."""
-    p = min(1.0, max(0.0, p))
+class Ex:
+    """A value in ffmpeg's expression language with the arithmetic corners() uses: corners() given an Ex for
+    p writes the expressions ffmpeg evaluates on every frame, given a float it computes the numbers."""
+    __slots__ = ("t",)
+
+    def __init__(self, t: str):
+        self.t = t
+
+    @staticmethod
+    def _of(v: "Num") -> str:
+        return v.t if isinstance(v, Ex) else _num(float(v))
+
+    def _op(self, op: str, other: "Num", swap: bool = False) -> "Ex":
+        a, b = (Ex._of(other), self.t) if swap else (self.t, Ex._of(other))
+        return Ex(f"({a}{op}{b})")
+
+    def __add__(self, o): return self._op("+", o)
+    def __radd__(self, o): return self._op("+", o, True)
+    def __sub__(self, o): return self._op("-", o)
+    def __rsub__(self, o): return self._op("-", o, True)
+    def __mul__(self, o): return self._op("*", o)
+    def __rmul__(self, o): return self._op("*", o, True)
+    def __truediv__(self, o): return self._op("/", o)
+    def __neg__(self): return Ex(f"(-{self.t})")
+
+
+Num = Union[float, Ex]
+
+
+def _sin(v: Num) -> Num:
+    return Ex(f"sin({v.t})") if isinstance(v, Ex) else math.sin(v)
+
+
+def _cos(v: Num) -> Num:
+    return Ex(f"cos({v.t})") if isinstance(v, Ex) else math.cos(v)
+
+
+def turn_max(amt: float, w: int = 1920, h: int = 1080) -> float:
+    """How far "push in while turning" turns at the end (radians): 0.9 of what keeps the turned window
+    inside the photo while it grows from the full frame (first order: s*(w/h*sin t + cos t) <= 1)."""
+    return 0.9 * (1 - 1 / (1 + amt)) * h / w
+
+
+def corners(kind: str, variant: int, amt: float, p: Num, eased: bool, w: int, h: int) -> Tuple[Num, ...]:
+    """The window at p (0..1 through the run) in pixels of the w x h photo: x0, y0 (top left), x1, y1 (top
+    right), x2, y2 (bottom left), x3, y3 (bottom right). A float p is clamped to 0..1; an Ex is used as it is
+    (the frames it is used on keep it in 0..1). Size s (share of the photo's width and height), centre
+    (cx, cy) and turn t:
+      zoomin     s 1 -> f              zoomout     s f -> 1                 (f = 1 / (1 + amount))
+      pan_lr/ud  s f, centre across    zoompan     s 1 -> f, to a corner    pan_diag  s f, corner to corner
+      zoomout_pan s f -> 1, from a corner           rotate  s 1 -> f, t 0 -> +-turn_max
+      breathe    s 1 -> f -> 1 (sine)
+    With eased, p becomes (1 - cos(pi p)) / 2."""
+    if not isinstance(p, Ex):
+        p = min(1.0, max(0.0, float(p)))
+    q: Num = (1 - _cos(p * math.pi)) / 2 if eased else p
     f = 1.0 / (1.0 + amt)
+    dx, dy = _CORNERS[variant % 4]
+    s: Num = 1.0
+    cx: Num = 0.5
+    cy: Num = 0.5
+    t: Num = 0.0
     if kind == "zoomin":
-        return 1 + (f - 1) * p, 0.5, 0.5
-    if kind == "zoomout":
-        return f + (1 - f) * p, 0.5, 0.5
-    if kind in ("pan_lr", "pan_ud"):
-        q = p if variant % 2 == 0 else 1 - p
-        c = f / 2 + (1 - f) * q
-        return (f, c, 0.5) if kind == "pan_lr" else (f, 0.5, c)
-    if kind == "zoompan":
-        s = 1 + (f - 1) * p
-        dx, dy = _CORNERS[variant % 4]
-        return s, 0.5 + 0.5 * dx * (1 - s), 0.5 + 0.3 * dy * (1 - s)
-    return 1.0, 0.5, 0.5
+        s = 1 + (f - 1) * q
+    elif kind == "zoomout":
+        s = f + (1 - f) * q
+    elif kind in ("pan_lr", "pan_ud"):
+        s = f
+        c = f / 2 + (1 - f) * (q if variant % 2 == 0 else 1 - q)
+        cx, cy = (c, 0.5) if kind == "pan_lr" else (0.5, c)
+    elif kind == "zoompan":
+        s = 1 + (f - 1) * q
+        cx, cy = 0.5 + 0.5 * dx * (1 - s), 0.5 + 0.3 * dy * (1 - s)
+    elif kind == "pan_diag":
+        s = f
+        cx, cy = 0.5 + dx * (1 - f) / 2 * (2 * q - 1), 0.5 + dy * (1 - f) / 2 * (2 * q - 1)
+    elif kind == "zoomout_pan":
+        s = f + (1 - f) * q
+        cx, cy = 0.5 + 0.5 * dx * (1 - s), 0.5 + 0.3 * dy * (1 - s)
+    elif kind == "rotate":
+        s = 1 + (f - 1) * q
+        t = (1 if variant % 2 == 0 else -1) * turn_max(amt, w, h) * q
+    elif kind == "breathe":
+        s = 1 + (f - 1) * _sin(q * math.pi)
+    hw, hh = s * (w / 2), s * (h / 2)
+    mx, my = cx * w, cy * h
+    if isinstance(t, float) and t == 0.0:
+        return (mx - hw, my - hh, mx + hw, my - hh, mx - hw, my + hh, mx + hw, my + hh)
+    co, si = _cos(t), _sin(t)
+    ax, ay = hw * co, hw * si          # half the top edge, turned
+    bx, by = -(hh * si), hh * co       # half the left edge, turned
+    return (mx - ax - bx, my - ay - by, mx + ax - bx, my + ay - by,
+            mx - ax + bx, my - ay + by, mx + ax + bx, my + ay + by)
 
 
-def rect(kind: str, variant: int, amt: float, p: float, w: int, h: int) -> Tuple[float, float, float, float]:
-    """The window at p in pixels: left, top, right, bottom (the full frame is 0, 0, w, h)."""
-    s, cx, cy = pose(kind, variant, amt, p)
-    return (cx - s / 2) * w, (cy - s / 2) * h, (cx + s / 2) * w, (cy + s / 2) * h
+def full(w: int, h: int) -> Tuple[float, ...]:
+    return (0.0, 0.0, float(w), 0.0, 0.0, float(h), float(w), float(h))
 
 
-def warp(img: Image.Image, r: Tuple[float, float, float, float]) -> Image.Image:
-    """The photo seen through window r, the size of the photo. Output pixel x samples the photo at
-    left + x * (right - left) / width (pixel indices), as ffmpeg's perspective filter does."""
+def warp(img: Image.Image, c: Sequence[float]) -> Image.Image:
+    """The photo seen through the window with corners c (from corners()), the size of the photo. Output pixel
+    (x, y) samples the photo at c0 + x * (c1 - c0) / width + y * (c2 - c0) / height (pixel indices), as
+    ffmpeg's perspective filter does for these windows (parallelograms: its projective map is affine)."""
     w, h = img.size
-    left, top, right, bottom = r
-    if abs(left) < 1e-6 and abs(top) < 1e-6 and abs(right - w) < 1e-6 and abs(bottom - h) < 1e-6:
+    if max(abs(a - b) for a, b in zip(c, full(w, h))) < 1e-6:
         return img
-    a, e = (right - left) / w, (bottom - top) / h
-    # PIL samples at a*(x+0.5)+c in pixel-centre coordinates, i.e. at index a*x + a/2 + c - 0.5
-    return img.transform((w, h), Image.Transform.AFFINE, (a, 0, left - a / 2 + 0.5, 0, e, top - e / 2 + 0.5),
+    x0, y0, x1, y1, x2, y2 = c[:6]
+    a, b = (x1 - x0) / w, (x2 - x0) / h
+    d, e = (y1 - y0) / w, (y2 - y0) / h
+    # PIL samples at a*(x+0.5)+b*(y+0.5)+c in pixel-centre coordinates, i.e. at index a*x + b*y + (a+b)/2 + c - 0.5
+    return img.transform((w, h), Image.Transform.AFFINE,
+                         (a, b, x0 - (a + b) / 2 + 0.5, d, e, y0 - (d + e) / 2 + 0.5),
                          resample=Image.Resampling.BILINEAR)
 
 
@@ -153,32 +243,44 @@ def _num(v: float) -> str:
     return f"{v:.9f}".rstrip("0").rstrip(".") if abs(v) >= 1e-12 else "0"
 
 
-def perspective_filter(pieces: Sequence[Tuple[int, int, Optional[Tuple[float, ...]]]], w: int, h: int) -> str:
-    """ffmpeg's perspective filter for the photo stream. pieces: (first frame, end frame, line) in order,
-    covering the video; line = (l0, l1, t0, t1, r0, r1, b0, b1, f0, f1): the window's left/top/right/bottom at
-    frames f0 and f1 (linear in between), or None for frames shown as they are (the transition frames,
-    already drawn, and the photos that do not move). The pieces are found by halving (if/lt on the frame
-    number), so the expressions stay shallow however long the song is.
-    The filter's frame counter "in" is 1 on the first frame (it counts the frames taken in, this one
-    included), so frame f is in = f + 1 (checked by tests/test_mv_motion.py with the ffmpeg in use)."""
-    def piece_value(line: Optional[Tuple[float, ...]], which: int, full: float) -> str:
-        if line is None:
-            return _num(full)
-        v0, v1, f0, f1 = line[2 * which], line[2 * which + 1], line[8], line[9]
-        if f1 <= f0 or abs(v1 - v0) < 1e-9:
-            return _num(v0)
-        slope = (v1 - v0) / (f1 - f0)
-        return f"({_num(v0 - slope * (f0 + 1))}+{_num(slope)}*in)"
+def _persp(spec: Tuple[str, int, int, int], f0: int, amt: float, eased: bool, w: int, h: int) -> str:
+    """The perspective filter of one moving piece that starts at frame f0 of the video. Its frame counter
+    "in" is 1 on the piece's first frame (it counts the frames taken in, this one included), so frame
+    f0 + in - 1 of the video: the window of that frame is corners(kind, variant, amt, (f - r0) / den, eased)."""
+    kind, var, r0, den = spec
+    vals = corners(kind, var, amt, Ex(f"((in+{f0 - 1 - r0})/{max(1, den)})"), eased, w, h)
+    txt = [(v.t if isinstance(v, Ex) else _num(v)).replace(",", "\\,") for v in vals]
+    names = ("x0", "y0", "x1", "y1", "x2", "y2", "x3", "y3")
+    return "perspective=" + ":".join(f"{n}={t}" for n, t in zip(names, txt)) + ":interpolation=linear:eval=frame"
 
-    def tree(lo: int, hi: int, which: int, full: float) -> str:
-        if hi - lo == 1:
-            return piece_value(pieces[lo][2], which, full)
-        mid = (lo + hi) // 2
-        a, b = tree(lo, mid, which, full), tree(mid, hi, which, full)
-        return a if a == b else f"if(lt(in\\,{pieces[mid][0] + 1})\\,{a}\\,{b})"
 
-    n = len(pieces)
-    left, top = tree(0, n, 0, 0.0), tree(0, n, 1, 0.0)
-    right, bottom = tree(0, n, 2, float(w)), tree(0, n, 3, float(h))
-    return (f"perspective=x0={left}:y0={top}:x1={right}:y1={top}:x2={left}:y2={bottom}:x3={right}:y3={bottom}"
-            ":interpolation=linear:eval=frame")
+def photo_chain(head: str, pieces: Sequence[Tuple[int, int, Optional[Tuple[str, int, int, int]]]], amt: float,
+                eased: bool, w: int, h: int, out: str) -> str:
+    """The filter text that moves the photo stream made by head (e.g. "[0:v]format=yuv420p,fps=60": whole
+    frames at 60 fps) and names the result out. pieces: (first frame, end frame, spec) in order, covering the
+    video; spec = (kind, variant, r0, den) for a moving piece, None for frames shown as they are (the
+    transition frames, already drawn, and the photos that do not move).
+    Each moving piece gets its own short perspective filter on its own branch (split, trim to its frames,
+    concat back). One filter for the whole song would be shorter to write but slow: perspective reads its
+    expressions again on every frame, so its cost grows with their length (a 3:49 song with turning, eased
+    windows took about 60 % longer per frame than with one short expression)."""
+    chunks: List[Tuple[int, int, Optional[Tuple[str, int, int, int]]]] = []
+    for f0, f1, spec in pieces:
+        if f1 <= f0:
+            continue
+        if spec is None and chunks and chunks[-1][2] is None and chunks[-1][1] == f0:
+            chunks[-1] = (chunks[-1][0], f1, None)              # still frames side by side: one branch
+        else:
+            chunks.append((f0, f1, spec))
+    if len(chunks) == 1:
+        f0, f1, spec = chunks[0]
+        return head + ("," + _persp(spec, f0, amt, eased, w, h) if spec else ",null") + out
+    k = len(chunks)
+    parts = [head + f",split={k}" + "".join(f"[mvs{i}]" for i in range(k))]
+    for i, (f0, f1, spec) in enumerate(chunks):
+        c = f"[mvs{i}]trim=start_frame={f0}:end_frame={f1},setpts=PTS-STARTPTS"
+        if spec:
+            c += "," + _persp(spec, f0, amt, eased, w, h)
+        parts.append(c + f"[mvc{i}]")
+    parts.append("".join(f"[mvc{i}]" for i in range(k)) + f"concat=n={k}:v=1:a=0{out}")
+    return ";".join(parts)

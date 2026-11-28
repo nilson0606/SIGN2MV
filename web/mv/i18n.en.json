@@ -733,7 +733,15 @@
   "這張照片自己的運鏡；要先勾上面的「🎥 運鏡」才有作用。換成別的照片就回到「跟全片」": "This photo's own camera motion; it works only when \"🎥 Camera motion\" above is ticked. Another photo put in its place goes back to \"Like the whole MV\"",
   "✔ 已關閉運鏡：照片不動": "✔ Camera motion off: the photos stay still",
   "五種輪流": "the five in turn",
-  "🎥 運鏡：照片的每一格在這一步算出來，會比沒有運鏡久一些": "🎥 Camera motion: every frame of the photos is computed in this step, so it takes longer than without motion"
+  "🎥 運鏡：照片的每一格在這一步算出來，會比沒有運鏡久一些": "🎥 Camera motion: every frame of the photos is computed in this step, so it takes longer than without motion",
+  "依序（輪流）": "In turn",
+  "緩起緩停": "Ease in and out",
+  "勾選後每張照片的運鏡開頭慢、中間快、結尾慢；不勾就是從頭到尾一樣快": "Ticked, each photo's motion starts slowly, speeds up and ends slowly; unticked it moves at one speed",
+  "斜向平移": "Pan corner to corner",
+  "拉遠加平移": "Pull out and drift",
+  "旋轉推近": "Push in and turn",
+  "推近再拉遠": "Push in, then pull back",
+  "九種輪流": "all nine in turn"
  },
  "patterns": [
   {
@@ -2063,6 +2071,10 @@
   {
    "zh": "已編碼 {0}／{1}（{2}%）",
    "en": "Encoded {0} / {1} ({2}%)"
+  },
+  {
+   "zh": "{0}・緩起緩停",
+   "en": "{0} · ease in and out"
   }
  ]
 }

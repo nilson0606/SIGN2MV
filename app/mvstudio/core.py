@@ -1047,7 +1047,7 @@ def _follow_encoder(proc: subprocess.Popen, total: float, stage: str) -> bytes:
 
 def _motion_streams(proj: Dict[str, Any], timeline: List[Dict[str, Any]], base_frames: List[Tuple[Any, ...]],
                     text_paths: List[str], run_of: List[int], run_first: List[int], mplan: List[Tuple[str, int]],
-                    amt: float, plan: List[str], trans_duration: float, trans_steps: int, frames_dir: str,
+                    amt: float, eased: bool, plan: List[str], trans_duration: float, trans_steps: int, frames_dir: str,
                     old_sigs: Dict[str, Any], new_sigs: Dict[str, Any], concat_lines: List[str],
                     bg_cache: Dict[Any, Image.Image], overlay: Callable[[int], Image.Image],
                     gold_at: Optional[Callable[[int, float], int]]) -> Tuple[str, List[Tuple[int, int, Any]]]:
@@ -1056,7 +1056,7 @@ def _motion_streams(proj: Dict[str, Any], timeline: List[Dict[str, Any]], base_f
     transition frames drawn here (photos at their pose, text fading as always). The text stream (a concat
     file, returned) has each line's text layer for its hold and nothing during the transitions. Every piece
     starts on a whole frame at 60 fps (found from the times, so nothing drifts), and the pieces (first
-    frame, end frame, window line or None) are returned for motion.perspective_filter.
+    frame, end frame, window line or None) are returned for motion.photo_chain.
     Every file in the two lists says "option framerate 60": without it the concat input keeps the picture
     reader's 1/25 s time base, every start is rounded to 40 ms and a picture shown for one frame is lost."""
     FPS = 60
@@ -1074,10 +1074,12 @@ def _motion_streams(proj: Dict[str, Any], timeline: List[Dict[str, Any]], base_f
         i1 = run_first[r + 1] - 1 if r + 1 < len(run_first) else last
         spans.append((bounds[i0 - 1][1] if i0 > 0 else 0, bounds[i1][2]))
 
-    def at(r: int, frame: float) -> Tuple[float, float, float, float]:
+    def at(r: int, frame: float) -> Tuple[float, ...]:
         kind, var = mplan[r]
+        if kind == "none":
+            return motion.full(FRAME_W, FRAME_H)
         r0, r1 = spans[r]
-        return motion.rect(kind, var, amt, (frame - r0) / max(1, r1 - r0 - 1), FRAME_W, FRAME_H)
+        return motion.corners(kind, var, amt, (frame - r0) / max(1, r1 - r0 - 1), eased, FRAME_W, FRAME_H)
 
     empty = os.path.join(frames_dir, "m_empty.png")
     if not os.path.exists(empty):
@@ -1090,11 +1092,10 @@ def _motion_streams(proj: Dict[str, Any], timeline: List[Dict[str, Any]], base_f
         fhs, fhe, fte = bounds[idx]
         r = run_of[idx]
         if fhe > fhs:
-            line = None
+            spec = None
             if mplan[r][0] != "none":
-                a, b = at(r, fhs), at(r, fhe - 1)
-                line = (a[0], b[0], a[1], b[1], a[2], b[2], a[3], b[3], fhs, fhe - 1)
-            pieces.append((fhs, fhe, line))
+                spec = (mplan[r][0], mplan[r][1], spans[r][0], max(1, spans[r][1] - spans[r][0] - 1))
+            pieces.append((fhs, fhe, spec))
             concat_lines.append(f"file '{base_frames[idx][0]}'\n{M_RATE}duration {(fhe - fhs) / FPS:.6f}\n")
             text_lines.append(f"file '{text_paths[idx]}'\n{M_RATE}duration {(fhe - fhs) / FPS:.6f}\n")
         if idx == last or fte <= fhe:
@@ -1112,7 +1113,7 @@ def _motion_streams(proj: Dict[str, Any], timeline: List[Dict[str, Any]], base_f
         gold_end = gold_at(idx, max(0.05, base_frames[idx][5] - trans_duration)) if gold_at else 0
         # (frames counted from where each photo appears: editing an earlier line does not draw these again)
         sig = "|".join([str(base_frames[idx][6]), str(base_frames[idx + 1][6]), style, f"{trans_duration:.3f}", str(trans_steps),
-                        str(int(same)), f"{amt}", repr(mplan[r]), repr(mplan[rb]), f"{n_tr}", f"k{gold_end}",
+                        str(int(same)), f"{amt}", f"e{int(eased)}", repr(mplan[r]), repr(mplan[rb]), f"{n_tr}", f"k{gold_end}",
                         f"{fhe - spans[r][0]},{spans[r][1] - spans[r][0]},{fhe - spans[rb][0]},{spans[rb][1] - spans[rb][0]}"])
         key = f"mtrans_{idx:03d}"
         new_sigs[key] = sig
@@ -1686,10 +1687,11 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
     m_text_concat = ""
     m_head: Optional[str] = None
     if motion_on:
-        m_text_concat, m_pieces = _motion_streams(proj, timeline, base_frames, m_text, run_of, run_first, mplan, m_amt, plan,
+        m_text_concat, m_pieces = _motion_streams(proj, timeline, base_frames, m_text, run_of, run_first, mplan, m_amt,
+                                                  motion.ease(proj), plan,
                                                   TRANS_DURATION, TRANS_STEPS, frames_dir, old_sigs, new_sigs, concat_lines,
                                                   bg_cache, _overlay, (lambda i, off: _gold_at(i, off)) if kara_on else None)
-        m_head = (f"[0:v]format=yuv420p,fps=60,{motion.perspective_filter(m_pieces, FRAME_W, FRAME_H)}[mph];"
+        m_head = (motion.photo_chain("[0:v]format=yuv420p,fps=60", m_pieces, m_amt, motion.ease(proj), FRAME_W, FRAME_H, "[mph]") + ";"
                   f"[{3 if kara_on else 2}:v]format=yuva420p,fps=60[mtx];[mph][mtx]overlay=format=yuv420:eof_action=pass[v0]")
 
     for idx in (range(len(base_frames)) if not motion_on else ()):
