@@ -259,6 +259,8 @@
     .player-actions .btn { padding: 8px 14px; font-size: 13px; border-radius: 8px; min-height: 36px;
       display: inline-flex; align-items: center; white-space: nowrap; }
     .player-actions .btn[style*="display:none"], .player-actions .btn[style*="display: none"] { display: none; }
+    .player-actions .render-group { display: inline-flex; gap: 8px; align-items: stretch; }   /* the two menus stay with their button */
+    .player-actions select.render-spec { width: auto; min-height: 36px; padding: 0 8px; font-size: 13px; }
     .btn-sm {
       padding: 4px 9px;
       font-size: 12px;
@@ -1033,9 +1035,20 @@
           <div class="player-actions">
             <button class="btn btn-sm" id="btnLiveSync" onclick="playPreview('live')" title="按下就開始播：播放音檔時即時顯示當下的分鏡圖與字幕（時間點照成品規則：換段前 0.4 秒淡入），不用出影片就能對字幕">🎵 即時對字幕</button>
             <button class="btn btn-sm btn-gold" id="btnPlayMv" disabled title="尚未渲染成品 MV" onclick="playPreview('video')">🎬 播放成品 MV (.mp4)</button>
-            <button class="btn btn-sm" id="btnDownloadMvVideo" style="border-color:#22c55e; color:#86efac; display:none;" onclick="downloadRenderedMv()" title="將已渲染完成的 1080p 60fps MP4 影片下載至本機">⬇️ 匯出/下載 MV 影片</button>
+            <button class="btn btn-sm" id="btnDownloadMvVideo" style="border-color:#22c55e; color:#86efac; display:none;" onclick="downloadRenderedMv()" title="將已渲染完成的 MV 影片（MP4）下載至本機">⬇️ 匯出/下載 MV 影片</button>
             <button class="btn btn-sm" id="btnOpenMvFolder" style="display:none;" onclick="openMvFolder()" title="在檔案總管顯示已輸出的 MV 檔案">📂 開啟資料夾</button>
+            <!-- [SIGN2MV 2026-11-28] 使用者要求：可以選 720p、30fps（存在專案裡，預設 1080p 60fps） -->
+            <span class="render-group">
+            <select id="selRenderHeight" class="render-spec" onchange="onRenderSpecChanged()" title="成品畫質：1080p 最清楚；720p 檔案比較小、編碼比較快（畫面一樣先做成 1080p 再縮小）">
+              <option value="1080">1080p</option>
+              <option value="720">720p</option>
+            </select>
+            <select id="selRenderFps" class="render-spec" onchange="onRenderSpecChanged()" title="每秒格數：60fps 最順；30fps 檔案比較小，轉場和運鏡要算的格數只有一半，渲染比較快">
+              <option value="60">60fps</option>
+              <option value="30">30fps</option>
+            </select>
             <button class="btn btn-sm btn-crimson" id="btnRenderMV" onclick="triggerFullRender()">🎬 啟動 1080p 60fps NVENC 極速渲染</button>
+            </span>
             <!-- [SIGN2MV 2026-11-19] 使用者要求：渲染旁加「只換音軌」，畫面沿用已渲染的成品，不用重新渲染 -->
             <button class="btn btn-sm" id="btnSwapAudio" style="display:none;" onclick="swapMvAudio()" title="成品 MV 的畫面不動，只把聲音換成目前「選音檔」選的音檔，幾秒就好，不用重新渲染。字幕時間和頻譜跳動線條是照渲染時的音檔做的，同一首歌換一版混音或換人唱都適合；換成別的音樂請重新渲染">🔁 只換音軌</button>
           </div>
@@ -1699,11 +1712,13 @@
         { const te = parseFloat(currentProject.tail_extend_sec); document.getElementById('inpTailExtend').value = (Number.isFinite(te) ? te : 2.50).toFixed(2); }
         loadTransitionControls();
         loadMotionControls();
+        loadRenderSpecControls();
 
         updateAudioProbeUI(data.audio_probe, currentProject.audio_file || '');
 
         const mvVideo = document.getElementById('mvVideoPlayer');
         const hasMv = !!(data.mv_probe && data.mv_probe.exists);
+        currentMvProbe = hasMv ? data.mv_probe : null;
         updateMvDownloadButtons(hasMv);
         if (hasMv) {
           mvVideo.src = `/api/mv/media?path=${encodeURIComponent(currentProject.output_mv)}&t=${Date.now()}`;
@@ -3004,6 +3019,8 @@
       currentProject.motion_style = document.getElementById('selMotionStyle').value || 'zoomin';
       currentProject.motion_amount = document.getElementById('selMotionAmount').value || 'light';
       currentProject.motion_ease = document.getElementById('chkMotionEase').checked;
+      currentProject.render_height = parseInt(document.getElementById('selRenderHeight').value, 10) || 1080;
+      currentProject.render_fps = parseInt(document.getElementById('selRenderFps').value, 10) || 60;
       if (currentProject.motion_enabled && !currentProject.motion_seed) currentProject.motion_seed = 1 + Math.floor(Math.random() * 2147483646);
     }
 
@@ -3149,6 +3166,31 @@
       if (!p.motion_enabled) { showToast('✔ 已關閉運鏡：照片不動'); return; }
       const amt = { light: '輕（放大 5%）', medium: '中（放大 10%）', strong: '強（放大 20%）' }[p.motion_amount] || '輕（放大 5%）';
       showToast(`🎥 運鏡：${p.motion_mode === 'fixed' ? '全片「' + motionLabel(p.motion_style) + '」' : (p.motion_mode === 'sequence' ? '九種輪流' : '隨機')}，幅度${amt}${p.motion_ease ? '・緩起緩停' : ''}（每張照片也可以在照片卡上自己選）`);
+    }
+    // ===== [SIGN2MV 2026-11-28] 成品畫質與每秒格數（app/mvstudio/core.py render_spec）=====
+    let currentMvProbe = null;          // the finished MV as the server measured it (size, frame rate)
+    function renderSpecLabel() {
+      return `${document.getElementById('selRenderHeight').value || 1080}p ${document.getElementById('selRenderFps').value || 60}fps`;
+    }
+    function renderButtonText() { return `🎬 啟動 ${renderSpecLabel()} NVENC 極速渲染`; }
+    function mvFileSpecTag() {
+      const p = currentMvProbe, fr = p ? String(p.r_frame_rate || '').split('/') : [];
+      const fps = fr.length === 2 && parseFloat(fr[1]) ? Math.round(parseFloat(fr[0]) / parseFloat(fr[1])) : Math.round(parseFloat(fr[0]) || 0);
+      return p && p.height && fps ? `${p.height}p${fps}` : renderSpecLabel().replace(/ (\d+)fps$/, '$1');
+    }
+    function loadRenderSpecControls() {
+      const p = currentProject || {};
+      document.getElementById('selRenderHeight').value = String(p.render_height) === '720' ? '720' : '1080';
+      document.getElementById('selRenderFps').value = String(p.render_fps) === '30' ? '30' : '60';
+      const btn = document.getElementById('btnRenderMV');
+      if (btn && !isRenderingInProgress) btn.textContent = renderButtonText();
+    }
+    function onRenderSpecChanged() {
+      if (!currentProject) { loadRenderSpecControls(); return; }
+      syncProjectFields();
+      loadRenderSpecControls();
+      scheduleAutoSave();
+      showToast(`🎬 成品改成 ${renderSpecLabel()}，下次渲染生效`);
     }
     function reshuffleMotion() {
       if (!currentProject) return;
@@ -4001,7 +4043,7 @@
         if (exists) {
           btnTop.style.borderColor = '#22c55e';
           btnTop.style.color = '#86efac';
-          btnTop.title = '點擊立即下載已渲染完成的 1080p 60fps MV 影片';
+          btnTop.title = '點擊立即下載已渲染完成的 MV 影片';
         } else {
           btnTop.style.borderColor = 'var(--border)';
           btnTop.style.color = 'var(--text-muted)';
@@ -4012,12 +4054,12 @@
 
     function downloadRenderedMv() {
       if (!currentProject || !currentProject.output_mv) {
-        showToast('⚠️ 目前尚未渲染成品 MV 影片，請先按播放器上紅色的「🎬 啟動 1080p 60fps NVENC 極速渲染」！', true);
+        showToast(`⚠️ 目前尚未渲染成品 MV 影片，請先按播放器上紅色的「${renderButtonText()}」！`, true);
         return;
       }
       const mvPath = currentProject.output_mv;
       const safeTitle = (currentProject.title || currentSlug || 'Master_MV').replace(/[\\/:*?"<>|]/g, '_');
-      const downloadName = `${safeTitle}_1080p60.mp4`;
+      const downloadName = `${safeTitle}_${mvFileSpecTag()}.mp4`;
       const downloadUrl = `/api/mv/media?path=${encodeURIComponent(mvPath)}&download=1&filename=${encodeURIComponent(downloadName)}`;
       
       const a = document.createElement('a');
@@ -4046,7 +4088,7 @@
       } catch (e) { showToast('❌ 沒有換音軌：' + e.message, true); return; }
       const d = info.diff_sec, gap = Math.abs(d).toFixed(1);
       let msg = `把成品 MV 的聲音換成：\n${info.audio_name}\n\n成品 MV：${fmtSec(info.mv_sec)}\n新音檔：${fmtSec(info.audio_sec)}\n\n畫面不重新渲染（字幕時間、頻譜跳動線條照渲染時的音檔），換好會蓋過原本那支 MV。`;
-      if (info.warn) msg += `\n\n⚠️ 新音檔比成品 MV ${d > 0 ? '長' : '短'} ${gap} 秒：字幕時間可能對不上；` + (d > 0 ? '新音檔多出來的結尾會被切掉。' : 'MV 會跟著變短。') + '\n不一樣的歌請改用「🎬 啟動 1080p 60fps NVENC 極速渲染」。';
+      if (info.warn) msg += `\n\n⚠️ 新音檔比成品 MV ${d > 0 ? '長' : '短'} ${gap} 秒：字幕時間可能對不上；` + (d > 0 ? '新音檔多出來的結尾會被切掉。' : 'MV 會跟著變短。') + `\n不一樣的歌請改用「${renderButtonText()}」。`;
       msg += '\n\n要換嗎？';
       if (!confirm(msg)) return;
       swapAudioBusy = true;
@@ -4140,12 +4182,12 @@
       if (!currentProject) return;
       syncProjectFields();
       const btn = document.getElementById('btnRenderMV');
-      btn.textContent = '⏳ NVENC 1080p 60fps 渲染中...';
+      btn.textContent = `⏳ NVENC ${renderSpecLabel()} 渲染中...`;
 
       // 依使用者指示：渲染時除終止鈕，其它按鈕暫時失效直到渲染完
       setRenderingUiLocked(true);
 
-      startProgressPolling(`🎬 正在合成《${currentProject.title}》1080p 60fps MV...`);
+      startProgressPolling(`🎬 正在合成《${currentProject.title}》${renderSpecLabel()} MV...`);
       showToast('🎬 正在合成 1080p 漸層暗角、0.40s 餘弦跨幀轉場並啟動 h264_nvenc 硬體加速渲染...');
 
       if (renderAbortController) {
@@ -4167,7 +4209,7 @@
         });
         const data = await res.json();
         if (data.status === 'ok') {
-          stopProgressPolling(`🎉《${currentProject.title}》1080p 60fps MV 合成與抽幀驗收 100% 完成！`, `總耗時 ${data.elapsed_sec}s (${data.encoder}) | 輸出路徑：${data.output_mv}`);
+          stopProgressPolling(`🎉《${currentProject.title}》${data.spec || renderSpecLabel()} MV 合成與抽幀驗收 100% 完成！`, `總耗時 ${data.elapsed_sec}s (${data.encoder}) | 輸出路徑：${data.output_mv}`);
           showToast(`🎉 渲染與抽幀驗收完成！耗時 ${data.elapsed_sec}s (${data.encoder})，輸出路徑：${data.output_mv}`);
           if (currentProject) {
             currentProject.output_mv = data.output_mv;
@@ -4180,6 +4222,7 @@
           try {
             const pr = await (await fetch(`/api/mv/project/${currentSlug}`)).json();
             const p = pr && pr.mv_probe;
+            currentMvProbe = p && p.exists ? p : null;
             if (p && p.exists) document.getElementById('mvFileStatus').innerHTML =
               `<span style="color:#86efac;">✔ 已有成品 MV (${p.size_mb} MB, ${p.width}x${p.height} @ ${p.r_frame_rate}fps)</span>`;
           } catch (e) {}
@@ -4201,7 +4244,7 @@
       } finally {
         // 渲染完畢，立刻解除按鈕失效鎖定，全面恢復操作
         setRenderingUiLocked(false);
-        btn.textContent = '🎬 啟動 1080p 60fps NVENC 極速渲染';
+        btn.textContent = renderButtonText();
       }
     }
 
@@ -4214,7 +4257,7 @@
       if (!p || !p.active || p.task_type !== 'render' || isRenderingInProgress) return;
       if (p.slug && p.slug !== currentSlug && allProjects.some(x => x.slug === p.slug)) await loadProject(p.slug);
       const btn = document.getElementById('btnRenderMV');
-      if (btn) btn.textContent = '⏳ NVENC 1080p 60fps 渲染中...';
+      if (btn) btn.textContent = `⏳ NVENC ${renderSpecLabel()} 渲染中...`;
       const jobId = p.job_id || '';
       setRenderingUiLocked(true);
       startProgressPolling('🎬 MV 渲染中（重新整理之前就開始的渲染）…');
@@ -4223,7 +4266,7 @@
         try { q = await (await fetch('/api/mv/progress')).json(); } catch (e) { return; }
         if (q && q.active && q.task_type === 'render') return;
         clearInterval(watch);
-        if (btn) btn.textContent = '🎬 啟動 1080p 60fps NVENC 極速渲染';
+        if (btn) btn.textContent = renderButtonText();
         const stopped = !isRenderingInProgress;   // stopped with the stop button meanwhile (already unlocked)
         let ok = false;
         if (!stopped) {

@@ -14,6 +14,12 @@
   instead of one expression for the whole song. perspective reads its expressions again on every frame, so a
   long song's single expression (30–140 KB) made every frame slower; 600 frames with 60 photos took 14.5 s
   (straight pan) and 22.9 s (turning, eased) before, 12.2 s and 13.6 s now.
+- MV output size and frame rate: two menus by the render button, 1080p or 720p and 60 or 30 fps, kept per
+  project (1080p 60 fps by default, old projects unchanged). The pictures are still made at 1920x1080; 720p
+  is scaled down (lanczos) just before encoding. 30 fps runs the whole render at 30: 30 transition pictures a
+  second (0.4 s = 12, one per frame), camera motion on 30 fps frames, every list read at 30, the spectrum at
+  30. Video bit rate follows the choice: 8 / 6 / 5 / 4 Mbit/s for 1080p60 / 1080p30 / 720p60 / 720p30.
+  Progress, finish messages and the download name say the size and rate. Manuals (zh/en) updated.
 
 ## 2026.11.28
 

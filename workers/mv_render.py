@@ -1,4 +1,4 @@
-"""MV workspace: render the 1080p 60 fps MV of a project (queue worker, GPU lane).
+"""MV workspace: render the MV of a project, 1080p or 720p at 60 or 30 fps (queue worker, GPU lane).
 
 Input JSON: {"slug": "<song id>_<name>", "library_root": "...", "brand": {singer, studio, lang}}
 Runs app/mvstudio/core.execute_mv_render_pipeline (frames -> transitions ->

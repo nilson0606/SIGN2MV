@@ -1,5 +1,5 @@
 """MV workspace engine: projects, timeline helpers, frame rendering and the
-1080p 60 fps render pipeline.
+render pipeline (1080p or 720p, 60 or 30 fps).
 
 Ported from the MV Studio of AI_COVER_MV (mv_studio_server.py, 2026-10-27).
 Rendering logic, transitions, karaoke timing and timeline rules are unchanged.
@@ -314,6 +314,8 @@ def save_project_dict(proj: Dict[str, Any]) -> Dict[str, Any]:
     if proj.get("credit_lang") not in (None, "zh", "en"):
         proj["credit_lang"] = "zh"
     motion.normalize(proj)
+    if "render_height" in proj or "render_fps" in proj:
+        proj["render_height"], proj["render_fps"] = render_spec(proj)
     sid, _ = parse_slug(slug)
     stored = {k: v for k, v in proj.items() if k not in ("illust_dir", "whisper_json", "song_id", "name", "slug")}
     stored["audio_file"] = _rel_audio(sid, str(proj.get("audio_file") or ""))
@@ -837,9 +839,10 @@ def transition_plan(proj: Dict[str, Any], n_boundaries: int) -> List[str]:
     return out
 
 
-def transition_steps(trans_duration: float) -> int:
-    """轉場格數跟著秒數走（每秒 40 格；0.4 秒＝16 格，跟原本一樣）"""
-    return max(8, min(60, int(round(float(trans_duration) * 40))))
+def transition_steps(trans_duration: float, fps: int = 60) -> int:
+    """轉場格數跟著秒數走（每秒 40 格；0.4 秒＝16 格，跟原本一樣）
+    [SIGN2MV 2026-11-28] at 30 fps 30 a second: one picture per frame (0.4 s = 12), none drawn to be dropped."""
+    return max(8, min(60, int(round(float(trans_duration) * min(40, int(fps))))))
 
 
 def _scale_center(arr: np.ndarray, sc: float) -> np.ndarray:
@@ -971,6 +974,40 @@ def compose_transition_frame(style: str, bgA: Image.Image, bgB: Image.Image, ovA
 _FFMPEG_MAJOR: Dict[str, int] = {}
 M_RATE = "option framerate 60\n"      # a concat list's line: read this picture at 60 fps (every list of the render)
 
+# [SIGN2MV 2026-11-28] the finished MV's size and frame rate, picked on the MV page by the render button. The
+# pictures are always made at 1920x1080 (the photos, cards and text are drawn for it); 720p is scaled down
+# just before encoding. 30 fps runs the whole render at 30: transition frames, camera motion, every list.
+RENDER_HEIGHTS = (1080, 720)
+RENDER_RATES = (60, 30)
+RENDER_MBPS = {(1080, 60): 8, (1080, 30): 6, (720, 60): 5, (720, 30): 4}   # video bit rate, Mbit/s
+
+
+def render_spec(proj: Dict[str, Any]) -> Tuple[int, int]:
+    """(height, frames per second) of the project's MV: 1080 and 60 unless it says 720 or 30."""
+    def _pick(key: str, allowed: Tuple[int, ...]) -> int:
+        try:
+            v = int(proj.get(key) or allowed[0])
+        except (TypeError, ValueError):
+            return allowed[0]
+        return v if v in allowed else allowed[0]
+    return _pick("render_height", RENDER_HEIGHTS), _pick("render_fps", RENDER_RATES)
+
+
+def render_label(proj: Dict[str, Any]) -> str:
+    h, fps = render_spec(proj)
+    return f"{h}p {fps}fps"
+
+
+def rate_line(fps: int) -> str:
+    """A concat list's line: read this picture at the render's frame rate (see M_RATE)."""
+    return f"option framerate {int(fps)}\n"
+
+
+def encoder_args(args: List[str], height: int, fps: int) -> List[str]:
+    """An encoder's arguments (RENDER_ENCODERS, written for 1080p 60) with the bit rate of this size and rate."""
+    mbps = RENDER_MBPS.get((height, fps), 8)
+    return [f"{mbps}M" if a == "8M" else (f"{mbps * 3 // 2}M" if a == "12M" else a) for a in args]
+
 
 def ffmpeg_major() -> int:
     """Major version of the ffmpeg in use (99 when it cannot be told, e.g. a build from the master branch)."""
@@ -1050,7 +1087,7 @@ def _motion_streams(proj: Dict[str, Any], timeline: List[Dict[str, Any]], base_f
                     amt: float, eased: bool, plan: List[str], trans_duration: float, trans_steps: int, frames_dir: str,
                     old_sigs: Dict[str, Any], new_sigs: Dict[str, Any], concat_lines: List[str],
                     bg_cache: Dict[Any, Image.Image], overlay: Callable[[int], Image.Image],
-                    gold_at: Optional[Callable[[int, float], int]]) -> Tuple[str, List[Tuple[int, int, Any]]]:
+                    gold_at: Optional[Callable[[int, float], int]], fps: int = 60) -> Tuple[str, List[Tuple[int, int, Any]]]:
     """The two streams of an MV whose photos move.
     concat_lines gets the photo stream: each line's photo alone for its hold (ffmpeg moves it), then the
     transition frames drawn here (photos at their pose, text fading as always). The text stream (a concat
@@ -1058,8 +1095,10 @@ def _motion_streams(proj: Dict[str, Any], timeline: List[Dict[str, Any]], base_f
     starts on a whole frame at 60 fps (found from the times, so nothing drifts), and the pieces (first
     frame, end frame, window line or None) are returned for motion.photo_chain.
     Every file in the two lists says "option framerate 60": without it the concat input keeps the picture
-    reader's 1/25 s time base, every start is rounded to 40 ms and a picture shown for one frame is lost."""
-    FPS = 60
+    reader's 1/25 s time base, every start is rounded to 40 ms and a picture shown for one frame is lost.
+    [SIGN2MV 2026-11-28] fps: the render's frame rate (60 or 30); the frames above are frames at that rate."""
+    FPS = int(fps)
+    RATE = rate_line(FPS)
     last = len(base_frames) - 1
     bounds: List[Tuple[int, int, int]] = []          # per line: hold start, hold end = transition start, transition end
     pos = 0.0
@@ -1096,8 +1135,8 @@ def _motion_streams(proj: Dict[str, Any], timeline: List[Dict[str, Any]], base_f
             if mplan[r][0] != "none":
                 spec = (mplan[r][0], mplan[r][1], spans[r][0], max(1, spans[r][1] - spans[r][0] - 1))
             pieces.append((fhs, fhe, spec))
-            concat_lines.append(f"file '{base_frames[idx][0]}'\n{M_RATE}duration {(fhe - fhs) / FPS:.6f}\n")
-            text_lines.append(f"file '{text_paths[idx]}'\n{M_RATE}duration {(fhe - fhs) / FPS:.6f}\n")
+            concat_lines.append(f"file '{base_frames[idx][0]}'\n{RATE}duration {(fhe - fhs) / FPS:.6f}\n")
+            text_lines.append(f"file '{text_paths[idx]}'\n{RATE}duration {(fhe - fhs) / FPS:.6f}\n")
         if idx == last or fte <= fhe:
             continue
         style = plan[idx]
@@ -1107,7 +1146,7 @@ def _motion_streams(proj: Dict[str, Any], timeline: List[Dict[str, Any]], base_f
                         f"✨ [階段 2/4] 正在生成 {trans_duration:.2f}s 轉場（{dict(TRANSITION_STYLES).get(style, style)}），照片跟著運鏡 ({idx + 1}/{n_pairs} 組)", "")
         n_tr = fte - fhe
         pieces.append((fhe, fte, None))
-        text_lines.append(f"file '{empty}'\n{M_RATE}duration {n_tr / FPS:.6f}\n")
+        text_lines.append(f"file '{empty}'\n{RATE}duration {n_tr / FPS:.6f}\n")
         steps = [(k, fhe + (k - 1) * n_tr // trans_steps, fhe + k * n_tr // trans_steps) for k in range(1, trans_steps + 1)]
         steps = [x for x in steps if x[2] > x[1]]
         gold_end = gold_at(idx, max(0.05, base_frames[idx][5] - trans_duration)) if gold_at else 0
@@ -1134,8 +1173,8 @@ def _motion_streams(proj: Dict[str, Any], timeline: List[Dict[str, Any]], base_f
                 wb = wa if same else motion.warp(bgB, at(rb, mid))
                 compose_transition_frame(style, wa, wb, ovA, ovB, sm, same).save(p, compress_level=1)
         for (k, fa, fb), p in zip(steps, paths):
-            concat_lines.append(f"file '{p}'\n{M_RATE}duration {(fb - fa) / FPS:.6f}\n")
-    text_lines.append(f"file '{text_paths[-1]}'\n{M_RATE}")
+            concat_lines.append(f"file '{p}'\n{RATE}duration {(fb - fa) / FPS:.6f}\n")
+    text_lines.append(f"file '{text_paths[-1]}'\n{RATE}")
     text_concat = os.path.join(frames_dir, "motion_text_concat.txt")
     with open(text_concat, "w", encoding="utf-8") as f:
         f.writelines(text_lines)
@@ -1200,14 +1239,18 @@ def spectrum_color_hex(proj: Dict[str, Any]) -> str:
 
 
 def build_video_filter(spec_ranges: Optional[List[Tuple[float, float]]], color_hex: str = "#f5d787",
-                       karaoke: bool = False, head: Optional[str] = None) -> Optional[str]:
+                       karaoke: bool = False, head: Optional[str] = None, fps: int = 60,
+                       out_h: int = 1080) -> Optional[str]:
     """合成最後一步的影片濾鏡：[0:v] 照片串 →（逐字金色字條 [2:v]）→（頻譜 [1:a]）→ [vout]。都沒有就回傳 None
     [SIGN2MV 2026-11-27] head: the chains that make [v0] instead of the plain photo stream (camera motion:
-    the moving photos with the still text layer on them); with it there is always a filter."""
-    if not spec_ranges and not karaoke and head is None:
+    the moving photos with the still text layer on them); with it there is always a filter.
+    [SIGN2MV 2026-11-28] fps: the render's frame rate; out_h: the MV's height (720: everything is put together
+    at 1920x1080 as always, then scaled down)."""
+    if not spec_ranges and not karaoke and head is None and out_h == FRAME_H:
         return None
+    out = "[vout]" if out_h == FRAME_H else "[vbig]"
     # 照片段是「一張圖停幾秒」：先轉 yuv420p 再補成每秒 60 格（顏色轉換每張圖只做一次），頻譜才會一直跳
-    parts = [head or "[0:v]format=yuv420p,fps=60[v0]"]
+    parts = [head or f"[0:v]format=yuv420p,fps={int(fps)}[v0]"]
     cur = "[v0]"
     if karaoke:
         parts.append("[2:v]format=rgba[kara]")
@@ -1217,13 +1260,15 @@ def build_video_filter(spec_ranges: Optional[List[Tuple[float, float]]], color_h
         enable = "+".join(f"gte(t,{a:.3f})*lt(t,{b:.3f})" for a, b in spec_ranges)
         col = "0x" + color_hex.lstrip("#")
         parts.append("[1:a]aformat=channel_layouts=mono,"
-                     f"showfreqs=s=60x36:rate=60:mode=bar:ascale=cbrt:fscale=log:win_size=2048:colors={col},"
+                     f"showfreqs=s=60x36:rate={int(fps)}:mode=bar:ascale=cbrt:fscale=log:win_size=2048:colors={col},"
                      # 放大後每 12px 畫一條 3px 黑線當柱子間隔，再把黑色去背
                      f"scale={SPECTRUM_W}:{SPECTRUM_H}:flags=neighbor,drawgrid=w=12:h={SPECTRUM_H * 4}:t=3:c=black,"
                      "format=rgba,colorkey=black:0.05:0.0[spec]")
-        parts.append(f"{cur}[spec]overlay=x={SPECTRUM_X}:y={SPECTRUM_Y}:eof_action=pass:format=yuv420:enable='{enable}'[vout]")
+        parts.append(f"{cur}[spec]overlay=x={SPECTRUM_X}:y={SPECTRUM_Y}:eof_action=pass:format=yuv420:enable='{enable}'{out}")
     else:
-        parts[-1] = parts[-1][:-len("[v1]")] + "[vout]"
+        parts[-1] = parts[-1][:-len("[v1]")] + out
+    if out_h != FRAME_H:
+        parts.append(f"[vbig]scale={FRAME_W * out_h // FRAME_H}:{out_h}:flags=lanczos[vout]")
     return ";".join(parts)
 
 
@@ -1544,7 +1589,10 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
     t0 = time.time()
     slug = proj["slug"]
     title = proj.get("title", slug)
-    update_progress(True, "render", 2, f"🎬 準備合成《{title}》1080p 60fps MV...", "正在檢查母帶音源與分鏡資產")
+    out_h, FPS = render_spec(proj)
+    spec = render_label(proj)
+    RATE = rate_line(FPS)
+    update_progress(True, "render", 2, f"🎬 準備合成《{title}》{spec} MV...", "正在檢查母帶音源與分鏡資產")
 
     frames_dir = os.path.join(project_dir(slug), "frames")
     os.makedirs(frames_dir, exist_ok=True)
@@ -1655,7 +1703,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
     # 格數跟秒數走（每秒 40 格）；前後同一張照片時照片不轉場。簽名含樣式、秒數、格數，換樣式才重畫。
     concat_lines = []
     TRANS_DURATION = max(0.1, float(proj.get("trans_duration", 0.40) or 0.40))
-    TRANS_STEPS = transition_steps(TRANS_DURATION)
+    TRANS_STEPS = transition_steps(TRANS_DURATION, FPS)
     total_trans_pairs = max(1, len(base_frames) - 1)
     plan = transition_plan(proj, max(0, len(base_frames) - 1))
 
@@ -1690,9 +1738,9 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
         m_text_concat, m_pieces = _motion_streams(proj, timeline, base_frames, m_text, run_of, run_first, mplan, m_amt,
                                                   motion.ease(proj), plan,
                                                   TRANS_DURATION, TRANS_STEPS, frames_dir, old_sigs, new_sigs, concat_lines,
-                                                  bg_cache, _overlay, (lambda i, off: _gold_at(i, off)) if kara_on else None)
-        m_head = (motion.photo_chain("[0:v]format=yuv420p,fps=60", m_pieces, m_amt, motion.ease(proj), FRAME_W, FRAME_H, "[mph]") + ";"
-                  f"[{3 if kara_on else 2}:v]format=yuva420p,fps=60[mtx];[mph][mtx]overlay=format=yuv420:eof_action=pass[v0]")
+                                                  bg_cache, _overlay, (lambda i, off: _gold_at(i, off)) if kara_on else None, FPS)
+        m_head = (motion.photo_chain(f"[0:v]format=yuv420p,fps={FPS}", m_pieces, m_amt, motion.ease(proj), FRAME_W, FRAME_H, "[mph]") + ";"
+                  f"[{3 if kara_on else 2}:v]format=yuva420p,fps={FPS}[mtx];[mph][mtx]overlay=format=yuv420:eof_action=pass[v0]")
 
     for idx in (range(len(base_frames)) if not motion_on else ()):
         _check_cancel()
@@ -1701,7 +1749,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
             if lyric_video:
                 if idx == 0:
                     update_progress(True, "render", 65, "✨ [階段 2/4] 沒有照片：不做轉場，歌詞直接換句", "")
-                concat_lines.append(f"file '{curr_path}'\n{M_RATE}")
+                concat_lines.append(f"file '{curr_path}'\n{RATE}")
                 concat_lines.append(f"duration {dur:.4f}\n")
                 continue
             style = plan[idx]
@@ -1716,7 +1764,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
             # [Claude 2026-10-26] 以實際照片檔判斷（間奏用專屬照片時，跟同 Scene 的歌詞段要照常轉場）
             same_photo = (curr_scp == next_scp) if (curr_scp or next_scp) else (curr_sc == next_sc)
             hold_dur = max(0.05, dur - TRANS_DURATION)
-            concat_lines.append(f"file '{curr_path}'\n{M_RATE}")
+            concat_lines.append(f"file '{curr_path}'\n{RATE}")
             concat_lines.append(f"duration {hold_dur:.4f}\n")
 
             pair_sig = f"{curr_sig}_{next_sig}_{style}_{TRANS_DURATION:.3f}_{TRANS_STEPS}_{int(same_photo)}"
@@ -1740,10 +1788,10 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
                     sm = 0.5 - 0.5 * math.cos((step / float(TRANS_STEPS)) * math.pi)
                     compose_transition_frame(style, bgA, bgB, ovA, ovB, sm, same_photo).save(tp, compress_level=1)
             for tp in trans_paths:
-                concat_lines.append(f"file '{tp}'\n{M_RATE}")
+                concat_lines.append(f"file '{tp}'\n{RATE}")
                 concat_lines.append(f"duration {step_dur:.4f}\n")
         else:
-            concat_lines.append(f"file '{curr_path}'\n{M_RATE}")
+            concat_lines.append(f"file '{curr_path}'\n{RATE}")
             concat_lines.append(f"duration {dur:.4f}\n")
 
     with open(sig_file, "w", encoding="utf-8") as f:
@@ -1751,18 +1799,19 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
         # with its frames), so switching motion off and on does not draw everything again
         json.dump({**old_sigs, **new_sigs}, f, indent=2)
 
-    # [SIGN2MV 2026-11-28] every picture of every list is read at 60 fps ("option framerate 60", see M_RATE): the
+    # [SIGN2MV 2026-11-28] every picture of every list is read at the render's rate ("option framerate 60", see M_RATE): the
     # concat input otherwise keeps the 1/25 s time base of the picture reader, rounds each start to 40 ms and
     # drops pictures that fall on the same tick (a 0.4 s transition showed 10 of its 16 frames)
-    concat_lines.append(f"file '{base_frames[-1][0]}'\n{M_RATE}")
+    concat_lines.append(f"file '{base_frames[-1][0]}'\n{RATE}")
     concat_file = os.path.join(frames_dir, "concat.txt")
     with open(concat_file, "w", encoding="utf-8") as f:
         f.writelines(concat_lines)
 
-    enc_stage = "🎬 [階段 3/4] 正在執行 NVENC 1080p 60fps 硬體加速編碼封裝..."
+    enc_stage = f"🎬 [階段 3/4] 正在執行 NVENC {spec} 硬體加速編碼封裝..."
     update_progress(
         True, "render", 70, enc_stage,
-        "🎥 運鏡：照片的每一格在這一步算出來，會比沒有運鏡久一些" if motion_on else "h264_nvenc (-preset p5 -b:v 8M -r 60) + AAC 320k 高音質母帶"
+        "🎥 運鏡：照片的每一格在這一步算出來，會比沒有運鏡久一些" if motion_on
+        else f"h264_nvenc (-preset p5 -b:v {RENDER_MBPS[(out_h, FPS)]}M -r {FPS}) + AAC 320k 高音質母帶"
     )
     # [Claude 2026-10-26] 先編到暫存檔，成功才取代正式成品：失敗時舊 MV 不會被當成新成品驗收。
     # 原本的備援把 cmd[9]（音檔路徑）換成 libx264、cmd[11] 換成 veryfast，必失敗；而且兩次都不檢查結果。
@@ -1798,7 +1847,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
 
         k_lines: List[str] = []
 
-        k_rate = M_RATE                          # the strip on the same 1/60 s grid as the text under it
+        k_rate = RATE                            # the strip on the same frame grid as the text under it
 
         def _kadd(path: str, d: float):
             if d > 1e-4:
@@ -1825,7 +1874,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
         with open(kara_concat, "w", encoding="utf-8") as f:
             f.writelines(k_lines)
         kara_args = ["-f", "concat", "-safe", "0", "-i", kara_concat]
-    vfc = build_video_filter(spec_ranges, spectrum_color_hex(proj), karaoke=kara_on, head=m_head)
+    vfc = build_video_filter(spec_ranges, spectrum_color_hex(proj), karaoke=kara_on, head=m_head, fps=FPS, out_h=out_h)
     text_args: List[str] = []
     if motion_on:
         # the photo stream is followed by the still text layer; the filter is long (the window of every line),
@@ -1842,7 +1891,7 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
         # -progress: ffmpeg says how far it is (read by _run_encoder, shown at 70 to 91 %)
         return [FFMPEG, "-hide_banner", "-y", "-nostats", "-progress", "pipe:1",
                 "-f", "concat", "-safe", "0", "-i", concat_file, "-i", audio_file, *kara_args, *text_args, *vf_args,
-                *video_codec_args, "-r", "60", "-pix_fmt", pix_fmt,
+                *encoder_args(video_codec_args, out_h, FPS), "-r", str(FPS), "-pix_fmt", pix_fmt,
                 "-c:a", "aac", "-b:a", "320k", "-shortest", tmp_out]
 
     # [SIGN2MV] graphics card encoders in turn (NVIDIA, AMD, Intel), then the CPU; each one that cannot
@@ -1891,13 +1940,14 @@ def _execute_mv_render_pipeline(proj: Dict[str, Any]) -> Dict[str, Any]:
     verify_res = execute_mv_verification(proj, custom_timestamps=None)
     update_progress(
         False, "render", 100,
-        f"🎉《{title}》1080p 60fps MV 合成渲染與驗收完成！(耗時 {elapsed}s)",
+        f"🎉《{title}》{spec} MV 合成渲染與驗收完成！(耗時 {elapsed}s)",
         f"編碼器：{encoder_used} | 輸出：{output_mv}"
     )
     return {
         "status": "ok",
         "elapsed_sec": elapsed,
         "encoder": encoder_used,
+        "spec": spec,
         "output_mv": output_mv,
         "verification": verify_res
     }

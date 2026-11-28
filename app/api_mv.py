@@ -1031,7 +1031,7 @@ def router(ctx: Context) -> APIRouter:
             local_update(False, "render", 0, "❌ MV 合成失敗", str(msg)[:300])
             return JSONResponse(status_code=500, content={"status": "error", "detail": f"MV 合成失敗：{msg}"})
         res = job.get("result") or {}
-        local_update(False, "render", 100, f"🎉《{proj.get('title', '')}》1080p 60fps MV 合成渲染與驗收完成！(耗時 {res.get('elapsed_sec', '?')}s)",
+        local_update(False, "render", 100, f"🎉《{proj.get('title', '')}》{core.render_label(proj)} MV 合成渲染與驗收完成！(耗時 {res.get('elapsed_sec', '?')}s)",
                      f"編碼器：{res.get('encoder', '')} | 輸出：{res.get('output_mv', '')}")
         return res
 

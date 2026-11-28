@@ -741,7 +741,11 @@
   "拉遠加平移": "Pull out and drift",
   "旋轉推近": "Push in and turn",
   "推近再拉遠": "Push in, then pull back",
-  "九種輪流": "all nine in turn"
+  "九種輪流": "all nine in turn",
+  "成品畫質：1080p 最清楚；720p 檔案比較小、編碼比較快（畫面一樣先做成 1080p 再縮小）": "Output quality: 1080p is the sharpest; 720p makes a smaller file and encodes faster (the picture is still made at 1080p, then scaled down)",
+  "每秒格數：60fps 最順；30fps 檔案比較小，轉場和運鏡要算的格數只有一半，渲染比較快": "Frames per second: 60fps is the smoothest; 30fps makes a smaller file and renders faster (half as many transition and camera-motion frames to work out)",
+  "將已渲染完成的 MV 影片（MP4）下載至本機": "Download the rendered MV (MP4) to this computer",
+  "點擊立即下載已渲染完成的 MV 影片": "Click to download the rendered MV video"
  },
  "patterns": [
   {
@@ -913,12 +917,12 @@
    "en": "🎙️ [Stage 2/3] Whisper{0} word-level timing ({1}s / {2}s)"
   },
   {
-   "zh": "🎉《{0}》1080p 60fps MV 合成與抽幀驗收 100% 完成！",
-   "en": "🎉 \"{0}\" 1080p 60fps MV rendered and frame-checked, 100% done!"
+   "zh": "🎉《{0}》{1} MV 合成與抽幀驗收 100% 完成！",
+   "en": "🎉 \"{0}\" {1} MV rendered and frame-checked, 100% done!"
   },
   {
-   "zh": "🎉《{0}》1080p 60fps MV 合成渲染與驗收完成！(耗時 {1}s)",
-   "en": "🎉 \"{0}\" 1080p 60fps MV rendered and verified! (took {1}s)"
+   "zh": "🎉《{0}》{1} MV 合成渲染與驗收完成！(耗時 {2}s)",
+   "en": "🎉 \"{0}\" {1} MV rendered and verified! (took {2}s)"
   },
   {
    "zh": "ffmpeg 編碼失敗（NVENC 與 libx264 都失敗）：{0}",
@@ -1041,8 +1045,8 @@
    "en": "⬇️ Downloading the finished MV of \"{0}\" ({1})..."
   },
   {
-   "zh": "🎬 正在合成《{0}》1080p 60fps MV...",
-   "en": "🎬 Rendering the 1080p 60fps MV of \"{0}\"..."
+   "zh": "🎬 正在合成《{0}》{1} MV...",
+   "en": "🎬 Rendering the {1} MV of \"{0}\"..."
   },
   {
    "zh": "🎉 渲染與抽幀驗收完成！耗時 {0}s ({1})，輸出路徑：{2}",
@@ -1061,8 +1065,8 @@
    "en": "Whisper did not finish: {0} (the current timeline was not changed)"
   },
   {
-   "zh": "🎬 準備合成《{0}》1080p 60fps MV...",
-   "en": "🎬 Preparing to render the 1080p 60fps MV of \"{0}\"..."
+   "zh": "🎬 準備合成《{0}》{1} MV...",
+   "en": "🎬 Preparing to render the {1} MV of \"{0}\"..."
   },
   {
    "zh": "✔ 已有成品 MV ({0} MB, {1}x{2} @ {3}fps)",
@@ -2075,6 +2079,34 @@
   {
    "zh": "{0}・緩起緩停",
    "en": "{0} · ease in and out"
+  },
+  {
+   "zh": "🎬 啟動 {0} NVENC 極速渲染",
+   "en": "🎬 Start {0} NVENC fast render"
+  },
+  {
+   "zh": "⏳ NVENC {0} 渲染中...",
+   "en": "⏳ Rendering NVENC {0}..."
+  },
+  {
+   "zh": "🎬 [階段 3/4] 正在執行 NVENC {0} 硬體加速編碼封裝...",
+   "en": "🎬 [Stage 3/4] Encoding {0} with NVENC hardware acceleration..."
+  },
+  {
+   "zh": "h264_nvenc (-preset p5 -b:v {0}M -r {1}) + AAC 320k 高音質母帶",
+   "en": "h264_nvenc (-preset p5 -b:v {0}M -r {1}) + AAC 320k high-quality audio"
+  },
+  {
+   "zh": "🎬 成品改成 {0}，下次渲染生效",
+   "en": "🎬 Output set to {0}; used from the next render"
+  },
+  {
+   "zh": "⚠️ 目前尚未渲染成品 MV 影片，請先按播放器上紅色的「{0}」！",
+   "en": "⚠️ No finished MV yet. Press the red \"{0}\" on the player first!"
+  },
+  {
+   "zh": "不一樣的歌請改用「{0}」。",
+   "en": "For a different song, use \"{0}\" instead."
   }
  ]
 }
